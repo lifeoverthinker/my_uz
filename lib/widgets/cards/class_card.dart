@@ -3,39 +3,17 @@ import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 
-/// Karta zajęć wyświetlana na ekranie głównym i w kalendarzu
-///
-/// Wyświetla informacje o zajęciach, takie jak nazwa przedmiotu,
-/// godzina i sala, wraz z inicjałem lub awatarem prowadzącego.
 class ClassCard extends StatelessWidget {
-  /// Tytuł zajęć
   final String title;
-
-  /// Czas rozpoczęcia i zakończenia zajęć
   final String time;
-
-  /// Sala, w której odbywają się zajęcia
   final String room;
-
-  /// Inicjał lub skrót nazwy przedmiotu wyświetlany w kółku
   final String initial;
-
-  /// Kolor tła karty
   final Color? backgroundColor;
-
-  /// Kolor tła awatara
   final Color? avatarColor;
-
-  /// Czy wyświetlać awatar
   final bool showAvatar;
-
-  /// Czy wyświetlać wskaźnik statusu (kropkę)
   final bool showStatusDot;
-
-  /// Kolor wskaźnika statusu
   final Color? statusDotColor;
 
-  /// Konstruktor karty zajęć
   const ClassCard({
     super.key,
     required this.title,
@@ -49,7 +27,6 @@ class ClassCard extends StatelessWidget {
     this.statusDotColor,
   });
 
-  /// Wariant karty zajęć dla ekranu kalendarza
   factory ClassCard.calendar({
     required String title,
     required String time,
@@ -68,129 +45,88 @@ class ClassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Pobranie motywu i stylów, aby uniknąć powtórzeń (zasada DRY)
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
-
-    // Domyślny kolor tekstu dla godziny i sali
-    final secondaryTextColor = colorScheme.onSurfaceVariant;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(12),
-      // Figma: Container
-      // color: #E8DEF8 (myUZSysLightSecondaryContainer)
-      // borderRadius: 8
       decoration: ShapeDecoration(
         color: backgroundColor ?? colorScheme.secondaryContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      width: double.infinity,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Figma: Text "Podstawy systemów dyskr..."
-                // style: myUZTitleSmall
-                // color: #1D192B (onSurface)
-                // fontSize: 14, fontWeight: 500, letterSpacing: 0.1
-                SizedBox(
-                  width: showAvatar ? 192 : double.infinity,
-                  child: Text(
-                    title,
-                    style: textTheme.titleSmall,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                Text(
+                  title,
+                  style: AppTextStyle.myUZLabelLarge.copyWith(color: const Color(0xFF1D192B)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
-
-                // Informacje o czasie i sali
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Figma: Text "10:00 - 10:45"
-                    // style: myUZBodySmall
-                    // color: #494949 (onSurfaceVariant)
-                    // fontSize: 12, fontWeight: 400, letterSpacing: 0.4
-                    Text(
-                      time,
-                      style: textTheme.bodySmall?.copyWith(color: secondaryTextColor),
+                    Icon(MyUz.clock, size: 16, color: const Color(0xFF4A4A4A)),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        time,
+                        style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF4A4A4A)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 16),
-
-                    // Figma: Text "Sala 102"
-                    // style: myUZBodySmall
-                    // color: #494949 (onSurfaceVariant)
-                    // fontSize: 12, fontWeight: 400, letterSpacing: 0.4
-                    Text(
-                      room,
-                      style: textTheme.bodySmall?.copyWith(color: secondaryTextColor),
+                    Flexible(
+                      child: Text(
+                        room,
+                        style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF4A4A4A)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-
-          // Rozdzielenie logiki dla awatara i kropki statusu dla czytelności (KISS)
-          if (showAvatar) ...[
-            const SizedBox(width: 16),
-            _buildAvatar(colorScheme, textTheme),
-          ] else if (showStatusDot) ...[
-            const SizedBox(width: 8),
-            _buildStatusDot(colorScheme),
-          ],
+          const SizedBox(width: 16),
+          if (showAvatar)
+            Container(
+              width: 32,
+              height: 32,
+              decoration: ShapeDecoration(
+                color: avatarColor ?? colorScheme.primary,
+                shape: const OvalBorder(),
+              ),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: AppTextStyle.myUZTitleMedium.copyWith(color: colorScheme.onPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            )
+          else if (showStatusDot)
+            Container(
+              width: 8,
+              height: 8,
+              decoration: ShapeDecoration(
+                color: statusDotColor ?? colorScheme.tertiary,
+                shape: const OvalBorder(),
+              ),
+            )
+          else
+            const SizedBox.shrink(),
         ],
-      ),
-    );
-  }
-
-  /// Buduje awatar z inicjałem
-  Widget _buildAvatar(ColorScheme colorScheme, TextTheme textTheme) {
-    return Container(
-      width: 32,
-      height: 32,
-      // Figma: Avatar
-      // color: #6750A4 (myUZSysLightPrimary)
-      // shape: Oval
-      decoration: ShapeDecoration(
-        color: avatarColor ?? colorScheme.primary,
-        shape: const OvalBorder(),
-      ),
-      child: Center(
-        // Figma: Text "A"
-        // style: myUZTitleMedium (z drobnymi różnicami w rodzinie czcionki)
-        // color: #FFFBFE (onPrimary)
-        // fontSize: 16, fontWeight: 500, letterSpacing: 0.15
-        child: Text(
-          initial,
-          style: textTheme.titleMedium?.copyWith(
-            color: colorScheme.onPrimary,
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Buduje wskaźnik statusu (kolorowa kropka)
-  Widget _buildStatusDot(ColorScheme colorScheme) {
-    return Container(
-      width: 8,
-      height: 8,
-      // Figma: Status Dot
-      // color: #7D5260 (myUZSysLightTertiary)
-      // shape: Oval
-      decoration: ShapeDecoration(
-        color: statusDotColor ?? colorScheme.tertiary,
-        shape: const OvalBorder(),
       ),
     );
   }
