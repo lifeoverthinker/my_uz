@@ -218,29 +218,74 @@ def main():
 
     print("ETAP 5: Pobieranie i zapisywanie zajęć nauczycieli...")
     wszystkie_zajecia_nauczyciela = []
+    missing_uuid = []
+    created_on_demand = 0
+    allow_ondemand = os.getenv("TEACHER_UUID_ONDEMAND", "1") == "1"
+
     for n in nauczyciele_final:
-        # Zewnętrzne (liczbowe) ID z planu – potrzebne do zbudowania poprawnego URL ICS
-        external_id = n.get("nauczyciel_id")
+        external_id = n.get("nauczyciel_id")  # ID numeryczne z planu (dla ICS)
+        nazwa = n.get("nazwa")
+        link_strony = n.get("link_strony_nauczyciela")
         if not external_id:
-            print(f"⚠️ Brak external_id dla nauczyciela {n.get('nazwa')}")
+            print(f"⚠️ Brak external_id dla nauczyciela {nazwa} ({link_strony})")
             continue
-        # UUID rekordu w bazie – przypisujemy do wydarzeń
-        uuid_key = (n.get("link_strony_nauczyciela") or "").strip().casefold()
+
+        uuid_key = (link_strony or "").strip().casefold()
         uuid_row = nauczyciel_uuid_map.get(uuid_key)
+
         if not uuid_row:
-            print(f"⚠️ Brak UUID w bazie dla nauczyciela {n.get('nauczyciel_id')} ({uuid_key})")
-            continue
+            # Spróbuj on-demand jeśli włączone
+            if allow_ondemand:
+                try:
+                    print(f"ℹ️ Fallback: próbuję dodać nauczyciela on-demand: {nazwa} ({link_strony})")
+                    supabase.table('nauczyciele').upsert([
+                        {
+                            'nazwa': nazwa,
+                            'link_strony_nauczyciela': link_strony,
+                            'instytut': n.get('instytut'),
+                            'email': n.get('email'),
+                            'link_ics_nauczyciela': n.get('link_ics_nauczyciela')
+                        }
+                    ], on_conflict='link_strony_nauczyciela').execute()
+                    # Odśwież tylko dla tego linku (select zamiast pełnego mapy)
+                    res = supabase.table('nauczyciele').select('id,link_strony_nauczyciela').eq('link_strony_nauczyciela', link_strony).limit(1).execute()
+                    if res.data:
+                        uuid_row = res.data[0]['id']
+                        nauczyciel_uuid_map[uuid_key] = uuid_row
+                        created_on_demand += 1
+                        print(f"✔ Dodano on-demand (UUID={uuid_row}) dla {nazwa}")
+                except Exception as e:
+                    print(f"❌ Nie udało się dodać nauczyciela on-demand: {nazwa} -> {e}")
+            if not uuid_row:
+                missing_uuid.append({
+                    'external_id': external_id,
+                    'nazwa': nazwa,
+                    'link': link_strony
+                })
+                print(f"⚠️ Brak UUID w bazie dla nauczyciela {nazwa} (ext_id={external_id}) {uuid_key}")
+                continue
+
         plan = pobierz_plan_ics_nauczyciela(external_id)
         if plan["status"] == "success" and plan["ics_content"]:
             zajecia = parse_ics_file(plan["ics_content"], link_ics_zrodlowy=plan["link_ics_zrodlowy"])
+            if not zajecia:
+                continue
             for z in zajecia:
                 z["nauczyciel_id"] = uuid_row  # UUID z bazy
             wszystkie_zajecia_nauczyciela.extend(zajecia)
-            print(f"Pobrano {len(zajecia)} zajęć dla nauczyciela (ext_id={external_id})")
+            print(f"Pobrano {len(zajecia)} zajęć dla nauczyciela {nazwa} (ext_id={external_id})")
         else:
-            print(f"⚠️ Nie udało się pobrać ICS dla nauczyciela (ext_id={external_id})")
-    save_zajecia_nauczyciela(wszystkie_zajecia_nauczyciela, nauczyciel_uuid_map)
-    print(f"Zapisano {len(wszystkie_zajecia_nauczyciela)} zajęć nauczycieli\n")
+            print(f"⚠️ Nie udało się pobrać ICS dla nauczyciela {nazwa} (ext_id={external_id})")
+
+    saved_teacher_events = save_zajecia_nauczyciela(wszystkie_zajecia_nauczyciela, nauczyciel_uuid_map)
+    print(f"Zapisano {saved_teacher_events} zajęć nauczycieli (po deduplikacji)")
+
+    if missing_uuid:
+        print(f"⚠️ Podsumowanie: {len(missing_uuid)} nauczycieli nadal bez UUID (lista skrócona do 10):")
+        for item in missing_uuid[:10]:
+            print(f" - {item['nazwa']} (ext_id={item['external_id']}) {item['link']}")
+    if created_on_demand:
+        print(f"ℹ️ Utworzono on-demand {created_on_demand} brakujących rekordów nauczycieli")
 
     print("Zakończono proces MVP.")
 
