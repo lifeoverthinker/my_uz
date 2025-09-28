@@ -16,14 +16,26 @@ def fetch_page(url: str) -> Optional[str]:
         print(f"❌ Błąd pobierania strony: {url} — {e}")
         return None
 
+# ZMIANA: poprzednio było KIND=NT (nieprawidłowe dla ICS nauczyciela).
+# Na stronie dostępne są KIND=GG / TB / MS – wybieramy pierwszy działający.
+# Dodany fallback z HEAD na GET oraz walidacja czy treść zawiera BEGIN:VCALENDAR.
+
 def get_ics_url(nauczyciel_id: str) -> Optional[str]:
-    url = f"{BASE_URL}nauczyciel_ics.php?ID={nauczyciel_id}&KIND=NT"
-    try:
-        resp = requests.head(url, timeout=5)
-        ct = resp.headers.get("content-type", "")
-        return url if resp.status_code == 200 and "text/calendar" in ct else None
-    except Exception:
-        return None
+    kinds = ["GG", "MS", "TB"]  # kolejność preferencji
+    for kind in kinds:
+        url = f"{BASE_URL}nauczyciel_ics.php?ID={nauczyciel_id}&KIND={kind}"
+        try:
+            # Spróbuj najpierw GET (niektóre serwery dla HEAD nie zwracają content-type).
+            resp = requests.get(url, timeout=10)
+            ct = resp.headers.get("content-type", "")
+            if resp.status_code == 200 and ("text/calendar" in ct or "BEGIN:VCALENDAR" in resp.text):
+                if "BEGIN:VCALENDAR" in resp.text:
+                    print(f"✔️ Znaleziono ICS nauczyciela {nauczyciel_id} (KIND={kind})")
+                    return url
+        except Exception as e:
+            print(f"⚠️ Próba pobrania ICS (KIND={kind}) dla nauczyciela {nauczyciel_id} nieudana: {e}")
+    print(f"❌ Nie znaleziono działającego ICS dla nauczyciela {nauczyciel_id}")
+    return None
 
 def parse_ics_for_nauczyciel(ics_text: str, nauczyciel_id: str) -> List[Dict[str, Any]]:
     cal = Calendar.from_ical(ics_text)
@@ -40,7 +52,10 @@ def parse_ics_for_nauczyciel(ics_text: str, nauczyciel_id: str) -> List[Dict[str
         rz = None
         if categories:
             if isinstance(categories, (list, tuple)):
-                rz = ",".join([cat.to_ical().decode(errors="ignore").strip() if hasattr(cat, "to_ical") else str(cat) for cat in categories])
+                rz = ",".join([
+                    cat.to_ical().decode(errors="ignore").strip() if hasattr(cat, "to_ical") else str(cat)
+                    for cat in categories
+                ])
             else:
                 rz = categories.to_ical().decode(errors="ignore").strip() if hasattr(categories, "to_ical") else str(categories)
             rz = rz[:10] if rz and len(rz) > 10 else rz
@@ -59,6 +74,10 @@ def parse_ics_for_nauczyciel(ics_text: str, nauczyciel_id: str) -> List[Dict[str
             "grupy": grupy,
             "nauczyciel_id": nauczyciel_id,
         })
+    if not zajecia:
+        print(f"⚠️ Parser ICS nauczyciela {nauczyciel_id}: brak VEVENT w pliku – możliwa zmiana formatu lub pusty kalendarz.")
+    else:
+        print(f"✔️ Parser ICS nauczyciela {nauczyciel_id}: znaleziono {len(zajecia)} wydarzeń.")
     return zajecia
 
 def scrape_nauczyciel_and_zajecia(nauczyciel_id: str) -> Optional[dict]:
