@@ -12,6 +12,8 @@ dependencies:
   cupertino_icons: ^1.0.2
   shared_preferences: ^2.5.3
   flutter_svg: ^2.2.1
+  supabase_flutter: ^2.5.3
+  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -23,6 +25,7 @@ flutter:
 
   assets:
     - assets/images/illustrations/
+    - .env
 
   fonts:
     - family: Inter
@@ -43,7 +46,6 @@ flutter:
           weight: 800
         - asset: lib/fonts/Inter-Black.otf
           weight: 900
-
     - family: MyUz
       fonts:
         - asset: lib/fonts/MyUz.ttf

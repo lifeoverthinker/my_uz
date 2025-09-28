@@ -4,6 +4,17 @@ import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'onboarding_frame.dart';
+// NOWE: Supabase i asynchroniczność
+import 'dart:async';
+import 'package:my_uz/supabase.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+// Klucze SharedPreferences dla onboarding
+const String _kPrefOnbMode = 'onb_mode'; // 'anon' | 'data'
+const String _kPrefOnbSalutation = 'onb_salutation';
+const String _kPrefOnbFirst = 'onb_first';
+const String _kPrefOnbLast = 'onb_last';
+const String _kPrefOnbGroup = 'onb_group';
+const String _kPrefOnbSub = 'onb_group_sub';
 
 /// OnboardingNavigator – stała góra/dół, animuje się tylko środek (MD3 expressive)
 /// Figma (mobile): SafeArea, top=12, bottom=32, horizontal=24
@@ -168,7 +179,7 @@ class _Page1Body extends StatelessWidget {
               // Tytuły
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 312),
-                child: Text('Witaj w MyUZ! 👋', textAlign: TextAlign.center, style: tt.headlineMedium?.copyWith(color: cs.onBackground)),
+                child: Text('Witaj w MyUZ! 👋', textAlign: TextAlign.center, style: tt.headlineMedium?.copyWith(color: cs.onSurface)),
               ),
               const SizedBox(height: 8),
               ConstrainedBox(
@@ -210,9 +221,49 @@ class _Page2BodyState extends State<_Page2Body> {
   String? _salutation; // 'Student' | 'Studentka'
   final _first = TextEditingController();
   final _last = TextEditingController();
+  Timer? _persistDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPersisted();
+    _first.addListener(_schedulePersist);
+    _last.addListener(_schedulePersist);
+  }
+
+  Future<void> _loadPersisted() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mode = prefs.getString(_kPrefOnbMode);
+    if (mode != null) {
+      setState(() => _selected = mode == 'anon' ? 0 : 1);
+    }
+    final sal = prefs.getString(_kPrefOnbSalutation);
+    if (sal != null && sal.isNotEmpty) _salutation = sal;
+    final f = prefs.getString(_kPrefOnbFirst);
+    final l = prefs.getString(_kPrefOnbLast);
+    if (f != null && f.isNotEmpty) _first.text = f;
+    if (l != null && l.isNotEmpty) _last.text = l;
+  }
+
+  void _schedulePersist() {
+    _persistDebounce?.cancel();
+    _persistDebounce = Timer(const Duration(milliseconds: 250), _persist);
+  }
+
+  Future<void> _persist() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mode = _selected == null ? null : (_selected == 0 ? 'anon' : 'data');
+    if (mode != null) await prefs.setString(_kPrefOnbMode, mode);
+    if (_salutation != null) await prefs.setString(_kPrefOnbSalutation, _salutation!);
+    await prefs.setString(_kPrefOnbFirst, _first.text.trim());
+    await prefs.setString(_kPrefOnbLast, _last.text.trim());
+  }
 
   @override
   void dispose() {
+    _persistDebounce?.cancel();
+    _first.removeListener(_schedulePersist);
+    _last.removeListener(_schedulePersist);
     _first.dispose();
     _last.dispose();
     super.dispose();
@@ -261,7 +312,7 @@ class _Page2BodyState extends State<_Page2Body> {
                 // Tytuły
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 312),
-                  child: Text('Jak mamy się do Ciebie zwracać?', textAlign: TextAlign.center, style: tt.headlineMedium?.copyWith(color: cs.onBackground)),
+                  child: Text('Jak mamy się do Ciebie zwracać?', textAlign: TextAlign.center, style: tt.headlineMedium?.copyWith(color: cs.onSurface)),
                 ),
                 const SizedBox(height: 8),
                 ConstrainedBox(
@@ -287,6 +338,7 @@ class _Page2BodyState extends State<_Page2Body> {
                     _salutation = null;
                     _first.clear();
                     _last.clear();
+                    _schedulePersist();
                   }),
                 ),
                 const SizedBox(height: 8),
@@ -299,6 +351,7 @@ class _Page2BodyState extends State<_Page2Body> {
                     _salutation = null;
                     _first.clear();
                     _last.clear();
+                    _schedulePersist();
                   }),
                 ),
                 const SizedBox(height: 16),
@@ -321,9 +374,9 @@ class _Page2BodyState extends State<_Page2Body> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _ChoicePill(label: 'Student', selected: _salutation == 'Student', onTap: () => setState(() => _salutation = 'Student')),
+                          _ChoicePill(label: 'Student', selected: _salutation == 'Student', onTap: () => setState(() { _salutation = 'Student'; _schedulePersist(); })),
                           const SizedBox(width: 16),
-                          _ChoicePill(label: 'Studentka', selected: _salutation == 'Studentka', onTap: () => setState(() => _salutation = 'Studentka')),
+                          _ChoicePill(label: 'Studentka', selected: _salutation == 'Studentka', onTap: () => setState(() { _salutation = 'Studentka'; _schedulePersist(); })),
                         ],
                       ),
                     ],
@@ -388,72 +441,286 @@ class _Page3BodyState extends State<_Page3Body> {
   final _groupCtrl = TextEditingController();
   final _groupFocus = FocusNode();
 
-  // Prosta lista przykładowych grup (do podmiany na realne źródło)
-  static const List<String> _allGroups = <String>[
-    '23INF-SP',
-    '23INF-NS',
-    '24INF-SP',
-    '24INF-NS',
-    '23MAT-A',
-    '23MAT-B',
-    '23ELE-A',
-    '23ELE-B',
-  ];
+  // Usunięto statyczną listę _allGroups – teraz dane z Supabase.
   List<String> _suggestions = [];
+  bool _loadingSuggestions = false;
+  String? _suggestionsError;
 
   String? _group; // wybrany kod (potwierdzony)
-  String? _sub; // 'A' | 'B'
+  Set<String> _subsSelected = <String>{}; // wielokrotny wybór podgrup
+  List<String> _availableSubs = []; // pobrane podgrupy
+  bool _loadingSubs = false;
+  String? _subsError;
+
+  final Map<String, List<String>> _subgroupCache = {}; // prosty cache podgrup
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    // Po wejściu na stronę 3 blokujemy "Dalej"
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onCanProceedChanged(false);
     });
     _groupCtrl.addListener(_onTextChanged);
-    _groupFocus.addListener(() => setState(() {})); // odśwież panel podpowiedzi
+    _groupFocus.addListener(() => setState(() {}));
+    _restorePersisted();
   }
 
-  @override
-  void dispose() {
-    _groupCtrl.removeListener(_onTextChanged);
-    _groupCtrl.dispose();
-    _groupFocus.dispose();
-    super.dispose();
+  Future<void> _restorePersisted() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedGroup = prefs.getString(_kPrefOnbGroup);
+    final savedSub = prefs.getString(_kPrefOnbSub); // teraz może zawierać listę np. "A,B,wf1"
+    if (savedGroup != null && savedGroup.isNotEmpty) {
+      setState(() {
+        _group = savedGroup;
+        _loadingSubs = true; // zaczynamy od ładowania podgrup
+      });
+      await _fetchSubgroupsForGroup(savedGroup);
+      if (savedSub != null) {
+        final parts = savedSub.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toSet();
+        // filtruj do dostępnych (jeśli już pobrane)
+        setState(() {
+          _subsSelected = parts.isEmpty ? <String>{} : parts;
+        });
+      }
+      _notifyProceed();
+    }
+  }
+
+  Future<void> _persistGroupSelection() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_group != null) await prefs.setString(_kPrefOnbGroup, _group!);
+    // zapis wielokrotny – join przecinkami
+    await prefs.setString(_kPrefOnbSub, _subsSelected.join(','));
+  }
+
+  Future<void> _clearPersistedGroup() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kPrefOnbGroup);
+    await prefs.remove(_kPrefOnbSub);
   }
 
   void _onTextChanged() {
     final q = _groupCtrl.text.trim();
-    if (_group != null) return; // po potwierdzeniu grupy nie podpowiadamy
+
+    // Jeśli była wybrana grupa, a użytkownik zacznie edytować (treść różna od wybranej), resetujemy wybór.
+    if (_group != null && q != _group) {
+      setState(() {
+        _group = null;
+        _subsSelected.clear();
+        _availableSubs = [];
+        _subsError = null;
+        _loadingSubs = false;
+      });
+      _clearPersistedGroup();
+      widget.onCanProceedChanged(false);
+    }
+
+    _debounce?.cancel();
     if (q.length < 2) {
-      if (_suggestions.isNotEmpty) setState(() => _suggestions = []);
+      if (_suggestions.isNotEmpty || _suggestionsError != null) {
+        setState(() {
+          _suggestions = [];
+          _suggestionsError = null;
+        });
+      }
       return;
     }
-    final lower = q.toLowerCase();
-    final filtered = _allGroups.where((g) => g.toLowerCase().startsWith(lower)).take(6).toList();
-    setState(() => _suggestions = filtered);
+    _debounce = Timer(const Duration(milliseconds: 280), () => _fetchGroupSuggestions(q));
   }
 
-  void _confirmGroup([String? value]) {
-    final v = (value ?? _groupCtrl.text).trim();
-    if (v.isEmpty) return;
+  Future<void> _fetchGroupSuggestions(String query) async {
+    setState(() {
+      _loadingSuggestions = true;
+      _suggestionsError = null;
+    });
+    try {
+      final raw = query.trim();
+      // Usuwamy potencjalne wildcardy aby nie manipulować wzorcem
+      final sanitized = raw.replaceAll('%', '').replaceAll('_', '');
+      if (sanitized.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _suggestions = [];
+            _loadingSuggestions = false;
+          });
+        }
+        return;
+      }
+
+      // Substring match (nie tylko prefix): %fragment%
+      final pattern = '%$sanitized%';
+      final res = await Supa.client
+          .from('grupy')
+          .select('kod_grupy')
+          .ilike('kod_grupy', pattern)
+          .order('kod_grupy')
+          .limit(40); // trochę większy limit, potem lokalnie przytnijmy do 15
+
+      final lower = sanitized.toLowerCase();
+      var list = (res as List<dynamic>)
+          .map((e) => (e['kod_grupy'] as String?)?.trim())
+          .whereType<String>()
+          .toSet() // unikalne
+          .toList();
+
+      // Ranking: priorytet zaczynających się od wpisu, potem wg pierwszego indexOf
+      list.sort((a, b) {
+        final al = a.toLowerCase();
+        final bl = b.toLowerCase();
+        final aStarts = al.startsWith(lower);
+        final bStarts = bl.startsWith(lower);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        final ai = al.indexOf(lower);
+        final bi = bl.indexOf(lower);
+        if (ai != bi) return ai.compareTo(bi);
+        return al.compareTo(bl);
+      });
+
+      // Przytnij listę aby nie przeładować dropdownu
+      if (list.length > 15) list = list.sublist(0, 15);
+
+      if (mounted) {
+        setState(() {
+          _suggestions = list;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _suggestionsError = 'Błąd pobierania: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSuggestions = false);
+      }
+    }
+  }
+
+  Future<void> _confirmGroup([String? value]) async {
+    final vRaw = (value ?? _groupCtrl.text).trim();
+    if (vRaw.isEmpty) return;
+
+    // Wymóg: użytkownik MUSI wybrać z listy – jeśli bieżące sugestie istnieją i brak dopasowania, blokujemy.
+    if (_suggestions.isNotEmpty && !_suggestions.contains(vRaw)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Wybierz grupę z listy sugerowanych wyników')), // krótkie info
+        );
+      }
+      return;
+    }
+
+    final v = vRaw; // zachowujemy dokładny zapis z listy
     setState(() {
       _group = v;
-      _sub = null;
+      _subsSelected.clear();
       _suggestions = [];
+      _suggestionsError = null;
+      _availableSubs = [];
+      _subsError = null;
+      _loadingSubs = true;
     });
+    await _persistGroupSelection();
+    await _fetchSubgroupsForGroup(v);
     _notifyProceed();
   }
 
-  void _selectSub(String s) {
-    setState(() => _sub = s);
+  Future<void> _fetchSubgroupsForGroup(String groupCode) async {
+    if (_subgroupCache.containsKey(groupCode)) {
+      setState(() {
+        _availableSubs = _subgroupCache[groupCode]!;
+        _loadingSubs = false;
+      });
+      return;
+    }
+    try {
+      // 1. Pobierz id grupy
+      final groupRow = await Supa.client.from('grupy').select('id').eq('kod_grupy', groupCode).maybeSingle();
+      final groupId = groupRow != null ? groupRow['id'] : null;
+      if (groupId == null) {
+        setState(() {
+          _subsError = 'Nie znaleziono grupy';
+          _loadingSubs = false;
+        });
+        return;
+      }
+      // 2. Pobierz podgrupy
+      final subRes = await Supa.client
+          .from('zajecia_grupy')
+          .select('podgrupa')
+          .eq('grupa_id', groupId)
+          .not('podgrupa', 'is', null);
+      final subs = (subRes as List<dynamic>)
+          .map((e) => (e['podgrupa'] as String?)?.trim())
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      setState(() {
+        _availableSubs = subs;
+        _subgroupCache[groupCode] = subs;
+        _loadingSubs = false;
+        if (subs.isEmpty) {
+          // Brak podgrup – pozwalamy przejść dalej bez wyboru
+          _subsSelected.clear();
+        } else {
+          // Usuń z zapisanego wyboru elementy, których już nie ma
+          _subsSelected = _subsSelected.where((s) => subs.contains(s)).toSet();
+        }
+      });
+      if (subs.isEmpty) {
+        widget.onCanProceedChanged(true);
+      }
+    } catch (e) {
+      setState(() {
+        _subsError = 'Błąd pobierania podgrup: $e';
+        _loadingSubs = false;
+      });
+    }
+  }
+
+  void _toggleSub(String s) {
+    setState(() {
+      if (_subsSelected.contains(s)) {
+        _subsSelected.remove(s);
+      } else {
+        _subsSelected.add(s);
+      }
+    });
+    _persistGroupSelection();
     _notifyProceed();
   }
 
   void _notifyProceed() {
-    final ok = (_group != null && _sub != null);
+    final ok = (_group != null && (_availableSubs.isEmpty || _subsSelected.isNotEmpty));
     widget.onCanProceedChanged(ok);
+  }
+
+  void _clearGroupSelection() {
+    setState(() {
+      _groupCtrl.clear();
+      _group = null;
+      _subsSelected.clear();
+      _availableSubs = [];
+      _subsError = null;
+      _loadingSubs = false;
+      _suggestions = [];
+      _suggestionsError = null;
+    });
+    _clearPersistedGroup();
+    widget.onCanProceedChanged(false);
+    FocusScope.of(context).requestFocus(_groupFocus);
+  }
+
+  void _clearSubgroupsSelection() {
+    if (_subsSelected.isEmpty) return;
+    setState(() => _subsSelected.clear());
+    _persistGroupSelection();
+    _notifyProceed();
   }
 
   @override
@@ -464,6 +731,7 @@ class _Page3BodyState extends State<_Page3Body> {
 
     final panelVisible = _group != null;
     final showAutocomplete = _groupFocus.hasFocus && _group == null && _suggestions.isNotEmpty;
+    final showAutocompletePanel = _groupFocus.hasFocus && _group == null && (_suggestions.isNotEmpty || _loadingSuggestions || _suggestionsError != null);
 
     double illustrationHeight = 205;
     if (panelVisible || showAutocomplete) illustrationHeight = 132;
@@ -500,7 +768,7 @@ class _Page3BodyState extends State<_Page3Body> {
                 // Tytuły
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 312),
-                  child: Text('Wybierz swoją grupę', textAlign: TextAlign.center, style: tt.headlineMedium?.copyWith(color: cs.onBackground)),
+                  child: Text('Wybierz swoją grupę', textAlign: TextAlign.center, style: tt.headlineMedium?.copyWith(color: cs.onSurface)),
                 ),
                 const SizedBox(height: 8),
                 ConstrainedBox(
@@ -555,12 +823,20 @@ class _Page3BodyState extends State<_Page3Body> {
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: cs.primary, width: 1),
                         ),
-                        suffixIcon: IconButton(
-                          onPressed: _confirmGroup,
-                          icon: Icon(MyUz.search_sm, color: cs.primary),
-                          splashColor: Colors.transparent,
-                          highlightColor: Colors.transparent,
-                        ),
+                        suffixIcon: _group == null
+                            ? IconButton(
+                                onPressed: _confirmGroup,
+                                icon: Icon(MyUz.search_sm, color: cs.primary),
+                                splashColor: Colors.transparent,
+                                highlightColor: Colors.transparent,
+                              )
+                            : IconButton(
+                                tooltip: 'Zmień grupę',
+                                onPressed: _clearGroupSelection,
+                                icon: Icon(Icons.close, color: cs.primary),
+                                splashColor: Colors.transparent,
+                                highlightColor: Colors.transparent,
+                              ),
                       ),
                     ),
                   ),
@@ -575,10 +851,10 @@ class _Page3BodyState extends State<_Page3Body> {
                     final slide = Tween<Offset>(begin: const Offset(0, -0.05), end: Offset.zero).animate(anim);
                     return FadeTransition(opacity: anim, child: SlideTransition(position: slide, child: child));
                   },
-                  child: showAutocomplete
+                  child: showAutocompletePanel
                       ? ConstrainedBox(
                     key: const ValueKey('autocomplete'),
-                    constraints: const BoxConstraints(maxWidth: 312, maxHeight: 200),
+                    constraints: const BoxConstraints(maxWidth: 312, maxHeight: 260),
                     child: Container(
                       margin: const EdgeInsets.only(top: 8),
                       decoration: ShapeDecoration(
@@ -588,7 +864,19 @@ class _Page3BodyState extends State<_Page3Body> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: ListView.separated(
+                      child: _suggestionsError != null
+                          ? Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(_suggestionsError!, style: AppTextStyle.myUZBodySmall.copyWith(color: Theme.of(context).colorScheme.error)),
+                      )
+                          : _loadingSuggestions
+                          ? const Center(child: Padding(padding: EdgeInsets.all(12), child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))))
+                          : _suggestions.isEmpty
+                          ? Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text('Brak wyników', style: AppTextStyle.myUZBodySmall.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                      )
+                          : ListView.separated(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         shrinkWrap: true,
                         itemCount: _suggestions.length,
@@ -622,18 +910,29 @@ class _Page3BodyState extends State<_Page3Body> {
                       : const SizedBox.shrink(key: ValueKey('autocomplete_empty')),
                 ),
                 const SizedBox(height: 8),
-
                 if (_group != null)
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 312),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Wybrana grupa: $_group', style: AppTextStyle.myUZLabelMedium.copyWith(color: cs.onSurfaceVariant)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Wybrana grupa: $_group', style: AppTextStyle.myUZLabelMedium.copyWith(color: cs.onSurfaceVariant)),
+                          if (_subsSelected.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Podgrupy: ${_subsSelected.join(', ')}',
+                                style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 const SizedBox(height: 16),
-
-                // Panel podgrup – pojawia się po wyborze grupy
+                // Panel podgrup – dynamiczny
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
                   switchInCurve: Curves.easeOutCubic,
@@ -649,20 +948,54 @@ class _Page3BodyState extends State<_Page3Body> {
                     children: [
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 312),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('Wybierz swoją podgrupę:', style: AppTextStyle.myUZLabelSmall.copyWith(color: cs.primary)),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text('Wybierz swoją podgrupę:', style: AppTextStyle.myUZLabelSmall.copyWith(color: cs.primary)),
+                            ),
+                            if (_availableSubs.isNotEmpty && _subsSelected.isNotEmpty)
+                              TextButton(
+                                onPressed: _clearSubgroupsSelection,
+                                style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 0), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                child: Text('Wyczyść wybór', style: AppTextStyle.myUZBodySmall.copyWith(color: cs.primary)),
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _ChoicePill(label: 'A', selected: _sub == 'A', onTap: () => _selectSub('A')),
-                          const SizedBox(width: 16),
-                          _ChoicePill(label: 'B', selected: _sub == 'B', onTap: () => _selectSub('B')),
-                        ],
-                      ),
+                      if (_loadingSubs)
+                        const SizedBox(
+                          height: 32,
+                          child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                        )
+                      else if (_subsError != null)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 312),
+                          child: Column(
+                            children: [
+                              Text(_subsError!, style: AppTextStyle.myUZBodySmall.copyWith(color: Theme.of(context).colorScheme.error)),
+                              const SizedBox(height: 8),
+                              OutlinedButton(onPressed: () => _fetchSubgroupsForGroup(_group!), child: const Text('Spróbuj ponownie')),
+                            ],
+                          ),
+                        )
+                      else if (_availableSubs.isEmpty)
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 312),
+                          child: Text('Brak podgrup – możesz przejść dalej', style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant)),
+                        )
+                      else
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 312),
+                          child: Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: _availableSubs
+                                .map((s) => _ChoicePill(label: s, selected: _subsSelected.contains(s), onTap: () => _toggleSub(s)))
+                                .toList(),
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -750,7 +1083,7 @@ class _SimplePageBody extends StatelessWidget {
               const SizedBox(height: 24),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 312),
-                child: Text(title, textAlign: TextAlign.center, style: AppTextStyle.myUZHeadlineMedium.copyWith(color: cs.onBackground)),
+                child: Text(title, textAlign: TextAlign.center, style: AppTextStyle.myUZHeadlineMedium.copyWith(color: cs.onSurface)),
               ),
               const SizedBox(height: 8),
               ConstrainedBox(
@@ -897,3 +1230,4 @@ class _ChoicePill extends StatelessWidget {
     );
   }
 }
+

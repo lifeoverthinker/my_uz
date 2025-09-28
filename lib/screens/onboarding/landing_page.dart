@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:my_uz/theme/text_style.dart';
-import 'package:my_uz/theme/app_colors.dart';
 import 'onboarding_frame.dart';
 
 /// Onboarding – Ekran 1 (mobile)

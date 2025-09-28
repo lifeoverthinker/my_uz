@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 
 class EventCard extends StatelessWidget {
