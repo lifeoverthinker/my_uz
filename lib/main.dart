@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:my_uz/navigation/bottom_navigation.dart';
+import 'package:my_uz/screens/onboarding/onboarding_navigator.dart';
 import 'package:my_uz/theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // --- POCZĄTEK: IMPORTY DO PODGLĄDU KART (można usunąć po testach) ---
 import 'package:my_uz/widgets/cards/class_card.dart';
 import 'package:my_uz/widgets/cards/event_card.dart';
 import 'package:my_uz/widgets/cards/task_card.dart';
-import 'package:my_uz/theme/app_colors.dart';
 // --- KONIEC: IMPORTY DO PODGLĄDU KART ---
 
-void main() {
+void main() async {
   // Upewniamy się, że wiązania Flutter zostały zainicjalizowane
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -23,24 +24,43 @@ void main() {
     Brightness.dark, // Ciemne ikony na pasku systemowym
   ));
 
-  runApp(const MyUZApp());
+  final prefs = await SharedPreferences.getInstance();
+  final onboardingComplete = prefs.getBool('onboarding_complete') ?? false;
+
+  runApp(MyUZApp(onboardingComplete: onboardingComplete));
 }
 
 /// Główna klasa aplikacji MyUZ
 class MyUZApp extends StatelessWidget {
+  final bool onboardingComplete;
   /// Konstruktor aplikacji
-  const MyUZApp({super.key});
+  const MyUZApp({super.key, required this.onboardingComplete});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'MyUZ',
       theme: AppTheme.lightTheme,
-      home: const HomePage(),
+      home: onboardingComplete ? const HomePage() : OnboardingNavigator(
+        onFinishOnboarding: () async {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('onboarding_complete', true);
+          // Po zakończeniu onboardingu, przechodzimy do HomePage.
+          // Używamy globalnego klucza nawigacyjnego, aby uzyskać dostęp do kontekstu.
+          navigatorKey.currentState?.pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomePage()),
+          );
+        },
+      ),
       debugShowCheckedModeBanner: false,
+      navigatorKey: navigatorKey, // Ustawienie globalnego klucza nawigacyjnego
     );
   }
 }
+
+// Globalny klucz do nawigacji, aby można było nawigować bez kontekstu build.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 
 /// Strona główna aplikacji z nawigacją
 class HomePage extends StatefulWidget {
@@ -126,13 +146,13 @@ class MainDashboard extends StatelessWidget {
         // Figma: Komponenty -> ClassCard
         Text('ClassCard', style: textTheme.headlineSmall),
         const SizedBox(height: 8),
-        const ClassCard(
+        ClassCard(
           title: 'Podstawy programowania obiektowego',
           time: '8:00 - 9:30',
           room: 'A-2, s. 101',
           initial: 'PO',
-          backgroundColor: AppColors.myUZSysLightSecondaryContainer,
-          avatarColor: AppColors.myUZSysLightPrimary,
+          backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+          avatarColor: Theme.of(context).colorScheme.primary,
         ),
         const SizedBox(height: 16),
 
@@ -145,7 +165,7 @@ class MainDashboard extends StatelessWidget {
           title: 'Analiza matematyczna II',
           time: '10:00 - 11:30',
           room: 'A-29, s. 305',
-          statusDotColor: AppColors.myUZExtendedCustomGreenLightColor,
+          statusDotColor: const Color(0xFF66BB6A), // Przykładowy kolor
         ),
         const SizedBox(height: 24),
 
@@ -153,23 +173,23 @@ class MainDashboard extends StatelessWidget {
         // Figma: Komponenty -> TaskCard
         Text('TaskCard', style: textTheme.headlineSmall),
         const SizedBox(height: 8),
-        const TaskCard(
+        TaskCard(
           title: 'Projekt zaliczeniowy',
           description: 'Przygotować aplikację mobilną zgodnie z wytycznymi.',
           initial: 'PZ',
-          backgroundColor: AppColors.myUZSysLightTertiaryContainer,
-          avatarColor: AppColors.myUZSysLightTertiary,
+          backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
+          avatarColor: Theme.of(context).colorScheme.tertiary,
         ),
         const SizedBox(height: 16),
 
         // --- Sekcja: TaskCard (bez awatara) ---
         Text('TaskCard (bez awatara)', style: textTheme.headlineSmall),
         const SizedBox(height: 8),
-        const TaskCard(
+        TaskCard(
           title: 'Kolokwium nr 1',
           description: 'Zagadnienia z pierwszych 5 wykładów.',
           showAvatar: false,
-          backgroundColor: AppColors.myUZSysLightErrorContainer,
+          backgroundColor: Theme.of(context).colorScheme.errorContainer,
         ),
         const SizedBox(height: 24),
 
