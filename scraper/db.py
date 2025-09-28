@@ -3,6 +3,7 @@ import os
 from supabase import create_client
 from dataclasses import asdict, is_dataclass
 from typing import Dict, Any, List, Tuple
+import time  # dodane dla backoff retry
 
 load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -228,19 +229,25 @@ def save_zajecia_nauczyciela(events, nauczyciel_uuid_map=None, batch_size=1000):
 
     total = 0
     batch_data = []
+    seen = set()  # deduplikacja globalna (uid, nauczyciel_id)
+    duplicates = 0
 
     for event in events:
         if is_dataclass(event):
             event = asdict(event)
 
-        # nauczyciel_id jest już UUID z bazy!
         uuid = event.get('nauczyciel_id')
         if not uuid:
             continue
 
-        # Sprawdź wymagane pola
         if not (event.get("uid") and event.get("od") and event.get("do_") and event.get("przedmiot")):
             continue
+
+        key = (event.get('uid'), uuid)
+        if key in seen:
+            duplicates += 1
+            continue
+        seen.add(key)
 
         batch_data.append({
             'uid': event.get('uid'),
@@ -254,15 +261,73 @@ def save_zajecia_nauczyciela(events, nauczyciel_uuid_map=None, batch_size=1000):
             'link_ics_zrodlowy': event.get('link_ics_zrodlowy')
         })
 
+    if duplicates:
+        print(f"ℹ️ Wykryto i pominięto {duplicates} duplikatów (uid,nauczyciel_id) przed zapisem")
+
+    max_retries = int(os.getenv("TEACHER_EVENTS_MAX_RETRIES", "3"))
+
+    def _upsert_with_retry(data_batch):
+        nonlocal total
+        attempt = 0
+        backoff = 2
+        while attempt < max_retries:
+            try:
+                supabase.table('zajecia_nauczyciela').upsert(data_batch, on_conflict='uid,nauczyciel_id').execute()
+                total += len(data_batch)
+                return
+            except Exception as e:
+                msg = str(e)
+                # Specjalna obsługa duplikatów w jednym poleceniu ON CONFLICT
+                if 'cannot affect row a second time' in msg.lower():
+                    # Dodatkowa deduplikacja (ostateczna) i ewentualny podział batcha jeśli nadal błąd
+                    dedup_seen = set()
+                    filtered = []
+                    for r in data_batch:
+                        k = (r['uid'], r['nauczyciel_id'])
+                        if k in dedup_seen:
+                            continue
+                        dedup_seen.add(k)
+                        filtered.append(r)
+                    if len(filtered) != len(data_batch):
+                        print(f"⚠️ Ponowna deduplikacja wewnątrz batcha: {len(data_batch)-len(filtered)} rekordów usunięto")
+                        data_batch = filtered
+                        continue  # spróbuj ponownie z odświeżoną listą
+                    # Jeśli nadal błąd i batch większy niż 1, dzielimy na pół (binary split)
+                    if len(data_batch) > 1:
+                        mid = len(data_batch)//2
+                        left = data_batch[:mid]
+                        right = data_batch[mid:]
+                        print(f"⚠️ Dzielę batch {len(data_batch)} na {len(left)} + {len(right)} z powodu konfliktu wielokrotnego")
+                        _upsert_with_retry(left)
+                        _upsert_with_retry(right)
+                        return
+                # Timeouty / błędy sieciowe -> retry z backoff
+                if any(tok in msg.lower() for tok in ["timed out", "did not complete", "timeout", "ssl"]):
+                    attempt += 1
+                    if attempt < max_retries:
+                        print(f"⚠️ Retry ({attempt}/{max_retries}) po błędzie sieciowym: {msg[:120]}...")
+                        time.sleep(backoff)
+                        backoff *= 2
+                        continue
+                print(f"❌ Błąd podczas upsertowania batcha zajęć nauczyciela: {e}")
+                if data_batch:
+                    print(f"Przykładowy rekord z błędem: {data_batch[0]}")
+                return  # przerywamy dla tego batcha
+
     for batch in chunks(batch_data, batch_size):
         if not batch:
             continue
-        try:
-            supabase.table('zajecia_nauczyciela').upsert(batch, on_conflict='uid,nauczyciel_id').execute()
-            total += len(batch)
-        except Exception as e:
-            print(f"❌ Błąd podczas upsertowania batcha zajęć nauczyciela: {e}")
-            if batch:
-                print(f"Przykładowy rekord z błędem: {batch[0]}")
+        # Ostateczna deduplikacja w batchu
+        local_seen = set()
+        final_batch = []
+        for r in batch:
+            k = (r['uid'], r['nauczyciel_id'])
+            if k in local_seen:
+                continue
+            local_seen.add(k)
+            final_batch.append(r)
+        if not final_batch:
+            continue
+        _upsert_with_retry(final_batch)
 
     return total
