@@ -2,30 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 
-/// Karta zadań wyświetlana na ekranie głównym i w kalendarzu
-///
-/// Wyświetla informacje o zadaniu, takie jak tytuł i opis,
-/// oraz opcjonalnie inicjał lub awatar przedmiotu.
 class TaskCard extends StatelessWidget {
-  /// Tytuł zadania
   final String title;
-
-  /// Opis zadania
   final String description;
-
-  /// Inicjał lub skrót nazwy przedmiotu wyświetlany w kółku
   final String? initial;
-
-  /// Kolor tła karty
   final Color? backgroundColor;
-
-  /// Kolor tła awatara
   final Color? avatarColor;
-
-  /// Czy wyświetlać awatar
   final bool showAvatar;
 
-  /// Konstruktor karty zadań
   const TaskCard({
     super.key,
     required this.title,
@@ -38,88 +22,61 @@ class TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: ShapeDecoration(
         color: backgroundColor ?? AppColors.myUZSysLightSecondaryContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
+      width: double.infinity,
       child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.start,
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Tytuł zadania
-                      SizedBox(
-                        width: showAvatar && initial != null ? 192 : double.infinity,
-                        child: Text(
-                          title,
-                          style: AppTextStyle.myUZTitleSmall.copyWith(
-                            color: const Color(0xFF222222),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Opis zadania
-                      SizedBox(
-                        width: showAvatar && initial != null ? 192 : double.infinity,
-                        child: Text(
-                          description,
-                          style: AppTextStyle.myUZBodySmall.copyWith(
-                            color: const Color(0xFF494949),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                        ),
-                      ),
-                    ],
-                  ),
+                Text(
+                  title,
+                  style: AppTextStyle.myUZLabelLarge.copyWith(color: const Color(0xFF1D192B)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-
-                // Awatar (opcjonalny)
-                if (showAvatar && initial != null) ...[
-                  const SizedBox(width: 16),
-                  _buildAvatar(),
-                ],
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF4A4A4A)),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
+          if (showAvatar)
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: ShapeDecoration(
+                  color: avatarColor ?? colorScheme.primary,
+                  shape: const OvalBorder(),
+                ),
+                child: Center(
+                  child: Text(
+                    initial ?? '',
+                    style: AppTextStyle.myUZTitleMedium.copyWith(color: colorScheme.onPrimary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            )
+          else
+            const SizedBox.shrink(),
         ],
-      ),
-    );
-  }
-
-  /// Buduje awatar z inicjałem
-  Widget _buildAvatar() {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: ShapeDecoration(
-        color: avatarColor ?? AppColors.myUZSysLightTertiary,
-        shape: const OvalBorder(),
-      ),
-      child: Center(
-        child: Text(
-          initial!,
-          style: AppTextStyle.myUZTitleMedium.copyWith(
-            color: AppColors.myUZSysLightOnTertiary,
-          ),
-        ),
       ),
     );
   }

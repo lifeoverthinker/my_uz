@@ -100,13 +100,13 @@ abstract class AppTheme {
       ),
 
       // Konfiguracja kart
-      cardTheme: CardTheme(
+      cardTheme: const CardThemeData(
         color: AppColors.myUZSysLightSurfaceContainerLow,
         elevation: 1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
     );
   }
@@ -207,13 +207,13 @@ abstract class AppTheme {
       ),
 
       // Konfiguracja kart
-      cardTheme: CardTheme(
+      cardTheme: const CardThemeData(
         color: AppColors.myUZSysDarkSurfaceContainerLow,
         elevation: 1,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       ),
     );
   }

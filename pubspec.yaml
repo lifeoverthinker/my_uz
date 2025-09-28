@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
+  shared_preferences: ^2.5.3
+  flutter_svg: ^2.2.1
 
 dev_dependencies:
   flutter_test:
@@ -19,10 +21,29 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  assets:
+    - assets/images/illustrations/
+
   fonts:
     - family: Inter
       fonts:
-        - asset: lib/fonts/Inter-Variable.ttf
+        - asset: lib/fonts/Inter-Thin.otf
+          weight: 100
+        - asset: lib/fonts/Inter-Light.otf
+          weight: 300
+        - asset: lib/fonts/Inter-Regular.otf
+          weight: 400
+        - asset: lib/fonts/Inter-Medium.otf
+          weight: 500
+        - asset: lib/fonts/Inter-SemiBold.otf
+          weight: 600
+        - asset: lib/fonts/Inter-Bold.otf
+          weight: 700
+        - asset: lib/fonts/Inter-ExtraBold.otf
+          weight: 800
+        - asset: lib/fonts/Inter-Black.otf
+          weight: 900
+
     - family: MyUz
       fonts:
         - asset: lib/fonts/MyUz.ttf
