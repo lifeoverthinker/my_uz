@@ -3,7 +3,12 @@ import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 
+/// ClassCard – karta “Najbliższe zajęcia”
+/// Figma height: 68 px (default fixed)
+/// Możliwość trybu "hug" (auto wysokość) poprzez [hugHeight].
 class ClassCard extends StatelessWidget {
+  static const double _kHeightClass = 68;
+
   final String title;
   final String time;
   final String room;
@@ -13,6 +18,11 @@ class ClassCard extends StatelessWidget {
   final bool showAvatar;
   final bool showStatusDot;
   final Color? statusDotColor;
+  /// Jeśli true – zachowuje się jak Figma "Hug" (wysokość dopasowana do treści),
+  /// w przeciwnym wypadku stałe 68 px.
+  final bool hugHeight;
+  /// Gdy hugHeight = true można pozwolić tytułowi na 2 linie (opcjonalnie).
+  final int maxTitleLines;
 
   const ClassCard({
     super.key,
@@ -25,6 +35,8 @@ class ClassCard extends StatelessWidget {
     this.showAvatar = true,
     this.showStatusDot = false,
     this.statusDotColor,
+    this.hugHeight = false,
+    this.maxTitleLines = 1,
   });
 
   factory ClassCard.calendar({
@@ -32,6 +44,7 @@ class ClassCard extends StatelessWidget {
     required String time,
     required String room,
     Color? statusDotColor,
+    bool hugHeight = false,
   }) {
     return ClassCard(
       title: title,
@@ -40,56 +53,67 @@ class ClassCard extends StatelessWidget {
       showAvatar: false,
       showStatusDot: true,
       statusDotColor: statusDotColor ?? AppColors.myUZSysLightTertiary,
+      hugHeight: hugHeight,
+      maxTitleLines: hugHeight ? 2 : 1,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final cs = Theme.of(context).colorScheme;
+    // Zastąpienie deprecated textScaleFactor na textScaler
+    final scale = MediaQuery.of(context).textScaler.scale(1.0);
+    final bool adaptive = hugHeight || scale > 1.0;
 
-    return Container(
+    final content = Container(
       padding: const EdgeInsets.all(12),
       decoration: ShapeDecoration(
-        color: backgroundColor ?? colorScheme.secondaryContainer,
+        color: backgroundColor ?? cs.secondaryContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      width: double.infinity,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Teksty
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,
-                  style: AppTextStyle.myUZLabelLarge.copyWith(color: const Color(0xFF1D192B)),
-                  maxLines: 1,
+                  maxLines: hugHeight ? maxTitleLines : 1,
                   overflow: TextOverflow.ellipsis,
+                  style: AppTextStyle.myUZLabelLarge.copyWith(
+                    color: const Color(0xFF1D192B),
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 8),
+                // Usunięto Flexible – w trybie hug wysokość nie jest sztywna.
                 Row(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Icon(MyUz.clock, size: 16, color: const Color(0xFF4A4A4A)),
                     const SizedBox(width: 4),
-                    Flexible(
+                    Expanded(
                       child: Text(
                         time,
-                        style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF4A4A4A)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        style: AppTextStyle.myUZBodySmall
+                            .copyWith(color: const Color(0xFF49454F)),
                       ),
                     ),
                     const SizedBox(width: 16),
-                    Flexible(
+                    Expanded(
                       child: Text(
                         room,
-                        style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF4A4A4A)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        style: AppTextStyle.myUZBodySmall
+                            .copyWith(color: const Color(0xFF49454F)),
                       ),
                     ),
                   ],
@@ -98,20 +122,23 @@ class ClassCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
+          // Awatar lub kropka statusu
           if (showAvatar)
             Container(
               width: 32,
               height: 32,
               decoration: ShapeDecoration(
-                color: avatarColor ?? colorScheme.primary,
+                color: avatarColor ?? cs.primary,
                 shape: const OvalBorder(),
               ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: AppTextStyle.myUZTitleMedium.copyWith(color: colorScheme.onPrimary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              alignment: Alignment.center,
+              child: Text(
+                initial,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyle.myUZTitleMedium.copyWith(
+                  color: cs.onPrimary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             )
@@ -120,7 +147,7 @@ class ClassCard extends StatelessWidget {
               width: 8,
               height: 8,
               decoration: ShapeDecoration(
-                color: statusDotColor ?? colorScheme.tertiary,
+                color: statusDotColor ?? cs.tertiary,
                 shape: const OvalBorder(),
               ),
             )
@@ -128,6 +155,17 @@ class ClassCard extends StatelessWidget {
             const SizedBox.shrink(),
         ],
       ),
+    );
+
+    if (adaptive) {
+      // Hug – pozwalamy rosnąć wg treści
+      return Align(alignment: Alignment.topLeft, child: content);
+    }
+
+    // Stała wysokość – ale jako minHeight, żeby uniknąć overflow przy minimalnych różnicach renderingu
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: _kHeightClass),
+      child: content,
     );
   }
 }

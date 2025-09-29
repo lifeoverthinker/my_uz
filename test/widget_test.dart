@@ -5,26 +5,20 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:my_uz/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyUZApp(onboardingComplete: true));
+  testWidgets('App boots and shows HomeScreen (onboarding skipped)', (WidgetTester tester) async {
+    // Wymuszamy ustawienie preferencji onboarding_complete na true (pomijamy realny onboarding)
+    // Ponieważ widget test nie uruchamia SharedPreferences normalnie, można pominąć i po prostu
+    // odpalić HomePage bezpośrednio – ale tu testujemy start MyBootstrap.
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(const MyBootstrap());
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Powinien istnieć któryś z elementów ekranu głównego – np. tekst powitalny fragment "Cześć," lub placeholder sekcji.
+    expect(find.textContaining('Cześć,'), findsOneWidget);
   });
 }
