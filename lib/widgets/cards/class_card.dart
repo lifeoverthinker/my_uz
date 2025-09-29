@@ -7,7 +7,7 @@ import 'package:my_uz/icons/my_uz_icons.dart';
 /// Figma height: 68 px (default fixed)
 /// Możliwość trybu "hug" (auto wysokość) poprzez [hugHeight].
 class ClassCard extends StatelessWidget {
-  static const double _kHeightClass = 68;
+  static const double _kMinHeight = 56; // bezpieczne minimum (1 linia + info)
 
   final String title;
   final String time;
@@ -20,7 +20,7 @@ class ClassCard extends StatelessWidget {
   final Color? statusDotColor;
   /// Jeśli true – zachowuje się jak Figma "Hug" (wysokość dopasowana do treści),
   /// w przeciwnym wypadku stałe 68 px.
-  final bool hugHeight;
+  final bool hugHeight; // pozostawione dla zgodności, zawsze traktowane jako true
   /// Gdy hugHeight = true można pozwolić tytułowi na 2 linie (opcjonalnie).
   final int maxTitleLines;
 
@@ -35,7 +35,7 @@ class ClassCard extends StatelessWidget {
     this.showAvatar = true,
     this.showStatusDot = false,
     this.statusDotColor,
-    this.hugHeight = false,
+    this.hugHeight = true, // default teraz true
     this.maxTitleLines = 1,
   });
 
@@ -61,111 +61,102 @@ class ClassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // Zastąpienie deprecated textScaleFactor na textScaler
-    final scale = MediaQuery.of(context).textScaler.scale(1.0);
-    final bool adaptive = hugHeight || scale > 1.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxH = constraints.maxHeight;
+        // compact jeśli karta dostaje ciasny wysokościowy constraint (np. 44)
+        final bool compact = maxH.isFinite && maxH <= 48;
+        final double vPad = compact ? 0 : 8; // normalnie 8 (Figma), w kompakt 0
+        final double hPad = 12; // stały padding poziomy
+        final double gap = compact ? 4 : 8; // odstęp tytuł -> wiersz info
 
-    final content = Container(
-      padding: const EdgeInsets.all(12),
-      decoration: ShapeDecoration(
-        color: backgroundColor ?? cs.secondaryContainer,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Teksty
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: hugHeight ? maxTitleLines : 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyle.myUZLabelLarge.copyWith(
-                    color: const Color(0xFF1D192B),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Usunięto Flexible – w trybie hug wysokość nie jest sztywna.
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+        return Container(
+          padding: EdgeInsets.fromLTRB(hPad, vPad, hPad, vPad),
+          decoration: ShapeDecoration(
+            color: backgroundColor ?? cs.secondaryContainer,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(MyUz.clock, size: 16, color: const Color(0xFF4A4A4A)),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        time,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyle.myUZBodySmall
-                            .copyWith(color: const Color(0xFF49454F)),
+                    Text(
+                      title,
+                      maxLines: maxTitleLines,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyle.myUZLabelLarge.copyWith(
+                        color: const Color(0xFF1D192B),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        room,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyle.myUZBodySmall
-                            .copyWith(color: const Color(0xFF49454F)),
-                      ),
+                    SizedBox(height: gap),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(MyUz.clock, size: 16, color: const Color(0xFF4A4A4A)),
+                        const SizedBox(width: 4),
+                        // Pełny czas – nie skracamy
+                        Text(
+                          time,
+                          maxLines: 1,
+                          overflow: TextOverflow.visible,
+                          softWrap: false,
+                          style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
+                        ),
+                        const SizedBox(width: 16),
+                        // Sala może się skracać
+                        Expanded(
+                          child: Text(
+                            room,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              if (showAvatar)
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: ShapeDecoration(
+                    color: avatarColor ?? cs.primary,
+                    shape: const OvalBorder(),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    initial,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyle.myUZTitleMedium.copyWith(
+                      color: cs.onPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                )
+              else if (showStatusDot)
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: ShapeDecoration(
+                    color: statusDotColor ?? cs.tertiary,
+                    shape: const OvalBorder(),
+                  ),
+                )
+              else
+                const SizedBox.shrink(),
+            ],
           ),
-          const SizedBox(width: 16),
-          // Awatar lub kropka statusu
-          if (showAvatar)
-            Container(
-              width: 32,
-              height: 32,
-              decoration: ShapeDecoration(
-                color: avatarColor ?? cs.primary,
-                shape: const OvalBorder(),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initial,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyle.myUZTitleMedium.copyWith(
-                  color: cs.onPrimary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )
-          else if (showStatusDot)
-            Container(
-              width: 8,
-              height: 8,
-              decoration: ShapeDecoration(
-                color: statusDotColor ?? cs.tertiary,
-                shape: const OvalBorder(),
-              ),
-            )
-          else
-            const SizedBox.shrink(),
-        ],
-      ),
-    );
-
-    if (adaptive) {
-      // Hug – pozwalamy rosnąć wg treści
-      return Align(alignment: Alignment.topLeft, child: content);
-    }
-
-    // Stała wysokość – ale jako minHeight, żeby uniknąć overflow przy minimalnych różnicach renderingu
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: _kHeightClass),
-      child: content,
+        );
+      },
     );
   }
 }

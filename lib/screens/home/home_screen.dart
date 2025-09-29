@@ -8,6 +8,8 @@ import 'package:my_uz/theme/text_style.dart';
 // MODELE
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/models/task_model.dart';
+// DODANE: ekran szczegółów zajęć
+import 'package:my_uz/screens/home/details/class_details.dart';
 
 // SEKCJE
 import 'components/upcoming_classes.dart';
@@ -176,7 +178,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _onTapClass(ClassModel c) => debugPrint('[Home] class tap ${c.id}');
+  void _onTapClass(ClassModel c) {
+    // --- TAP: karta zajęć -> arkusz szczegółów (modal bottom sheet) ---
+    ClassDetailsSheet.open(context, c);
+  }
   void _onTapTask(TaskModel t) => debugPrint('[Home] task tap ${t.id}');
   void _onTapEvent(EventModel e) => debugPrint('[Home] event tap ${e.id}');
 }
@@ -225,62 +230,23 @@ class _Header extends StatelessWidget {
                   Row(
                     children: [
                       // Przycisk mapa
-                      Container(
-                        width: 48,
-                        height: 48,
-                        alignment: Alignment.center,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          clipBehavior: Clip.antiAlias,
-                          decoration: ShapeDecoration(
-                            color: const Color(0xFFE8DEF8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(100),
-                            ),
-                          ),
-                          child: Center(
-                            child: Icon(MyUz.map_02, size: 24, color: Color(0xFF1D192B)),
-                          ),
-                        ),
+                      _ActionCircle(
+                        icon: MyUz.map_02,
+                        tooltip: 'Mapa kampusu',
+                        onTap: () {
+                          // TODO: akcja mapy
+                        },
                       ),
                       const SizedBox(width: 8),
                       // Przycisk mail z kropką
-                      Container(
-                        width: 48,
-                        height: 48,
-                        alignment: Alignment.center,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              clipBehavior: Clip.antiAlias,
-                              decoration: ShapeDecoration(
-                                color: const Color(0xFFE8DEF8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(100),
-                                ),
-                              ),
-                              child: Center(
-                                child: Icon(MyUz.mail_01, size: 24, color: Color(0xFF1D192B)),
-                              ),
-                            ),
-                            Positioned(
-                              right: 2,
-                              bottom: 2,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: ShapeDecoration(
-                                  color: const Color(0xFFB3261E),
-                                  shape: OvalBorder(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      _ActionCircle(
+                        icon: MyUz.mail_01,
+                        tooltip: 'Skrzynka pocztowa',
+                        showBadge: true,
+                        badgeColor: Color(0xFFB3261E),
+                        onTap: () {
+                          // TODO: akcja mail
+                        },
                       ),
                     ],
                   ),
@@ -349,17 +315,24 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// Okrągły przycisk 48x48 (SecondaryContainer)
 class _ActionCircle extends StatelessWidget {
   final IconData icon;
   final String? tooltip;
   final VoidCallback onTap;
-  const _ActionCircle({required this.icon, this.tooltip, required this.onTap});
+  final bool showBadge;
+  final Color? badgeColor;
+  const _ActionCircle({
+    required this.icon,
+    this.tooltip,
+    required this.onTap,
+    this.showBadge = false,
+    this.badgeColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final btn = Material(
+    final circle = Material(
       color: cs.secondaryContainer,
       shape: const CircleBorder(),
       child: InkWell(
@@ -370,12 +343,37 @@ class _ActionCircle extends StatelessWidget {
         child: SizedBox(
           width: 48,
           height: 48,
-          child: Icon(icon, size: 24, color: cs.onSecondaryContainer),
+          child: Center(
+            child: Icon(icon, size: 24, color: cs.onSecondaryContainer),
+          ),
         ),
       ),
     );
+    Widget btn = SizedBox(
+      width: 48,
+      height: 48,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          circle,
+          if (showBadge)
+            Positioned(
+              right: 6,
+              bottom: 6,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: ShapeDecoration(
+                  color: badgeColor ?? const Color(0xFFB3261E),
+                  shape: const OvalBorder(),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
     if (tooltip != null && tooltip!.isNotEmpty) {
-      return Tooltip(message: tooltip!, child: btn);
+      btn = Tooltip(message: tooltip!, child: btn);
     }
     return btn;
   }
