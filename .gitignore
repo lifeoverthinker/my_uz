@@ -1,5 +1,5 @@
 # Konfiguracja / klucze lokalne
-.env
+*.env
 
 # Miscellaneous
 *.class
