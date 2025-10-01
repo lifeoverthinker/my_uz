@@ -7,6 +7,7 @@ class TaskModel {
   final String subject;        // Przedmiot (np. "PPO", "Analiza II")
   final String? classId;       // Opcjonalne powiązanie z ClassModel.id
   final bool completed;        // Status ukończenia (lokalnie / zdalnie)
+  final String? type;         // Typ zaliczenia (np. Laboratorium, Egzamin)
 
   const TaskModel({
     required this.id,
@@ -15,6 +16,7 @@ class TaskModel {
     required this.subject,
     this.classId,
     this.completed = false,
+    this.type,
   });
 
   factory TaskModel.fromMap(Map<String, dynamic> map) {
@@ -25,6 +27,7 @@ class TaskModel {
       subject: map['subject'] as String,
       classId: map['class_id'] as String?,
       completed: (map['completed'] as bool?) ?? false,
+      type: map['type'] as String?,
     );
   }
 
@@ -35,6 +38,7 @@ class TaskModel {
     'subject': subject,
     'class_id': classId,
     'completed': completed,
+    'type': type,
   };
 
   TaskModel copyWith({
@@ -44,6 +48,7 @@ class TaskModel {
     String? subject,
     String? classId,
     bool? completed,
+    String? type,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -52,12 +57,13 @@ class TaskModel {
       subject: subject ?? this.subject,
       classId: classId ?? this.classId,
       completed: completed ?? this.completed,
+      type: type ?? this.type,
     );
   }
 
   @override
   String toString() =>
-      'TaskModel(id=$id, title=$title, deadline=$deadline, subject=$subject, classId=$classId, completed=$completed)';
+      'TaskModel(id=$id, title=$title, deadline=$deadline, subject=$subject, classId=$classId, completed=$completed, type=$type)';
 
   @override
   bool operator ==(Object other) {
@@ -68,10 +74,11 @@ class TaskModel {
             other.deadline == deadline &&
             other.subject == subject &&
             other.classId == classId &&
-            other.completed == completed);
+            other.completed == completed &&
+            other.type == type);
   }
 
   @override
   int get hashCode =>
-      Object.hash(id, title, deadline, subject, classId, completed);
+      Object.hash(id, title, deadline, subject, classId, completed, type);
 }
