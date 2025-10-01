@@ -10,6 +10,7 @@ import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/models/task_model.dart';
 // DODANE: ekran szczegółów zajęć
 import 'package:my_uz/screens/home/details/class_details.dart';
+import 'package:my_uz/screens/home/details/task_details.dart';
 
 // SEKCJE
 import 'components/upcoming_classes.dart';
@@ -147,29 +148,60 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Biała sekcja aż do dołu
                 SliverFillRemaining(
                   hasScrollBody: false,
-                  child: _ContentContainer(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        UpcomingClassesSection(
-                          classes: _classes,
-                          onTap: _onTapClass,
+                  child: Transform.translate(
+                    offset: const Offset(0, -8), // overlap header so top radius is visible
+                    child: Material(
+                      color: Colors.white,
+                      clipBehavior: Clip.antiAlias,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      child: _ContentContainer(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            UpcomingClassesSection(
+                              classes: _classes,
+                              onTap: _onTapClass,
+                            ),
+                            const SizedBox(height: 12),
+                            TasksSection(
+                              tasks: _tasks,
+                              onTap: (task) {
+                                TaskDetailsSheet.show(
+                                  context,
+                                  task,
+                                  description: '',
+                                  relatedClass: _classes.where((c) => c.subject == task.subject).isNotEmpty
+                                      ? _classes.where((c) => c.subject == task.subject).first
+                                      : null,
+                                  onEdit: () {
+                                    // TODO: obsługa edycji zadania
+                                  },
+                                  onDelete: () {
+                                    // TODO: obsługa usuwania zadania
+                                  },
+                                  onToggleCompleted: (completed) {
+                                    setState(() {
+                                      final idx = _tasks.indexWhere((t) => t.id == task.id);
+                                      if (idx != -1) _tasks[idx] = _tasks[idx].copyWith(completed: completed);
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            EventsSection(
+                              events: _events,
+                              onTap: _onTapEvent,
+                            ),
+                            const SizedBox(height: _footerTopSpacing),
+                            _Footer(color: AppColors.myUZSysLightOutline),
+                            const SizedBox(height: kBottomNavigationBarHeight + 16),
+                          ],
                         ),
-                        const SizedBox(height: 12),
-                        TasksSection(
-                          tasks: _tasks,
-                          onTap: _onTapTask,
-                        ),
-                        const SizedBox(height: 12),
-                        EventsSection(
-                          events: _events,
-                          onTap: _onTapEvent,
-                        ),
-                        const SizedBox(height: _footerTopSpacing),
-                        _Footer(color: AppColors.myUZSysLightOutline),
-                        const SizedBox(height: kBottomNavigationBarHeight + 16),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -182,7 +214,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // --- TAP: karta zajęć -> arkusz szczegółów (modal bottom sheet) ---
     ClassDetailsSheet.open(context, c);
   }
-  void _onTapTask(TaskModel t) => debugPrint('[Home] task tap ${t.id}');
   void _onTapEvent(EventModel e) => debugPrint('[Home] event tap ${e.id}');
 }
 
@@ -209,13 +240,13 @@ class _Header extends StatelessWidget {
           children: [
             // Date + actions
             Container(
-              width: 360,
               child: Row(
-                mainAxisSize: MainAxisSize.max, // hug szerokość
+                mainAxisSize: MainAxisSize.max,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Flexible(
+                  // Lewa strona: data (zajmuje pozostałą szerokość)
+                  Expanded(
                     child: Text(
                       dateText,
                       style: AppTextStyle.myUZLabelLarge.copyWith(
@@ -226,8 +257,9 @@ class _Header extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const SizedBox(width: 16), // odstęp od ikonek
+                  // Prawa strona: ikony, opakowane w Row z minimalną szerokością
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       // Przycisk mapa
                       _ActionCircle(
@@ -284,11 +316,7 @@ class _ContentContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white, // Figma: #FFFFFF
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      padding: const EdgeInsets.only(top: 24, bottom: 0), // bottom 0 – kontrola spacingu w Column
+      padding: const EdgeInsets.only(top: 32, bottom: 0), // increased top padding to account for overlap so content isn't clipped
       child: child,
     );
   }

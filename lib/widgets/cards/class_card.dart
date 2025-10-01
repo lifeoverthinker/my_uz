@@ -7,8 +7,6 @@ import 'package:my_uz/icons/my_uz_icons.dart';
 /// Figma height: 68 px (default fixed)
 /// Możliwość trybu "hug" (auto wysokość) poprzez [hugHeight].
 class ClassCard extends StatelessWidget {
-  static const double _kMinHeight = 56; // bezpieczne minimum (1 linia + info)
-
   final String title;
   final String time;
   final String room;
