@@ -2,20 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/widgets/cards/event_card.dart';
-
-/// Model wydarzenia (prosty – YAGNI)
-class EventModel {
-  final String id;
-  final String title;
-  final String description;
-  final int colorVariant; // 0 / 1
-  const EventModel({
-    required this.id,
-    required this.title,
-    required this.description,
-    this.colorVariant = 0,
-  });
-}
+import 'package:my_uz/models/event_model.dart';
+import 'package:my_uz/screens/home/details/event_details.dart';
 
 /// Sekcja: Wydarzenia
 /// Card height (Figma): 84
@@ -66,11 +54,16 @@ class EventsSection extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       splashColor: Colors.transparent,
                       highlightColor: Colors.transparent,
-                      onTap: () => onTap(e),
+                      onTap: () {
+                        EventDetailsSheet.open(context, e);
+                        // Możesz też wywołać onTap(e) jeśli potrzebujesz
+                        // onTap(e);
+                      },
                       child: EventCard(
                         title: e.title,
                         description: e.description,
                         backgroundColor: bg,
+                        eventModel: e,
                       ),
                     ),
                   ),

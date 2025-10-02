@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:my_uz/theme/text_style.dart';
+import 'package:my_uz/screens/home/details/event_details.dart';
+import 'package:my_uz/models/event_model.dart';
 
 /// EventCard – karta “Wydarzenia”
-/// Figma height: 84 px (analogiczna struktura do TaskCard)
-/// 12 + 20 + 8 + 32 + 12 = 84
 class EventCard extends StatelessWidget {
   static const double _kHeightEvent = 84;
 
@@ -11,11 +11,13 @@ class EventCard extends StatelessWidget {
   final String description;
   final Color? backgroundColor;
   final bool hugHeight;
+  final EventModel eventModel;
 
   const EventCard({
     super.key,
     required this.title,
     required this.description,
+    required this.eventModel,
     this.backgroundColor,
     this.hugHeight = false,
   });
@@ -55,11 +57,18 @@ class EventCard extends StatelessWidget {
       ),
     );
 
-    if (adaptive) return inner;
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: _kHeightEvent),
-      child: inner,
+    if (adaptive) {
+      return GestureDetector(
+        onTap: () => EventDetailsSheet.open(context, eventModel),
+        child: inner,
+      );
+    }
+    return GestureDetector(
+      onTap: () => EventDetailsSheet.open(context, eventModel),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _kHeightEvent),
+        child: inner,
+      ),
     );
   }
 }
