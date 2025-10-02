@@ -8,6 +8,7 @@ import 'package:my_uz/theme/text_style.dart';
 // MODELE
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/models/task_model.dart';
+import 'package:my_uz/models/event_model.dart';
 // DODANE: ekran szczegółów zajęć
 import 'package:my_uz/screens/home/details/class_details.dart';
 import 'package:my_uz/screens/home/details/task_details.dart';
@@ -94,10 +95,34 @@ class _HomeScreenState extends State<HomeScreen> {
         deadline: now2.add(const Duration(days: 6)),
       ),
     ];
-    _events = const [
-      EventModel(id: 'e1', title: 'Juwenalia 2025', description: 'Koncerty i atrakcje na kampusie.'),
-      EventModel(id: 'e2', title: 'Dzień sportu', description: 'Turniej siatkówki + biegi.'),
-      EventModel(id: 'e3', title: 'Hackathon UZ', description: '24h kodowania – zgłoś zespół.'),
+    _events = [
+      EventModel(
+        id: 'e1',
+        title: 'Juwenalia 2025',
+        description: 'Koncerty i atrakcje na kampusie.',
+        date: 'Piątek, 4 paź 2025',
+        time: '18:00 - 23:00',
+        location: 'Kampus UZ',
+        freeEntry: true,
+      ),
+      EventModel(
+        id: 'e2',
+        title: 'Dzień sportu',
+        description: 'Turniej siatkówki + biegi.',
+        date: 'Sobota, 10 paź 2025',
+        time: '10:00 - 16:00',
+        location: 'Stadion UZ',
+        freeEntry: false,
+      ),
+      EventModel(
+        id: 'e3',
+        title: 'Hackathon UZ',
+        description: '24h kodowania – zgłoś zespół.',
+        date: 'Wtorek, 21 paź 2025',
+        time: '09:00 - 09:00',
+        location: 'Aula UZ',
+        freeEntry: true,
+      ),
     ];
   }
 
