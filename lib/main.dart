@@ -6,6 +6,7 @@ import 'package:my_uz/screens/onboarding/onboarding_navigator.dart';
 import 'package:my_uz/theme/app_theme.dart';
 import 'package:my_uz/screens/home/home_screen.dart';
 import 'package:my_uz/screens/calendar/calendar_screen.dart';
+import 'package:my_uz/screens/index/index_screen.dart';
 import 'package:my_uz/supabase.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -128,6 +129,8 @@ class _HomePageState extends State<HomePage> {
     HomeScreen(),
     CalendarScreen(),
     PlaceholderPage(title: 'Indeks'),
+    PlaceholderPage(title: 'Kalendarz'),
+    IndexScreen(),
     PlaceholderPage(title: 'Konto'),
   ];
 
@@ -139,6 +142,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _index == 0 || _index == 1 ? null : AppBar(title: Text(_titles[_index])),
+      appBar: _index == 0 || _index == 2 ? null : AppBar(title: Text(_titles[_index])),
       body: _pages[_index],
       bottomNavigationBar: MyUZBottomNavigation(
         currentIndex: _index,
