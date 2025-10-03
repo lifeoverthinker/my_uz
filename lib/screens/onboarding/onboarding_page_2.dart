@@ -28,11 +28,15 @@ class _OnboardingPage2State extends State<OnboardingPage2> {
   String? _salutation; // 'Student' | 'Studentka'
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
+  final _firstNameFocus = FocusNode();
+  final _lastNameFocus = FocusNode();
 
   @override
   void dispose() {
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
+    _firstNameFocus.dispose();
+    _lastNameFocus.dispose();
     super.dispose();
   }
 
@@ -194,9 +198,25 @@ class _OnboardingPage2State extends State<OnboardingPage2> {
       return Column(
         key: const ValueKey('panel_input'),
         children: [
-          _OutlinedTextField(controller: _firstNameCtrl, hint: 'Imię', cs: cs, tt: tt),
+          _OutlinedTextField(
+            controller: _firstNameCtrl,
+            hint: 'Imię',
+            cs: cs,
+            tt: tt,
+            focusNode: _firstNameFocus,
+            textInputAction: TextInputAction.next,
+            onSubmitted: (_) => _lastNameFocus.requestFocus(),
+          ),
           const SizedBox(height: 8),
-          _OutlinedTextField(controller: _lastNameCtrl, hint: 'Nazwisko', cs: cs, tt: tt),
+          _OutlinedTextField(
+            controller: _lastNameCtrl,
+            hint: 'Nazwisko',
+            cs: cs,
+            tt: tt,
+            focusNode: _lastNameFocus,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => widget.onNext(),
+          ),
         ],
       );
     }
@@ -337,12 +357,18 @@ class _OutlinedTextField extends StatelessWidget {
   final String hint;
   final ColorScheme cs;
   final TextTheme tt;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   const _OutlinedTextField({
     required this.controller,
     required this.hint,
     required this.cs,
     required this.tt,
+    this.focusNode,
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   @override
@@ -351,8 +377,10 @@ class _OutlinedTextField extends StatelessWidget {
       height: 56,
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         style: tt.bodyLarge?.copyWith(color: cs.onSurface),
-        textInputAction: TextInputAction.next,
+        textInputAction: textInputAction ?? TextInputAction.next,
+        onSubmitted: onSubmitted,
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: AppTextStyle.myUZBodyLarge.copyWith(color: AppColors.myUZSysLightOnSurfaceVariant),
