@@ -41,13 +41,16 @@ class CalendarView extends StatelessWidget {
     Widget content = monthGrid;
     // Gesture: week -> zmiana tygodnia, month -> zmiana miesiąca
     content = GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onHorizontalDragEnd: (details) {
         final v = details.primaryVelocity ?? 0;
-        if (v.abs() < 140) return;
+        // Ujednolicony kierunek (jak w widoku dziennym):
+        // swipe w lewo (finger left, v<0) -> poprzedni okres; w prawo (v>0) -> następny.
+        if (v.abs() < 80) return; // niższy próg dla lepszej responsywności
         if (isWeekView) {
-          if (v < 0) { if (onNextWeek!=null) onNextWeek!(); } else { if (onPrevWeek!=null) onPrevWeek!(); }
+          if (v < 0) { if (onPrevWeek!=null) onPrevWeek!(); } else { if (onNextWeek!=null) onNextWeek!(); }
         } else {
-          if (v < 0) { if (onNextMonth!=null) onNextMonth!(); } else { if (onPrevMonth!=null) onPrevMonth!(); }
+          if (v < 0) { if (onPrevMonth!=null) onPrevMonth!(); } else { if (onNextMonth!=null) onNextMonth!(); }
         }
       },
       child: monthGrid,

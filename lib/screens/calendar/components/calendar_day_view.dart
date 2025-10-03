@@ -169,10 +169,12 @@ class _CalendarDayViewState extends State<CalendarDayView> {
       onHorizontalDragEnd: (details) {
         final v = details.primaryVelocity ?? 0;
         if (v.abs() < 180) return;
+        // Poprawione: wcześniejsza implementacja miała odwrotną logikę.
+        // Teraz: przesunięcie w lewo (v < 0) -> poprzedni dzień, w prawo (v > 0) -> następny dzień.
         if (v < 0) {
-          widget.onNextDay?.call();
-        } else {
           widget.onPrevDay?.call();
+        } else {
+          widget.onNextDay?.call();
         }
       },
       child: Padding(

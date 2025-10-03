@@ -96,6 +96,15 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
     setState(() { _selectedDay = _stripTime(day); });
   }
 
+  void _selectDay(DateTime day) {
+    final d0 = _stripTime(day);
+    setState(() {
+      _selectedDay = d0;
+      _focusedDay = d0; // aktualizujemy fokus aby _ensureWeekLoaded ustawił loading dla właściwego tygodnia
+    });
+    _ensureWeekLoaded(d0); // jeśli tydzień nie był w cache – zostanie pobrany
+  }
+
   void _prevWeek() {
     setState(() { _focusedDay = _focusedDay.subtract(const Duration(days: 7)); });
     _ensureWeekLoaded(_focusedDay);
@@ -108,20 +117,12 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
 
   // Dodane: przesunięcie o 1 dzień do przodu
   void _nextDay() {
-    setState(() {
-      _focusedDay = _focusedDay.add(const Duration(days: 1));
-      _selectedDay = _stripTime(_selectedDay.add(const Duration(days: 1)));
-    });
-    _ensureWeekLoaded(_focusedDay);
+    _selectDay(_selectedDay.add(const Duration(days: 1)));
   }
 
   // Dodane: przesunięcie o 1 dzień do tyłu
   void _prevDay() {
-    setState(() {
-      _focusedDay = _focusedDay.subtract(const Duration(days: 1));
-      _selectedDay = _stripTime(_selectedDay.subtract(const Duration(days: 1)));
-    });
-    _ensureWeekLoaded(_focusedDay);
+    _selectDay(_selectedDay.subtract(const Duration(days: 1)));
   }
 
   void _prevMonth(){
@@ -158,7 +159,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
         selectedDay: _selectedDay,
         isWeekView: !_isMonthView,
         classesByDay: classesByDay,
-        onDaySelected: (d){ _onDaySelected(d); setState(()=> _focusedDay = d); },
+        onDaySelected: (d){ _selectDay(d); },
         onPrevWeek: _prevWeek,
         onNextWeek: _nextWeek,
         onPrevMonth: _prevMonth,
