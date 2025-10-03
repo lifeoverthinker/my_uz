@@ -7,7 +7,6 @@ import 'package:my_uz/screens/calendar/components/calendar_view.dart';
 import 'package:my_uz/screens/calendar/components/calendar_day_view.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:my_uz/supabase.dart';
 
 /// Ekran kalendarza – widok tygodniowy + dzienny timeline (siatka godzinowa).
 class CalendarScreen extends StatefulWidget {
@@ -29,11 +28,6 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   String? _errorMsg;
   final Map<DateTime, List<ClassModel>> _weekCache = {};
   final Set<DateTime> _loadingWeeks = {};
-  static const String _prefGroup = 'onb_group';
-  static const String _prefSub = 'onb_group_sub';
-  static const String _prefGroupId = 'onb_group_id';
-  static const String _fallbackGroup = '23inf sp';
-  String? _cachedGroupId;
 
   @override
   void initState() {
@@ -90,10 +84,6 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       _loadingWeeks.remove(mondayKey);
       if (mounted && _mondayOfWeek(_focusedDay)==mondayKey) setState(()=> _loading = false);
     }
-  }
-
-  void _onDaySelected(DateTime day) {
-    setState(() { _selectedDay = _stripTime(day); });
   }
 
   void _selectDay(DateTime day) {
@@ -349,7 +339,7 @@ class _CalendarDaysHeader extends StatelessWidget {
   const _CalendarDaysHeader();
   @override
   Widget build(BuildContext context) {
-    final names = const ['P','W','Ś','C','P','S','N'];
+    const names = ['P','W','Ś','C','P','S','N'];
     final style = Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500, color: const Color(0xFF494949));
     return LayoutBuilder(builder: (context, constraints) {
       // mirror calculation from _MonthGrid: available = maxWidth - leftReserve - padding(16*2)
@@ -358,7 +348,7 @@ class _CalendarDaysHeader extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal:16),
         child: Row(children:[
-          SizedBox(width:kCalendarLeftReserve),
+          const SizedBox(width:kCalendarLeftReserve),
           for (int i = 0; i < 7; i++)
             SizedBox(width: itemW, child: SizedBox(height:24, child: Center(child: Text(names[i], style: style)))),
         ]),

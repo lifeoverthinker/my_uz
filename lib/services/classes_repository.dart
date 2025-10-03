@@ -70,12 +70,6 @@ class ClassesRepository {
     return null;
   }
 
-  static String _buildSubgroupOr(List<String> subgroups) {
-    if (subgroups.isEmpty) return "podgrupa.is.null,podgrupa.eq.''";
-    final inPart = subgroups.map((e)=>"'${e.replaceAll("'", "\\'")}'").join(',');
-    return "podgrupa.is.null,podgrupa.eq.'',podgrupa.in.($inPart)";
-  }
-
   /// Uniwersalne pobranie zakresu [from, to). Zwraca posortowaną listę.
   static Future<List<ClassModel>> fetchRange({required DateTime from, required DateTime to, String? groupCode, List<String> subgroups = const []}) async {
     final rawGroup = _trim(groupCode);

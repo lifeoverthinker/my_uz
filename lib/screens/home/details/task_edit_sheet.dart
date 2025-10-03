@@ -233,7 +233,7 @@ class _TaskEditSheetContentState extends State<_TaskEditSheetContent> {
                         ),
                         child: Row(
                           children: [
-                            Icon(MyUz.calendar, size: 20, color: AppColors.myUZSysLightPrimary),
+                            const Icon(MyUz.calendar, size: 20, color: AppColors.myUZSysLightPrimary),
                             const SizedBox(width: 12),
                             Text(
                               _dateInline(_deadline),
@@ -264,7 +264,7 @@ class _TaskEditSheetContentState extends State<_TaskEditSheetContent> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.myUZSysLightPrimary, width: 1.5),
+                          borderSide: const BorderSide(color: AppColors.myUZSysLightPrimary, width: 1.5),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),

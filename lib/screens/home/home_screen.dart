@@ -43,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true; // ładowanie prefów
   bool _classesLoading = false; // ładowanie zajęć
   DateTime? _classesForDate; // data dla której aktualnie pokazujemy _classes
-  bool _hasExplicitGroup = false; // czy użytkownik faktycznie ustawił grupę (a nie fallback)
   Timer? _refreshTimer; // periodyczne sprawdzanie zmiany dnia
 
   List<ClassModel> _classes = const [];
@@ -164,26 +163,15 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_classesLoading) return;
     setState(()=> _classesLoading = true);
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final rawGroup = (prefs.getString(_kPrefOnbGroup) ?? '').trim();
-      _hasExplicitGroup = rawGroup.isNotEmpty;
       final (groupCode, subgroups) = await ClassesRepository.loadGroupPrefs();
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      final tomorrow = today.add(const Duration(days: 1));
       final todayList = await ClassesRepository.fetchDayWithWeekFallback(today, groupCode: groupCode, subgroups: subgroups);
-      final remaining = ClassesRepository.filterRemainingOrAll(todayList, today, now, allowEndedIfAllEnded: true);
-      if (remaining.isNotEmpty) {
-        if (!mounted) return; setState(() {
-          _classes = remaining;
-          _classesForDate = today;
-          _classesLoading = false;
-        }); return;
-      }
-      final tomorrowList = await ClassesRepository.fetchDayWithWeekFallback(tomorrow, groupCode: groupCode, subgroups: subgroups);
-      if (!mounted) return; setState(() {
-        _classes = tomorrowList; // gdy brak jakichkolwiek dzisiejszych -> pokaż jutro
-        _classesForDate = tomorrow;
+      final remaining = ClassesRepository.filterRemainingOrAll(todayList, today, now, allowEndedIfAllEnded: false);
+      if (!mounted) return;
+      setState(() {
+        _classes = remaining; // jeśli pusto -> komponent pokaże lewostronny komunikat
+        _classesForDate = today;
         _classesLoading = false;
       });
     } catch (e) {
@@ -232,8 +220,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             // compute today/tomorrow as date-only values to decide whether to show 'jutro'
                             Builder(builder: (context) {
                               // Always show the same header label regardless whether we're showing tomorrow's classes
-                              final header = 'Najbliższe zajęcia';
-                              final emptyMsg = (_classesLoading ? '' : (_classes.isEmpty ? (_groupCode==null? 'Wybierz grupę w ustawieniach.' : 'Brak nadchodzących zajęć') : null));
+                              const header = 'Najbliższe zajęcia';
+                              final emptyMsg = (_classesLoading ? '' : (_classes.isEmpty ? (_groupCode==null? 'Wybierz grupę w ustawieniach.' : 'Dziś brak nadchodzących zajęć') : null));
                                return UpcomingClassesSection(
                                  classes: _classes,
                                  onTap: _onTapClass,
@@ -276,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               onTap: _onTapEvent,
                             ),
                             const SizedBox(height: _footerTopSpacing),
-                            _Footer(color: AppColors.myUZSysLightOutline),
+                            const _Footer(color: AppColors.myUZSysLightOutline),
                             const SizedBox(height: kBottomNavigationBarHeight + 16),
                           ],
                         ),
@@ -324,51 +312,49 @@ class _Header extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Date + actions
-            Container(
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Lewa strona: data (zajmuje pozostałą szerokość)
-                  Expanded(
-                    child: Text(
-                      dateText,
-                      style: AppTextStyle.myUZLabelLarge.copyWith(
-                        color: const Color(0xFF1D192B),
-                        height: 1.43,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+            Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Lewa strona: data (zajmuje pozostałą szerokość)
+                Expanded(
+                  child: Text(
+                    dateText,
+                    style: AppTextStyle.myUZLabelLarge.copyWith(
+                      color: const Color(0xFF1D192B),
+                      height: 1.43,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  // Prawa strona: ikony, opakowane w Row z minimalną szerokością
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Przycisk mapa
-                      _ActionCircle(
-                        icon: MyUz.map_02,
-                        tooltip: 'Mapa kampusu',
-                        onTap: () {
-                          // TODO: akcja mapy
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      // Przycisk mail z kropką
-                      _ActionCircle(
-                        icon: MyUz.mail_01,
-                        tooltip: 'Skrzynka pocztowa',
-                        showBadge: true,
-                        badgeColor: Color(0xFFB3261E),
-                        onTap: () {
-                          // TODO: akcja mail
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+                // Prawa strona: ikony, opakowane w Row z minimalną szerokością
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Przycisk mapa
+                    _ActionCircle(
+                      icon: MyUz.map_02,
+                      tooltip: 'Mapa kampusu',
+                      onTap: () {
+                        // TODO: akcja mapy
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    // Przycisk mail z kropką
+                    _ActionCircle(
+                      icon: MyUz.mail_01,
+                      tooltip: 'Skrzynka pocztowa',
+                      showBadge: true,
+                      badgeColor: const Color(0xFFB3261E),
+                      onTap: () {
+                        // TODO: akcja mail
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: _dateToGreeting),
             Text(
@@ -510,42 +496,4 @@ String _plDate(DateTime d) {
     'grudnia'
   ];
   return '${dni[d.weekday - 1]}, ${d.day} ${mies[d.month - 1]}';
-}
-
-// Debug overlay widget (tymczasowy – wyłącz przez _debugEnabled=false)
-const bool _debugEnabled = true; // ustaw na false aby ukryć panel diagnostyczny
-
-class _DebugClassesOverlay extends StatelessWidget {
-  final String label;
-  final int dayRows;
-  final String dayVariant;
-  final int weekRows;
-  final String weekVariant;
-  final DateTime? queriedDay;
-  final DateTime? weekStart;
-  const _DebugClassesOverlay({required this.label, required this.dayRows, required this.dayVariant, required this.weekRows, required this.weekVariant, this.queriedDay, this.weekStart});
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.labelSmall;
-    String fmt(DateTime? d){ if(d==null) return '-'; return '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}'; }
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal:16),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF222222).withOpacity(.85),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DefaultTextStyle(
-        style: (style?? const TextStyle()).copyWith(color: const Color(0xFFE0E0E0), fontSize: 11, height: 1.2),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('DEBUG $label'),
-            Text('dayRows=$dayRows variant=$dayVariant day=${fmt(queriedDay)}'),
-            Text('weekRows=$weekRows variant=$weekVariant weekStart=${fmt(weekStart)}'),
-          ],
-        ),
-      ),
-    );
-  }
 }

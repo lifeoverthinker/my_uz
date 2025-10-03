@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:my_uz/models/class_model.dart';
 
-// Rezerwa po lewej aby kolumny dni wyrównały się z osią timeline: 32(label) +16(gap) +8(segment)
-const double kCalendarLeftReserve = 32 + 16 + 8; // 56
+// Rezerwa po lewej aby kolumny dni wyrównały się z osią timeline:
+// odpowiada pozycji pionowej linii w CalendarDayView: _labelWidth(48) + _labelFragmentGap(4) + _smallSegment(8) = 60
+const double kCalendarLeftReserve = 60;
 
 class CalendarView extends StatelessWidget {
   final DateTime focusedDay;
@@ -44,13 +45,20 @@ class CalendarView extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onHorizontalDragEnd: (details) {
         final v = details.primaryVelocity ?? 0;
-        // Ujednolicony kierunek (jak w widoku dziennym):
-        // swipe w lewo (finger left, v<0) -> poprzedni okres; w prawo (v>0) -> następny.
-        if (v.abs() < 80) return; // niższy próg dla lepszej responsywności
+        if (v.abs() < 80) return;
         if (isWeekView) {
-          if (v < 0) { if (onPrevWeek!=null) onPrevWeek!(); } else { if (onNextWeek!=null) onNextWeek!(); }
+          // MD3: swipe left (v<0) -> next, swipe right (v>0) -> prev
+          if (v < 0) {
+            if (onNextWeek != null) onNextWeek!();
+          } else {
+            if (onPrevWeek != null) onPrevWeek!();
+          }
         } else {
-          if (v < 0) { if (onPrevMonth!=null) onPrevMonth!(); } else { if (onNextMonth!=null) onNextMonth!(); }
+          if (v < 0) {
+            if (onNextMonth != null) onNextMonth!();
+          } else {
+            if (onPrevMonth != null) onPrevMonth!();
+          }
         }
       },
       child: monthGrid,
@@ -88,7 +96,10 @@ class _MonthGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      final available = constraints.maxWidth - kCalendarLeftReserve - 32; // odejmij padding 16*2
+      // contentWidth: szerokość dostępna wewnątrz paddingu (po obu stronach po 16px)
+      final contentWidth = constraints.maxWidth - 32;
+      // obszar od pionowej linii do końca frame'a to contentWidth - (kCalendarLeftReserve + 1)
+      final available = (contentWidth - (kCalendarLeftReserve + 1)).clamp(0.0, double.infinity);
       final itemW = available / 7;
       const rowHeight = 38.0; // DayCell: 32 + 6 marg.
       final targetRows = isWeekView ? 1 : 6;
@@ -110,7 +121,7 @@ class _MonthGrid extends StatelessWidget {
                       height: rowHeight,
                       child: Row(
                         children: [
-                          SizedBox(width: kCalendarLeftReserve),
+                          const SizedBox(width: kCalendarLeftReserve),
                           for (int d = 0; d < 7; d++)
                             SizedBox(
                               width: itemW,
@@ -183,7 +194,7 @@ class _DayCell extends StatelessWidget {
       textColor = const Color(0xFF494949);
     }
 
-    final double diameter = 32; // stała średnica dla kółka
+    const double diameter = 32; // stała średnica dla kółka
 
     final TextStyle dayTextStyle = (baseStyle ?? const TextStyle()).copyWith(
       fontWeight: FontWeight.w600,

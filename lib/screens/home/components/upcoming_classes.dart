@@ -65,9 +65,11 @@ class UpcomingClassesSection extends StatelessWidget {
             child: isLoading
                 ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 3)))
                 : classes.isEmpty
-                    ? Center(
+                    ? Align(
+                        alignment: Alignment.centerLeft,
                         child: Text(
-                          emptyMessage ?? 'Brak nadchodzących zajęć',
+                          emptyMessage ?? 'Dziś brak nadchodzących zajęć',
+                          textAlign: TextAlign.left,
                           style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
                         ),
                       )

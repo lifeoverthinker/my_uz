@@ -100,7 +100,7 @@ class _SheetScaffold extends StatelessWidget {
                   semanticsLabel: 'Zamknij szczegóły zajęć',
                   isButton: true,
                   onTap: () => Navigator.of(context).maybePop(),
-                  child: Icon(MyUz.x_close, size: 24, color: const Color(0xFF1D192B)),
+                  child: const Icon(MyUz.x_close, size: 24, color: Color(0xFF1D192B)),
                 ),
                 const Spacer(),
               ],
@@ -140,7 +140,7 @@ class _DetailsContent extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _AdaptiveIconSlot(
+            const _AdaptiveIconSlot(
               iconSize: 16, // marker 16 w kole 32
               child: _TypeColorMarker(color: AppColors.myUZSysLightPrimaryContainer),
             ),

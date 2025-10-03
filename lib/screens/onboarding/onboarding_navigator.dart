@@ -34,22 +34,31 @@ class _OnboardingNavigatorState extends State<OnboardingNavigator> {
   bool _canProceed = true; // kontrola stanu "Dalej" (np. strona 3)
   bool _isForward = true; // kierunek przejścia dla animacji (MD3 shared-axis/fade-through feel)
 
+  // Key do strony 2 (personalizacja), żeby móc wymusić flush zapisów przed zakończeniem
+  final GlobalKey<_Page2BodyState> _page2Key = GlobalKey<_Page2BodyState>();
+
   void _setCanProceed(bool v) {
     if (_canProceed == v) return;
     setState(() => _canProceed = v);
   }
 
-  void _next() {
-    setState(() {
-      _isForward = true;
-      if (_current < _totalPages - 1) {
+  Future<void> _next() async {
+    // Jeśli nie jesteśmy na ostatniej stronie – tylko przejdź dalej
+    if (_current < _totalPages - 1) {
+      setState(() {
+        _isForward = true;
         _current++;
         // Strona 3 (index=2) – domyślnie blokujemy "Dalej" dopóki user nie wybierze grupy i podgrupy
         _canProceed = _current == 2 ? false : true;
-      } else {
-        widget.onFinishOnboarding();
-      }
-    });
+      });
+      return;
+    }
+
+    // Jesteśmy na ostatniej stronie -> przed zakończeniem upewnij się, że dane zostały zapisane
+    try {
+      await _page2Key.currentState?.flushPersist();
+    } catch (_) {}
+    widget.onFinishOnboarding();
   }
 
   void _back() {
@@ -62,7 +71,13 @@ class _OnboardingNavigatorState extends State<OnboardingNavigator> {
   }
 
   void _skip() {
-    widget.onFinishOnboarding();
+    // Jeśli istnieje strona z personalizacją, spróbuj wymusić zapis przed zakończeniem onboarding
+    final fut = _page2Key.currentState?.flushPersist();
+    if (fut != null) {
+      fut.then((_) => widget.onFinishOnboarding()).catchError((_) => widget.onFinishOnboarding());
+    } else {
+      widget.onFinishOnboarding();
+    }
   }
 
   // MD3 expressive: Fade-through + lekki slide/scale
@@ -96,7 +111,7 @@ class _OnboardingNavigatorState extends State<OnboardingNavigator> {
       case 0:
         return const _Page1Body(); // college-students
       case 1:
-        return const _Page2Body(); // hello
+        return _Page2Body(key: _page2Key); // hello (z keyiem, aby móc flushować)
       case 2:
         return _Page3Body(onCanProceedChanged: _setCanProceed); // settings + autocomplete
       case 3:
@@ -210,7 +225,8 @@ class _Page1Body extends StatelessWidget {
 
 // --- PAGE 2: Personalizacja (hello) ---
 class _Page2Body extends StatefulWidget {
-  const _Page2Body();
+  // Accept a key so callers can pass a GlobalKey<_Page2BodyState> to access state (flushPersist)
+  const _Page2Body({Key? key}) : super(key: key);
 
   @override
   State<_Page2Body> createState() => _Page2BodyState();
@@ -229,6 +245,12 @@ class _Page2BodyState extends State<_Page2Body> {
     _loadPersisted();
     _first.addListener(_schedulePersist);
     _last.addListener(_schedulePersist);
+  }
+
+  /// Wymuś natychmiastowy zapis (flush) wszelkich oczekujących debounce'ów.
+  Future<void> flushPersist() async {
+    _persistDebounce?.cancel();
+    await _persist();
   }
 
   Future<void> _loadPersisted() async {
@@ -261,6 +283,8 @@ class _Page2BodyState extends State<_Page2Body> {
 
   @override
   void dispose() {
+    // Zapisz natychmiast (bez await) aby nie stracić wartości jeśli użytkownik opuści stronę
+    _persist();
     _persistDebounce?.cancel();
     _first.removeListener(_schedulePersist);
     _last.removeListener(_schedulePersist);
@@ -385,9 +409,9 @@ class _Page2BodyState extends State<_Page2Body> {
                       ? Column(
                     key: const ValueKey('data'),
                     children: [
-                      _input(context, hint: 'Imię'),
+                      _input(context, hint: 'Imię', controller: _first),
                       const SizedBox(height: 8),
-                      _input(context, hint: 'Nazwisko'),
+                      _input(context, hint: 'Nazwisko', controller: _last),
                     ],
                   )
                       : const SizedBox.shrink(key: ValueKey('empty')),
@@ -402,12 +426,13 @@ class _Page2BodyState extends State<_Page2Body> {
   }
 
   /// Outlined Text Field – Figma: h=56, r=8, outline #7A757F, focus Primary
-  Widget _input(BuildContext context, {required String hint}) {
+  Widget _input(BuildContext context, {required String hint, required TextEditingController controller}) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     return SizedBox(
       height: 56,
       child: TextField(
+        controller: controller,
         style: tt.bodyLarge?.copyWith(color: cs.onSurface),
         textInputAction: TextInputAction.next,
         decoration: InputDecoration(

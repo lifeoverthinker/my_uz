@@ -39,8 +39,8 @@ class _CalendarDayViewState extends State<CalendarDayView> {
           _scrollController.animateTo(offset.toDouble(), duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic);
         }
       } else if (_sameDay(widget.day, DateTime.now())) {
-        final baseHour = 7;
-        final offset = baseHour * _hourHeight;
+        const baseHour = 7;
+        const offset = baseHour * _hourHeight;
         if (_scrollController.hasClients) {
           _scrollController.animateTo(offset.toDouble(), duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic);
         }
@@ -61,9 +61,10 @@ class _CalendarDayViewState extends State<CalendarDayView> {
   // padding otaczający treść
   static const double _hPad = 16;
   // szerokość obszaru etykiet godzin (poza paddingiem)
-  static const double _labelWidth = 32;
+  static const double _labelWidth = 48; // mniejsza szerokość, godziny przylegają do lewej
   // odstęp między etykietą a krótkim fragmentem linii
-  static const double _labelFragmentGap = 16;
+  // Zmniejszony gap zgodnie z prośbą: bliżej wystającego krótkiego fragmentu
+  static const double _labelFragmentGap = 4;
   // długość krótkiego fragmentu poziomej linii przy kolumnie godzin
   static const double _smallSegment = 8;
 
@@ -134,12 +135,12 @@ class _CalendarDayViewState extends State<CalendarDayView> {
         room: c.room,
         statusDotColor: finished ? Colors.transparent : const Color(0xFF7D5260),
         showStatusDot: !finished,
-        hugHeight: true,
+        hugHeight: false,
         backgroundColor: _backgroundForIndex(index),
       ),
     );
-    final verticalLineX = _labelWidth + _labelFragmentGap + _smallSegment;
-    final cardLeft = verticalLineX + 1; // przylega do linii pionowej
+    const verticalLineX = _labelWidth + _labelFragmentGap + _smallSegment;
+    const cardLeft = verticalLineX + 1; // przylega do linii pionowej
     // szerokość dostępna: containerWidth - cardLeft - prawy padding (=_hPad)
     const double safeMargin = 4.0; // zapas, żeby zaokrąglony róg nie był przycinany
     final availableWidth = (containerWidth - cardLeft - _hPad - safeMargin).clamp(80.0, containerWidth);
@@ -159,9 +160,9 @@ class _CalendarDayViewState extends State<CalendarDayView> {
     final dayClasses = widget.classes.where((c) => _sameDay(c.startTime, widget.day)).toList()
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
     const double labelHalfHeight = 8;
-    final shortFragmentLeft = _labelWidth + _labelFragmentGap; // bez zmian
-    final verticalLineX = shortFragmentLeft + _smallSegment;
-    final totalHeight = 24 * _hourHeight; // pełne 24 przedziały (0..24)
+    const shortFragmentLeft = _labelWidth + _labelFragmentGap; // bez zmian
+    const verticalLineX = shortFragmentLeft + _smallSegment;
+    const totalHeight = 24 * _hourHeight; // pełne 24 przedziały (0..24)
     const double topPad = 8; // dodane aby uzyskać 64px (56 + 8) od górnej krawędzi do linii 1:00
     const double bottomPad = 8; // analogicznie na dole pod linią 23:00
 
@@ -169,12 +170,11 @@ class _CalendarDayViewState extends State<CalendarDayView> {
       onHorizontalDragEnd: (details) {
         final v = details.primaryVelocity ?? 0;
         if (v.abs() < 180) return;
-        // Poprawione: wcześniejsza implementacja miała odwrotną logikę.
-        // Teraz: przesunięcie w lewo (v < 0) -> poprzedni dzień, w prawo (v > 0) -> następny dzień.
+        // MD3: swipe left (v<0) -> następny dzień, swipe right (v>0) -> poprzedni dzień
         if (v < 0) {
-          widget.onPrevDay?.call();
-        } else {
           widget.onNextDay?.call();
+        } else {
+          widget.onPrevDay?.call();
         }
       },
       child: Padding(
@@ -216,22 +216,25 @@ class _CalendarDayViewState extends State<CalendarDayView> {
                         right: 0,
                         child: Container(height: 1, color: const Color(0xFFEDE6F3)),
                       ),
-                    // Etykiety godzin (przesunięte)
+                    // Etykiety godzin (przesunięte) — tekst wyrównany do lewej (przylega do lewej krawędzi)
                     for (int i = 1; i < 24; i++)
                       Positioned(
                         top: (i * _hourHeight) - labelHalfHeight + topPad,
                         left: 0,
                         width: _labelWidth,
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Text(
-                            _hourLabel(i),
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: const Color(0xFF494949),
-                              fontWeight: FontWeight.w500,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 0),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _hourLabel(i),
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: const Color(0xFF494949),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
@@ -247,7 +250,7 @@ class _CalendarDayViewState extends State<CalendarDayView> {
                         right: 0,
                         child: Row(
                           children: [
-                            SizedBox(
+                            const SizedBox(
                               width: 10,
                               child: Align(
                                 alignment: Alignment.centerRight,

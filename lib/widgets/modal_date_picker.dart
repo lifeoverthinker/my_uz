@@ -152,10 +152,10 @@ class _GoogleCalendarDatePickerState extends State<_GoogleCalendarDatePicker> {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: Icon(
+                  icon: const Icon(
                     MyUz.edit_02,
                     size: 20,
-                    color: const Color(0xFF5F6368),
+                    color: Color(0xFF5F6368),
                   ),
                   onPressed: () {},
                   iconSize: 20,
@@ -204,10 +204,10 @@ class _GoogleCalendarDatePickerState extends State<_GoogleCalendarDatePicker> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(
+                        const Icon(
                           MyUz.chevron_down,
                           size: 18,
-                          color: const Color(0xFF5F6368),
+                          color: Color(0xFF5F6368),
                         ),
                       ],
                     ),
@@ -218,20 +218,20 @@ class _GoogleCalendarDatePickerState extends State<_GoogleCalendarDatePicker> {
 
                 // Strzałki nawigacji
                 IconButton(
-                  icon: Icon(
+                  icon: const Icon(
                     MyUz.chevron_left,
                     size: 24,
-                    color: const Color(0xFF202124),
+                    color: Color(0xFF202124),
                   ),
                   onPressed: () => _navigateMonth(-1),
                   iconSize: 24,
                 ),
 
                 IconButton(
-                  icon: Icon(
+                  icon: const Icon(
                     MyUz.chevron_right,
                     size: 24,
-                    color: const Color(0xFF202124),
+                    color: Color(0xFF202124),
                   ),
                   onPressed: () => _navigateMonth(1),
                   iconSize: 24,

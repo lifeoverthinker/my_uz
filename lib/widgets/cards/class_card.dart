@@ -72,7 +72,7 @@ class ClassCard extends StatelessWidget {
         final bool veryCompact = maxH.isFinite && maxH <= 44;
         final bool compact = maxH.isFinite && maxH > 44 && maxH <= 60;
         final double vPad = veryCompact ? 0 : (compact ? 4 : 8);
-        final double hPad = 16; // stały padding poziomy
+        const double hPad = 16; // stały padding poziomy
         final double gap = veryCompact ? 2 : (compact ? 6 : 8);
 
         return Container(
@@ -104,7 +104,7 @@ class ClassCard extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Icon(MyUz.clock, size: 16, color: const Color(0xFF4A4A4A)),
+                          const Icon(MyUz.clock, size: 16, color: Color(0xFF4A4A4A)),
                           const SizedBox(width: 4),
                           // time: ogranicz do maxWidth by uniknąć overflow przy węższych kartach
                           Flexible(

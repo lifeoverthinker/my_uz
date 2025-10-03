@@ -105,14 +105,14 @@ class _MyBootstrapState extends State<MyBootstrap> {
     return _onboardingComplete
         ? const HomePage()
         : OnboardingNavigator(
-      onFinishOnboarding: () async {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('onboarding_complete', true);
-        navigatorKey.currentState?.pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
-      },
-    );
+            onFinishOnboarding: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('onboarding_complete', true);
+              navigatorKey.currentState?.pushReplacement(
+                MaterialPageRoute(builder: (_) => const HomePage()),
+              );
+            },
+          );
   }
 }
 
@@ -125,13 +125,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _index = 0;
 
+  // Uporządkowane strony zgodnie z kolejnością zakładek w dolnej nawigacji.
   final List<Widget> _pages = const [
-    HomeScreen(),
-    CalendarScreen(),
-    PlaceholderPage(title: 'Indeks'),
-    PlaceholderPage(title: 'Kalendarz'),
-    IndexScreen(),
-    PlaceholderPage(title: 'Konto'),
+    HomeScreen(),         // 0
+    CalendarScreen(),     // 1
+    IndexScreen(),        // 2 (Indeks)
+    PlaceholderPage(title: 'Konto'), // 3 (Konto)
   ];
 
   static const _titles = ['Główna', 'Kalendarz', 'Indeks', 'Konto'];
@@ -141,8 +140,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _index == 0 || _index == 1 ? null : AppBar(title: Text(_titles[_index])),
-      appBar: _index == 0 || _index == 2 ? null : AppBar(title: Text(_titles[_index])),
+      // Brak AppBar dla ekranu głównego, kalendarza i indeksu; pokazuj dla pozostałych (Konto)
+      appBar: (_index == 0 || _index == 1 || _index == 2) ? null : AppBar(title: Text(_titles[_index])),
       body: _pages[_index],
       bottomNavigationBar: MyUZBottomNavigation(
         currentIndex: _index,

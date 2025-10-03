@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/models/event_model.dart';
-import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 
 abstract class EventDetailsSheet {
@@ -84,7 +83,7 @@ class _EventSheetScaffold extends StatelessWidget {
                   semanticsLabel: 'Zamknij szczegóły wydarzenia',
                   isButton: true,
                   onTap: () => Navigator.of(context).maybePop(),
-                  child: Icon(MyUz.x_close, size: 24, color: const Color(0xFF1D192B)),
+                  child: const Icon(MyUz.x_close, size: 24, color: Color(0xFF1D192B)),
                 ),
                 const Spacer(),
               ],
@@ -187,14 +186,12 @@ class _Grip extends StatelessWidget {
 class _AdaptiveIconSlot extends StatelessWidget {
   final double iconSize;
   final Widget child;
-  final Color? background;
   final VoidCallback? onTap;
   final String? semanticsLabel;
   final bool isButton;
   const _AdaptiveIconSlot({
     required this.iconSize,
     required this.child,
-    this.background,
     this.onTap,
     this.semanticsLabel,
     this.isButton = false,
@@ -211,7 +208,6 @@ class _AdaptiveIconSlot extends StatelessWidget {
           width: circle,
           height: circle,
           decoration: BoxDecoration(
-            color: background,
             borderRadius: BorderRadius.circular(circle / 2),
           ),
           alignment: Alignment.center,
@@ -289,10 +285,4 @@ class _DetailRow extends StatelessWidget {
       ],
     );
   }
-}
-
-class _NoGlow extends ScrollBehavior {
-  const _NoGlow();
-  @override
-  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) => child;
 }

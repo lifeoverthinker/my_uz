@@ -32,8 +32,9 @@ class ClassModel {
     DateTime? parseDateTimeFromDynamic(dynamic v) {
       if (v == null) return null;
       DateTime? parsed;
-      if (v is DateTime) parsed = v;
-      else if (v is String) {
+      if (v is DateTime) {
+        parsed = v;
+      } else if (v is String) {
         try { parsed = DateTime.parse(v); } catch (_) { parsed = null; }
       } else if (v is int) {
         parsed = DateTime.fromMillisecondsSinceEpoch(v);

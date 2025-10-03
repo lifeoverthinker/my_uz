@@ -8,7 +8,7 @@ abstract class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       // Kolory podstawowe
-      colorScheme: ColorScheme(
+      colorScheme: const ColorScheme(
         brightness: Brightness.light,
         primary: AppColors.myUZSysLightPrimary,
         onPrimary: AppColors.myUZSysLightOnPrimary,
@@ -43,7 +43,7 @@ abstract class AppTheme {
       ),
 
       // Style tekstu
-      textTheme: TextTheme(
+      textTheme: const TextTheme(
         displayLarge: AppTextStyle.myUZDisplayLarge,
         displayMedium: AppTextStyle.myUZDisplayMedium,
         displaySmall: AppTextStyle.myUZDisplaySmall,
@@ -76,7 +76,7 @@ abstract class AppTheme {
       ),
 
       // Konfiguracja BottomNavigationBar
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.myUZSysLightSurface,
         selectedItemColor: AppColors.myUZSysLightPrimary,
         unselectedItemColor: AppColors.myUZSysLightOnSurfaceVariant,
@@ -115,7 +115,7 @@ abstract class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       // Kolory podstawowe dla ciemnego motywu
-      colorScheme: ColorScheme(
+      colorScheme: const ColorScheme(
         brightness: Brightness.dark,
         primary: AppColors.myUZSysDarkPrimary,
         onPrimary: AppColors.myUZSysDarkOnPrimary,
@@ -150,7 +150,7 @@ abstract class AppTheme {
       ),
 
       // Style tekstu
-      textTheme: TextTheme(
+      textTheme: const TextTheme(
         displayLarge: AppTextStyle.myUZDisplayLarge,
         displayMedium: AppTextStyle.myUZDisplayMedium,
         displaySmall: AppTextStyle.myUZDisplaySmall,
@@ -183,7 +183,7 @@ abstract class AppTheme {
       ),
 
       // Konfiguracja BottomNavigationBar
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.myUZSysDarkSurface,
         selectedItemColor: AppColors.myUZSysDarkPrimary,
         unselectedItemColor: AppColors.myUZSysDarkOnSurfaceVariant,
