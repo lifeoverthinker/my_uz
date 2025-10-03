@@ -29,19 +29,40 @@ class ClassModel {
 
   /// Fabryka z mapy (obsługuje różne nazwy kolumn – elastyczność przy widoku / tabeli).
   factory ClassModel.fromMap(Map<String, dynamic> map) {
+    DateTime? parseDateTimeFromDynamic(dynamic v) {
+      if (v == null) return null;
+      DateTime? parsed;
+      if (v is DateTime) parsed = v;
+      else if (v is String) {
+        try { parsed = DateTime.parse(v); } catch (_) { parsed = null; }
+      } else if (v is int) {
+        parsed = DateTime.fromMillisecondsSinceEpoch(v);
+      } else {
+        try { parsed = DateTime.parse(v.toString()); } catch (_) { parsed = null; }
+      }
+      if (parsed == null) return null;
+      return parsed.isUtc ? parsed.toLocal() : parsed;
+    }
     String readString(String keyPrimary, [String? fallback]) {
       final v = map[keyPrimary] ?? (fallback != null ? map[fallback] : null);
       if (v == null) return '';
       return v as String; // zakładamy poprawny typ – jeśli nie, rzuci
     }
 
+    final start = parseDateTimeFromDynamic(map['start_time'] ?? map['od']);
+    final end = parseDateTimeFromDynamic(map['end_time'] ?? map['do_'] ?? map['do']);
+    if (start == null || end == null) {
+      // Debug pomocniczy – jeżeli dane nie parsują się poprawnie
+      // ignore: avoid_print
+      print('[ClassModel][PARSE-WARN] invalid times start=${map['start_time'] ?? map['od']} end=${map['end_time'] ?? map['do_'] ?? map['do']} id=${map['id']}');
+    }
     return ClassModel(
       id: readString('id'),
       subject: readString('subject', 'przedmiot'),
       room: readString('room', 'miejsce'),
-      lecturer: readString('lecturer', 'nazwa_nauczyciela'),
-      startTime: DateTime.parse(map['start_time'] ?? map['od'] as String),
-      endTime: DateTime.parse(map['end_time'] ?? map['do_'] as String),
+      lecturer: readString('lecturer', 'nauczyciel'),
+      startTime: start ?? DateTime.now(),
+      endTime: end ?? (start ?? DateTime.now()).add(const Duration(hours: 1)),
       uid: map['uid'] as String?,
       type: map['type'] as String? ?? map['typ'] as String? ?? map['rz'] as String?,
       groupCode: map['kod_grupy'] as String? ?? map['group_code'] as String?,

@@ -43,16 +43,19 @@ class ClassCard extends StatelessWidget {
     required String room,
     Color? statusDotColor,
     bool hugHeight = false,
+    bool showStatusDot = true,
+    Color? backgroundColor,
   }) {
     return ClassCard(
       title: title,
       time: time,
       room: room,
       showAvatar: false,
-      showStatusDot: true,
+      showStatusDot: showStatusDot,
       statusDotColor: statusDotColor ?? AppColors.myUZSysLightTertiary,
       hugHeight: hugHeight,
       maxTitleLines: hugHeight ? 2 : 1,
+      backgroundColor: backgroundColor,
     );
   }
 
@@ -62,11 +65,15 @@ class ClassCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxH = constraints.maxHeight;
-        // compact jeśli karta dostaje ciasny wysokościowy constraint (np. 44)
-        final bool compact = maxH.isFinite && maxH <= 48;
-        final double vPad = compact ? 0 : 8; // normalnie 8 (Figma), w kompakt 0
-        final double hPad = 12; // stały padding poziomy
-        final double gap = compact ? 4 : 8; // odstęp tytuł -> wiersz info
+        // trzy progi:
+        // veryCompact: <=44 - tylko tytuł 1 linia
+        // compact: <=60 - tytuł + czas (bez sali)
+        // normal: >60 - pełne info
+        final bool veryCompact = maxH.isFinite && maxH <= 44;
+        final bool compact = maxH.isFinite && maxH > 44 && maxH <= 60;
+        final double vPad = veryCompact ? 0 : (compact ? 4 : 8);
+        final double hPad = 16; // stały padding poziomy
+        final double gap = veryCompact ? 2 : (compact ? 6 : 8);
 
         return Container(
           padding: EdgeInsets.fromLTRB(hPad, vPad, hPad, vPad),
@@ -92,31 +99,41 @@ class ClassCard extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: gap),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Icon(MyUz.clock, size: 16, color: const Color(0xFF4A4A4A)),
-                        const SizedBox(width: 4),
-                        // Pełny czas – nie skracamy
-                        Text(
-                          time,
-                          maxLines: 1,
-                          overflow: TextOverflow.visible,
-                          softWrap: false,
-                          style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
-                        ),
-                        const SizedBox(width: 16),
-                        // Sala może się skracać
-                        Expanded(
-                          child: Text(
-                            room,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
+                    // Info row: depending on available height show different details
+                    if (!veryCompact)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Icon(MyUz.clock, size: 16, color: const Color(0xFF4A4A4A)),
+                          const SizedBox(width: 4),
+                          // time: ogranicz do maxWidth by uniknąć overflow przy węższych kartach
+                          Flexible(
+                            flex: 0,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 88),
+                              child: Text(
+                                time,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 16),
+                          // room shown only in normal mode
+                          if (!compact)
+                            Expanded(
+                              child: Text(
+                                room,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
+                              ),
+                            )
+                          else
+                            const Spacer(),
+                        ],
+                      ),
                   ],
                 ),
               ),
@@ -134,10 +151,16 @@ class ClassCard extends StatelessWidget {
                     initial,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyle.myUZTitleMedium.copyWith(
-                      color: cs.onPrimary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: () {
+                      final base = AppTextStyle.myUZTitleMedium.copyWith(
+                        color: cs.onPrimary,
+                        fontWeight: FontWeight.w500,
+                      );
+                      if (initial.length >= 3) {
+                        return base.copyWith(fontSize: 12);
+                      }
+                      return base;
+                    }(),
                   ),
                 )
               else if (showStatusDot)
