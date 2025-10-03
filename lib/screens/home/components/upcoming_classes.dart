@@ -11,11 +11,21 @@ import 'package:my_uz/widgets/cards/class_card.dart';
 class UpcomingClassesSection extends StatelessWidget {
   final List<ClassModel> classes;
   final ValueChanged<ClassModel> onTap;
+  final String? groupCode;
+  final List<String>? subgroups;
+  final String headerTitle;
+  final bool isLoading;
+  final String? emptyMessage;
 
   const UpcomingClassesSection({
     super.key,
     required this.classes,
     required this.onTap,
+    this.groupCode,
+    this.subgroups,
+    this.headerTitle = 'Najbliższe zajęcia',
+    this.isLoading = false,
+    this.emptyMessage,
   });
 
   static const double _kCardWidth = 264;
@@ -30,49 +40,78 @@ class UpcomingClassesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionHeader(
-            icon: MyUz.graduation_hat_02,
-            label: 'Najbliższe zajęcia',
-            color: cs.onSurface,
+          // Header row (title configurable)
+          Row(
+            children: [
+              Icon(MyUz.graduation_hat_02, size: 20, color: cs.onSurface),
+              const SizedBox(width: 8),
+              Text(
+                headerTitle,
+                style: AppTextStyle.myUZTitleMedium.copyWith(
+                  fontSize: 18,
+                  height: 1.33,
+                  fontWeight: FontWeight.w500,
+                  color: cs.onSurface,
+                ),
+              ),
+              const Spacer(),
+              // NOTE: removed right-side suffix (e.g. 'jutro') per design change
+            ],
           ),
           const SizedBox(height: 12),
+          // Responsive horizontal list: show only as many cards as fit into available width
           SizedBox(
             height: _kListHeight,
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              scrollDirection: Axis.horizontal,
-              physics: const ClampingScrollPhysics(),
-              itemCount: classes.length + 1, // +1 dla trailing spacer 16
-              itemBuilder: (context, i) {
-                if (i == classes.length) {
-                  return const SizedBox(width: 16); // końcowy padding
-                }
-                final c = classes[i];
-                final colors = _variant(i % 3);
-                final time = '${_hhmm(c.startTime)} - ${_hhmm(c.endTime)}';
-                final init = _initials(c.lecturer);
-                return Padding(
-                  padding: EdgeInsets.only(right: i == classes.length - 1 ? 0 : 8),
-                  child: SizedBox(
-                    width: _kCardWidth,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      onTap: () => onTap(c),
-                      child: ClassCard(
-                        title: c.subject,
-                        time: time,
-                        room: c.room,
-                        initial: init,
-                        backgroundColor: colors.bg,
-                        avatarColor: colors.avatar,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+            child: isLoading
+                ? const Center(child: SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 3)))
+                : classes.isEmpty
+                    ? Center(
+                        child: Text(
+                          emptyMessage ?? 'Brak nadchodzących zajęć',
+                          style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                      )
+                    : LayoutBuilder(builder: (context, constraints) {
+                        final double maxWidth = constraints.maxWidth;
+                        const double spacing = 8;
+                        // compute how many cards can fit (accounting for spacing between cards)
+                        final int fitCount = ((maxWidth + spacing) ~/ (_kCardWidth + spacing)).clamp(0, classes.length);
+                        final visible = classes.take(fitCount).toList();
+                        return ListView.builder(
+                          padding: EdgeInsets.zero,
+                          scrollDirection: Axis.horizontal,
+                          physics: const ClampingScrollPhysics(),
+                          itemCount: visible.length + 1, // trailing spacer
+                          itemBuilder: (context, i) {
+                            if (i == visible.length) return const SizedBox(width: 16);
+                            final c = visible[i];
+                            final colors = _variant(i % 3);
+                            final time = '${_hhmm(c.startTime)} - ${_hhmm(c.endTime)}';
+                            final abbrev = (c.type ?? '').trim();
+                            final init = abbrev.isNotEmpty ? abbrev.toUpperCase() : _initials(c.lecturer);
+                            return Padding(
+                              padding: EdgeInsets.only(right: i == visible.length - 1 ? 0 : spacing),
+                              child: SizedBox(
+                                width: _kCardWidth,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  splashColor: Colors.transparent,
+                                  highlightColor: Colors.transparent,
+                                  onTap: () => onTap(c),
+                                  child: ClassCard(
+                                    title: c.subject,
+                                    time: time,
+                                    room: c.room,
+                                    initial: init,
+                                    backgroundColor: colors.bg,
+                                    avatarColor: colors.avatar,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      }),
           ),
         ],
       ),
@@ -111,31 +150,6 @@ class UpcomingClassesSection extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  const _SectionHeader({required this.icon, required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: AppTextStyle.myUZTitleMedium.copyWith(
-            fontSize: 18,
-            height: 1.33,
-            fontWeight: FontWeight.w500,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _ClassColors {
   final Color bg;

@@ -422,7 +422,6 @@ class _SimpleDropdown extends StatelessWidget {
 
 // Konfiguracja stałych (przywrócone po refaktorze)
 const double _kTopRadius = 24;
-const double _kIconGap = 12;
 const double _kHitArea = 48;
 
 String _dateInline(DateTime d) {

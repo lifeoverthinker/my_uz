@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:my_uz/supabase.dart'; // nieużywane po refaktoryzacji – zostawione zakomentowane dla ewentualnych przyszłych zadań
+import 'package:my_uz/services/classes_repository.dart';
 
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/theme/app_colors.dart';
@@ -30,12 +33,20 @@ class HomeScreen extends StatefulWidget {
 const String _kPrefOnbMode = 'onb_mode';
 const String _kPrefOnbSalutation = 'onb_salutation';
 const String _kPrefOnbFirst = 'onb_first';
+const String _kPrefOnbGroup = 'onb_group';
+const String _kPrefOnbSub = 'onb_group_sub';
 
 class _HomeScreenState extends State<HomeScreen> {
   String _greetingName = 'Student';
+  String? _groupCode; // kod grupy
+  List<String> _subgroups = []; // lista podgrup
   bool _loading = true; // ładowanie prefów
+  bool _classesLoading = false; // ładowanie zajęć
+  DateTime? _classesForDate; // data dla której aktualnie pokazujemy _classes
+  bool _hasExplicitGroup = false; // czy użytkownik faktycznie ustawił grupę (a nie fallback)
+  Timer? _refreshTimer; // periodyczne sprawdzanie zmiany dnia
 
-  late List<ClassModel> _classes;
+  List<ClassModel> _classes = const [];
   late final List<TaskModel> _tasks;
   late final List<EventModel> _events;
 
@@ -44,55 +55,43 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _buildMocks();
     _loadPrefs();
+    _loadTodayClasses();
+    // timer, który odświeża listę jeśli zmieni się dzień (np. przejście przez północ)
+    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      final now = DateTime.now();
+      if (_classesForDate == null) {
+        _loadTodayClasses();
+        return;
+      }
+      final shown = DateTime(_classesForDate!.year, _classesForDate!.month, _classesForDate!.day);
+      final today = DateTime(now.year, now.month, now.day);
+      if (shown != today) {
+        _loadTodayClasses();
+      }
+    });
   }
 
   void _buildMocks() {
+    // Usunięto mocki zajęć – realne dane ładowane po wyborze grupy.
     final now = DateTime.now();
-    _classes = [
-      ClassModel(
-        id: 'c1',
-        subject: 'Podstawy systemów dyskretnych',
-        room: 'Sala 102',
-        lecturer: 'dr A. Nowak',
-        startTime: DateTime(now.year, now.month, now.day, 10, 0),
-        endTime: DateTime(now.year, now.month, now.day, 10, 45),
-      ),
-      ClassModel(
-        id: 'c2',
-        subject: 'Analiza matematyczna II',
-        room: 'A-29, s. 305',
-        lecturer: 'prof. B. Kowalski',
-        startTime: DateTime(now.year, now.month, now.day, 11, 0),
-        endTime: DateTime(now.year, now.month, now.day, 12, 30),
-      ),
-      ClassModel(
-        id: 'c3',
-        subject: 'Programowanie obiektowe',
-        room: 'Lab 205',
-        lecturer: 'mgr C. Zieliński',
-        startTime: DateTime(now.year, now.month, now.day, 13, 15),
-        endTime: DateTime(now.year, now.month, now.day, 14, 45),
-      ),
-    ];
-    final now2 = now;
     _tasks = [
       TaskModel(
         id: 't1',
         title: 'Projekt zaliczeniowy',
         subject: 'PPO',
-        deadline: now2.add(const Duration(days: 3)),
+        deadline: now.add(const Duration(days: 3)),
       ),
       TaskModel(
         id: 't2',
         title: 'Kolokwium – Algebra',
         subject: 'Algebra',
-        deadline: now2.add(const Duration(days: 5)),
+        deadline: now.add(const Duration(days: 5)),
       ),
       TaskModel(
         id: 't3',
         title: 'Sprawozdanie z laboratorium',
         subject: 'Fizyka',
-        deadline: now2.add(const Duration(days: 6)),
+        deadline: now.add(const Duration(days: 6)),
       ),
     ];
     _events = [
@@ -132,20 +131,64 @@ class _HomeScreenState extends State<HomeScreen> {
       final mode = p.getString(_kPrefOnbMode);
       final first = p.getString(_kPrefOnbFirst)?.trim();
       final sal = p.getString(_kPrefOnbSalutation)?.trim();
+      final group = p.getString(_kPrefOnbGroup)?.trim();
+      final subsCsv = p.getString(_kPrefOnbSub) ?? '';
+      final subs = subsCsv.split(',').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toList();
       String name = 'Student';
-      if (mode == 'data' && first != null && first.isNotEmpty) {
-        name = first;
-      } else if (sal != null && sal.isNotEmpty) {
-        name = sal;
+      if (mode == 'data') {
+        if (first != null && first.isNotEmpty) {
+          name = first;
+        } else if (sal != null && sal.isNotEmpty) {
+          name = sal;
+        }
+      } else {
+        // anon or unspecified -> prefer salutation if present
+        if (sal != null && sal.isNotEmpty) {
+          name = sal;
+        }
       }
       if (!mounted) return;
       setState(() {
         _greetingName = name;
+        _groupCode = (group != null && group.isNotEmpty) ? group : null;
+        _subgroups = subs;
         _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loadTodayClasses() async {
+    if (_classesLoading) return;
+    setState(()=> _classesLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawGroup = (prefs.getString(_kPrefOnbGroup) ?? '').trim();
+      _hasExplicitGroup = rawGroup.isNotEmpty;
+      final (groupCode, subgroups) = await ClassesRepository.loadGroupPrefs();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final tomorrow = today.add(const Duration(days: 1));
+      final todayList = await ClassesRepository.fetchDayWithWeekFallback(today, groupCode: groupCode, subgroups: subgroups);
+      final remaining = ClassesRepository.filterRemainingOrAll(todayList, today, now, allowEndedIfAllEnded: true);
+      if (remaining.isNotEmpty) {
+        if (!mounted) return; setState(() {
+          _classes = remaining;
+          _classesForDate = today;
+          _classesLoading = false;
+        }); return;
+      }
+      final tomorrowList = await ClassesRepository.fetchDayWithWeekFallback(tomorrow, groupCode: groupCode, subgroups: subgroups);
+      if (!mounted) return; setState(() {
+        _classes = tomorrowList; // gdy brak jakichkolwiek dzisiejszych -> pokaż jutro
+        _classesForDate = tomorrow;
+        _classesLoading = false;
+      });
+    } catch (e) {
+      debugPrint('[Home][_loadTodayClasses][ERR] $e');
+      if (!mounted) return; setState(()=> _classesLoading=false);
     }
   }
 
@@ -186,10 +229,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            UpcomingClassesSection(
-                              classes: _classes,
-                              onTap: _onTapClass,
-                            ),
+                            // compute today/tomorrow as date-only values to decide whether to show 'jutro'
+                            Builder(builder: (context) {
+                              // Always show the same header label regardless whether we're showing tomorrow's classes
+                              final header = 'Najbliższe zajęcia';
+                              final emptyMsg = (_classesLoading ? '' : (_classes.isEmpty ? (_groupCode==null? 'Wybierz grupę w ustawieniach.' : 'Brak nadchodzących zajęć') : null));
+                               return UpcomingClassesSection(
+                                 classes: _classes,
+                                 onTap: _onTapClass,
+                                 groupCode: _groupCode,
+                                 subgroups: _subgroups,
+                                 headerTitle: header,
+                                 isLoading: _classesLoading,
+                                 emptyMessage: emptyMsg,
+                               );
+                            }),
                             const SizedBox(height: 12),
                             TasksSection(
                               tasks: _tasks,
@@ -240,6 +294,12 @@ class _HomeScreenState extends State<HomeScreen> {
     ClassDetailsSheet.open(context, c);
   }
   void _onTapEvent(EventModel e) => debugPrint('[Home] event tap ${e.id}');
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
 }
 
 /// HEADER – SafeArea + spacing z Figmy
@@ -450,4 +510,42 @@ String _plDate(DateTime d) {
     'grudnia'
   ];
   return '${dni[d.weekday - 1]}, ${d.day} ${mies[d.month - 1]}';
+}
+
+// Debug overlay widget (tymczasowy – wyłącz przez _debugEnabled=false)
+const bool _debugEnabled = true; // ustaw na false aby ukryć panel diagnostyczny
+
+class _DebugClassesOverlay extends StatelessWidget {
+  final String label;
+  final int dayRows;
+  final String dayVariant;
+  final int weekRows;
+  final String weekVariant;
+  final DateTime? queriedDay;
+  final DateTime? weekStart;
+  const _DebugClassesOverlay({required this.label, required this.dayRows, required this.dayVariant, required this.weekRows, required this.weekVariant, this.queriedDay, this.weekStart});
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.labelSmall;
+    String fmt(DateTime? d){ if(d==null) return '-'; return '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}'; }
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal:16),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF222222).withOpacity(.85),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DefaultTextStyle(
+        style: (style?? const TextStyle()).copyWith(color: const Color(0xFFE0E0E0), fontSize: 11, height: 1.2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('DEBUG $label'),
+            Text('dayRows=$dayRows variant=$dayVariant day=${fmt(queriedDay)}'),
+            Text('weekRows=$weekRows variant=$weekVariant weekStart=${fmt(weekStart)}'),
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -313,14 +313,12 @@ class _SheetScaffold extends StatelessWidget {
                     semanticsLabel: 'Więcej opcji',
                     isButton: true,
                     onTap: () async {
-                      final theme = Theme.of(context);
                       final selected = await showMenu<String>(
                         context: context,
                         position: const RelativeRect.fromLTRB(1000, 56, 16, 0),
                         items: const [
                           PopupMenuItem(value: 'delete', child: Text('Usuń zadanie')),
                         ],
-                        // wymuszenie białego tła przez Theme override
                       );
                       if (selected == 'delete') onDelete?.call();
                     },
@@ -531,10 +529,7 @@ class _DetailsContent extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 14),
-                  child: Text(
-                    description!.trim(),
-                    style: AppTextStyle.myUZBodyLarge.copyWith(color: cs.onSurface),
-                  ),
+                  child: _FormattedDescription(text: description!.trim()),
                 ),
               ),
             ],
@@ -778,11 +773,24 @@ class _EditForm extends StatelessWidget {
             topAlign: true,
             child: TextField(
               controller: descController,
-              maxLines: 5,
+              maxLines: null, // brak limitu
               minLines: 1,
+              keyboardType: TextInputType.multiline,
+              onChanged: (_) {
+                // autoscroll gdy zbliżamy się do końca
+                Future.microtask(() {
+                  if (scrollController.hasClients) {
+                    scrollController.animateTo(
+                      scrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 150),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                });
+              },
               decoration: InputDecoration(
                 border: InputBorder.none,
-                hintText: 'Dodaj opis',
+                hintText: 'Dodaj opis zadania (opcjonalne)',
                 hintStyle: AppTextStyle.myUZBodyLarge.copyWith(color: const Color(0xFF938F99)),
               ),
               style: AppTextStyle.myUZBodyLarge.copyWith(color: const Color(0xFF1D192B)),
@@ -818,21 +826,29 @@ class _SmallDropdown extends StatelessWidget {
   final String current; final List<String> values; final ValueChanged<String> onChanged; const _SmallDropdown({required this.current, required this.values, required this.onChanged});
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE7E0EC)),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: current,
           isExpanded: true,
-          icon: const Icon(MyUz.chevron_down, size: 14, color: Color(0xFF49454F)),
-          style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF1D192B), fontWeight: FontWeight.w500),
+          dropdownColor: cs.surface,
+          icon: Icon(MyUz.chevron_down, size: 14, color: cs.onSurfaceVariant),
+          style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurface, fontWeight: FontWeight.w500),
           onChanged: (v){ if(v!=null) onChanged(v); },
-          items: values.map((e)=> DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+          items: values.map((e)=> DropdownMenuItem(
+            value: e,
+            child: Text(e, overflow: TextOverflow.ellipsis, style: AppTextStyle.myUZBodySmall.copyWith(
+              color: e==current ? cs.primary : cs.onSurface,
+              fontWeight: e==current ? FontWeight.w600 : FontWeight.w500,
+            )),
+          )).toList(),
         ),
       ),
     );
@@ -845,5 +861,64 @@ class _SectionDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Divider(height: 1, thickness: 1, color: Color(0xFFE7E0EC));
+  }
+}
+
+class _FormattedDescription extends StatelessWidget {
+  final String text;
+  const _FormattedDescription({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final base = AppTextStyle.myUZBodyLarge.copyWith(color: cs.onSurface);
+    final spans = <TextSpan>[];
+    final lines = text.split('\n');
+    for (var li = 0; li < lines.length; li++) {
+      final line = lines[li];
+      final bulletMatch = RegExp(r'^\s*[-*]\s+(.*)').firstMatch(line);
+      final orderedMatch = RegExp(r'^\s*(\d+)\.\s+(.*)').firstMatch(line);
+      if (bulletMatch != null) {
+        spans.add(TextSpan(text: '• ', style: base));
+        spans.addAll(_parseInline(bulletMatch.group(1)!, base));
+      } else if (orderedMatch != null) {
+        spans.add(TextSpan(text: '${orderedMatch.group(1)}. ', style: base));
+        spans.addAll(_parseInline(orderedMatch.group(2)!, base));
+      } else {
+        spans.addAll(_parseInline(line, base));
+      }
+      if (li != lines.length - 1) spans.add(const TextSpan(text: '\n'));
+    }
+    return RichText(text: TextSpan(style: base, children: spans));
+  }
+
+  List<TextSpan> _parseInline(String input, TextStyle base) {
+    final result = <TextSpan>[];
+    int i = 0;
+    while (i < input.length) {
+      if (input.startsWith('**', i)) {
+        final end = input.indexOf('**', i + 2);
+        if (end != -1) {
+          final inner = input.substring(i + 2, end);
+          result.add(TextSpan(text: inner, style: base.copyWith(fontWeight: FontWeight.w600))); // bold
+          i = end + 2;
+          continue;
+        }
+      }
+      if (input[i] == '*') {
+        final end = input.indexOf('*', i + 1);
+        if (end != -1) {
+          final inner = input.substring(i + 1, end);
+          result.add(TextSpan(text: inner, style: base.copyWith(fontStyle: FontStyle.italic))); // italic
+          i = end + 1;
+          continue;
+        }
+      }
+      final next = input.indexOf('*', i + 1);
+      final segment = next == -1 ? input.substring(i) : input.substring(i, next);
+      result.add(TextSpan(text: segment, style: base));
+      if (next == -1) break; else i = next;
+    }
+    return result;
   }
 }

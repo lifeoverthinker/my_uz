@@ -33,7 +33,6 @@ const double _kMinChildFraction = 0.40;
 const double _kMaxChildFraction = 1.0; // Zmieniono z 0.95 na 1.0
 const double _kTopRadius = 24;
 const double _kHitArea = 48; // hit area dla ikon/markera ala Material (min 48x48)
-const double _kLeadingBox = _kHitArea; // kolumna na slot ikony
 const double _kCircleSmall = 32; // dla ikon 16/20
 const double _kCircleLarge = 40; // dla ikon 24
 const double _kIconToTextGap = 12; // odstęp ikona -> tekst
@@ -226,13 +225,57 @@ class _DetailsContent extends StatelessWidget {
   }
 
   static String? _mapType(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return null;
-    final u = raw.trim().toUpperCase();
-    if (u.startsWith('LAB') || u == 'LAB') return 'Laboratorium';
+    if (raw == null) return null;
+    final r = raw.trim();
+    if (r.isEmpty) return null;
+    final u = r.toUpperCase();
+    // Pełna mapa skrótów -> nazwy
+    switch (u) {
+      case 'R': return 'Rezerwacja';
+      case 'BHP': return 'Szkolenie BHP';
+      case 'C': return 'Ćwiczenia';
+      case 'CZ': return 'Ćwiczenia / Zdalne';
+      case 'Ć': return 'Ćwiczenia';
+      case 'ĆL': return 'Ćwiczenia i laboratorium';
+      case 'E': return 'Egzamin';
+      case 'E/Z': return 'Egzamin / Zdalne';
+      case 'I': return 'Inne';
+      case 'K': return 'Konwersatorium';
+      case 'L': return 'Laboratorium';
+      case 'P': return 'Projekt';
+      case 'PRA': return 'Praktyka';
+      case 'PRO': return 'Proseminarium';
+      case 'PRZ': return 'Praktyka zawodowa';
+      case 'P/Z': return 'Projekt / Zdalne';
+      case 'S': return 'Seminarium';
+      case 'SK': return 'Samokształcenie';
+      case 'T': return 'Zajęcia terenowe';
+      case 'W': return 'Wykład';
+      case 'WAR': return 'Warsztaty';
+      case 'W+C': return 'Wykład i ćwiczenia';
+      case 'WĆL': return 'Wykład + ćwiczenia + laboratorium';
+      case 'W+K': return 'Wykłady + konwersatoria';
+      case 'W+L': return 'Wykład i laboratorium';
+      case 'W+P': return 'Wykład + projekt';
+      case 'WW': return 'Wykład i warsztaty';
+      case 'W/Z': return 'Wykład / Zdalne';
+      case 'Z': return 'Zdalne';
+      case 'ZK': return 'Zajęcia kliniczne';
+      case 'ZP': return 'Zajęcia praktyczne';
+    }
+    // Dotychczasowe skróty (zachowane – mogą wystąpić inną wielkością lub wariantem)
     if (u.startsWith('WYK')) return 'Wykład';
-    if (u.startsWith('ĆW') || u.startsWith('CW')) return 'Ćwiczenia';
+    if (u.startsWith('LAB')) return 'Laboratorium';
+    if (u == 'ĆW' || u == 'CW' || u.startsWith('ĆW') || u.startsWith('CW')) return 'Ćwiczenia';
     if (u.startsWith('SEM')) return 'Seminarium';
-    final lower = raw.toLowerCase();
+    if (u.startsWith('PROJ')) return 'Projekt';
+    if (u.startsWith('KON')) return 'Konwersatorium';
+    if (u == 'WF') return 'Wychowanie fizyczne';
+    if (u.startsWith('LEKT')) return 'Lektorat';
+    if (u.startsWith('EGZ')) return 'Egzamin';
+    if (u.startsWith('KOL')) return 'Kolokwium';
+    // fallback – kapitalizacja pierwszej litery reszty
+    final lower = r.toLowerCase();
     return lower[0].toUpperCase() + lower.substring(1);
   }
 }
@@ -257,14 +300,12 @@ class _Grip extends StatelessWidget {
 class _AdaptiveIconSlot extends StatelessWidget {
   final double iconSize; // 16/20/24
   final Widget child; // glif lub marker
-  final Color? background; // opcjonalne tło (np. dla przyszłych typów)
   final VoidCallback? onTap;
   final String? semanticsLabel;
   final bool isButton;
   const _AdaptiveIconSlot({
     required this.iconSize,
     required this.child,
-    this.background,
     this.onTap,
     this.semanticsLabel,
     this.isButton = false,
@@ -281,7 +322,6 @@ class _AdaptiveIconSlot extends StatelessWidget {
           width: circle,
           height: circle,
           decoration: BoxDecoration(
-            color: background,
             borderRadius: BorderRadius.circular(circle / 2),
           ),
           alignment: Alignment.center,
@@ -361,11 +401,4 @@ class _DetailRow extends StatelessWidget {
       ],
     );
   }
-}
-
-/// ScrollBehavior bez glow (spójne z innymi ekranami)
-class _NoGlow extends ScrollBehavior {
-  const _NoGlow();
-  @override
-  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) => child;
 }
