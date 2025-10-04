@@ -64,7 +64,7 @@ class _CalendarDayViewState extends State<CalendarDayView> {
   static const double _labelWidth = 48; // mniejsza szerokość, godziny przylegają do lewej
   // odstęp między etykietą a krótkim fragmentem linii
   // Zmniejszony gap zgodnie z prośbą: bliżej wystającego krótkiego fragmentu
-  static const double _labelFragmentGap = 2;
+  static const double _labelFragmentGap = 4;
   // długość krótkiego fragmentu poziomej linii przy kolumnie godzin
   static const double _smallSegment = 8;
 
@@ -140,34 +140,16 @@ class _CalendarDayViewState extends State<CalendarDayView> {
       ),
     );
     const verticalLineX = _labelWidth + _labelFragmentGap + _smallSegment;
-    const cardLeft = verticalLineX + 1; // przylega do linii pionowej (bez _hPad)
-    // szerokość dostępna: chcemy, aby left + width = outerContainerWidth - cardRightGap
-    // containerWidth tutaj to szerokość wnętrza (po odjęciu paddingu _hPad po obu stronach).
-    // Aby uzyskać offset względem zewnętrznej ramki, dodajemy _hPad.
-    const double cardRightGap = 8.0; // karta kończy się 8px od prawej krawędzi frame'a
-    // containerWidth to szerokość WEWNĄTRZ paddingu. Aby uzyskać width tak, by
-    // left + width = outerWidth - cardRightGap, a outerWidth = containerWidth + 2*_hPad,
-    // możemy użyć width = containerWidth + _hPad - cardLeft - cardRightGap
-    // final availableWidth = (containerWidth + _hPad - cardLeft - cardRightGap).clamp(80.0, containerWidth + _hPad);
-    // Używamy Positioned z left i right zamiast width, aby wymusić dokładny odstęp
-    // od prawej krawędzi (right = cardRightGap). Dzięki temu nie ryzykujemy przycięcia
-    // zaokrągleń karty.
+    const cardLeft = verticalLineX + 1; // przylega do linii pionowej
+    // szerokość dostępna: containerWidth - cardLeft - prawy padding (=_hPad)
+    const double safeMargin = 4.0; // zapas, żeby zaokrąglony róg nie był przycinany
+    final availableWidth = (containerWidth - cardLeft - _hPad - safeMargin).clamp(80.0, containerWidth);
     return Positioned(
       top: startPos + 1,
-      left: cardLeft + _hPad,
-      // dokładnie 8px od prawej krawędzi frame'a
-      right: cardRightGap,
+      left: cardLeft,
+      width: availableWidth,
       height: height,
-      // Opacity może tworzyć warstwę; aby zaokrąglenia były antyaliasowane i
-      // widoczne, dodatkowo opakowujemy kartę w ClipRRect z tą samą
-      // promieniem co dekoracja karty.
-      child: Opacity(
-        opacity: finished ? 0.55 : 1,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: card,
-        ),
-      ),
+      child: Opacity(opacity: finished ? 0.55 : 1, child: card),
     );
   }
 
@@ -195,92 +177,96 @@ class _CalendarDayViewState extends State<CalendarDayView> {
           widget.onPrevDay?.call();
         }
       },
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final containerWidth = constraints.maxWidth; // pełna szerokość frame'a
-          final height = math.max(totalHeight.toDouble(), constraints.maxHeight);
-          return SingleChildScrollView(
-            controller: _scrollController,
-            padding: EdgeInsets.zero,
-            child: SizedBox(
-              height: height + topPad + bottomPad,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  // Poziome krótkie segmenty (przesunięte o _hPad)
-                  for (int i = 1; i < 24; i++)
+      child: Padding(
+        // Przywróć padding 16 po obu stronach; wewnętrzne etykiety godzin będą przylegać do lewej wewnątrz tej przestrzeni.
+        padding: const EdgeInsets.symmetric(horizontal: _hPad),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final containerWidth = constraints.maxWidth;
+            final height = math.max(totalHeight.toDouble(), constraints.maxHeight);
+            return SingleChildScrollView(
+              controller: _scrollController,
+              padding: EdgeInsets.zero,
+              child: SizedBox(
+                height: height + topPad + bottomPad,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    // Poziome krótkie segmenty (pozostawione – jeśli niepotrzebne można usunąć) przesunięte o topPad
+                    for (int i = 1; i < 24; i++)
+                      Positioned(
+                        top: i * _hourHeight + topPad,
+                        left: shortFragmentLeft,
+                        width: _smallSegment,
+                        child: Container(height: 1, color: const Color(0xFFEDE6F3)),
+                      ),
+                    // Linia pionowa
                     Positioned(
-                      top: i * _hourHeight + topPad,
-                      left: shortFragmentLeft + _hPad,
-                      width: _smallSegment,
-                      child: Container(height: 1, color: const Color(0xFFEDE6F3)),
+                      top: topPad,
+                      bottom: bottomPad,
+                      left: verticalLineX,
+                      width: 1,
+                      child: Container(color: const Color(0xFFEDE6F3)),
                     ),
-                  // Linia pionowa
-                  Positioned(
-                    top: topPad,
-                    bottom: bottomPad,
-                    left: verticalLineX + _hPad,
-                    width: 1,
-                    child: Container(color: const Color(0xFFEDE6F3)),
-                  ),
-                  // Poziome dalsze linie
-                  for (int i = 1; i < 24; i++)
-                    Positioned(
-                      top: i * _hourHeight + topPad,
-                      left: verticalLineX + 1 + _hPad,
-                      right: 0,
-                      child: Container(height: 1, color: const Color(0xFFEDE6F3)),
-                    ),
-                  // Etykiety godzin (przesunięte o _hPad)
-                  for (int i = 1; i < 24; i++)
-                    Positioned(
-                      top: (i * _hourHeight) - labelHalfHeight + topPad,
-                      left: _hPad,
-                      width: _labelWidth,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 0),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            _hourLabel(i),
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: const Color(0xFF494949),
-                              fontWeight: FontWeight.w500,
+                    // Poziome dalsze linie
+                    for (int i = 1; i < 24; i++)
+                      Positioned(
+                        top: i * _hourHeight + topPad,
+                        left: verticalLineX + 1,
+                        right: 0,
+                        child: Container(height: 1, color: const Color(0xFFEDE6F3)),
+                      ),
+                    // Etykiety godzin (przesunięte) — tekst wyrównany do lewej (przylega do lewej krawędzi)
+                    for (int i = 1; i < 24; i++)
+                      Positioned(
+                        top: (i * _hourHeight) - labelHalfHeight + topPad,
+                        left: 0,
+                        width: _labelWidth,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 0),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _hourLabel(i),
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: const Color(0xFF494949),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  // Karty zajęć
-                  for (final idx in List<int>.generate(dayClasses.length, (i) => i))
-                    _buildPositionedCard(dayClasses[idx], idx, topPad: topPad, containerWidth: containerWidth),
-                  // Linia "teraz"
-                  if (_sameDay(widget.day, _now))
-                    Positioned(
-                      top: _timeToPixels(_now) - 1 + topPad,
-                      left: verticalLineX - 5 + _hPad,
-                      right: 0,
-                      child: Row(
-                        children: [
-                          const SizedBox(
-                            width: 10,
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: _NowDot(color: Colors.red),
+                    // Karty zajęć
+                    for (final _idx in List<int>.generate(dayClasses.length, (i) => i))
+                      _buildPositionedCard(dayClasses[_idx], _idx, topPad: topPad, containerWidth: containerWidth),
+                    // Linia "teraz"
+                    if (_sameDay(widget.day, _now))
+                      Positioned(
+                        top: _timeToPixels(_now) - 1 + topPad,
+                        left: verticalLineX - 5,
+                        right: 0,
+                        child: Row(
+                          children: [
+                            const SizedBox(
+                              width: 10,
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: _NowDot(color: Colors.red),
+                              ),
                             ),
-                          ),
-                          Expanded(child: Container(height: 2, color: Colors.red)),
-                        ],
+                            Expanded(child: Container(height: 2, color: Colors.red)),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

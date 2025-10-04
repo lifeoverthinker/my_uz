@@ -24,64 +24,51 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      final availH = constraints.maxHeight.isFinite ? constraints.maxHeight : double.infinity;
-      // adaptive values
-      final bool compact = availH.isFinite && availH < 64;
-      final double vPad = compact ? 6 : 8;
-      final double gap = compact ? 6 : 8;
-      final int titleLines = compact ? 1 : (hugHeight ? 2 : 1);
-      final int descLines = compact ? 2 : (hugHeight ? 3 : 2);
+    final scale = MediaQuery.of(context).textScaleFactor;
+    final adaptive = hugHeight || scale > 1.0;
 
-      final inner = Container(
-        padding: EdgeInsets.symmetric(vertical: vPad, horizontal: 12),
-        decoration: ShapeDecoration(
-          color: backgroundColor ?? const Color(0xFFDAF5D7),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Teksty (jak TaskCard) – bez avatara
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    fit: FlexFit.loose,
-                    child: Text(
-                      title,
-                      maxLines: titleLines,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyle.myUZLabelLarge.copyWith(
-                        color: const Color(0xFF1D192B),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: gap),
-                  Flexible(
-                    fit: FlexFit.loose,
-                    child: Text(
-                      description,
-                      maxLines: descLines,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
-                    ),
-                  ),
-                ],
-              ),
+    final inner = Container(
+      padding: const EdgeInsets.all(12),
+      decoration: ShapeDecoration(
+        color: backgroundColor ?? const Color(0xFFDAF5D7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            maxLines: hugHeight ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyle.myUZLabelLarge.copyWith(
+              color: const Color(0xFF1D192B),
+              fontWeight: FontWeight.w500,
             ),
-            const SizedBox(width: 0),
-          ],
-        ),
-      );
+          ),
+          const SizedBox(height: 8),
+          Text(
+            description,
+            maxLines: hugHeight ? 3 : 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
+          ),
+        ],
+      ),
+    );
 
+    if (adaptive) {
       return GestureDetector(
         onTap: () => EventDetailsSheet.open(context, eventModel),
         child: inner,
       );
-    });
+    }
+    return GestureDetector(
+      onTap: () => EventDetailsSheet.open(context, eventModel),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _kHeightEvent),
+        child: inner,
+      ),
+    );
   }
 }

@@ -303,12 +303,14 @@ class _AdaptiveIconSlot extends StatelessWidget {
   final VoidCallback? onTap;
   final String? semanticsLabel;
   final bool isButton;
+  final bool alignTop; // new: allow top alignment
   const _AdaptiveIconSlot({
     required this.iconSize,
     required this.child,
     this.onTap,
     this.semanticsLabel,
     this.isButton = false,
+    this.alignTop = false,
   });
 
   @override
@@ -317,8 +319,10 @@ class _AdaptiveIconSlot extends StatelessWidget {
     Widget inner = SizedBox(
       width: _kHitArea,
       height: _kHitArea,
-      child: Center(
+      child: Align(
+        alignment: alignTop ? Alignment.topCenter : Alignment.center,
         child: Container(
+          margin: EdgeInsets.only(top: alignTop ? 4 : 0),
           width: circle,
           height: circle,
           decoration: BoxDecoration(
@@ -382,17 +386,21 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _AdaptiveIconSlot(
           iconSize: 20,
           child: Icon(icon, size: 20, color: cs.onSurface),
+          alignTop: true,
         ),
         const SizedBox(width: _kIconToTextGap),
         Expanded(
-          child: Text(
-            label,
-            style: AppTextStyle.myUZBodyLarge.copyWith(color: cs.onSurface),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 2), // top-aligned text to match icon
+            child: Text(
+              label,
+              style: AppTextStyle.myUZBodyLarge.copyWith(color: cs.onSurface),
+            ),
           ),
         ),
       ],

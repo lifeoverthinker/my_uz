@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:my_uz/models/class_model.dart';
 
 // Rezerwa po lewej aby kolumny dni wyrównały się z osią timeline:
-// odpowiada pozycji pionowej linii w CalendarDayView: _labelWidth(48) + _labelFragmentGap(2) + _smallSegment(8) = 58
-const double kCalendarLeftReserve = 58;
+// odpowiada pozycji pionowej linii w CalendarDayView: _labelWidth(48) + _labelFragmentGap(4) + _smallSegment(8) = 60
+const double kCalendarLeftReserve = 60;
 
 class CalendarView extends StatefulWidget {
   final DateTime focusedDay;
@@ -29,211 +28,66 @@ class CalendarView extends StatefulWidget {
     this.onNextMonth,
   });
 
-  // publiczna metoda pomocnicza do generowania siatki 42 dni (6 wierszy x 7 dni)
-  static List<DateTime> buildMonthDays(DateTime focus) {
-    final firstOfMonth = DateTime(focus.year, focus.month, 1);
-    final firstWeekday = firstOfMonth.weekday; // 1=pon
-    final start = firstOfMonth.subtract(Duration(days: firstWeekday - 1));
-    return List.generate(42, (i) => start.add(Duration(days: i)));
-  }
-
   @override
   State<CalendarView> createState() => _CalendarViewState();
 }
 
 class _CalendarViewState extends State<CalendarView> {
-  double _accumDx = 0.0;
-  DateTime? _lastSwipeTime;
-  static const int _swipeCooldownMs = 420;
+  double _dragDx = 0;
+  static const double _dragThreshold = 60; // minimalna odległość do uznania gestu
 
-  void _onPointerDown(PointerDownEvent ev) {
-    _accumDx = 0.0;
+  void _handleDragUpdate(DragUpdateDetails details) {
+    _dragDx += details.delta.dx;
   }
 
-  void _onPointerMove(PointerMoveEvent ev) {
-    _accumDx += ev.delta.dx;
-  }
-
-  void _trySwipe(VoidCallback cb) {
-    final now = DateTime.now();
-    if (_lastSwipeTime != null && now.difference(_lastSwipeTime!).inMilliseconds < _swipeCooldownMs) return;
-    _lastSwipeTime = now;
-    cb();
-  }
-
-  void _onPointerUp(PointerUpEvent ev) {
-    // Threshold similar to earlier: 40px
-    if (_accumDx.abs() < 40) return;
-    if (_accumDx < 0) {
-      if (widget.isWeekView) _trySwipe(() => widget.onNextWeek?.call());
-      else _trySwipe(() => widget.onNextMonth?.call());
-    } else {
-      if (widget.isWeekView) _trySwipe(() => widget.onPrevWeek?.call());
-      else _trySwipe(() => widget.onPrevMonth?.call());
+  void _handleDragEnd(DragEndDetails details) {
+    if (_dragDx.abs() > _dragThreshold) {
+      if (_dragDx < 0) {
+        widget.onNextMonth?.call();
+      } else {
+        widget.onPrevMonth?.call();
+      }
     }
+    // Resetuj stan gestu po zakończeniu
+    _dragDx = 0;
   }
 
   @override
   Widget build(BuildContext context) {
-    // final days = CalendarView.buildMonthDays(widget.focusedDay); // zawsze 42 dni (unused)
-
-    // Używamy TableCalendar by mieć pewność, że dni miesiąca są poprawnie
-    // generowane według kalendarza (bez duplikatów). Stylujemy każdą komórkę
-    // przy pomocy lokalnego _DayCell, i wywołujemy callbacki page change.
-    const rowHeight = 38.0;
-    final targetRows = widget.isWeekView ? 1 : 6;
-
-    return Listener(
-      onPointerDown: _onPointerDown,
-      onPointerMove: _onPointerMove,
-      onPointerUp: _onPointerUp,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onHorizontalDragEnd: (details) {
-          final v = details.primaryVelocity ?? 0;
-          if (v.abs() < 40) return;
-          if (v < 0) {
-            if (widget.isWeekView) _trySwipe(() => widget.onNextWeek?.call()); else _trySwipe(() => widget.onNextMonth?.call());
-          } else {
-            if (widget.isWeekView) _trySwipe(() => widget.onPrevWeek?.call()); else _trySwipe(() => widget.onPrevMonth?.call());
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 80),
-            curve: Curves.easeInOutCubic,
-            alignment: Alignment.topCenter,
-            child: ClipRect(
-              child: SizedBox(
-                height: rowHeight * targetRows,
-                child: Row(
-                  children: [
-                    const SizedBox(width: kCalendarLeftReserve),
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          TableCalendar(
-                            firstDay: DateTime(widget.focusedDay.year - 2),
-                            lastDay: DateTime(widget.focusedDay.year + 2, 12, 31),
-                            rowHeight: rowHeight,
-                            daysOfWeekHeight: 0,
-                            focusedDay: widget.focusedDay,
-                            headerVisible: false,
-                            daysOfWeekVisible: false,
-                            calendarFormat: widget.isWeekView ? CalendarFormat.week : CalendarFormat.month,
-                            startingDayOfWeek: StartingDayOfWeek.monday,
-                            onDaySelected: (d, fd) => widget.onDaySelected(d),
-                            onPageChanged: (newFocused) {
-                              final now = DateTime.now();
-                              if (_lastSwipeTime != null && now.difference(_lastSwipeTime!).inMilliseconds < _swipeCooldownMs) {
-                                return;
-                              }
-                              if (newFocused.isAfter(widget.focusedDay)) {
-                                if (widget.isWeekView) {
-                                  _trySwipe(() => widget.onNextWeek?.call());
-                                } else {
-                                  _trySwipe(() => widget.onNextMonth?.call());
-                                }
-                              } else if (newFocused.isBefore(widget.focusedDay)) {
-                                if (widget.isWeekView) {
-                                  _trySwipe(() => widget.onPrevWeek?.call());
-                                } else {
-                                  _trySwipe(() => widget.onPrevMonth?.call());
-                                }
-                              }
-                            },
-                            calendarBuilders: CalendarBuilders(
-                              defaultBuilder: (context, day, focused) {
-                                return SizedBox(
-                                  height: rowHeight,
-                                  child: _DayCell(
-                                    day: day,
-                                    isSelected: day.year == widget.selectedDay.year && day.month == widget.selectedDay.month && day.day == widget.selectedDay.day,
-                                    isOutside: day.month != widget.focusedDay.month,
-                                    hasClasses: (widget.classesByDay[DateTime(day.year, day.month, day.day)] ?? const []).isNotEmpty,
-                                    onTap: () => widget.onDaySelected(day),
-                                    size: 32,
-                                  ),
-                                );
-                              },
-                              selectedBuilder: (context, day, focused) {
-                                return SizedBox(
-                                  height: rowHeight,
-                                  child: _DayCell(
-                                    day: day,
-                                    isSelected: true,
-                                    isOutside: day.month != widget.focusedDay.month,
-                                    hasClasses: (widget.classesByDay[DateTime(day.year, day.month, day.day)] ?? const []).isNotEmpty,
-                                    onTap: () => widget.onDaySelected(day),
-                                    size: 32,
-                                  ),
-                                );
-                              },
-                              todayBuilder: (context, day, focused) {
-                                final isSelected = day.year == widget.selectedDay.year && day.month == widget.selectedDay.month && day.day == widget.selectedDay.day;
-                                return SizedBox(
-                                  height: rowHeight,
-                                  child: _DayCell(
-                                    day: day,
-                                    isSelected: isSelected,
-                                    isOutside: day.month != widget.focusedDay.month,
-                                    hasClasses: (widget.classesByDay[DateTime(day.year, day.month, day.day)] ?? const []).isNotEmpty,
-                                    onTap: () => widget.onDaySelected(day),
-                                    size: 32,
-                                  ),
-                                );
-                              },
-                            ),
-                            calendarStyle: CalendarStyle(
-                              outsideDaysVisible: true,
-                              cellMargin: EdgeInsets.zero,
-                              isTodayHighlighted: false,
-                              todayDecoration: const BoxDecoration(
-                                color: Colors.transparent,
-                                shape: BoxShape.circle,
-                              ),
-                              selectedDecoration: const BoxDecoration(
-                                color: Colors.transparent,
-                                shape: BoxShape.circle,
-                              ),
-                              todayTextStyle: const TextStyle(),
-                              selectedTextStyle: const TextStyle(),
-                            ),
-                          ),
-                          // Przezroczysty detektor gestów na wierzchu, aby pewnie przechwycić flingi
-                          Positioned.fill(
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.translucent,
-                              onHorizontalDragEnd: (details) {
-                                final v = details.primaryVelocity ?? 0;
-                                if (v.abs() < 40) return;
-                                if (v < 0) {
-                                  if (widget.isWeekView) _trySwipe(() => widget.onNextWeek?.call()); else _trySwipe(() => widget.onNextMonth?.call());
-                                } else {
-                                  if (widget.isWeekView) _trySwipe(() => widget.onPrevWeek?.call()); else _trySwipe(() => widget.onPrevMonth?.call());
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+    final days = _buildMonthDays(widget.focusedDay); // zawsze 42 dni
+    final grid = _MonthGrid(
+      days: days,
+      focusedMonth: DateTime(widget.focusedDay.year, widget.focusedDay.month),
+      selectedDay: widget.selectedDay,
+      classesByDay: widget.classesByDay,
+      onTap: widget.onDaySelected,
+      isWeekView: widget.isWeekView,
     );
+    // Gest przesuwania tylko w widoku miesiąca
+    if (!widget.isWeekView) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragUpdate: _handleDragUpdate,
+        onHorizontalDragEnd: _handleDragEnd,
+        child: grid,
+      );
+    } else {
+      // W widoku tygodnia brak gestów przesuwania
+      return grid;
+    }
+  }
+
+  List<DateTime> _buildMonthDays(DateTime focus) {
+    final firstOfMonth = DateTime(focus.year, focus.month, 1);
+    final firstWeekday = firstOfMonth.weekday; // 1=pon
+    final start = firstOfMonth.subtract(Duration(days: firstWeekday - 1));
+    return List.generate(42, (i) => start.add(Duration(days: i)));
   }
 }
 
 class _MonthGrid extends StatelessWidget {
   final List<DateTime> days; // 42 elementy
   final DateTime focusedMonth;
-  final DateTime focusedDay; // rzeczywisty fokus (używany w trybie tygodniowym)
   final DateTime selectedDay;
   final Map<DateTime, List<ClassModel>> classesByDay;
   final ValueChanged<DateTime> onTap;
@@ -241,7 +95,6 @@ class _MonthGrid extends StatelessWidget {
   const _MonthGrid({
     required this.days,
     required this.focusedMonth,
-    required this.focusedDay,
     required this.selectedDay,
     required this.classesByDay,
     required this.onTap,
@@ -260,43 +113,41 @@ class _MonthGrid extends StatelessWidget {
       final itemW = available / 7;
       const rowHeight = 38.0; // DayCell: 32 + 6 marg.
       final targetRows = isWeekView ? 1 : 6;
-
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: AnimatedSize(
-          duration: const Duration(milliseconds: 80),
+          duration: const Duration(milliseconds: 340),
           curve: Curves.easeInOutCubic,
           alignment: Alignment.topCenter,
           child: ClipRect(
             child: SizedBox(
               height: rowHeight * targetRows,
               child: Column(
-                children: List.generate(6, (w) {
-                  final visible = isWeekView ? (w == _weekIndexOf(focusedDay)) : (w == _weekIndexOf(selectedDay));
-                  final opacityVisible = visible;
-                  return _AnimatedMonthRow(
-                    visible: visible,
-                    opacityVisible: opacityVisible,
-                    height: rowHeight,
-                    child: Row(
-                      children: [
-                        const SizedBox(width: kCalendarLeftReserve),
-                        for (int d = 0; d < 7; d++)
-                          SizedBox(
-                            width: itemW,
-                            child: _DayCell(
-                              day: days[w * 7 + d],
-                              isSelected: _isSameDay(days[w * 7 + d], selectedDay),
-                              isOutside: days[w * 7 + d].month != focusedMonth.month,
-                              hasClasses: (classesByDay[DateTime(days[w * 7 + d].year, days[w * 7 + d].month, days[w * 7 + d].day)] ?? const []).isNotEmpty,
-                              onTap: () => onTap(days[w * 7 + d]),
-                              size: 32,
+                children: [
+                  for (int w = 0; w < 6; w++)
+                    _AnimatedMonthRow(
+                      visible: !isWeekView || w == _weekIndexOf(selectedDay),
+                      opacityVisible: !isWeekView || w == _weekIndexOf(selectedDay),
+                      height: rowHeight,
+                      child: Row(
+                        children: [
+                          const SizedBox(width: kCalendarLeftReserve),
+                          for (int d = 0; d < 7; d++)
+                            SizedBox(
+                              width: itemW,
+                              child: _DayCell(
+                                day: days[w * 7 + d],
+                                isSelected: _isSameDay(days[w * 7 + d], selectedDay),
+                                isOutside: days[w * 7 + d].month != focusedMonth.month,
+                                hasClasses: (classesByDay[DateTime(days[w * 7 + d].year, days[w * 7 + d].month, days[w * 7 + d].day)] ?? const []).isNotEmpty,
+                                onTap: () => onTap(days[w * 7 + d]),
+                                size: 34,
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  );
-                }),
+                ],
               ),
             ),
           ),
@@ -353,7 +204,7 @@ class _DayCell extends StatelessWidget {
       textColor = const Color(0xFF494949);
     }
 
-    final double diameter = size; // użyj przekazanego rozmiaru
+    const double diameter = 32; // stała średnica dla kółka
 
     final TextStyle dayTextStyle = (baseStyle ?? const TextStyle()).copyWith(
       fontWeight: FontWeight.w600,
@@ -369,12 +220,14 @@ class _DayCell extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected
             ? cs.primary
-            : (isToday ? cs.primary.withValues(alpha: 0.4) : Colors.transparent),
+            : (isToday ? cs.primary.withValues(alpha: 0.16) : Colors.transparent),
         borderRadius: BorderRadius.circular(diameter / 2),
-        border: (isSelected || isToday) ? null : null,
+        border: isSelected
+            ? null
+            : (isToday ? Border.all(color: cs.primary.withValues(alpha: 0.32), width: 1) : null),
       ),
       alignment: Alignment.center,
-      child: Text(text, style: dayTextStyle),
+      child: Text(text, style: dayTextStyle.copyWith(color: isSelected ? cs.onPrimary : (isToday ? cs.primary : dayTextStyle.color))),
     );
 
     final bool showCircle = isSelected || isToday;
