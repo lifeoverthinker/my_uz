@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:my_uz/models/class_model.dart';
 
 // Rezerwa po lewej aby kolumny dni wyrównały się z osią timeline:
@@ -15,6 +16,7 @@ class CalendarView extends StatefulWidget {
   final VoidCallback? onNextWeek;
   final VoidCallback? onPrevMonth;
   final VoidCallback? onNextMonth;
+  final bool enableSwipe; // Dodano parametr
   const CalendarView({
     super.key,
     required this.focusedDay,
@@ -26,35 +28,108 @@ class CalendarView extends StatefulWidget {
     this.onNextWeek,
     this.onPrevMonth,
     this.onNextMonth,
+    this.enableSwipe = true, // domyślnie true
   });
 
   @override
   State<CalendarView> createState() => _CalendarViewState();
+
+  // Public static helper used by tests: buduje 42 dni dla miesiąca zaczynając od poniedziałku
+  static List<DateTime> buildMonthDays(DateTime focus) {
+    final firstOfMonth = DateTime(focus.year, focus.month, 1);
+    final firstWeekday = firstOfMonth.weekday; // 1=pon
+    final start = firstOfMonth.subtract(Duration(days: firstWeekday - 1));
+    return List.generate(42, (i) => start.add(Duration(days: i)));
+  }
 }
 
 class _CalendarViewState extends State<CalendarView> {
-  double _dragDx = 0;
-  static const double _dragThreshold = 60; // minimalna odległość do uznania gestu
+  // pointer-based gesture tracking (works even when child widgets have GestureDetectors)
+  double? _startX;
+  int? _startTimeMillis;
+  double? _lastX;
+  int? _lastTimeMillis;
+  double? _startY;
+  double? _lastY;
+  static const double _dragThreshold = 40; // minimalna odległość px (bardziej czuły)
+  static const double _velocityThreshold = 250; // px/s (bardziej czuły)
+  DateTime? _lastWeekMonday;
+  int _slideDir = 0; // -1 = left (next), 1 = right (prev), 0 = none
 
-  void _handleDragUpdate(DragUpdateDetails details) {
-    _dragDx += details.delta.dx;
+  void _onPointerDown(PointerDownEvent e) {
+    _startX = e.position.dx;
+    _startY = e.position.dy;
+    _lastX = _startX;
+    final t = DateTime.now().millisecondsSinceEpoch;
+    _startTimeMillis = t;
+    _lastTimeMillis = t;
   }
 
-  void _handleDragEnd(DragEndDetails details) {
-    if (_dragDx.abs() > _dragThreshold) {
-      if (_dragDx < 0) {
-        widget.onNextMonth?.call();
+  void _onPointerMove(PointerMoveEvent e) {
+    _lastX = e.position.dx;
+    _lastY = e.position.dy;
+    _lastTimeMillis = DateTime.now().millisecondsSinceEpoch;
+  }
+
+  void _onPointerCancel(PointerCancelEvent e) {
+    _startX = null; _lastX = null; _startTimeMillis = null; _lastTimeMillis = null;
+  }
+
+  void _onPointerUp(PointerUpEvent e) {
+    if (_startX == null || _lastX == null || _startTimeMillis == null || _lastTimeMillis == null) {
+      _startX = null; _lastX = null; _startTimeMillis = null; _lastTimeMillis = null; return;
+    }
+    final dx = _lastX! - _startX!; // positive -> moved right
+    final dy = (_lastY ?? _startY ?? 0) - (_startY ?? 0);
+    // rozpoznaj gest poziomy tylko gdy przesunięcie X jest większe niż Y * 1.2
+    if (dx.abs() <= (dy.abs() * 1.2)) {
+      _startX = null; _lastX = null; _startTimeMillis = null; _lastTimeMillis = null; _startY = null; _lastY = null; return;
+    }
+    final dtMillis = (_lastTimeMillis! - _startTimeMillis!).clamp(1, 100000);
+    final velocity = dx / dtMillis * 1000.0; // px/s
+
+    bool triggered = false;
+    if (velocity.abs() > _velocityThreshold) {
+      if (velocity < 0) {
+        if (widget.isWeekView) widget.onNextWeek?.call(); else widget.onNextMonth?.call();
       } else {
-        widget.onPrevMonth?.call();
+        if (widget.isWeekView) widget.onPrevWeek?.call(); else widget.onPrevMonth?.call();
+      }
+      triggered = true;
+    }
+    if (!triggered && dx.abs() > _dragThreshold) {
+      if (dx < 0) {
+        if (widget.isWeekView) widget.onNextWeek?.call(); else widget.onNextMonth?.call();
+      } else {
+        if (widget.isWeekView) widget.onPrevWeek?.call(); else widget.onPrevMonth?.call();
       }
     }
-    // Resetuj stan gestu po zakończeniu
-    _dragDx = 0;
+
+    _startX = null; _lastX = null; _startTimeMillis = null; _lastTimeMillis = null; _startY = null; _lastY = null;
+    // Debug feedback removed: previously showed gesture info via SnackBar which was noisy during testing
+  }
+
+  DateTime _mondayOfWeekLocal(DateTime d) {
+    final wd = d.weekday; // 1=Mon
+    return DateTime(d.year, d.month, d.day).subtract(Duration(days: wd - 1));
+  }
+
+  @override
+  void didUpdateWidget(covariant CalendarView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Jeśli przesunięto fokus na inny tydzień, ustaw kierunek animacji
+    final prev = _lastWeekMonday ?? _mondayOfWeekLocal(oldWidget.focusedDay);
+    final now = _mondayOfWeekLocal(widget.focusedDay);
+    final diff = now.difference(prev).inDays;
+    if (diff > 0) _slideDir = -1; // move left to show next week
+    else if (diff < 0) _slideDir = 1; // move right to show prev week
+    else _slideDir = 0;
+    _lastWeekMonday = now;
   }
 
   @override
   Widget build(BuildContext context) {
-    final days = _buildMonthDays(widget.focusedDay); // zawsze 42 dni
+    final days = CalendarView.buildMonthDays(widget.focusedDay); // zawsze 42 dni
     final grid = _MonthGrid(
       days: days,
       focusedMonth: DateTime(widget.focusedDay.year, widget.focusedDay.month),
@@ -63,29 +138,39 @@ class _CalendarViewState extends State<CalendarView> {
       onTap: widget.onDaySelected,
       isWeekView: widget.isWeekView,
     );
-    // Gest przesuwania tylko w widoku miesiąca
-    if (!widget.isWeekView) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onHorizontalDragUpdate: _handleDragUpdate,
-        onHorizontalDragEnd: _handleDragEnd,
-        child: grid,
-      );
-    } else {
-      // W widoku tygodnia brak gestów przesuwania
-      return grid;
+    // Zawsze opakuj grid w Listener; w trybie tygodniowym dodatkowo animujemy przejścia
+    final child = widget.isWeekView
+        ? (() {
+            final newKeyStr = _mondayOfWeekLocal(widget.focusedDay).toIso8601String();
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
+              transitionBuilder: (childWidget, animation) {
+                return FadeTransition(opacity: animation, child: childWidget);
+              },
+              child: SizedBox(key: ValueKey(newKeyStr), child: grid),
+            );
+          })()
+        : grid;
+
+    // Jeśli gesty są wyłączone, zwróć child bez Listener
+    if (!widget.enableSwipe) {
+      return child;
     }
-  }
+    // W przeciwnym razie opakuj w Listener
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: _onPointerDown,
+      onPointerMove: _onPointerMove,
+      onPointerUp: _onPointerUp,
+      onPointerCancel: _onPointerCancel,
+      child: child,
+    );
+   }
+ }
 
-  List<DateTime> _buildMonthDays(DateTime focus) {
-    final firstOfMonth = DateTime(focus.year, focus.month, 1);
-    final firstWeekday = firstOfMonth.weekday; // 1=pon
-    final start = firstOfMonth.subtract(Duration(days: firstWeekday - 1));
-    return List.generate(42, (i) => start.add(Duration(days: i)));
-  }
-}
-
-class _MonthGrid extends StatelessWidget {
+ class _MonthGrid extends StatelessWidget {
   final List<DateTime> days; // 42 elementy
   final DateTime focusedMonth;
   final DateTime selectedDay;

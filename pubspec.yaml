@@ -21,12 +21,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.10.0
 
 flutter:
   uses-material-design: true
 
   assets:
     - assets/images/illustrations/
+    - assets/logo.png
     - .env
 
   fonts:
@@ -51,3 +53,12 @@ flutter:
     - family: MyUz
       fonts:
         - asset: lib/fonts/MyUz.ttf
+
+# Konfiguracja generatora ikon aplikacji (flutter_launcher_icons)
+# Używa pliku: assets/logo.png (wybierz PNG 1024x1024 dla najlepszej jakości)
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#68548E"

@@ -166,107 +166,95 @@ class _CalendarDayViewState extends State<CalendarDayView> {
     const double topPad = 8; // dodane aby uzyskać 64px (56 + 8) od górnej krawędzi do linii 1:00
     const double bottomPad = 8; // analogicznie na dole pod linią 23:00
 
-    return GestureDetector(
-      onHorizontalDragEnd: (details) {
-        final v = details.primaryVelocity ?? 0;
-        if (v.abs() < 180) return;
-        // MD3: swipe left (v<0) -> następny dzień, swipe right (v>0) -> poprzedni dzień
-        if (v < 0) {
-          widget.onNextDay?.call();
-        } else {
-          widget.onPrevDay?.call();
-        }
-      },
-      child: Padding(
-        // Przywróć padding 16 po obu stronach; wewnętrzne etykiety godzin będą przylegać do lewej wewnątrz tej przestrzeni.
-        padding: const EdgeInsets.symmetric(horizontal: _hPad),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final containerWidth = constraints.maxWidth;
-            final height = math.max(totalHeight.toDouble(), constraints.maxHeight);
-            return SingleChildScrollView(
-              controller: _scrollController,
-              padding: EdgeInsets.zero,
-              child: SizedBox(
-                height: height + topPad + bottomPad,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    // Poziome krótkie segmenty (pozostawione – jeśli niepotrzebne można usunąć) przesunięte o topPad
-                    for (int i = 1; i < 24; i++)
-                      Positioned(
-                        top: i * _hourHeight + topPad,
-                        left: shortFragmentLeft,
-                        width: _smallSegment,
-                        child: Container(height: 1, color: const Color(0xFFEDE6F3)),
-                      ),
-                    // Linia pionowa
+    return Padding(
+      // Przywróć padding 16 po obu stronach; wewnętrzne etykiety godzin będą przylegać do lewej wewnątrz tej przestrzeni.
+      padding: const EdgeInsets.symmetric(horizontal: _hPad),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final containerWidth = constraints.maxWidth;
+          final height = math.max(totalHeight.toDouble(), constraints.maxHeight);
+          return SingleChildScrollView(
+            controller: _scrollController,
+            padding: EdgeInsets.zero,
+            child: SizedBox(
+              height: height + topPad + bottomPad,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Poziome krótkie segmenty (pozostawione – jeśli niepotrzebne można usunąć) przesunięte o topPad
+                  for (int i = 1; i < 24; i++)
                     Positioned(
-                      top: topPad,
-                      bottom: bottomPad,
-                      left: verticalLineX,
-                      width: 1,
-                      child: Container(color: const Color(0xFFEDE6F3)),
+                      top: i * _hourHeight + topPad,
+                      left: shortFragmentLeft,
+                      width: _smallSegment,
+                      child: Container(height: 1, color: const Color(0xFFEDE6F3)),
                     ),
-                    // Poziome dalsze linie
-                    for (int i = 1; i < 24; i++)
-                      Positioned(
-                        top: i * _hourHeight + topPad,
-                        left: verticalLineX + 1,
-                        right: 0,
-                        child: Container(height: 1, color: const Color(0xFFEDE6F3)),
-                      ),
-                    // Etykiety godzin (przesunięte) — tekst wyrównany do lewej (przylega do lewej krawędzi)
-                    for (int i = 1; i < 24; i++)
-                      Positioned(
-                        top: (i * _hourHeight) - labelHalfHeight + topPad,
-                        left: 0,
-                        width: _labelWidth,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 0),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              _hourLabel(i),
-                              maxLines: 1,
-                              softWrap: false,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: const Color(0xFF494949),
-                                fontWeight: FontWeight.w500,
-                              ),
+                  // Linia pionowa
+                  Positioned(
+                    top: topPad,
+                    bottom: bottomPad,
+                    left: verticalLineX,
+                    width: 1,
+                    child: Container(color: const Color(0xFFEDE6F3)),
+                  ),
+                  // Poziome dalsze linie
+                  for (int i = 1; i < 24; i++)
+                    Positioned(
+                      top: i * _hourHeight + topPad,
+                      left: verticalLineX + 1,
+                      right: 0,
+                      child: Container(height: 1, color: const Color(0xFFEDE6F3)),
+                    ),
+                  // Etykiety godzin (przesunięte) — tekst wyrównany do lewej (przylega do lewej krawędzi)
+                  for (int i = 1; i < 24; i++)
+                    Positioned(
+                      top: (i * _hourHeight) - labelHalfHeight + topPad,
+                      left: 0,
+                      width: _labelWidth,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 0),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            _hourLabel(i),
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: const Color(0xFF494949),
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
                       ),
-                    // Karty zajęć
-                    for (final _idx in List<int>.generate(dayClasses.length, (i) => i))
-                      _buildPositionedCard(dayClasses[_idx], _idx, topPad: topPad, containerWidth: containerWidth),
-                    // Linia "teraz"
-                    if (_sameDay(widget.day, _now))
-                      Positioned(
-                        top: _timeToPixels(_now) - 1 + topPad,
-                        left: verticalLineX - 5,
-                        right: 0,
-                        child: Row(
-                          children: [
-                            const SizedBox(
-                              width: 10,
-                              child: Align(
-                                alignment: Alignment.centerRight,
-                                child: _NowDot(color: Colors.red),
-                              ),
+                    ),
+                  // Karty zajęć
+                  for (final _idx in List<int>.generate(dayClasses.length, (i) => i))
+                    _buildPositionedCard(dayClasses[_idx], _idx, topPad: topPad, containerWidth: containerWidth),
+                  // Linia "teraz"
+                  if (_sameDay(widget.day, _now))
+                    Positioned(
+                      top: _timeToPixels(_now) - 1 + topPad,
+                      left: verticalLineX - 5,
+                      right: 0,
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 10,
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: _NowDot(color: Colors.red),
                             ),
-                            Expanded(child: Container(height: 2, color: Colors.red)),
-                          ],
-                        ),
+                          ),
+                          Expanded(child: Container(height: 2, color: Colors.red)),
+                        ],
                       ),
-                  ],
-                ),
+                    ),
+                ],
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

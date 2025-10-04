@@ -189,8 +189,8 @@ class ClassesRepository {
     }
 
     // 1) jeśli przekazano groupId – użyj go bez żadnych fallbacków
-    String? resolvedGroupId = _trim(groupId);
-    if (resolvedGroupId?.isEmpty ?? false) resolvedGroupId = null;
+    final String _resolvedRaw = _trim(groupId);
+    String? resolvedGroupId = _resolvedRaw.isEmpty ? null : _resolvedRaw;
 
     if (resolvedGroupId != null) {
       try {
@@ -335,6 +335,30 @@ class ClassesRepository {
     } catch (e) {
       debugPrint('[ClassesRepo][getSubgroupsForGroup] err $e');
       return [];
+    }
+  }
+
+  /// Pobierz szczegóły nauczyciela (email, instytut, nazwa) jeśli są dostępne
+  static Future<Map<String,dynamic>?> getTeacherDetails(String teacherId) async {
+    try {
+      final row = await Supa.client.from('nauczyciele').select('id,nazwa,email,instytut').eq('id', teacherId).maybeSingle();
+      if (row == null) return null;
+      return Map<String,dynamic>.from(row as Map);
+    } catch (e) {
+      debugPrint('[ClassesRepo][getTeacherDetails] err $e');
+      return null;
+    }
+  }
+
+  /// Pobierz meta grupy po ID (id, kod_grupy, nazwa) - pomocnicze dla drawer/ulubionych
+  static Future<Map<String,dynamic>?> getGroupById(String groupId) async {
+    try {
+      final row = await Supa.client.from('grupy').select('id,kod_grupy,nazwa').eq('id', groupId).maybeSingle();
+      if (row == null) return null;
+      return Map<String,dynamic>.from(row as Map);
+    } catch (e) {
+      debugPrint('[ClassesRepo][getGroupById] err $e');
+      return null;
     }
   }
 
