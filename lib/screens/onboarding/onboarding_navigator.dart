@@ -6,15 +6,13 @@ import 'package:my_uz/theme/text_style.dart';
 import 'onboarding_frame.dart';
 // NOWE: Supabase i asynchroniczność
 import 'dart:async';
-import 'package:my_uz/supabase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:my_uz/services/classes_repository.dart';
 // Klucze SharedPreferences dla onboarding
 const String _kPrefOnbMode = 'onb_mode'; // 'anon' | 'data'
 const String _kPrefOnbSalutation = 'onb_salutation';
 const String _kPrefOnbFirst = 'onb_first';
 const String _kPrefOnbLast = 'onb_last';
-const String _kPrefOnbGroup = 'onb_group';
-const String _kPrefOnbSub = 'onb_group_sub';
 
 /// OnboardingNavigator – stała góra/dół, animuje się tylko środek (MD3 expressive)
 /// Figma (mobile): SafeArea, top=12, bottom=32, horizontal=24
@@ -492,20 +490,20 @@ class _Page3BodyState extends State<_Page3Body> {
   }
 
   Future<void> _restorePersisted() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedGroup = prefs.getString(_kPrefOnbGroup);
-    final savedSub = prefs.getString(_kPrefOnbSub); // teraz może zawierać listę np. "A,B,wf1"
+    final (savedGroup, savedSubs) = await ClassesRepository.loadGroupPrefs();
     if (savedGroup != null && savedGroup.isNotEmpty) {
       setState(() {
         _group = savedGroup;
         _loadingSubs = true; // zaczynamy od ładowania podgrup
       });
-      await _fetchSubgroupsForGroup(savedGroup);
-      if (savedSub != null) {
-        final parts = savedSub.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toSet();
-        // filtruj do dostępnych (jeśli już pobrane)
+      final subs = await ClassesRepository.getSubgroupsForGroup(savedGroup);
+      setState(() {
+        _availableSubs = subs;
+        _loadingSubs = false;
+      });
+      if (savedSubs.isNotEmpty) {
         setState(() {
-          _subsSelected = parts.isEmpty ? <String>{} : parts;
+          _subsSelected = savedSubs.toSet();
         });
       }
       _notifyProceed();
@@ -513,16 +511,11 @@ class _Page3BodyState extends State<_Page3Body> {
   }
 
   Future<void> _persistGroupSelection() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (_group != null) await prefs.setString(_kPrefOnbGroup, _group!);
-    // zapis wielokrotny – join przecinkami
-    await prefs.setString(_kPrefOnbSub, _subsSelected.join(','));
+    await ClassesRepository.setGroupPrefs(_group, _subsSelected.toList());
   }
 
   Future<void> _clearPersistedGroup() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_kPrefOnbGroup);
-    await prefs.remove(_kPrefOnbSub);
+    await ClassesRepository.setGroupPrefs(null, []);
   }
 
   void _onTextChanged() {
@@ -555,73 +548,17 @@ class _Page3BodyState extends State<_Page3Body> {
   }
 
   Future<void> _fetchGroupSuggestions(String query) async {
-    setState(() {
-      _loadingSuggestions = true;
-      _suggestionsError = null;
-    });
+    setState(() { _loadingSuggestions = true; _suggestionsError = null; });
     try {
-      final raw = query.trim();
-      // Usuwamy potencjalne wildcardy aby nie manipulować wzorcem
-      final sanitized = raw.replaceAll('%', '').replaceAll('_', '');
-      if (sanitized.isEmpty) {
-        if (mounted) {
-          setState(() {
-            _suggestions = [];
-            _loadingSuggestions = false;
-          });
-        }
-        return;
-      }
-
-      // Substring match (nie tylko prefix): %fragment%
-      final pattern = '%$sanitized%';
-      final res = await Supa.client
-          .from('grupy')
-          .select('kod_grupy')
-          .ilike('kod_grupy', pattern)
-          .order('kod_grupy')
-          .limit(40); // trochę większy limit, potem lokalnie przytnijmy do 15
-
-      final lower = sanitized.toLowerCase();
-      var list = (res as List<dynamic>)
-          .map((e) => (e['kod_grupy'] as String?)?.trim())
-          .whereType<String>()
-          .toSet() // unikalne
-          .toList();
-
-      // Ranking: priorytet zaczynających się od wpisu, potem wg pierwszego indexOf
-      list.sort((a, b) {
-        final al = a.toLowerCase();
-        final bl = b.toLowerCase();
-        final aStarts = al.startsWith(lower);
-        final bStarts = bl.startsWith(lower);
-        if (aStarts && !bStarts) return -1;
-        if (!aStarts && bStarts) return 1;
-        final ai = al.indexOf(lower);
-        final bi = bl.indexOf(lower);
-        if (ai != bi) return ai.compareTo(bi);
-        return al.compareTo(bl);
-      });
-
-      // Przytnij listę aby nie przeładować dropdownu
-      if (list.length > 15) list = list.sublist(0, 15);
-
-      if (mounted) {
-        setState(() {
-          _suggestions = list;
-        });
-      }
+      final rows = await ClassesRepository.searchGroups(query, limit: 40);
+      var list = rows.map((r) => (r['kod_grupy'] as String?)?.trim()).whereType<String>().toSet().toList();
+      final lower = query.trim().toLowerCase();
+      list.sort((a,b){ final al=a.toLowerCase(), bl=b.toLowerCase(); final aStarts=al.startsWith(lower), bStarts=bl.startsWith(lower); if (aStarts && !bStarts) return -1; if (!aStarts && bStarts) return 1; final ai=al.indexOf(lower), bi=bl.indexOf(lower); if (ai!=bi) return ai.compareTo(bi); return al.compareTo(bl); });
+      if (list.length>15) list=list.sublist(0,15);
+      if (mounted) setState(()=> _suggestions = list);
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _suggestionsError = 'Błąd pobierania: $e';
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loadingSuggestions = false);
-      }
-    }
+      if (mounted) setState(()=> _suggestionsError = 'Błąd pobierania: $e');
+    } finally { if (mounted) setState(()=> _loadingSuggestions = false); }
   }
 
   Future<void> _confirmGroup([String? value]) async {
@@ -655,56 +592,27 @@ class _Page3BodyState extends State<_Page3Body> {
 
   Future<void> _fetchSubgroupsForGroup(String groupCode) async {
     if (_subgroupCache.containsKey(groupCode)) {
-      setState(() {
-        _availableSubs = _subgroupCache[groupCode]!;
-        _loadingSubs = false;
-      });
+      if (!mounted) return;
+      setState(() { _availableSubs = _subgroupCache[groupCode]!; _loadingSubs = false; });
       return;
     }
     try {
-      // 1. Pobierz id grupy
-      final groupRow = await Supa.client.from('grupy').select('id').eq('kod_grupy', groupCode).maybeSingle();
-      final groupId = groupRow != null ? groupRow['id'] : null;
-      if (groupId == null) {
-        setState(() {
-          _subsError = 'Nie znaleziono grupy';
-          _loadingSubs = false;
-        });
-        return;
-      }
-      // 2. Pobierz podgrupy
-      final subRes = await Supa.client
-          .from('zajecia_grupy')
-          .select('podgrupa')
-          .eq('grupa_id', groupId)
-          .not('podgrupa', 'is', null);
-      final subs = (subRes as List<dynamic>)
-          .map((e) => (e['podgrupa'] as String?)?.trim())
-          .whereType<String>()
-          .where((s) => s.isNotEmpty)
-          .toSet()
-          .toList()
-        ..sort();
+      final subs = await ClassesRepository.getSubgroupsForGroup(groupCode);
+      _subgroupCache[groupCode] = subs;
+      if (!mounted) return;
       setState(() {
         _availableSubs = subs;
-        _subgroupCache[groupCode] = subs;
         _loadingSubs = false;
         if (subs.isEmpty) {
-          // Brak podgrup – pozwalamy przejść dalej bez wyboru
           _subsSelected.clear();
         } else {
-          // Usuń z zapisanego wyboru elementy, których już nie ma
           _subsSelected = _subsSelected.where((s) => subs.contains(s)).toSet();
         }
       });
-      if (subs.isEmpty) {
-        widget.onCanProceedChanged(true);
-      }
+      if (subs.isEmpty) widget.onCanProceedChanged(true);
     } catch (e) {
-      setState(() {
-        _subsError = 'Błąd pobierania podgrup: $e';
-        _loadingSubs = false;
-      });
+      if (!mounted) return;
+      setState(() { _subsError = 'Błąd pobierania podgrup: $e'; _loadingSubs = false; });
     }
   }
 
@@ -1255,4 +1163,3 @@ class _ChoicePill extends StatelessWidget {
     );
   }
 }
-

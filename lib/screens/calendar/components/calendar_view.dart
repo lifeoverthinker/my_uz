@@ -74,6 +74,30 @@ class _CalendarViewState extends State<CalendarView> {
   }
 
   @override
+  State<CalendarView> createState() => _CalendarViewState();
+}
+
+class _CalendarViewState extends State<CalendarView> {
+  double _dragDx = 0;
+  static const double _dragThreshold = 60; // minimalna odległość do uznania gestu
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    _dragDx += details.delta.dx;
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_dragDx.abs() > _dragThreshold) {
+      if (_dragDx < 0) {
+        widget.onNextMonth?.call();
+      } else {
+        widget.onPrevMonth?.call();
+      }
+    }
+    // Resetuj stan gestu po zakończeniu
+    _dragDx = 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
     // final days = CalendarView.buildMonthDays(widget.focusedDay); // zawsze 42 dni (unused)
 
@@ -371,10 +395,12 @@ class _DayCell extends StatelessWidget {
             ? cs.primary
             : (isToday ? cs.primary.withValues(alpha: 0.4) : Colors.transparent),
         borderRadius: BorderRadius.circular(diameter / 2),
-        border: (isSelected || isToday) ? null : null,
+        border: isSelected
+            ? null
+            : (isToday ? Border.all(color: cs.primary.withValues(alpha: 0.32), width: 1) : null),
       ),
       alignment: Alignment.center,
-      child: Text(text, style: dayTextStyle),
+      child: Text(text, style: dayTextStyle.copyWith(color: isSelected ? cs.onPrimary : (isToday ? cs.primary : dayTextStyle.color))),
     );
 
     final bool showCircle = isSelected || isToday;
