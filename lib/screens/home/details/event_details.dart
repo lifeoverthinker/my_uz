@@ -189,14 +189,12 @@ class _AdaptiveIconSlot extends StatelessWidget {
   final VoidCallback? onTap;
   final String? semanticsLabel;
   final bool isButton;
-  final bool alignTop; // jeśli true, ikona jest wyrównana do góry (przydatne w wierszach z wielolinijkowym tekstem)
   const _AdaptiveIconSlot({
     required this.iconSize,
     required this.child,
     this.onTap,
     this.semanticsLabel,
     this.isButton = false,
-    this.alignTop = false,
   });
 
   @override
@@ -205,10 +203,8 @@ class _AdaptiveIconSlot extends StatelessWidget {
     Widget inner = SizedBox(
       width: _kHitArea,
       height: _kHitArea,
-      child: Align(
-        alignment: alignTop ? Alignment.topCenter : Alignment.center,
+      child: Center(
         child: Container(
-          margin: EdgeInsets.only(top: alignTop ? 4 : 0),
           width: circle,
           height: circle,
           decoration: BoxDecoration(
@@ -276,7 +272,6 @@ class _DetailRow extends StatelessWidget {
         _AdaptiveIconSlot(
           iconSize: 20,
           child: Icon(icon, size: 20, color: cs.onSurface),
-          alignTop: true,
         ),
         const SizedBox(width: _kIconToTextGap),
         Expanded(

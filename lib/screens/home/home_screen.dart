@@ -34,6 +34,8 @@ class HomeScreen extends StatefulWidget {
 const String _kPrefOnbMode = 'onb_mode';
 const String _kPrefOnbSalutation = 'onb_salutation';
 const String _kPrefOnbFirst = 'onb_first';
+const String _kPrefOnbGroup = 'onb_group';
+const String _kPrefOnbSub = 'onb_group_sub';
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _greetingName = 'Student';
@@ -287,8 +289,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 class _Header extends StatelessWidget {
   final String dateText;
   final String greetingName;
-  final String? subtitle;
-  const _Header({required this.dateText, required this.greetingName, this.subtitle});
+  const _Header({required this.dateText, required this.greetingName});
 
   static const double _hPad = 16;
   static const double _topAfterSafe = 8;
@@ -360,7 +361,7 @@ class _Header extends StatelessWidget {
             ),
             const SizedBox(height: _greetingToSubtitle),
             Text(
-              subtitle ?? 'UZ, Wydział Informatyki',
+              'UZ, Wydział Informatyki',
               style: AppTextStyle.myUZBodySmall.copyWith(
                 color: cs.onSurfaceVariant,
                 height: 2, // 12px * 2 = 24px jak w Figmie
