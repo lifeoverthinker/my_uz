@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/services/classes_repository.dart';
@@ -7,6 +8,10 @@ import 'package:my_uz/screens/calendar/components/calendar_view.dart';
 import 'package:my_uz/screens/calendar/components/calendar_day_view.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/screens/calendar/search_schedule_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:my_uz/screens/calendar/group_schedule_screen.dart';
+import 'package:my_uz/screens/calendar/teacher_schedule_screen.dart';
 
 /// Ekran kalendarza – widok tygodniowy + dzienny timeline (siatka godzinowa).
 class CalendarScreen extends StatefulWidget {
@@ -28,6 +33,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   String? _errorMsg;
   final Map<DateTime, List<ClassModel>> _weekCache = {};
   final Set<DateTime> _loadingWeeks = {};
+  int _slideDir = 0; // -1 = left (next), 1 = right (prev), 0 = none
 
   @override
   void initState() {
@@ -88,7 +94,11 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
 
   void _selectDay(DateTime day) {
     final d0 = _stripTime(day);
+    // Determine slide direction for animation: move left for next days (slide left), right for prev
+    final diff = d0.difference(_selectedDay).inDays;
+    final dir = diff > 0 ? -1 : (diff < 0 ? 1 : 0);
     setState(() {
+      _slideDir = dir;
       _selectedDay = d0;
       _focusedDay = d0; // aktualizujemy fokus aby _ensureWeekLoaded ustawił loading dla właściwego tygodnia
     });
@@ -96,14 +106,22 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   }
 
   void _prevWeek() {
-    setState(() { _focusedDay = _focusedDay.subtract(const Duration(days: 7)); });
+    setState(() {
+      _slideDir = 1; // slide right
+      _focusedDay = _focusedDay.subtract(const Duration(days: 7));
+      _selectedDay = _selectedDay.subtract(const Duration(days: 7));
+    });
     _ensureWeekLoaded(_focusedDay);
   }
 
   void _nextWeek() {
-    setState(() { _focusedDay = _focusedDay.add(const Duration(days: 7)); });
-    _ensureWeekLoaded(_focusedDay);
-  }
+    setState(() {
+      _slideDir = -1; // slide left
+       _focusedDay = _focusedDay.add(const Duration(days: 7));
+       _selectedDay = _selectedDay.add(const Duration(days: 7));
+     });
+     _ensureWeekLoaded(_focusedDay);
+   }
 
   // Dodane: przesunięcie o 1 dzień do przodu
   void _nextDay() {
@@ -144,6 +162,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
     final monthTitle = DateFormat('LLLL', 'pl').format(_focusedDay);
     Widget topCalendarRegion = Column(children: [
       const _CalendarDaysHeader(),
+      // CalendarView sam obsługuje gesty: przesuń tygodnem lub miesiącem w zależności od trybu
       CalendarView(
         focusedDay: _focusedDay,
         selectedDay: _selectedDay,
@@ -154,6 +173,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
         onNextWeek: _nextWeek,
         onPrevMonth: _prevMonth,
         onNextMonth: _nextMonth,
+        enableSwipe: true, // przywróć gest przesuwania tygodnia
       ),
     ]);
     Widget bodyContent = Expanded(
@@ -161,17 +181,45 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
         ? const Center(child: CircularProgressIndicator())
         : _error
           ? _ErrorReload(onReload: ()=>_ensureWeekLoaded(_focusedDay), msg: _errorMsg)
-          : CalendarDayView(
-              day: _selectedDay,
-              classes: selectedClasses,
-              onNextDay: _nextDay,
-              onPrevDay: _prevDay,
-            ),
+          : (() {
+              final newKeyStr = _selectedDay.toIso8601String();
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                switchInCurve: Curves.easeInOut,
+                switchOutCurve: Curves.easeInOut,
+                transitionBuilder: (childWidget, animation) {
+                  return FadeTransition(opacity: animation, child: childWidget);
+                },
+                child: SizedBox(
+                  key: ValueKey<String>(newKeyStr),
+                  child: CalendarDayView(
+                    day: _selectedDay,
+                    classes: selectedClasses,
+                    onNextDay: _nextDay,
+                    onPrevDay: _prevDay,
+                  ),
+                ),
+              );
+            })(),
     );
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       body: Stack(children:[
+        // Obszar przy lewej krawędzi do otwierania drawera gestem (swipe right)
+        if (!_drawerOpen)
+          Positioned(
+            left: 0, top: 0, bottom: 0, width: 24, // szerokość obszaru gestu
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragUpdate: (details) {
+                if (details.delta.dx > 16) {
+                  setState(() => _drawerOpen = true);
+                }
+              },
+              onTap: () {}, // blokuje tap-through
+            ),
+          ),
         SafeArea(child: Column(children:[
           _CalendarTopBar(
             monthTitle: monthTitle,
@@ -184,8 +232,39 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
           if (_activeSection=='calendar') topCalendarRegion,
           if (_activeSection=='calendar') bodyContent else Expanded(child: Center(child: Text(_activeSection=='schedule'?'Terminarz – miejsce na implementację.':'Porównaj plany – miejsce na implementację.'))),
         ])),
-        if (_drawerOpen) Positioned.fill(child: GestureDetector(onTap: ()=> setState(()=> _drawerOpen=false), child: AnimatedOpacity(duration: const Duration(milliseconds:200), opacity: _drawerOpen?1:0, child: Container(color: Colors.black.withValues(alpha:0.32))))),
-        AnimatedPositioned(duration: const Duration(milliseconds:340), curve: Curves.easeOutCubic, left: _drawerOpen?0:-300, top:0, bottom:0, width:288, child: Material(elevation:16, color:Colors.white, borderRadius: const BorderRadius.only(topRight: Radius.circular(16), bottomRight: Radius.circular(16)), clipBehavior: Clip.antiAlias, child: _CalendarDrawer(activeSection:_activeSection, onSelectSection:(s){ setState((){ _activeSection=s; _drawerOpen=false; });})) ),
+        if (_drawerOpen) Positioned.fill(
+          child: GestureDetector(
+            onTap: ()=> setState(()=> _drawerOpen=false),
+            onHorizontalDragEnd: (details) {
+              final v = details.primaryVelocity ?? 0;
+              if (v < -200) setState(()=> _drawerOpen=false); // przesunięcie w lewo zamyka drawer
+            },
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds:200),
+              opacity: _drawerOpen?1:0,
+              child: Container(color: Colors.black.withValues(alpha:0.32)),
+            ),
+          )
+        ),
+        AnimatedPositioned(
+          duration: const Duration(milliseconds:340),
+          curve: Curves.easeOutCubic,
+          left: _drawerOpen?0:-300,
+          top:0,
+          bottom:0,
+          width:288,
+          child: Material(
+            elevation:16,
+            color:Colors.white,
+            borderRadius: const BorderRadius.only(topRight: Radius.circular(16), bottomRight: Radius.circular(16)),
+            clipBehavior: Clip.antiAlias,
+            child: _CalendarDrawer(
+              key: ValueKey(_drawerOpen),
+              activeSection:_activeSection,
+              onSelectSection:(s){ setState((){ _activeSection=s; _drawerOpen=false; });}
+            )
+          ),
+        ),
       ]),
     );
   }
@@ -371,13 +450,19 @@ class _CalendarDaysHeader extends StatelessWidget {
 class _CalendarDrawer extends StatefulWidget {
   final String activeSection;
   final ValueChanged<String> onSelectSection;
-  const _CalendarDrawer({this.activeSection = 'calendar', required this.onSelectSection});
+  const _CalendarDrawer({Key? key, this.activeSection = 'calendar', required this.onSelectSection}) : super(key: key);
   @override
   State<_CalendarDrawer> createState() => _CalendarDrawerState();
 }
 
 class _CalendarDrawerState extends State<_CalendarDrawer> {
-  String? _groupCode; List<String> _subs = []; bool _loading = true;
+  // pola są ustawiane przy ładowaniu prefs i trzymamy je na przyszłość
+  // ignore: unused_field
+  String? _groupCode;
+  // ignore: unused_field
+  List<String> _subs = [];
+  bool _loading = true;
+  List<Map<String,String>> _favorites = []; // [{'type':'group'|'teacher','id':id,'label':label}]
   @override
   void initState(){ super.initState(); _load(); }
   Future<void> _load() async {
@@ -386,11 +471,110 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
       if(!mounted) return;
       setState(() { _groupCode = g; _subs = subs; _loading=false; });
     } catch (_) {
-      // fallback to empty
       if(!mounted) return;
       setState(() { _groupCode = null; _subs = []; _loading=false; });
     }
+    await _loadFavorites();
   }
+
+  Future<void> _loadFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('fav_plans');
+    Map<String,String> labelsMap = {};
+    try {
+      final rawLabels = prefs.getString('fav_labels');
+      if (rawLabels != null && rawLabels.isNotEmpty) {
+        final decoded = jsonDecode(rawLabels);
+        if (decoded is Map) decoded.forEach((k,v){ if (k is String && v is String) labelsMap[k]=v; });
+      }
+    } catch (_) {}
+
+    final favList = <String>[];
+    try { if (raw != null && raw.isNotEmpty) { final List<dynamic> l = jsonDecode(raw); favList.addAll(l.map((e)=>e.toString())); } } catch (_) {}
+    final keys = <String>{...favList, ...labelsMap.keys};
+    if (keys.isEmpty) {
+      if (!mounted) return;
+      setState(() => _favorites = []);
+      return;
+    }
+
+    final out = <Map<String,String>>[];
+    bool labelsChanged = false;
+    for (final s in keys) {
+      final parts = s.split(':');
+      if (parts.length != 2) continue;
+      final type = parts[0]; final token = parts[1];
+      String label = labelsMap.containsKey(s) ? labelsMap[s]! : '';
+
+      if (type == 'group') {
+        // token may be an id (UUID) or a visible code like 'IF-3B'. Simple heuristic:
+        final uuidLike = RegExp(r'^[0-9a-fA-F\-]{12,}\$');
+        if (label.isEmpty) {
+          if (uuidLike.hasMatch(token)) {
+            // token looks like an id - try fetch meta by id
+            try {
+              final meta = await ClassesRepository.getGroupById(token);
+              if (meta != null) label = (meta['kod_grupy'] as String?) ?? (meta['nazwa'] as String?) ?? token;
+            } catch (_) {}
+          } else {
+            // token looks like a human code (e.g. IF-3B) - use it as label and try to resolve id for future
+            label = token;
+            try {
+              final resolvedId = await ClassesRepository.resolveGroupIdForCode(token);
+              if (resolvedId != null) {
+                final meta2 = await ClassesRepository.getGroupById(resolvedId);
+                if (meta2 != null) label = (meta2['kod_grupy'] as String?) ?? (meta2['nazwa'] as String?) ?? label;
+              }
+            } catch (_) {}
+          }
+        }
+        if (label.isEmpty) label = token;
+        if (labelsMap[s] != label) { labelsMap[s] = label; labelsChanged = true; }
+      } else if (type == 'teacher') {
+        if (label.isEmpty) {
+          try {
+            final meta = await ClassesRepository.getTeacherDetails(token);
+            if (meta != null) label = (meta['nazwa'] as String?) ?? token;
+          } catch (_) {}
+        }
+        if (label.isEmpty) label = token;
+        if (labelsMap[s] != label) { labelsMap[s] = label; labelsChanged = true; }
+      }
+      out.add({'type': type, 'id': token, 'label': label});
+    }
+
+    if (labelsChanged) {
+      try { await prefs.setString('fav_labels', jsonEncode(labelsMap)); } catch (_) {}
+    }
+
+    if (!mounted) return;
+    setState(() { _favorites = out; });
+    return;
+
+  }
+
+  Future<void> _removeFavoriteEntry(Map<String,String> entry) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString('fav_plans');
+    try {
+      final List<String> newList = [];
+      if (raw != null && raw.isNotEmpty) {
+        final l = jsonDecode(raw) as List<dynamic>;
+        newList.addAll(l.map((e)=>e.toString()).where((s) => s != '${entry['type']}:${entry['id']}'));
+      }
+      await prefs.setString('fav_plans', jsonEncode(newList));
+      // remove label as well
+      try {
+        final rawLabels = prefs.getString('fav_labels');
+        if (rawLabels != null && rawLabels.isNotEmpty) {
+          final decoded = jsonDecode(rawLabels) as Map<String,dynamic>;
+          decoded.remove('${entry['type']}:${entry['id']}');
+          await prefs.setString('fav_labels', jsonEncode(decoded));
+        }
+      } catch (_) {}
+      await _loadFavorites();
+    } catch (_) {}
+   }
 
   Widget _sectionLabel(String text) => Padding(
     padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
@@ -453,10 +637,6 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    final groupLabel = _groupCode == null
-        ? 'Brak zapisanej grupy'
-        : (_subs.isEmpty ? _groupCode! : '${_groupCode!} ${_subs.join('/')}' );
-
     return SafeArea(
       left: false,
       bottom: false,
@@ -474,9 +654,120 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
                     _item(icon: MyUz.book_open_01, label: 'Terminarz', active: widget.activeSection=='schedule', onTap: ()=>widget.onSelectSection('schedule')),
                     _item(icon: MyUz.switch_horizontal_02, label: 'Porównaj plany', active: widget.activeSection=='compare', onTap: ()=>widget.onSelectSection('compare')),
                     _divider(),
-                    _sectionLabel('Ulubione'),
-                    _item(icon: MyUz.user_01, label: groupLabel),
-                    _item(icon: MyUz.users_01, label: 'Nauczyciele'),
+                    GestureDetector(
+                      onLongPress: () async {
+                        try {
+                          final prefs = await SharedPreferences.getInstance();
+                          final fp = prefs.getString('fav_plans') ?? '<empty>';
+                          final fl = prefs.getString('fav_labels') ?? '<empty>';
+                          if (!mounted) return;
+                          await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+                            title: const Text('Debug prefs'),
+                            content: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('fav_plans:'), SelectableText(fp), const SizedBox(height:8), const Text('fav_labels:'), SelectableText(fl)])),
+                            actions: [TextButton(onPressed: ()=>Navigator.of(ctx).pop(), child: const Text('Zamknij'))],
+                          ));
+                        } catch (_) {}
+                      },
+                      child: _sectionLabel('Ulubione'),
+                    ),
+                    // Lista ulubionych (grupy + nauczyciele)
+                    for (final fav in _favorites)
+                      Row(children:[
+                        Expanded(child: _item(
+                          icon: fav['type']=='teacher' ? MyUz.user_01 : MyUz.users_01,
+                          label: fav['label'] ?? '${fav['type']}:${fav['id']}',
+                          onTap: () async {
+                            final navigator = Navigator.of(context);
+                            if (fav['type']=='group') {
+                              // Ensure we provide groupCode and subgroups to GroupScheduleScreen for consistent UI
+                              String? code;
+                              String? name;
+                              List<String>? subgroups;
+                              // Attempt to read group meta by id or code
+                              try {
+                                final meta = await ClassesRepository.getGroupById(fav['id']!);
+                                if (meta != null) {
+                                  final k = (meta['kod_grupy'] as String?)?.trim() ?? '';
+                                  code = k.isNotEmpty ? k : null;
+                                  final n = (meta['nazwa'] as String?)?.trim() ?? '';
+                                  name = n.isNotEmpty ? n : null;
+                                } else {
+                                  final label = (fav['label'] ?? '').toString().trim();
+                                  final uuidLike = RegExp(r'^[0-9a-fA-F\-]{12,}\$');
+                                  // treat label as group code if it doesn't look like a UUID-like token
+                                  if (!uuidLike.hasMatch(label) && label.isNotEmpty) code = label;
+                                  name = null;
+                                }
+                                if (code != null && code.isNotEmpty) {
+                                  try { subgroups = await ClassesRepository.getSubgroupsForGroup(code); } catch (_) { subgroups = null; }
+                                }
+                              } catch (_) {}
+                              // Odczytaj mapę wyboru podgrup dla ulubionych
+                              final prefs = await SharedPreferences.getInstance();
+                              Map<String, List<String>> favSubgroups = {};
+                              try {
+                                final raw = prefs.getString('fav_subgroups');
+                                if (raw != null && raw.isNotEmpty) {
+                                  final decoded = jsonDecode(raw);
+                                  if (decoded is Map) {
+                                    decoded.forEach((k, v) {
+                                      if (k is String && v is List) {
+                                        favSubgroups[k] = v.map((e) => e.toString()).toList();
+                                      }
+                                    });
+                                  }
+                                }
+                              } catch (_) {}
+                              // Klucz do mapy: 'group:<id>'
+                              final favKey = 'group:${fav['id']!}';
+                              List<String>? selectedSubs = favSubgroups[favKey];
+                              navigator.push(MaterialPageRoute(builder: (_) => GroupScheduleScreen(
+                                    groupCode: code,
+                                    groupId: fav['id']!,
+                                    groupName: name,
+                                    subgroups: subgroups,
+                                    selectedSubgroups: selectedSubs,
+                                    onToggleFavorite: () async { await _loadFavorites(); },
+                                    onSubgroupSelected: (subs) async {
+                                      // Zapisz wybór podgrup dla tego ulubionego
+                                      final prefs = await SharedPreferences.getInstance();
+                                      Map<String, List<String>> favSubgroups = {};
+                                      try {
+                                        final raw = prefs.getString('fav_subgroups');
+                                        if (raw != null && raw.isNotEmpty) {
+                                          final decoded = jsonDecode(raw);
+                                          if (decoded is Map) {
+                                            decoded.forEach((k, v) {
+                                              if (k is String && v is List) {
+                                                favSubgroups[k] = v.map((e) => e.toString()).toList();
+                                              }
+                                            });
+                                          }
+                                        }
+                                      } catch (_) {}
+                                      favSubgroups[favKey] = subs ?? <String>[];
+                                      await prefs.setString('fav_subgroups', jsonEncode(favSubgroups));
+                                    },
+                                  ))).then((res){ setState((){}); });
+                            } else if (fav['type']=='teacher') {
+                               final meta = await ClassesRepository.getTeacherDetails(fav['id']!);
+                               final name = meta?['nazwa'] as String? ?? (fav['label'] ?? '');
+                               if (!mounted) return;
+                               navigator.push(MaterialPageRoute(builder: (_) => TeacherScheduleScreen(
+                                     teacherId: fav['id']!,
+                                     teacherName: name,
+                                     onToggleFavorite: () async { await _loadFavorites(); },
+                                   ))).then((res){ setState((){}); });
+                            }
+                          },
+                        )),
+                        // Zamieniono ikonę kosza na serduszko — klik usuwa (odznacza) z ulubionych.
+                        IconButton(
+                          icon: Icon(Icons.favorite, color: Theme.of(context).colorScheme.primary),
+                          onPressed: () => _removeFavoriteEntry(fav),
+                          tooltip: 'Usuń z ulubionych',
+                        ),
+                      ]),
                     _divider(),
                     _sectionLabel('Udostępnione terminarze'),
                     _item(icon: MyUz.bookmark, label: 'Terminarz Leny'),

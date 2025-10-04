@@ -97,12 +97,31 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
 
   bool _isFav(Map<String,dynamic> item) => _favorites.contains('${item['type']}:${item['id']}');
 
-  void _toggleFav(Map<String,dynamic> item) {
+  void _toggleFav(Map<String,dynamic> item) async {
     final key = '${item['type']}:${item['id']}';
     setState((){
       if (_favorites.contains(key)) _favorites.remove(key); else _favorites.add(key);
     });
-    _saveFavorites();
+    await _saveFavorites();
+    // save label map for drawer fallback
+    try {
+      final p = await SharedPreferences.getInstance();
+      final raw = p.getString('fav_labels');
+      Map<String,String> map = {};
+      if (raw != null && raw.isNotEmpty) {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map) decoded.forEach((k,v){ if (k is String && v is String) map[k]=v; });
+      }
+      if (_favorites.contains(key)) {
+        // add/update label
+        final label = (item['title'] ?? '').toString();
+        if (label.isNotEmpty) map[key] = label;
+      } else {
+        // removed
+        map.remove(key);
+      }
+      await p.setString('fav_labels', jsonEncode(map));
+    } catch (_) {}
   }
 
   @override
@@ -121,12 +140,15 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
            icon: const Icon(MyUz.chevron_left, size: 24),
            onPressed: () => Navigator.pop(context),
          ),
+         centerTitle: false,
          titleSpacing: 0,
          // AppBar ma tło surface (MD3) — pole wyszukiwania jest 'transparentne' z samym hintem
          backgroundColor: Theme.of(context).colorScheme.surface,
          foregroundColor: Theme.of(context).colorScheme.onSurface,
          elevation: 0,
-         title: SizedBox(
+         title: Align(
+           alignment: Alignment.centerLeft,
+           child: SizedBox(
            height: 44,
            child: TextField(
              controller: _ctrl,
@@ -140,6 +162,7 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
              ),
              onChanged: _onQueryChanged,
            ),
+          ),
          ),
          actions: [
            TextButton(
@@ -191,8 +214,32 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
                                    final String id = (item['id'] ?? '').toString();
                                    final String code = (item['title'] ?? '').toString();
                                    final navigator = Navigator.of(context);
+                                   // Pobierz listę podgrup (jeśli dostępna) oraz aktualnie wybrane podgrupy z kontekstu
+                                   List<String>? subs;
+                                   List<String>? selectedSubs;
+                                   try {
+                                     if (code.isNotEmpty) {
+                                       subs = await ClassesRepository.getSubgroupsForGroup(code);
+                                     }
+                                   } catch (_) { subs = null; }
+                                   try {
+                                     final ctx = await ClassesRepository.loadGroupContext(); // record: (groupCode, subgroups, groupId)
+                                     final ctxCode = ctx.$1;
+                                     final ctxSubs = ctx.$2 as List<String>?;
+                                     final ctxId = ctx.$3;
+                                     // jeśli kontekst dotyczy tej samej grupy (kod lub id), użyj wybranych podgrup
+                                     if ((ctxCode != null && ctxCode.toString().isNotEmpty && ctxCode.toString() == code) || (ctxId != null && ctxId.toString() == id)) {
+                                       selectedSubs = ctxSubs == null ? <String>[] : List<String>.from(ctxSubs);
+                                     }
+                                   } catch (_) { selectedSubs = null; }
                                    // Otwórz ekran z pełnym widokiem planu grupy (istniejący GroupScheduleScreen)
-                                   final res = await navigator.push<Map<String,dynamic>?>(MaterialPageRoute(builder: (_) => GroupScheduleScreen(groupCode: code, groupId: id)));
+                                   final res = await navigator.push<Map<String,dynamic>?>(MaterialPageRoute(builder: (_) => GroupScheduleScreen(
+                                     groupCode: code,
+                                     groupId: id,
+                                     subgroups: subs,
+                                     selectedSubgroups: [], // ZAWSZE resetuj wybór podgrup przy wyszukiwaniu
+                                     onToggleFavorite: () async { await _loadFavorites(); },
+                                   )));
                                     if (!mounted) return;
                                     if (res != null && res['apply'] == true) {
                                       if (id.isNotEmpty && code.isNotEmpty) {
@@ -209,7 +256,7 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
                                    final navigator = Navigator.of(context);
                                    final String id = (item['id'] ?? '').toString();
                                    final String name = (item['title'] ?? '').toString();
-                                   final res = await navigator.push<Map<String,dynamic>?>(MaterialPageRoute(builder: (_) => TeacherScheduleScreen(teacherId: id, teacherName: name)));
+                                   final res = await navigator.push<Map<String,dynamic>?>(MaterialPageRoute(builder: (_) => TeacherScheduleScreen(teacherId: id, teacherName: name, onToggleFavorite: () async { await _loadFavorites(); })));
                                    if (!mounted) return;
                                    if (res != null && res['apply'] == true) {
                                      // Zapisz preferencje nauczyciela

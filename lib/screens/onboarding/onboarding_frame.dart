@@ -37,7 +37,7 @@ class OnboardingFrame extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.background,
+      backgroundColor: cs.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -130,12 +130,12 @@ class OnboardingFrame extends StatelessWidget {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                           textStyle: AppTextStyle.myUZLabelLarge.copyWith(color: cs.onPrimary),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('Dalej'),
-                            SizedBox(width: 8),
-                            Icon(MyUz.chevron_right, size: 24),
+                            Text(pageIndex == totalPages - 1 ? 'Gotowe!' : 'Dalej'),
+                            const SizedBox(width: 8),
+                            const Icon(MyUz.chevron_right, size: 24),
                           ],
                         ),
                       ),
