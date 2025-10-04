@@ -386,7 +386,7 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _AdaptiveIconSlot(
           iconSize: 20,
@@ -395,12 +395,9 @@ class _DetailRow extends StatelessWidget {
         ),
         const SizedBox(width: _kIconToTextGap),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 2), // top-aligned text to match icon
-            child: Text(
-              label,
-              style: AppTextStyle.myUZBodyLarge.copyWith(color: cs.onSurface),
-            ),
+          child: Text(
+            label,
+            style: AppTextStyle.myUZBodyLarge.copyWith(color: cs.onSurface),
           ),
         ),
       ],

@@ -29,6 +29,16 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   final Map<DateTime, List<ClassModel>> _weekCache = {};
   final Set<DateTime> _loadingWeeks = {};
 
+  DateTime? _lastSwipeTime;
+  static const int _swipeCooldownMs = 420;
+
+  void _trySwipe(VoidCallback cb) {
+    final now = DateTime.now();
+    if (_lastSwipeTime != null && now.difference(_lastSwipeTime!).inMilliseconds < _swipeCooldownMs) return;
+    _lastSwipeTime = now;
+    cb();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -156,6 +166,20 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
         onNextMonth: _nextMonth,
       ),
     ]);
+    // Wrap header+grid with GestureDetector so swiping on header also changes week/month
+    topCalendarRegion = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragEnd: (details) {
+        final v = details.primaryVelocity ?? 0;
+        if (v.abs() < 40) return; // zgodnie z progiem w CalendarView
+        if (!_isMonthView) {
+          if (v < 0) _trySwipe(_nextWeek); else _trySwipe(_prevWeek);
+        } else {
+          if (v < 0) _trySwipe(_nextMonth); else _trySwipe(_prevMonth);
+        }
+      },
+      child: topCalendarRegion,
+    );
     Widget bodyContent = Expanded(
       child: _loading
         ? const Center(child: CircularProgressIndicator())
