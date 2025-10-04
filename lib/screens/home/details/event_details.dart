@@ -258,6 +258,7 @@ class _TypeColorMarker extends StatelessWidget {
   }
 }
 
+/// Wiersz szczegółu (ikona + tekst)
 class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -266,7 +267,7 @@ class _DetailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _AdaptiveIconSlot(
           iconSize: 20,
@@ -274,12 +275,9 @@ class _DetailRow extends StatelessWidget {
         ),
         const SizedBox(width: _kIconToTextGap),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 14),
-            child: Text(
-              label,
-              style: AppTextStyle.myUZBodyLarge.copyWith(color: cs.onSurface),
-            ),
+          child: Text(
+            label,
+            style: AppTextStyle.myUZBodyLarge.copyWith(color: cs.onSurface),
           ),
         ),
       ],

@@ -15,6 +15,7 @@ import 'package:my_uz/models/event_model.dart';
 // DODANE: ekran szczegółów zajęć
 import 'package:my_uz/screens/home/details/class_details.dart';
 import 'package:my_uz/screens/home/details/task_details.dart';
+import 'package:my_uz/screens/home/details/event_details.dart';
 
 // SEKCJE
 import 'components/upcoming_classes.dart';
@@ -36,10 +37,8 @@ const String _kPrefOnbFirst = 'onb_first';
 const String _kPrefOnbGroup = 'onb_group';
 const String _kPrefOnbSub = 'onb_group_sub';
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _greetingName = 'Student';
-  String? _groupCode; // kod grupy
-  List<String> _subgroups = []; // lista podgrup
   bool _loading = true; // ładowanie prefów
   bool _classesLoading = false; // ładowanie zajęć
   DateTime? _classesForDate; // data dla której aktualnie pokazujemy _classes
@@ -47,11 +46,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<ClassModel> _classes = const [];
   late final List<TaskModel> _tasks;
-  late final List<EventModel> _events;
+  String? _groupCode; // tylko do wyświetlania w nagłówku, nie do logiki!
+  List<String> _subgroups = []; // tylko do wyświetlania w nagłówku, nie do logiki!
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _buildMocks();
     _loadPrefs();
     _loadTodayClasses();
@@ -68,6 +69,15 @@ class _HomeScreenState extends State<HomeScreen> {
         _loadTodayClasses();
       }
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Po powrocie do aplikacji odśwież preferencje i listę zajęć
+      _loadPrefs();
+      _loadTodayClasses();
+    }
   }
 
   void _buildMocks() {
@@ -91,35 +101,6 @@ class _HomeScreenState extends State<HomeScreen> {
         title: 'Sprawozdanie z laboratorium',
         subject: 'Fizyka',
         deadline: now.add(const Duration(days: 6)),
-      ),
-    ];
-    _events = [
-      EventModel(
-        id: 'e1',
-        title: 'Juwenalia 2025',
-        description: 'Koncerty i atrakcje na kampusie.',
-        date: 'Piątek, 4 paź 2025',
-        time: '18:00 - 23:00',
-        location: 'Kampus UZ',
-        freeEntry: true,
-      ),
-      EventModel(
-        id: 'e2',
-        title: 'Dzień sportu',
-        description: 'Turniej siatkówki + biegi.',
-        date: 'Sobota, 10 paź 2025',
-        time: '10:00 - 16:00',
-        location: 'Stadion UZ',
-        freeEntry: false,
-      ),
-      EventModel(
-        id: 'e3',
-        title: 'Hackathon UZ',
-        description: '24h kodowania – zgłoś zespół.',
-        date: 'Wtorek, 21 paź 2025',
-        time: '09:00 - 09:00',
-        location: 'Aula UZ',
-        freeEntry: true,
       ),
     ];
   }
@@ -149,8 +130,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() {
         _greetingName = name;
-        _groupCode = (group != null && group.isNotEmpty) ? group : null;
-        _subgroups = subs;
+        _groupCode = (group != null && group.isNotEmpty) ? group : null; // tylko do wyświetlania
+        _subgroups = subs; // tylko do wyświetlania
         _loading = false;
       });
     } catch (_) {
@@ -167,10 +148,20 @@ class _HomeScreenState extends State<HomeScreen> {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final todayList = await ClassesRepository.fetchDayWithWeekFallback(today, groupCode: groupCode, subgroups: subgroups);
+
+      // DEBUG: wypisz kilka pól z pobranych rekordów, przed i po filtrowaniu
+      if (mounted) {
+        debugPrint('[Home][_loadTodayClasses] prefs group=$groupCode subgroups=${subgroups.join(',')} fetched=${todayList.length}');
+        for (final c in todayList.take(12)) {
+          debugPrint('[Home][rec] id=${c.id} subject=${c.subject} start=${c.startTime.toIso8601String()} groupCode=${c.groupCode ?? '<null>'} subgroup=${c.subgroup ?? '<null>'} room=${c.room}');
+        }
+      }
+
       final remaining = ClassesRepository.filterRemainingOrAll(todayList, today, now, allowEndedIfAllEnded: false);
+
       if (!mounted) return;
       setState(() {
-        _classes = remaining; // jeśli pusto -> komponent pokaże lewostronny komunikat
+        _classes = remaining;
         _classesForDate = today;
         _classesLoading = false;
       });
@@ -213,60 +204,60 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                       ),
                       child: _ContentContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // compute today/tomorrow as date-only values to decide whether to show 'jutro'
-                            Builder(builder: (context) {
-                              // Always show the same header label regardless whether we're showing tomorrow's classes
-                              const header = 'Najbliższe zajęcia';
-                              final emptyMsg = (_classesLoading ? '' : (_classes.isEmpty ? (_groupCode==null? 'Wybierz grupę w ustawieniach.' : 'Dziś brak nadchodzących zajęć') : null));
-                               return UpcomingClassesSection(
-                                 classes: _classes,
-                                 onTap: _onTapClass,
-                                 groupCode: _groupCode,
-                                 subgroups: _subgroups,
-                                 headerTitle: header,
-                                 isLoading: _classesLoading,
-                                 emptyMessage: emptyMsg,
-                               );
-                            }),
-                            const SizedBox(height: 12),
-                            TasksSection(
-                              tasks: _tasks,
-                              onTap: (task) {
-                                TaskDetailsSheet.show(
-                                  context,
-                                  task,
-                                  description: '',
-                                  relatedClass: _classes.where((c) => c.subject == task.subject).isNotEmpty
-                                      ? _classes.where((c) => c.subject == task.subject).first
-                                      : null,
-                                  onEdit: () {
-                                    // TODO: obsługa edycji zadania
-                                  },
-                                  onDelete: () {
-                                    // TODO: obsługa usuwania zadania
-                                  },
-                                  onToggleCompleted: (completed) {
-                                    setState(() {
-                                      final idx = _tasks.indexWhere((t) => t.id == task.id);
-                                      if (idx != -1) _tasks[idx] = _tasks[idx].copyWith(completed: completed);
-                                    });
-                                  },
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            EventsSection(
-                              events: _events,
-                              onTap: _onTapEvent,
-                            ),
-                            const SizedBox(height: _footerTopSpacing),
-                            const _Footer(color: AppColors.myUZSysLightOutline),
-                            const SizedBox(height: kBottomNavigationBarHeight + 16),
-                          ],
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // compute today/tomorrow as date-only values to decide whether to show 'jutro'
+                              Builder(builder: (context) {
+                                // Always show the same header label regardless whether we're showing tomorrow's classes
+                                const header = 'Najbliższe zajęcia';
+                                final emptyMsg = (_classesLoading ? '' : (_classes.isEmpty ? (_groupCode==null? 'Wybierz grupę w ustawieniach.' : 'Dziś brak nadchodzących zajęć') : null));
+                                 return UpcomingClassesSection(
+                                   classes: _classes,
+                                   onTap: _onTapClass,
+                                   groupCode: _groupCode,
+                                   subgroups: _subgroups,
+                                   headerTitle: header,
+                                   isLoading: _classesLoading,
+                                   emptyMessage: emptyMsg,
+                                 );
+                              }),
+                              const SizedBox(height: 12),
+                              TasksSection(
+                                tasks: _tasks,
+                                onTap: (task) {
+                                  TaskDetailsSheet.show(
+                                    context,
+                                    task,
+                                    description: '',
+                                    relatedClass: _classes.where((c) => c.subject == task.subject).isNotEmpty
+                                        ? _classes.where((c) => c.subject == task.subject).first
+                                        : null,
+                                    onEdit: () {
+                                      // TODO: obsługa edycji zadania
+                                    },
+                                    onDelete: () {
+                                      // TODO: obsługa usuwania zadania
+                                    },
+                                    onToggleCompleted: (completed) {
+                                      setState(() {
+                                        final idx = _tasks.indexWhere((t) => t.id == task.id);
+                                        if (idx != -1) _tasks[idx] = _tasks[idx].copyWith(completed: completed);
+                                      });
+                                    },
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              EventsSection(
+                                onTap: _onTapEvent,
+                              ),
+                              const SizedBox(height: _footerTopSpacing),
+                              const _Footer(color: AppColors.myUZSysLightOutline),
+                              const SizedBox(height: kBottomNavigationBarHeight + 16),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -281,11 +272,15 @@ class _HomeScreenState extends State<HomeScreen> {
     // --- TAP: karta zajęć -> arkusz szczegółów (modal bottom sheet) ---
     ClassDetailsSheet.open(context, c);
   }
-  void _onTapEvent(EventModel e) => debugPrint('[Home] event tap ${e.id}');
+  void _onTapEvent(EventModel e) {
+    // Otwórz arkusz szczegółów wydarzenia
+    EventDetailsSheet.open(context, e);
+  }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 }

@@ -106,21 +106,19 @@ class ClassCard extends StatelessWidget {
                         children: [
                           const Icon(MyUz.clock, size: 16, color: Color(0xFF4A4A4A)),
                           const SizedBox(width: 4),
-                          // time: ogranicz do maxWidth by uniknąć overflow przy węższych kartach
+                          // Czas: zawsze w całości, nie ucinamy – rezerwuje własną szerokość
                           Flexible(
                             flex: 0,
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 88),
-                              child: Text(
-                                time,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
-                              ),
+                            child: Text(
+                              time,
+                              maxLines: 1,
+                              softWrap: false,
+                              overflow: TextOverflow.visible,
+                              style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          // room shown only in normal mode
+                          const SizedBox(width: 12),
+                          // Sala: może być ucięta, zajmuje resztę miejsca
                           if (!compact)
                             Expanded(
                               child: Text(
@@ -137,7 +135,7 @@ class ClassCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 8),
               if (showAvatar)
                 Container(
                   width: 32,

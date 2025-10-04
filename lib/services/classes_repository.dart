@@ -107,36 +107,58 @@ class ClassesRepository {
       } catch(e) { debugPrint('[ClassesRepo][range] grupa_id err $e'); }
     }
 
-    // 2) fallback join po kod_grupy (warianty) jeśli pusto
+    // Usunięto fallback po kod_grupy!
+    // Jeśli nie znaleziono po grupa_id, zwracamy pustą listę
     if (data.isEmpty) {
-      final variants = <String>{
-        group,
-        group.replaceAll('-', ''),
-        group.replaceAll(' ', ''),
-        group.replaceAll('-', ' '),
-        group.toUpperCase(),
-        group.toLowerCase(),
-      };
-      for (final v in variants) {
-        if (v.isEmpty) continue;
-        try {
-          final rows = await Supa.client
-              .from('zajecia_grupy')
-              .select('*,grupy(kod_grupy)')
-              .gte('od', start.toIso8601String())
-              .lt('od', end.toIso8601String())
-              .eq('grupy.kod_grupy', v)
-              .order('od', ascending: true) as List;
-          if (rows.isNotEmpty) { data = rows; lastRangeVariant = 'kod_grupy:$v'; break; }
-        } catch (e) { debugPrint('[ClassesRepo][range] kod_grupy $v err $e'); }
-      }
+      lastRangeRows = 0;
+      lastRangeVariant = 'no_data';
+      return [];
     }
 
-    lastRangeRows = data.length;
-
-    for (int i=0;i<data.length;i++){ final d=data[i]; if(d is Map && d.containsKey('grupy')) d.remove('grupy'); }
+    for (int i=0;i<data.length;i++){ final d=data[i]; if(d is Map && d.containsKey('grupy')) {
+        final grp = d['grupy'];
+        if (grp is Map && grp.containsKey('kod_grupy')) {
+          try { d['kod_grupy'] = grp['kod_grupy']; } catch(_){}
+        }
+        d.remove('grupy');
+      } }
     final list = <ClassModel>[];
     for (final r in data) { try { list.add(ClassModel.fromMap(Map<String,dynamic>.from(r as Map))); } catch(e){ debugPrint('[ClassesRepo][range][PARSE] $e'); } }
+
+    // Capture variant used to fetch data - if server already filtered by group, skip strict local filter
+    final fetchedVariant = lastRangeVariant;
+
+    // DEBUG: dump unikalnych groupCode przed filtrowaniem
+    if (kDebugMode) {
+      final Map<String,int> gcount = {};
+      for (final c in list) {
+        final k = (c.groupCode ?? '<empty>').trim();
+        gcount[k] = (gcount[k] ?? 0) + 1;
+      }
+      debugPrint('[ClassesRepo][range] unique groupCodes: ${gcount.entries.map((e)=>'${e.key}=${e.value}').join(', ')}');
+      debugPrint('[ClassesRepo][range] fetchedVariant=$fetchedVariant');
+    }
+
+    // Dodatkowy filtr bezpieczeństwa po kodzie grupy (jeśli jest w modelu)
+    if (group.isNotEmpty) {
+      // If server already filtered by grupa_id or kod_grupy or data came from cache -> skip local strict filter
+      if (fetchedVariant.startsWith('grupa_id') || fetchedVariant.startsWith('kod_grupy') || fetchedVariant == 'cache') {
+        if (kDebugMode) debugPrint('[ClassesRepo][range] skipping local groupCode filter because fetchedVariant=$fetchedVariant');
+      } else {
+        String _normalize(String s) => s.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toLowerCase();
+        final before = list.length;
+        final gNorm = _normalize(group);
+        list.retainWhere((c) {
+          final cgRaw = (c.groupCode ?? '').trim();
+          if (cgRaw.isEmpty) return false; // brak danych w rekordzie -> odrzucamy, wymagana zgodność
+          final cg = _normalize(cgRaw);
+          return cg == gNorm;
+        });
+        if (kDebugMode) {
+          debugPrint('[ClassesRepo][range] group filter $before -> ${list.length} for group=$group (norm=$gNorm)');
+        }
+      }
+    }
 
     final lowerSubs = subgroups.map((e)=>e.toLowerCase()).toSet();
     if (lowerSubs.isNotEmpty) {
