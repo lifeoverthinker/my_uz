@@ -4,6 +4,7 @@ import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'onboarding_frame.dart';
+import 'package:my_uz/services/classes_repository.dart';
 
 /// Onboarding – Ekran 3 (mobile)
 /// Figma: padding top=12, bottom=32, horizontal=24
@@ -62,7 +63,11 @@ class _OnboardingPage3State extends State<OnboardingPage3> {
       totalPages: 6,
       onSkip: widget.onSkip,
       onBack: widget.onBack,
-      onNext: widget.onNext,
+      onNext: () async {
+        // Zapisz wybraną grupę i podgrupy przed przejściem dalej
+        await ClassesRepository.setGroupPrefs(_selectedGroupCode, _subgroup == null ? [] : [_subgroup!]);
+        widget.onNext();
+      },
       canProceed: _canProceed,
       child: ScrollConfiguration(
         behavior: const _NoGlowScrollBehavior(),

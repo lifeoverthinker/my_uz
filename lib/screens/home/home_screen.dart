@@ -33,268 +33,293 @@ class HomeScreen extends StatefulWidget {
 const String _kPrefOnbMode = 'onb_mode';
 const String _kPrefOnbSalutation = 'onb_salutation';
 const String _kPrefOnbFirst = 'onb_first';
-const String _kPrefOnbGroup = 'onb_group';
-const String _kPrefOnbSub = 'onb_group_sub';
 
-class _HomeScreenState extends State<HomeScreen> {
-  String _greetingName = 'Student';
-  String? _groupCode; // kod grupy
-  List<String> _subgroups = []; // lista podgrup
-  bool _loading = true; // ładowanie prefów
-  bool _classesLoading = false; // ładowanie zajęć
-  DateTime? _classesForDate; // data dla której aktualnie pokazujemy _classes
-  Timer? _refreshTimer; // periodyczne sprawdzanie zmiany dnia
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+   String _greetingName = 'Student';
+   String? _greetingSubtitle; // dodatkowa linia pod powitaniem (wydział/kierunek/tryb)
+   String? _groupCode; // kod grupy
+   List<String> _subgroups = []; // lista podgrup
+   bool _loading = true; // ładowanie prefów
+   bool _classesLoading = false; // ładowanie zajęć
+   DateTime? _classesForDate; // data dla której aktualnie pokazujemy _classes
+   Timer? _refreshTimer; // periodyczne sprawdzanie zmiany dnia
 
-  List<ClassModel> _classes = const [];
-  late final List<TaskModel> _tasks;
-  late final List<EventModel> _events;
+   List<ClassModel> _classes = const [];
+   late final List<TaskModel> _tasks;
+   late final List<EventModel> _events;
 
-  @override
-  void initState() {
-    super.initState();
-    _buildMocks();
-    _loadPrefs();
-    _loadTodayClasses();
-    // timer, który odświeża listę jeśli zmieni się dzień (np. przejście przez północ)
-    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      final now = DateTime.now();
-      if (_classesForDate == null) {
-        _loadTodayClasses();
-        return;
-      }
-      final shown = DateTime(_classesForDate!.year, _classesForDate!.month, _classesForDate!.day);
-      final today = DateTime(now.year, now.month, now.day);
-      if (shown != today) {
-        _loadTodayClasses();
-      }
-    });
-  }
+   @override
+   void initState() {
+     super.initState();
+     _buildMocks();
+     WidgetsBinding.instance.addObserver(this);
+     _loadPrefs();
+     _loadTodayClasses();
+     // timer, który odświeża listę jeśli zmieni się dzień (np. przejście przez północ)
+     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+       final now = DateTime.now();
+       if (_classesForDate == null) {
+         _loadTodayClasses();
+         return;
+       }
+       final shown = DateTime(_classesForDate!.year, _classesForDate!.month, _classesForDate!.day);
+       final today = DateTime(now.year, now.month, now.day);
+       if (shown != today) {
+         _loadTodayClasses();
+       }
+     });
+   }
 
-  void _buildMocks() {
-    // Usunięto mocki zajęć – realne dane ładowane po wyborze grupy.
-    final now = DateTime.now();
-    _tasks = [
-      TaskModel(
-        id: 't1',
-        title: 'Projekt zaliczeniowy',
-        subject: 'PPO',
-        deadline: now.add(const Duration(days: 3)),
-      ),
-      TaskModel(
-        id: 't2',
-        title: 'Kolokwium – Algebra',
-        subject: 'Algebra',
-        deadline: now.add(const Duration(days: 5)),
-      ),
-      TaskModel(
-        id: 't3',
-        title: 'Sprawozdanie z laboratorium',
-        subject: 'Fizyka',
-        deadline: now.add(const Duration(days: 6)),
-      ),
-    ];
-    _events = [
-      EventModel(
-        id: 'e1',
-        title: 'Juwenalia 2025',
-        description: 'Koncerty i atrakcje na kampusie.',
-        date: 'Piątek, 4 paź 2025',
-        time: '18:00 - 23:00',
-        location: 'Kampus UZ',
-        freeEntry: true,
-      ),
-      EventModel(
-        id: 'e2',
-        title: 'Dzień sportu',
-        description: 'Turniej siatkówki + biegi.',
-        date: 'Sobota, 10 paź 2025',
-        time: '10:00 - 16:00',
-        location: 'Stadion UZ',
-        freeEntry: false,
-      ),
-      EventModel(
-        id: 'e3',
-        title: 'Hackathon UZ',
-        description: '24h kodowania – zgłoś zespół.',
-        date: 'Wtorek, 21 paź 2025',
-        time: '09:00 - 09:00',
-        location: 'Aula UZ',
-        freeEntry: true,
-      ),
-    ];
-  }
+   void _buildMocks() {
+     // Usunięto mocki zajęć – realne dane ładowane po wyborze grupy.
+     final now = DateTime.now();
+     _tasks = [
+       TaskModel(
+         id: 't1',
+         title: 'Projekt zaliczeniowy',
+         subject: 'PPO',
+         deadline: now.add(const Duration(days: 3)),
+       ),
+       TaskModel(
+         id: 't2',
+         title: 'Kolokwium – Algebra',
+         subject: 'Algebra',
+         deadline: now.add(const Duration(days: 5)),
+       ),
+       TaskModel(
+         id: 't3',
+         title: 'Sprawozdanie z laboratorium',
+         subject: 'Fizyka',
+         deadline: now.add(const Duration(days: 6)),
+       ),
+     ];
+     _events = [
+       EventModel(
+         id: 'e1',
+         title: 'Juwenalia 2025',
+         description: 'Koncerty i atrakcje na kampusie.',
+         date: 'Piątek, 4 paź 2025',
+         time: '18:00 - 23:00',
+         location: 'Kampus UZ',
+         freeEntry: true,
+       ),
+       EventModel(
+         id: 'e2',
+         title: 'Dzień sportu',
+         description: 'Turniej siatkówki + biegi.',
+         date: 'Sobota, 10 paź 2025',
+         time: '10:00 - 16:00',
+         location: 'Stadion UZ',
+         freeEntry: false,
+       ),
+       EventModel(
+         id: 'e3',
+         title: 'Hackathon UZ',
+         description: '24h kodowania – zgłoś zespół.',
+         date: 'Wtorek, 21 paź 2025',
+         time: '09:00 - 09:00',
+         location: 'Aula UZ',
+         freeEntry: true,
+       ),
+     ];
+   }
 
-  Future<void> _loadPrefs() async {
-    try {
-      final p = await SharedPreferences.getInstance();
-      final mode = p.getString(_kPrefOnbMode);
-      final first = p.getString(_kPrefOnbFirst)?.trim();
-      final sal = p.getString(_kPrefOnbSalutation)?.trim();
-      final group = p.getString(_kPrefOnbGroup)?.trim();
-      final subsCsv = p.getString(_kPrefOnbSub) ?? '';
-      final subs = subsCsv.split(',').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toList();
-      String name = 'Student';
-      if (mode == 'data') {
-        if (first != null && first.isNotEmpty) {
-          name = first;
-        } else if (sal != null && sal.isNotEmpty) {
-          name = sal;
-        }
-      } else {
-        // anon or unspecified -> prefer salutation if present
-        if (sal != null && sal.isNotEmpty) {
-          name = sal;
-        }
-      }
-      if (!mounted) return;
-      setState(() {
-        _greetingName = name;
-        _groupCode = (group != null && group.isNotEmpty) ? group : null;
-        _subgroups = subs;
-        _loading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _loading = false);
-    }
-  }
+   Future<void> _loadPrefs() async {
+     try {
+       final p = await SharedPreferences.getInstance();
+       final mode = p.getString(_kPrefOnbMode);
+       final first = p.getString(_kPrefOnbFirst)?.trim();
+       final sal = p.getString(_kPrefOnbSalutation)?.trim();
+       // use centralized loader for group prefs to avoid mismatch with calendar
+       final (String? groupCode, List<String> subs) = await ClassesRepository.loadGroupPrefs();
+       // Dodatkowo spróbuj pobrać metadane grupy (wydział/kierunek/tryb) i złożyć krótką linię pod powitaniem
+       String? subtitle;
+       try {
+         final meta = await ClassesRepository.loadGroupMeta();
+         if (meta != null) {
+           final parts = <String>[];
+           // sprawdź kilka możliwych kluczy
+           if ((meta['wydzial'] ?? meta['wydzial_nazwa'] ?? meta['wydzial_name']) != null) parts.add((meta['wydzial'] ?? meta['wydzial_nazwa'] ?? meta['wydzial_name']).toString());
+           if ((meta['kierunek'] ?? meta['kierunek_nazwa'] ?? meta['kierunek_name']) != null) parts.add((meta['kierunek'] ?? meta['kierunek_nazwa'] ?? meta['kierunek_name']).toString());
+           if ((meta['tryb'] ?? meta['forma'] ?? meta['forma_studiow']) != null) parts.add((meta['tryb'] ?? meta['forma'] ?? meta['forma_studiow']).toString());
+           if (parts.isNotEmpty) subtitle = parts.join(' • ');
+         }
+       } catch (_) { subtitle = null; }
+       String name = 'Student';
+       if (mode == 'data') {
+         if (first != null && first.isNotEmpty) {
+           name = first;
+         } else if (sal != null && sal.isNotEmpty) {
+           name = sal;
+         }
+       } else {
+         // anon or unspecified -> prefer salutation if present
+         if (sal != null && sal.isNotEmpty) {
+           name = sal;
+         }
+       }
+       if (!mounted) return;
+       setState(() {
+         _greetingName = name;
+         _groupCode = (groupCode != null && groupCode.isNotEmpty) ? groupCode : null;
+         _subgroups = subs;
+         _greetingSubtitle = subtitle;
+         _loading = false;
+       });
+     } catch (_) {
+       if (!mounted) return;
+       setState(() => _loading = false);
+     }
+   }
 
-  Future<void> _loadTodayClasses() async {
-    if (_classesLoading) return;
-    setState(()=> _classesLoading = true);
-    try {
-      final (groupCode, subgroups) = await ClassesRepository.loadGroupPrefs();
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final todayList = await ClassesRepository.fetchDayWithWeekFallback(today, groupCode: groupCode, subgroups: subgroups);
-      final remaining = ClassesRepository.filterRemainingOrAll(todayList, today, now, allowEndedIfAllEnded: false);
-      if (!mounted) return;
-      setState(() {
-        _classes = remaining; // jeśli pusto -> komponent pokaże lewostronny komunikat
-        _classesForDate = today;
-        _classesLoading = false;
-      });
-    } catch (e) {
-      debugPrint('[Home][_loadTodayClasses][ERR] $e');
-      if (!mounted) return; setState(()=> _classesLoading=false);
-    }
-  }
+   Future<void> _loadTodayClasses() async {
+     if (_classesLoading) return;
+     setState(()=> _classesLoading = true);
+     try {
+       final (groupCode, subgroups, groupId) = await ClassesRepository.loadGroupContext();
+       final now = DateTime.now();
+       final today = DateTime(now.year, now.month, now.day);
+       final todayList = await ClassesRepository.fetchDayWithWeekFallback(today, groupCode: groupCode, subgroups: subgroups, groupId: groupId);
+       final remaining = ClassesRepository.filterRemainingOrAll(todayList, today, now, allowEndedIfAllEnded: false);
+       if (!mounted) return;
+       setState(() {
+         _classes = remaining; // jeśli pusto -> komponent pokaże lewostronny komunikat
+         _classesForDate = today;
+         _classesLoading = false;
+       });
+     } catch (e) {
+       debugPrint('[Home][_loadTodayClasses][ERR] $e');
+       if (!mounted) return; setState(()=> _classesLoading=false);
+     }
+   }
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    const double _footerTopSpacing = 10; // Figma: odstęp treści od stopki
-    return Container(
-      // Root na biało, żeby przy overscrollu na dole NIE było widać powierzchni tła (#FEF7FF)
-      color: Colors.white,
-      child: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
-              physics: const ClampingScrollPhysics(), // brak bounce = brak "prześwitu" na dole
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Container(
-                    color: cs.surface, // tylko header ma kolor surface
-                    child: _Header(
-                      dateText: _plDate(DateTime.now()),
-                      greetingName: _greetingName,
-                    ),
-                  ),
-                ),
-                // Biała sekcja aż do dołu
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Transform.translate(
-                    offset: const Offset(0, -8), // overlap header so top radius is visible
-                    child: Material(
-                      color: Colors.white,
-                      clipBehavior: Clip.antiAlias,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                      ),
-                      child: _ContentContainer(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // compute today/tomorrow as date-only values to decide whether to show 'jutro'
-                            Builder(builder: (context) {
-                              // Always show the same header label regardless whether we're showing tomorrow's classes
-                              const header = 'Najbliższe zajęcia';
-                              final emptyMsg = (_classesLoading ? '' : (_classes.isEmpty ? (_groupCode==null? 'Wybierz grupę w ustawieniach.' : 'Dziś brak nadchodzących zajęć') : null));
-                               return UpcomingClassesSection(
-                                 classes: _classes,
-                                 onTap: _onTapClass,
-                                 groupCode: _groupCode,
-                                 subgroups: _subgroups,
-                                 headerTitle: header,
-                                 isLoading: _classesLoading,
-                                 emptyMessage: emptyMsg,
-                               );
-                            }),
-                            const SizedBox(height: 12),
-                            TasksSection(
-                              tasks: _tasks,
-                              onTap: (task) {
-                                TaskDetailsSheet.show(
-                                  context,
-                                  task,
-                                  description: '',
-                                  relatedClass: _classes.where((c) => c.subject == task.subject).isNotEmpty
-                                      ? _classes.where((c) => c.subject == task.subject).first
-                                      : null,
-                                  onEdit: () {
-                                    // TODO: obsługa edycji zadania
-                                  },
-                                  onDelete: () {
-                                    // TODO: obsługa usuwania zadania
-                                  },
-                                  onToggleCompleted: (completed) {
-                                    setState(() {
-                                      final idx = _tasks.indexWhere((t) => t.id == task.id);
-                                      if (idx != -1) _tasks[idx] = _tasks[idx].copyWith(completed: completed);
-                                    });
-                                  },
+   @override
+   Widget build(BuildContext context) {
+     final cs = Theme.of(context).colorScheme;
+     const double _footerTopSpacing = 10; // Figma: odstęp treści od stopki
+     return Container(
+       // Root na biało, żeby przy overscrollu na dole NIE było widać powierzchni tła (#FEF7FF)
+       color: Colors.white,
+       child: _loading
+           ? const Center(child: CircularProgressIndicator())
+           : CustomScrollView(
+               physics: const ClampingScrollPhysics(), // brak bounce = brak "prześwitu" na dole
+               slivers: [
+                 SliverToBoxAdapter(
+                   child: Container(
+                     color: cs.surface, // tylko header ma kolor surface
+                     child: _Header(
+                       dateText: _plDate(DateTime.now()),
+                       greetingName: _greetingName,
+                       subtitle: _greetingSubtitle,
+                     ),
+                   ),
+                 ),
+                 // Biała sekcja aż do dołu
+                 SliverFillRemaining(
+                   hasScrollBody: false,
+                   child: Transform.translate(
+                     offset: const Offset(0, -8), // overlap header so top radius is visible
+                     child: Material(
+                       color: Colors.white,
+                       clipBehavior: Clip.antiAlias,
+                       shape: const RoundedRectangleBorder(
+                         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                       ),
+                       child: _ContentContainer(
+                         child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           mainAxisSize: MainAxisSize.min,
+                           children: [
+                             // compute today/tomorrow as date-only values to decide whether to show 'jutro'
+                             Builder(builder: (context) {
+                               // Always show the same header label regardless whether we're showing tomorrow's classes
+                               const header = 'Najbliższe zajęcia';
+                               final emptyMsg = (_classesLoading ? '' : (_classes.isEmpty ? (_groupCode==null? 'Wybierz grupę w ustawieniach.' : 'Dziś brak nadchodzących zajęć') : null));
+                                return UpcomingClassesSection(
+                                  classes: _classes,
+                                  onTap: _onTapClass,
+                                  groupCode: _groupCode,
+                                  subgroups: _subgroups,
+                                  headerTitle: header,
+                                  isLoading: _classesLoading,
+                                  emptyMessage: emptyMsg,
                                 );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            EventsSection(
-                              events: _events,
-                              onTap: _onTapEvent,
-                            ),
-                            const SizedBox(height: _footerTopSpacing),
-                            const _Footer(color: AppColors.myUZSysLightOutline),
-                            const SizedBox(height: kBottomNavigationBarHeight + 16),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
+                           }),
+                           const SizedBox(height: 12),
+                           TasksSection(
+                             tasks: _tasks,
+                             onTap: (task) {
+                               TaskDetailsSheet.show(
+                                 context,
+                                 task,
+                                 description: '',
+                                 relatedClass: _classes.where((c) => c.subject == task.subject).isNotEmpty
+                                     ? _classes.where((c) => c.subject == task.subject).first
+                                     : null,
+                                 onEdit: () {
+                                   // TODO: obsługa edycji zadania
+                                 },
+                                 onDelete: () {
+                                   // TODO: obsługa usuwania zadania
+                                 },
+                                 onToggleCompleted: (completed) {
+                                   setState(() {
+                                     final idx = _tasks.indexWhere((t) => t.id == task.id);
+                                     if (idx != -1) _tasks[idx] = _tasks[idx].copyWith(completed: completed);
+                                   });
+                                 },
+                               );
+                             },
+                           ),
+                           const SizedBox(height: 12),
+                           EventsSection(
+                             events: _events,
+                             onTap: _onTapEvent,
+                           ),
+                           const SizedBox(height: _footerTopSpacing),
+                           const _Footer(color: AppColors.myUZSysLightOutline),
+                           const SizedBox(height: kBottomNavigationBarHeight + 16),
+                         ],
+                       ),
+                     ),
+                   ),
+                 ),
+                 ),
+                 ],
+             ),
+     );
+   }
 
-  void _onTapClass(ClassModel c) {
-    // --- TAP: karta zajęć -> arkusz szczegółów (modal bottom sheet) ---
-    ClassDetailsSheet.open(context, c);
-  }
-  void _onTapEvent(EventModel e) => debugPrint('[Home] event tap ${e.id}');
+   void _onTapClass(ClassModel c) {
+     // --- TAP: karta zajęć -> arkusz szczegółów (modal bottom sheet) ---
+     ClassDetailsSheet.open(context, c);
+   }
+   void _onTapEvent(EventModel e) => debugPrint('[Home] event tap ${e.id}');
 
-  @override
-  void dispose() {
-    _refreshTimer?.cancel();
-    super.dispose();
-  }
+   @override
+   void dispose() {
+     WidgetsBinding.instance.removeObserver(this);
+     _refreshTimer?.cancel();
+     super.dispose();
+   }
+
+   @override
+   void didChangeAppLifecycleState(AppLifecycleState state) {
+     if (state == AppLifecycleState.resumed) {
+       // reload prefs and classes when app resumes to keep Home in sync with other screens
+       _loadPrefs();
+       _loadTodayClasses();
+     }
+   }
 }
 
 /// HEADER – SafeArea + spacing z Figmy
 class _Header extends StatelessWidget {
   final String dateText;
   final String greetingName;
-  const _Header({required this.dateText, required this.greetingName});
+  final String? subtitle;
+  const _Header({required this.dateText, required this.greetingName, this.subtitle});
 
   static const double _hPad = 16;
   static const double _topAfterSafe = 8;
@@ -366,7 +391,7 @@ class _Header extends StatelessWidget {
             ),
             const SizedBox(height: _greetingToSubtitle),
             Text(
-              'UZ, Wydział Informatyki',
+              subtitle ?? 'UZ, Wydział Informatyki',
               style: AppTextStyle.myUZBodySmall.copyWith(
                 color: cs.onSurfaceVariant,
                 height: 2, // 12px * 2 = 24px jak w Figmie

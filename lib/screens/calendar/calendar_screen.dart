@@ -6,7 +6,7 @@ import 'package:my_uz/services/classes_repository.dart';
 import 'package:my_uz/screens/calendar/components/calendar_view.dart';
 import 'package:my_uz/screens/calendar/components/calendar_day_view.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:my_uz/screens/calendar/search_schedule_screen.dart';
 
 /// Ekran kalendarza – widok tygodniowy + dzienny timeline (siatka godzinowa).
 class CalendarScreen extends StatefulWidget {
@@ -68,8 +68,8 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       setState(() { _loading = true; _error = false; _errorMsg = null; });
     }
     try {
-      final (groupCode, subgroups) = await ClassesRepository.loadGroupPrefs();
-      final list = await ClassesRepository.fetchWeek(mondayKey, groupCode: groupCode, subgroups: subgroups);
+      final (groupCode, subgroups, groupId) = await ClassesRepository.loadGroupContext();
+      final list = await ClassesRepository.fetchWeek(mondayKey, groupCode: groupCode, subgroups: subgroups, groupId: groupId);
       if (!mounted) return;
       _weekCache[mondayKey] = list;
       if (_mondayOfWeek(_focusedDay)==mondayKey) {
@@ -207,7 +207,18 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   }
 
   void _openSearchPlaceholder(){
-    showModalBottomSheet(context: context, builder: (_) => const _PlaceholderSheet(title: 'Wyszukiwarka', description: 'Tutaj w przyszłości pojawi się wyszukiwanie zajęć / zadań.'));
+    // Otwórz pełnoekranowy ekran wyszukiwania zamiast bottom sheetu.
+    Navigator.push<Map<String,dynamic>?>(context, MaterialPageRoute(builder: (_) => const SearchScheduleScreen())).then((res) {
+      if (res == null) return;
+      // Jeśli użytkownik wybrał grupę -> zapiszemy ją (to już robi ekran wyszukiwania), ale trzeba wyczyścić cache tygodni
+      if (res['type'] == 'group') {
+        // Wyczyść cache aby wymusić ponowne pobranie z nową grupą
+        _weekCache.clear();
+        // Ustaw loading i pobierz tydzień ponownie
+        _ensureWeekLoaded(_focusedDay);
+      }
+      // TODO: w przyszłości obsłużyć wybór nauczyciela
+    });
   }
   void _openAddTaskPlaceholder(){
     showModalBottomSheet(context: context, builder: (_) => const _PlaceholderSheet(title: 'Dodaj zadanie', description: 'Formularz dodawania zadania pojawi się tutaj.'));
@@ -370,11 +381,15 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
   @override
   void initState(){ super.initState(); _load(); }
   Future<void> _load() async {
-    final p = await SharedPreferences.getInstance();
-    final g = p.getString('onb_group');
-    final s = p.getString('onb_group_sub') ?? '';
-    if(!mounted) return;
-    setState(() { _groupCode = g; _subs = s.split(',').where((e)=>e.trim().isNotEmpty).toList(); _loading=false; });
+    try {
+      final (g, subs) = await ClassesRepository.loadGroupPrefs();
+      if(!mounted) return;
+      setState(() { _groupCode = g; _subs = subs; _loading=false; });
+    } catch (_) {
+      // fallback to empty
+      if(!mounted) return;
+      setState(() { _groupCode = null; _subs = []; _loading=false; });
+    }
   }
 
   Widget _sectionLabel(String text) => Padding(

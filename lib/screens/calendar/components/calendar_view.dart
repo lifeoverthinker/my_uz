@@ -5,7 +5,7 @@ import 'package:my_uz/models/class_model.dart';
 // odpowiada pozycji pionowej linii w CalendarDayView: _labelWidth(48) + _labelFragmentGap(4) + _smallSegment(8) = 60
 const double kCalendarLeftReserve = 60;
 
-class CalendarView extends StatelessWidget {
+class CalendarView extends StatefulWidget {
   final DateTime focusedDay;
   final DateTime selectedDay;
   final bool isWeekView;
@@ -29,42 +29,52 @@ class CalendarView extends StatelessWidget {
   });
 
   @override
+  State<CalendarView> createState() => _CalendarViewState();
+}
+
+class _CalendarViewState extends State<CalendarView> {
+  double _dragDx = 0;
+  static const double _dragThreshold = 60; // minimalna odległość do uznania gestu
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    _dragDx += details.delta.dx;
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_dragDx.abs() > _dragThreshold) {
+      if (_dragDx < 0) {
+        widget.onNextMonth?.call();
+      } else {
+        widget.onPrevMonth?.call();
+      }
+    }
+    // Resetuj stan gestu po zakończeniu
+    _dragDx = 0;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final days = _buildMonthDays(focusedDay); // zawsze 42 dni
-    final monthGrid = _MonthGrid(
+    final days = _buildMonthDays(widget.focusedDay); // zawsze 42 dni
+    final grid = _MonthGrid(
       days: days,
-      focusedMonth: DateTime(focusedDay.year, focusedDay.month),
-      selectedDay: selectedDay,
-      classesByDay: classesByDay,
-      onTap: onDaySelected,
-      isWeekView: isWeekView,
+      focusedMonth: DateTime(widget.focusedDay.year, widget.focusedDay.month),
+      selectedDay: widget.selectedDay,
+      classesByDay: widget.classesByDay,
+      onTap: widget.onDaySelected,
+      isWeekView: widget.isWeekView,
     );
-    Widget content = monthGrid;
-    // Gesture: week -> zmiana tygodnia, month -> zmiana miesiąca
-    content = GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onHorizontalDragEnd: (details) {
-        final v = details.primaryVelocity ?? 0;
-        if (v.abs() < 80) return;
-        if (isWeekView) {
-          // MD3: swipe left (v<0) -> next, swipe right (v>0) -> prev
-          if (v < 0) {
-            if (onNextWeek != null) onNextWeek!();
-          } else {
-            if (onPrevWeek != null) onPrevWeek!();
-          }
-        } else {
-          if (v < 0) {
-            if (onNextMonth != null) onNextMonth!();
-          } else {
-            if (onPrevMonth != null) onPrevMonth!();
-          }
-        }
-      },
-      child: monthGrid,
-    );
-    // Zewnętrzny padding usunięty – wyrównanie z nagłówkiem dni tygodnia (ten ma własny padding 16).
-    return content;
+    // Gest przesuwania tylko w widoku miesiąca
+    if (!widget.isWeekView) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragUpdate: _handleDragUpdate,
+        onHorizontalDragEnd: _handleDragEnd,
+        child: grid,
+      );
+    } else {
+      // W widoku tygodnia brak gestów przesuwania
+      return grid;
+    }
   }
 
   List<DateTime> _buildMonthDays(DateTime focus) {
@@ -210,12 +220,14 @@ class _DayCell extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected
             ? cs.primary
-            : (isToday ? cs.primary.withValues(alpha: 0.12) : Colors.transparent),
+            : (isToday ? cs.primary.withValues(alpha: 0.16) : Colors.transparent),
         borderRadius: BorderRadius.circular(diameter / 2),
-        border: (isSelected || isToday) ? null : null,
+        border: isSelected
+            ? null
+            : (isToday ? Border.all(color: cs.primary.withValues(alpha: 0.32), width: 1) : null),
       ),
       alignment: Alignment.center,
-      child: Text(text, style: dayTextStyle),
+      child: Text(text, style: dayTextStyle.copyWith(color: isSelected ? cs.onPrimary : (isToday ? cs.primary : dayTextStyle.color))),
     );
 
     final bool showCircle = isSelected || isToday;
