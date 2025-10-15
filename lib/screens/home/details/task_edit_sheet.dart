@@ -5,7 +5,7 @@ import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/widgets/confirm_modal.dart';
-import 'package:my_uz/widgets/modal_date_picker.dart';
+import 'package:my_uz/widgets/date_picker.dart';
 
 /// Arkusz edycji zadania w stylu Google Calendar / spójny z TaskDetailsSheet
 class TaskEditSheet {

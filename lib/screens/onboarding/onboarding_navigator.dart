@@ -496,7 +496,7 @@ class _Page3BodyState extends State<_Page3Body> {
         _group = savedGroup;
         _loadingSubs = true; // zaczynamy od ładowania podgrup
       });
-      final subs = await ClassesRepository.getSubgroupsForGroup(savedGroup);
+      final subs = await ClassesRepository.getSubgroupsForGroup(savedGroup, forceRefresh: true);
       setState(() {
         _availableSubs = subs;
         _loadingSubs = false;
@@ -597,7 +597,7 @@ class _Page3BodyState extends State<_Page3Body> {
       return;
     }
     try {
-      final subs = await ClassesRepository.getSubgroupsForGroup(groupCode);
+      final subs = await ClassesRepository.getSubgroupsForGroup(groupCode, forceRefresh: true);
       _subgroupCache[groupCode] = subs;
       if (!mounted) return;
       setState(() {

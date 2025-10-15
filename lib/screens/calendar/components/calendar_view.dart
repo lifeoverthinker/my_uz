@@ -54,6 +54,7 @@ class _CalendarViewState extends State<CalendarView> {
   static const double _dragThreshold = 40; // minimalna odległość px (bardziej czuły)
   static const double _velocityThreshold = 250; // px/s (bardziej czuły)
   DateTime? _lastWeekMonday;
+  // ignore: unused_field
   int _slideDir = 0; // -1 = left (next), 1 = right (prev), 0 = none
 
   void _onPointerDown(PointerDownEvent e) {

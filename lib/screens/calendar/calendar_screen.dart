@@ -28,11 +28,16 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   DateTime _selectedDay = _stripTime(DateTime.now());
   DateTime _focusedDay = _stripTime(DateTime.now());
   List<ClassModel> _allClasses = [];
+  // Temporary override (used when user chooses a plan via search/preview but we must NOT persist it)
+  String? _overrideGroupCode;
+  String? _overrideGroupId;
+  List<String>? _overrideSubgroups;
   bool _loading = false;
   bool _error = false;
   String? _errorMsg;
   final Map<DateTime, List<ClassModel>> _weekCache = {};
   final Set<DateTime> _loadingWeeks = {};
+  // ignore: unused_field
   int _slideDir = 0; // -1 = left (next), 1 = right (prev), 0 = none
 
   @override
@@ -74,7 +79,20 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       setState(() { _loading = true; _error = false; _errorMsg = null; });
     }
     try {
-      final (groupCode, subgroups, groupId) = await ClassesRepository.loadGroupContext();
+      // Prefer temporary override (from search preview) — do NOT persist it here.
+      String? groupCode;
+      List<String> subgroups = const [];
+      String? groupId;
+      if (_overrideGroupCode != null || _overrideGroupId != null) {
+        groupCode = _overrideGroupCode;
+        groupId = _overrideGroupId;
+        subgroups = _overrideSubgroups ?? const [];
+      } else {
+        final ctx = await ClassesRepository.loadGroupContext();
+        groupCode = ctx.$1;
+        subgroups = ctx.$2;
+        groupId = ctx.$3;
+      }
       final list = await ClassesRepository.fetchWeek(mondayKey, groupCode: groupCode, subgroups: subgroups, groupId: groupId);
       if (!mounted) return;
       _weekCache[mondayKey] = list;
@@ -106,22 +124,28 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   }
 
   void _prevWeek() {
+    // move to Monday of previous week
+    final candidate = _focusedDay.subtract(const Duration(days: 7));
+    final monday = _mondayOfWeek(candidate);
     setState(() {
       _slideDir = 1; // slide right
-      _focusedDay = _focusedDay.subtract(const Duration(days: 7));
-      _selectedDay = _selectedDay.subtract(const Duration(days: 7));
+      _focusedDay = monday;
+      _selectedDay = monday;
     });
     _ensureWeekLoaded(_focusedDay);
   }
 
   void _nextWeek() {
+    // move to Monday of next week
+    final candidate = _focusedDay.add(const Duration(days: 7));
+    final monday = _mondayOfWeek(candidate);
     setState(() {
       _slideDir = -1; // slide left
-       _focusedDay = _focusedDay.add(const Duration(days: 7));
-       _selectedDay = _selectedDay.add(const Duration(days: 7));
-     });
-     _ensureWeekLoaded(_focusedDay);
-   }
+      _focusedDay = monday;
+      _selectedDay = monday;
+    });
+    _ensureWeekLoaded(_focusedDay);
+  }
 
   // Dodane: przesunięcie o 1 dzień do przodu
   void _nextDay() {
@@ -291,9 +315,13 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       if (res == null) return;
       // Jeśli użytkownik wybrał grupę -> zapiszemy ją (to już robi ekran wyszukiwania), ale trzeba wyczyścić cache tygodni
       if (res['type'] == 'group') {
-        // Wyczyść cache aby wymusić ponowne pobranie z nową grupą
+        // Ustaw tymczasowy override (NIE zapisujemy jako domyślnego planu). To pozwala tymczasowo podglądać plan.
+        _overrideGroupCode = res['code'] as String?;
+        _overrideGroupId = res['id'] as String?;
+        // selected subgroups may be passed in future; for now leave null to show all
+        _overrideSubgroups = null;
+        // Wyczyść cache aby wymusić ponowne pobranie dla tej grupy
         _weekCache.clear();
-        // Ustaw loading i pobierz tydzień ponownie
         _ensureWeekLoaded(_focusedDay);
       }
       // TODO: w przyszłości obsłużyć wybór nauczyciela
@@ -507,29 +535,41 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
       String label = labelsMap.containsKey(s) ? labelsMap[s]! : '';
 
       if (type == 'group') {
-        // token may be an id (UUID) or a visible code like 'IF-3B'. Simple heuristic:
-        final uuidLike = RegExp(r'^[0-9a-fA-F\-]{12,}\$');
+        // token może być id (UUID) albo kodem (np. IF-3B)
+        final isUuid = ClassesRepository.uuidRe.hasMatch(token);
+        String effectiveId = token; // użyjemy do nawigacji
         if (label.isEmpty) {
-          if (uuidLike.hasMatch(token)) {
-            // token looks like an id - try fetch meta by id
+          if (isUuid) {
+            // token wygląda na id - spróbuj pobrać meta po id dla czytelnej etykiety
             try {
               final meta = await ClassesRepository.getGroupById(token);
               if (meta != null) label = (meta['kod_grupy'] as String?) ?? (meta['nazwa'] as String?) ?? token;
             } catch (_) {}
           } else {
-            // token looks like a human code (e.g. IF-3B) - use it as label and try to resolve id for future
+            // token wygląda na kod grupy (np. IF-3B)
             label = token;
             try {
               final resolvedId = await ClassesRepository.resolveGroupIdForCode(token);
-              if (resolvedId != null) {
+              if (resolvedId != null && resolvedId.isNotEmpty) {
+                effectiveId = resolvedId; // używaj id dalej
                 final meta2 = await ClassesRepository.getGroupById(resolvedId);
                 if (meta2 != null) label = (meta2['kod_grupy'] as String?) ?? (meta2['nazwa'] as String?) ?? label;
               }
             } catch (_) {}
           }
+        } else {
+          // Jeśli mamy label, ale token to kod, spróbuj ustalić effectiveId do nawigacji
+          if (!isUuid) {
+            try {
+              final resolvedId = await ClassesRepository.resolveGroupIdForCode(token);
+              if (resolvedId != null && resolvedId.isNotEmpty) effectiveId = resolvedId;
+            } catch (_) {}
+          }
         }
         if (label.isEmpty) label = token;
         if (labelsMap[s] != label) { labelsMap[s] = label; labelsChanged = true; }
+        out.add({'type': type, 'id': effectiveId, 'label': label});
+        continue;
       } else if (type == 'teacher') {
         if (label.isEmpty) {
           try {
@@ -542,6 +582,57 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
       }
       out.add({'type': type, 'id': token, 'label': label});
     }
+
+    // --- Validate stored fav_subgroups: ensure saved selected subgroups exist for given group ---
+    try {
+      final rawFavSubs = prefs.getString('fav_subgroups');
+      if (rawFavSubs != null && rawFavSubs.isNotEmpty) {
+        final decoded = jsonDecode(rawFavSubs);
+        if (decoded is Map) {
+          final Map<String, dynamic> normalized = {};
+          for (final entryKey in decoded.keys) {
+            try {
+              final value = decoded[entryKey];
+              if (entryKey is! String) continue;
+              if (value is! List) { normalized[entryKey] = <String>[]; continue; }
+              final saved = value.map((e) => e.toString()).toList();
+              // Only process keys like 'group:<id>'
+              if (!entryKey.startsWith('group:')) { normalized[entryKey] = saved; continue; }
+              final parts = entryKey.split(':');
+              if (parts.length != 2) { normalized[entryKey] = saved; continue; }
+              final gid = parts[1];
+              // Resolve group code via meta if possible
+              String? code;
+              try {
+                final meta = await ClassesRepository.getGroupById(gid);
+                if (meta != null) code = (meta['kod_grupy'] as String?)?.trim();
+              } catch (_) { code = null; }
+              List<String> allowed = [];
+              if (code != null && code.isNotEmpty) {
+                try {
+                  allowed = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true);
+                } catch (_) { allowed = []; }
+              }
+              if (allowed.isEmpty) {
+                // No subgroups available -> normalize to empty list
+                if (saved.isNotEmpty) normalized[entryKey] = <String>[];
+              } else {
+                final allowedSet = allowed.map((s) => s.trim()).where((s) => s.isNotEmpty).toSet();
+                final filtered = saved.where((s) => allowedSet.contains(s)).toList();
+                if (filtered.length != saved.length) normalized[entryKey] = filtered;
+              }
+            } catch (_) {
+              // ignore individual entry errors
+            }
+          }
+          if (normalized.isNotEmpty) {
+            try {
+              await prefs.setString('fav_subgroups', jsonEncode(normalized));
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (_) {}
 
     if (labelsChanged) {
       try { await prefs.setString('fav_labels', jsonEncode(labelsMap)); } catch (_) {}
@@ -693,13 +784,13 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
                                   name = n.isNotEmpty ? n : null;
                                 } else {
                                   final label = (fav['label'] ?? '').toString().trim();
-                                  final uuidLike = RegExp(r'^[0-9a-fA-F\-]{12,}\$');
-                                  // treat label as group code if it doesn't look like a UUID-like token
-                                  if (!uuidLike.hasMatch(label) && label.isNotEmpty) code = label;
+                                  final isUuid = ClassesRepository.uuidRe.hasMatch(label);
+                                  // treat label as group code jeśli nie wygląda jak UUID
+                                  if (!isUuid && label.isNotEmpty) code = label;
                                   name = null;
                                 }
                                 if (code != null && code.isNotEmpty) {
-                                  try { subgroups = await ClassesRepository.getSubgroupsForGroup(code); } catch (_) { subgroups = null; }
+                                  try { subgroups = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true); } catch (_) { subgroups = null; }
                                 }
                               } catch (_) {}
                               // Odczytaj mapę wyboru podgrup dla ulubionych
@@ -721,34 +812,65 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
                               // Klucz do mapy: 'group:<id>'
                               final favKey = 'group:${fav['id']!}';
                               List<String>? selectedSubs = favSubgroups[favKey];
-                              navigator.push(MaterialPageRoute(builder: (_) => GroupScheduleScreen(
-                                    groupCode: code,
-                                    groupId: fav['id']!,
-                                    groupName: name,
-                                    subgroups: subgroups,
-                                    selectedSubgroups: selectedSubs,
-                                    onToggleFavorite: () async { await _loadFavorites(); },
-                                    onSubgroupSelected: (subs) async {
-                                      // Zapisz wybór podgrup dla tego ulubionego
-                                      final prefs = await SharedPreferences.getInstance();
-                                      Map<String, List<String>> favSubgroups = {};
-                                      try {
-                                        final raw = prefs.getString('fav_subgroups');
-                                        if (raw != null && raw.isNotEmpty) {
-                                          final decoded = jsonDecode(raw);
-                                          if (decoded is Map) {
-                                            decoded.forEach((k, v) {
-                                              if (k is String && v is List) {
-                                                favSubgroups[k] = v.map((e) => e.toString()).toList();
-                                              }
-                                            });
-                                          }
-                                        }
-                                      } catch (_) {}
-                                      favSubgroups[favKey] = subs ?? <String>[];
-                                      await prefs.setString('fav_subgroups', jsonEncode(favSubgroups));
-                                    },
-                                  ))).then((res){ setState((){}); });
+                              // Jeśli mamy listę dostępnych podgrup (pobranych powyżej), przefiltruj zapisane wybrane podgrupy
+                              if (selectedSubs != null && selectedSubs.isNotEmpty) {
+                                if (subgroups != null && subgroups.isNotEmpty) {
+                                  final allowed = subgroups.map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
+                                  selectedSubs = selectedSubs.where((s)=> allowed.contains(s)).toList();
+                                  if (selectedSubs.isEmpty) selectedSubs = <String>[]; // normalizacja
+                                } else if (code != null && code.isNotEmpty) {
+                                  // Brak lokalnej listy subgrup — spróbuj pobrać teraz i przefiltruj
+                                  try {
+                                    final remoteSubs = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true);
+                                    final allowed = remoteSubs.map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
+                                    selectedSubs = selectedSubs.where((s)=> allowed.contains(s)).toList();
+                                  } catch (_) {
+                                    // jeśli nie uda się pobrać, pozostaw jak jest (bez filtrowania)
+                                  }
+                                }
+                              }
+                               navigator.push(MaterialPageRoute(builder: (_) => GroupScheduleScreen(
+                                     groupCode: code,
+                                     groupId: fav['id']!,
+                                     groupName: name,
+                                     subgroups: subgroups,
+                                     selectedSubgroups: selectedSubs,
+                                     onToggleFavorite: () async { await _loadFavorites(); },
+                                     onSubgroupSelected: (subs) async {
+                                       // Zapisz wybór podgrup dla tego ulubionego
+                                       final prefs = await SharedPreferences.getInstance();
+                                       Map<String, List<String>> favSubgroups = {};
+                                       try {
+                                         final raw = prefs.getString('fav_subgroups');
+                                         if (raw != null && raw.isNotEmpty) {
+                                           final decoded = jsonDecode(raw);
+                                           if (decoded is Map) {
+                                             decoded.forEach((k, v) {
+                                               if (k is String && v is List) {
+                                                 favSubgroups[k] = v.map((e) => e.toString()).toList();
+                                               }
+                                             });
+                                           }
+                                         }
+                                       } catch (_) {}
+                                       // przed zapisem przefiltruj subs względem aktualnie dostępnych podgrup (jeśli możemy je pobrać)
+                                       List<String> toSave = subs ?? <String>[];
+                                       try {
+                                         List<String>? allowedSubs;
+                                         if (code != null && code.isNotEmpty) {
+                                           allowedSubs = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true);
+                                         } else if (subgroups != null) {
+                                           allowedSubs = subgroups;
+                                         }
+                                         if (allowedSubs != null) {
+                                           final allowed = allowedSubs.map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
+                                           toSave = toSave.where((s) => allowed.contains(s)).toList();
+                                         }
+                                       } catch (_) {}
+                                       favSubgroups[favKey] = toSave;
+                                       await prefs.setString('fav_subgroups', jsonEncode(favSubgroups));
+                                     },
+                                   ))).then((res){ setState((){}); });
                             } else if (fav['type']=='teacher') {
                                final meta = await ClassesRepository.getTeacherDetails(fav['id']!);
                                final name = meta?['nazwa'] as String? ?? (fav['label'] ?? '');

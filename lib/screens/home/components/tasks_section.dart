@@ -3,6 +3,7 @@ import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
+import 'package:my_uz/services/classes_repository.dart';
 import 'package:my_uz/widgets/cards/task_card.dart';
 
 /// Sekcja: Zadania
@@ -95,12 +96,7 @@ class TasksSection extends StatelessWidget {
   String _ddmm(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
 
-  String _subjectInitials(String s) {
-    final parts = s.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return '';
-    if (parts.length == 1) return parts.first.characters.first.toUpperCase();
-    return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
-  }
+  String _subjectInitials(String s) => ClassesRepository.initialsFromName(s);
 }
 
 class _SectionHeader extends StatelessWidget {

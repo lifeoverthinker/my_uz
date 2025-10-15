@@ -28,7 +28,10 @@ class OnboardingPage3 extends StatefulWidget {
 class _OnboardingPage3State extends State<OnboardingPage3> {
   final _groupCtrl = TextEditingController();
   String? _selectedGroupCode; // potwierdzony kod
-  String? _subgroup; // 'A' | 'B'
+  String? _subgroup; // 'A' | 'B' | dowolna z listy dynamicznej
+  // Dynamicznie dostępne podgrupy dla wybranej grupy (jeśli backend je zwraca).
+  List<String> _availableSubgroups = const [];
+  bool _loadingSubs = false;
 
   @override
   void dispose() {
@@ -36,13 +39,30 @@ class _OnboardingPage3State extends State<OnboardingPage3> {
     super.dispose();
   }
 
-  void _confirmGroup() {
+  Future<void> _confirmGroup() async {
     final v = _groupCtrl.text.trim();
     if (v.isEmpty) return;
     setState(() {
       _selectedGroupCode = v;
       _subgroup = null;
+      _availableSubgroups = const [];
+      _loadingSubs = true;
     });
+    try {
+      final subs = await ClassesRepository.getSubgroupsForGroup(v, forceRefresh: true);
+      if (!mounted) return;
+      // Jeśli backend zwróci 1 podgrupę, możemy ją wstępnie zaznaczyć (UX). W innym wypadku użytkownik wybierze.
+      setState(() {
+        _availableSubgroups = subs;
+        if (subs.length == 1) {
+          _subgroup = subs.first;
+        }
+        _loadingSubs = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _availableSubgroups = const []; _loadingSubs = false; });
+    }
   }
 
   bool get _canProceed => _selectedGroupCode != null && _subgroup != null;
@@ -104,7 +124,7 @@ class _OnboardingPage3State extends State<OnboardingPage3> {
                     child: Text(
                       'Wybierz swoją grupę',
                       textAlign: TextAlign.center,
-                      style: tt.headlineMedium?.copyWith(color: cs.onBackground),
+                      style: tt.headlineMedium?.copyWith(color: cs.onSurface),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -201,26 +221,52 @@ class _OnboardingPage3State extends State<OnboardingPage3> {
                     child: _selectedGroupCode == null
                         ? const SizedBox.shrink(key: ValueKey('panel_empty'))
                         : Column(
-                      key: const ValueKey('panel_subgroups'),
-                      children: [
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 312),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text('Wybierz swoją podgrupę:', style: AppTextStyle.myUZLabelSmall.copyWith(color: cs.primary)),
+                            key: const ValueKey('panel_subgroups'),
+                            children: [
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 312),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text('Wybierz swoją podgrupę:', style: AppTextStyle.myUZLabelSmall.copyWith(color: cs.primary)),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (_loadingSubs)
+                                const SizedBox(
+                                  height: 32,
+                                  width: 32,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              else ...[
+                                // Renderuj listę podgrup z backendu, a jeśli brak — fallback A/B
+                                Builder(
+                                  builder: (context) {
+                                    final items = _availableSubgroups.isNotEmpty ? _availableSubgroups : const ['A', 'B'];
+                                    return Wrap(
+                                      alignment: WrapAlignment.center,
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: items.map((s) => _ChoicePill(
+                                        label: s,
+                                        selected: _subgroup == s,
+                                        onTap: () => setState(() => _subgroup = s),
+                                        cs: cs,
+                                      )).toList(),
+                                    );
+                                  },
+                                ),
+                                if (_availableSubgroups.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      'Brak zdefiniowanych podgrup — wybierz A lub B.',
+                                      style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                              ],
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _ChoicePill(label: 'A', selected: _subgroup == 'A', onTap: () => setState(() => _subgroup = 'A'), cs: cs),
-                            const SizedBox(width: 16),
-                            _ChoicePill(label: 'B', selected: _subgroup == 'B', onTap: () => setState(() => _subgroup = 'B'), cs: cs),
-                          ],
-                        ),
-                      ],
-                    ),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -267,7 +313,7 @@ class _ChoicePill extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         splashFactory: NoSplash.splashFactory,
-        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

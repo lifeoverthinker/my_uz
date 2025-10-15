@@ -93,7 +93,7 @@ class _OnboardingPage2State extends State<OnboardingPage2> {
                     child: Text(
                       'Jak mamy się do Ciebie zwracać?',
                       textAlign: TextAlign.center,
-                      style: tt.headlineMedium?.copyWith(color: cs.onBackground),
+                      style: tt.headlineMedium?.copyWith(color: cs.onSurface),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -255,54 +255,50 @@ class _OptionCardRadio extends StatelessWidget {
   Widget build(BuildContext context) {
     final selected = value == groupValue;
 
-    return InkWell(
+    return GestureDetector(
       onTap: () => onChanged(value),
-      borderRadius: BorderRadius.circular(8),
-      splashFactory: NoSplash.splashFactory,
-      overlayColor: MaterialStateProperty.all(Colors.transparent),
-      child: ConstrainedBox(
+      behavior: HitTestBehavior.opaque,
+      child: Container(
         constraints: const BoxConstraints(minHeight: 56),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: ShapeDecoration(
-            color: selected ? cs.secondaryContainer : Colors.transparent,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(width: 1, color: selected ? cs.primary : AppColors.myUZSysLightOutlineVariant),
-              borderRadius: BorderRadius.circular(8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: ShapeDecoration(
+          color: selected ? cs.secondaryContainer : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(width: 1, color: selected ? cs.primary : AppColors.myUZSysLightOutlineVariant),
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: selected ? cs.primary : cs.onSurfaceVariant,
+              size: 20,
             ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Radio – bez overlay
-              RadioTheme(
-                data: RadioTheme.of(context).copyWith(
-                  fillColor: MaterialStateProperty.all(cs.primary),
-                  overlayColor: MaterialStateProperty.all(Colors.transparent),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                ),
-                child: Radio<int>(
-                  value: value,
-                  groupValue: groupValue,
-                  onChanged: (_) => onChanged(value),
-                ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyle.myUZLabelMedium.copyWith(color: cs.onSurfaceVariant),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              // Teksty
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: AppTextStyle.myUZLabelMedium.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 2),
-                    Text(subtitle, style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant), maxLines: 2, overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -335,7 +331,7 @@ class _ChoicePill extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         splashFactory: NoSplash.splashFactory,
-        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
