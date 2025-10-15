@@ -3,6 +3,7 @@ import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
+import 'package:my_uz/services/classes_repository.dart';
 import 'package:my_uz/widgets/cards/class_card.dart';
 
 /// Sekcja: Najbliższe zajęcia
@@ -90,7 +91,7 @@ class UpcomingClassesSection extends StatelessWidget {
                             final colors = _variant(i % 3);
                             final time = '${_hhmm(c.startTime)} - ${_hhmm(c.endTime)}';
                             final abbrev = (c.type ?? '').trim();
-                            final init = abbrev.isNotEmpty ? abbrev.toUpperCase() : _initials(c.lecturer);
+                            final init = abbrev.isNotEmpty ? abbrev.toUpperCase() : ClassesRepository.initialsFromName(c.lecturer);
                             return Padding(
                               padding: EdgeInsets.only(right: i == visible.length - 1 ? 0 : spacing),
                               child: SizedBox(
@@ -143,13 +144,6 @@ class UpcomingClassesSection extends StatelessWidget {
 
   String _hhmm(DateTime d) =>
       '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-
-  String _initials(String lecturer) {
-    final parts = lecturer.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty) return 'A';
-    if (parts.length == 1) return parts.first.characters.first.toUpperCase();
-    return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
-  }
 }
 
 

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/services/classes_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'package:my_uz/widgets/teacher_info_modal.dart';
+import 'package:my_uz/models/class_model.dart';
+import 'package:my_uz/screens/calendar/components/calendar_day_view.dart';
+import 'package:my_uz/widgets/schedule_app_bar.dart';
 
-/// Placeholder ekranu planu nauczyciela.
-/// Zwraca Map {'apply': true, 'id': id, 'name': name} jeśli użytkownik zatwierdzi.
+/// Widok planu nauczyciela (bardziej spójny ze stylem GroupScheduleScreen).
+/// Różnice względem planu grupy:
+/// - Brak podgrup
+/// - Ikonka "info" pokazuje dane nauczyciela (TeacherInfoModal)
 class TeacherScheduleScreen extends StatefulWidget {
   final String teacherId;
   final String teacherName;
@@ -20,256 +24,237 @@ class TeacherScheduleScreen extends StatefulWidget {
 class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
   bool _isFavorite = false;
   bool _favAnimating = false;
+  late DateTime _selectedDay;
+  List<ClassModel>? _loadedClasses;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDay = DateTime.now();
+    _loadFavoriteStatus();
+    _loadClassesForDay();
+  }
 
   Future<void> _showTeacherInfo() async {
-    final details = await ClassesRepository.getTeacherDetails(widget.teacherId);
-    if (!mounted) return;
-    final email = details?['email'] as String?;
-    final instRaw = details?['instytut'] as String? ?? details?['institute'] as String?;
-    final name = details?['nazwa'] as String? ?? widget.teacherName;
-    // split institutes by comma/semicolon/newline if present
-    final institutes = <String>[];
-    if (instRaw != null && instRaw.trim().isNotEmpty) {
-      institutes.addAll(instRaw.split(RegExp(r'[;,\n]')).map((s)=>s.trim()).where((s)=>s.isNotEmpty));
-    }
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(name),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (email != null && email.isNotEmpty) ...[
-              const Text('E-mail:'),
-              Row(
-                children: [
-                  Expanded(child: SelectableText(email)),
-                  IconButton(
-                    icon: const Icon(Icons.copy, size: 20),
-                    onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: email));
-                      Navigator.of(ctx).pop();
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Adres e-mail skopiowany')));
-                    },
-                    tooltip: 'Kopiuj e-mail',
-                  )
-                ],
-              ),
-            ],
-            if (institutes.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text('Instytuty:'),
-              const SizedBox(height: 6),
-              for (final it in institutes) Text('- $it'),
-            ],
-            if ((email == null || email.isEmpty) && institutes.isEmpty)
-              const Text('Brak dodatkowych informacji'),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Zamknij')),
-        ],
-      ),
-    );
+    // Wyświetl modal z dodatkowymi informacjami o nauczycielu.
+    await TeacherInfoModal.show(context, widget.teacherId, widget.teacherName);
   }
 
   Future<void> _loadFavoriteStatus() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('fav_plans');
-      if (raw == null || raw.isEmpty) { setState(()=> _isFavorite = false); return; }
-      final List<dynamic> l = jsonDecode(raw);
       final key = 'teacher:${widget.teacherId}';
-      setState(() => _isFavorite = l.map((e)=>e.toString()).contains(key));
-    } catch (_) { setState(()=> _isFavorite = false); }
+      final fav = await ClassesRepository.isFavorite(key);
+      if (mounted) setState(() => _isFavorite = fav);
+    } catch (_) { if (mounted) setState(() => _isFavorite = false); }
   }
 
   Future<void> _toggleFavorite() async {
+    // Jeśli rodzic dostarczył callback (Drawer/Lista ulubionych) -> powiadom go i nie zmieniaj lokalnego storage tutaj.
     if (widget.onToggleFavorite != null) {
       widget.onToggleFavorite!();
-      setState(()=> _isFavorite = !_isFavorite);
-      setState(() { _favAnimating = true; });
+      if (mounted) setState(() => _isFavorite = !_isFavorite);
+      if (mounted) setState(() => _favAnimating = true);
       Future.delayed(const Duration(milliseconds: 260), () { if (mounted) setState(() { _favAnimating = false; }); });
       return;
     }
+
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('fav_plans');
-      final List<String> list = raw == null || raw.isEmpty ? [] : List<String>.from(jsonDecode(raw).map((e)=>e.toString()));
       final key = 'teacher:${widget.teacherId}';
-      if (list.contains(key)) { list.remove(key); setState(()=> _isFavorite = false); }
-      else { list.add(key); setState(()=> _isFavorite = true); }
-      await prefs.setString('fav_plans', jsonEncode(list));
-      // update fav_labels map so Drawer shows readable name immediately
-      try {
-        final rawLabels = prefs.getString('fav_labels');
-        Map<String,String> labels = {};
-        if (rawLabels != null && rawLabels.isNotEmpty) {
-          final dec = jsonDecode(rawLabels);
-          if (dec is Map) dec.forEach((k,v){ if (k is String && v is String) labels[k]=v; });
-        }
-        if (list.contains(key)) {
-          final label = widget.teacherName.isNotEmpty ? widget.teacherName : (await ClassesRepository.getTeacherDetails(widget.teacherId))?['nazwa'] as String? ?? widget.teacherId;
-          if (label.isNotEmpty) labels[key] = label;
-        } else {
-          labels.remove(key);
-        }
-        await prefs.setString('fav_labels', jsonEncode(labels));
-      } catch (_) {}
-      setState(() { _favAnimating = true; });
+      final label = widget.teacherName.isNotEmpty ? widget.teacherName : widget.teacherId;
+      await ClassesRepository.toggleFavorite(key, label: label);
+      final fav = await ClassesRepository.isFavorite(key);
+      if (mounted) {
+        setState(() {
+          _isFavorite = fav;
+          _favAnimating = true;
+        });
+      }
       Future.delayed(const Duration(milliseconds: 260), () { if (mounted) setState(() { _favAnimating = false; }); });
-      final snack = _isFavorite ? 'Dodano do ulubionych' : 'Usunięto z ulubionych';
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(snack)));
+
+      // Informacja dla użytkownika
+      if (mounted) {
+        final snack = _isFavorite ? 'Dodano do ulubionych' : 'Usunięto z ulubionych';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(snack)));
+      }
     } catch (_) {}
   }
 
-  @override
-  void initState(){
-    super.initState();
-    _loadFavoriteStatus();
+  Future<void> _loadClassesForDay() async {
+    if (!mounted) return;
+    setState(() { _loading = true; });
+    try {
+      final list = await ClassesRepository.fetchTeacherDayWithWeekFallback(_selectedDay, teacherId: widget.teacherId);
+      if (!mounted) return;
+      setState(() { _loadedClasses = list; });
+    } catch (e) {
+      if (mounted) setState(() { _loadedClasses = <ClassModel>[]; });
+    } finally {
+      if (mounted) setState(() { _loading = false; });
+    }
+  }
+
+  void _onDaySelected(DateTime d) {
+    if (!mounted) return;
+    setState(() { _selectedDay = d; });
+    _loadClassesForDay();
+  }
+
+  DateTime _mondayOfWeek(DateTime d) {
+    final wd = d.weekday; // 1=Mon
+    return DateTime(d.year, d.month, d.day - (wd - 1));
+  }
+
+  void _goToNextWeekMonday() {
+    final candidate = _selectedDay.add(const Duration(days: 7));
+    final monday = _mondayOfWeek(candidate);
+    _onDaySelected(monday);
+  }
+
+  void _goToPrevWeekMonday() {
+    final candidate = _selectedDay.subtract(const Duration(days: 7));
+    final monday = _mondayOfWeek(candidate);
+    _onDaySelected(monday);
   }
 
   @override
   Widget build(BuildContext context) {
-    final favColor = _isFavorite ? (Theme.of(context).colorScheme.primary) : Theme.of(context).iconTheme.color;
+    final cs = Theme.of(context).colorScheme;
+    final heartColor = _isFavorite ? cs.primary : Theme.of(context).iconTheme.color;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(MyUz.chevron_left, size: 24),
-          onPressed: () => Navigator.of(context).pop(null),
-        ),
-        centerTitle: false,
-        titleSpacing: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        elevation: 0,
-        title: Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.only(left:4.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Plan nauczyciela', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height:2),
-                Text(widget.teacherName.isNotEmpty ? widget.teacherName : 'Nauczyciel', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-        ),
+      appBar: ScheduleAppBar(
+        title: 'Plan nauczyciela',
+        subtitle: widget.teacherName.isNotEmpty ? widget.teacherName : 'Nauczyciel',
+        onBack: () => Navigator.of(context).pop(),
         actions: [
-          IconButton(
+          ScheduleAppBarAction(
             icon: const Icon(Icons.info_outline),
-            onPressed: _showTeacherInfo,
             tooltip: 'Informacje o nauczycielu',
+            onTap: _showTeacherInfo,
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: AnimatedScale(
+          ScheduleAppBarAction(
+            icon: AnimatedScale(
               scale: _favAnimating ? 1.15 : 1.0,
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutBack,
-              child: IconButton(
-                icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: favColor),
-                onPressed: _toggleFavorite,
-                tooltip: _isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych',
-              ),
+              child: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: heartColor),
             ),
+            tooltip: _isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych',
+            onTap: _toggleFavorite,
           ),
-          TextButton(onPressed: () => Navigator.of(context).pop(null), child: const Text('Anuluj')),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const Divider(height: 1, thickness: 1),
-            Expanded(
-              child: Container(
-                color: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                child: Column(
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: const [
-                        // Przykładowe podpowiedzi - dla nauczyciela mogą być puste
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border.all(color: Theme.of(context).dividerColor, width: 0.5),
-                        ),
-                        child: CustomPaint(
-                          painter: _GridPainter(),
-                          child: const Center(child: Text('Widok planu (w budowie)', style: TextStyle(color: Colors.grey))),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Spójny pasek dni tygodnia (tak jak w GroupScheduleScreen)
+          _DaysOfWeekBar(
+            selectedDay: _selectedDay,
+            onDaySelected: _onDaySelected,
+            onPrevWeek: _goToPrevWeekMonday,
+            onNextWeek: _goToNextWeekMonday,
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : CalendarDayView(
+              day: _selectedDay,
+              classes: _loadedClasses ?? [],
+              onNextDay: () => _onDaySelected(_selectedDay.add(const Duration(days: 1))),
+              onPrevDay: () => _onDaySelected(_selectedDay.subtract(const Duration(days: 1))),
             ),
-            const Divider(height: 1, thickness: 1),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(null),
-                      child: const Text('Anuluj'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          await ClassesRepository.setTeacherPrefsById(widget.teacherId);
-                        } catch (_) {}
-                        if (!mounted) return;
-                        Navigator.of(context).pop({'apply': true, 'id': widget.teacherId, 'name': widget.teacherName});
-                      },
-                      child: const Text('Ustaw jako mój nauczyciel'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Colors.grey (0xFF9E9E9E) ~ RGB(158,158,158). Używamy Color.fromRGBO, by uniknąć deprecacji .withOpacity().
-    final paint = Paint()..color = const Color.fromRGBO(158, 158, 158, 0.12)..strokeWidth = 0.5;
-    final rows = 12;
-    final cols = 7;
-    final rowH = size.height / rows;
-    final colW = size.width / cols;
-    for (int i = 1; i < rows; i++) {
-      final y = rowH * i;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-    for (int i = 1; i < cols; i++) {
-      final x = colW * i;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-  }
+/// DaysOfWeekBar – spójny z implementacją w GroupScheduleScreen
+class _DaysOfWeekBar extends StatelessWidget {
+  final DateTime selectedDay;
+  final ValueChanged<DateTime> onDaySelected;
+  final VoidCallback? onPrevWeek;
+  final VoidCallback? onNextWeek;
+  const _DaysOfWeekBar({required this.selectedDay, required this.onDaySelected, this.onPrevWeek, this.onNextWeek});
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) {
+    final startOfWeek = selectedDay.subtract(Duration(days: selectedDay.weekday - 1));
+    final cs = Theme.of(context).colorScheme;
+    final baseStyle = Theme.of(context).textTheme.bodyMedium;
+    final dayTextStyle = (baseStyle ?? const TextStyle()).copyWith(fontWeight: FontWeight.w600, fontSize: 16, height: 1);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragEnd: (details){
+        final v = details.primaryVelocity ?? 0;
+        if (v.abs() < 200) return;
+        if (v < 0) { onNextWeek?.call(); } else { onPrevWeek?.call(); }
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            const SizedBox(width: 60), // kCalendarLeftReserve (aligned with CalendarDayView timeline)
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(7, (i) {
+                  final day = startOfWeek.add(Duration(days: i));
+                  final isSelected = day.year == selectedDay.year && day.month == selectedDay.month && day.day == selectedDay.day;
+                  final isToday = DateTime.now().year==day.year && DateTime.now().month==day.month && DateTime.now().day==day.day;
+
+                  Widget dayCircle() {
+                    final showCircle = isSelected || isToday;
+                    if (showCircle) {
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds:180),
+                        width: 32, height: 32,
+                        decoration: BoxDecoration(
+                          color: isSelected ? cs.primary : (isToday ? cs.primary.withOpacity(0.16) : Colors.transparent),
+                          borderRadius: BorderRadius.circular(16),
+                          border: isSelected ? null : (isToday ? Border.all(color: cs.primary.withOpacity(0.32)) : null),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(day.day.toString(), style: dayTextStyle.copyWith(color: isSelected ? cs.onPrimary : (isToday ? cs.primary : const Color(0xFF494949)))),
+                      );
+                    } else {
+                      return SizedBox(
+                        width: 32, height: 32,
+                        child: Center(child: Text(day.day.toString(), style: dayTextStyle.copyWith(color: const Color(0xFF494949)))),
+                      );
+                    }
+                  }
+
+                  return Column(
+                    children: [
+                      Text(_weekdayShort(day.weekday), style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w500, color: const Color(0xFF494949))),
+                      const SizedBox(height:4),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(16),
+                          onTap: () => onDaySelected(day),
+                          child: dayCircle(),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _weekdayShort(int weekday) {
+    const days = ['P','W','Ś','C','P','S','N'];
+    return days[weekday-1];
+  }
 }

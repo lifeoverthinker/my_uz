@@ -29,18 +29,14 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
   }
 
   Future<void> _loadFavorites() async {
-    final p = await SharedPreferences.getInstance();
-    final raw = p.getString('fav_plans');
-    if (raw == null) return;
     try {
-      final List<dynamic> l = jsonDecode(raw);
-      setState(()=> _favorites = l.map((e) => e.toString()).toSet());
+      final favs = await ClassesRepository.loadFavorites();
+      if (mounted) setState(() => _favorites = favs);
     } catch (_) {}
   }
 
   Future<void> _saveFavorites() async {
-    final p = await SharedPreferences.getInstance();
-    await p.setString('fav_plans', jsonEncode(_favorites.toList()));
+    try { await ClassesRepository.saveFavorites(_favorites); } catch (_) {}
   }
 
   void _onQueryChanged(String q){
@@ -99,28 +95,10 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
 
   void _toggleFav(Map<String,dynamic> item) async {
     final key = '${item['type']}:${item['id']}';
-    setState((){
-      if (_favorites.contains(key)) _favorites.remove(key); else _favorites.add(key);
-    });
-    await _saveFavorites();
-    // save label map for drawer fallback
+    final label = (item['title'] ?? '').toString();
     try {
-      final p = await SharedPreferences.getInstance();
-      final raw = p.getString('fav_labels');
-      Map<String,String> map = {};
-      if (raw != null && raw.isNotEmpty) {
-        final decoded = jsonDecode(raw);
-        if (decoded is Map) decoded.forEach((k,v){ if (k is String && v is String) map[k]=v; });
-      }
-      if (_favorites.contains(key)) {
-        // add/update label
-        final label = (item['title'] ?? '').toString();
-        if (label.isNotEmpty) map[key] = label;
-      } else {
-        // removed
-        map.remove(key);
-      }
-      await p.setString('fav_labels', jsonEncode(map));
+      await ClassesRepository.toggleFavorite(key, label: label.isEmpty ? null : label);
+      await _loadFavorites();
     } catch (_) {}
   }
 
@@ -216,7 +194,6 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
                                    final navigator = Navigator.of(context);
                                    // Pobierz listę podgrup (jeśli dostępna) oraz aktualnie wybrane podgrupy z kontekstu
                                    List<String>? subs;
-                                   List<String>? selectedSubs;
                                    try {
                                      if (code.isNotEmpty) {
                                        subs = await ClassesRepository.getSubgroupsForGroup(code);
@@ -225,13 +202,12 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
                                    try {
                                      final ctx = await ClassesRepository.loadGroupContext(); // record: (groupCode, subgroups, groupId)
                                      final ctxCode = ctx.$1;
-                                     final ctxSubs = ctx.$2 as List<String>?;
                                      final ctxId = ctx.$3;
-                                     // jeśli kontekst dotyczy tej samej grupy (kod lub id), użyj wybranych podgrup
+                                     // jeżeli kontekst dotyczy tej samej grupy (kod lub id), możemy użyć wybranych podgrup (ale i tak je resetujemy poniżej)
                                      if ((ctxCode != null && ctxCode.toString().isNotEmpty && ctxCode.toString() == code) || (ctxId != null && ctxId.toString() == id)) {
-                                       selectedSubs = ctxSubs == null ? <String>[] : List<String>.from(ctxSubs);
+                                       // no-op
                                      }
-                                   } catch (_) { selectedSubs = null; }
+                                   } catch (_) {}
                                    // Otwórz ekran z pełnym widokiem planu grupy (istniejący GroupScheduleScreen)
                                    final res = await navigator.push<Map<String,dynamic>?>(MaterialPageRoute(builder: (_) => GroupScheduleScreen(
                                      groupCode: code,
@@ -241,15 +217,12 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
                                      onToggleFavorite: () async { await _loadFavorites(); },
                                    )));
                                     if (!mounted) return;
+                                    // Nie zapisujemy domyślnego planu podczas przeglądania/podglądu z wyszukiwania.
+                                    // Domyślny plan powinien być ustawiany tylko podczas onboarding'u lub jawnej akcji "Ustaw jako domyślny".
                                     if (res != null && res['apply'] == true) {
-                                      if (id.isNotEmpty && code.isNotEmpty) {
-                                        await ClassesRepository.setGroupPrefsById(groupId: id, groupCode: code, subgroups: []);
-                                      } else {
-                                        await ClassesRepository.setGroupPrefs(code, []);
-                                      }
-                                      if (!mounted) return;
-                                      navigator.pop({'type':'group','code': code, 'id': id});
-                                    }
+                                     // Zwróć selekcję do wywołującego bez zmiany preferencji
+                                     navigator.pop({'type':'group','code': code, 'id': id});
+                                   }
                                     return;
                                  }
                                  if (item['type']=='teacher') {
@@ -258,11 +231,8 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
                                    final String name = (item['title'] ?? '').toString();
                                    final res = await navigator.push<Map<String,dynamic>?>(MaterialPageRoute(builder: (_) => TeacherScheduleScreen(teacherId: id, teacherName: name, onToggleFavorite: () async { await _loadFavorites(); })));
                                    if (!mounted) return;
+                                   // Nie zapisujemy preferencji nauczyciela jako domyślnych przy samym przeglądaniu.
                                    if (res != null && res['apply'] == true) {
-                                     // Zapisz preferencje nauczyciela
-                                     try {
-                                       await ClassesRepository.setTeacherPrefsById(id);
-                                     } catch (_) {}
                                      navigator.pop({'type':'teacher','id': id, 'name': name});
                                    }
                                    return;

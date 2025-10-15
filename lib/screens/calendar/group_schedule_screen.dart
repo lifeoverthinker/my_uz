@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/services/classes_repository.dart';
-import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/screens/calendar/components/calendar_day_view.dart';
 import 'package:my_uz/screens/calendar/components/calendar_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:my_uz/widgets/schedule_app_bar.dart';
 
 class GroupScheduleScreen extends StatefulWidget {
   // Możliwe sposoby użycia:
@@ -49,14 +49,12 @@ class _GroupScheduleScreenState extends State<GroupScheduleScreen> {
   String? _resolvedGroupCode; // preferowany kod do wyświetlenia
   bool _showAllSubgroups = false; // <--- nowy stan rozwijania podgrup
 
-  // Prosta heurystyka: czy warto traktować przekazany string jako surowe id (UUID-like)?
+  // Prosta heurystyka: czy przekazany string jest UUID?
   bool _isLikelyId(String? s) {
     if (s == null) return false;
     final t = s.trim();
     if (t.isEmpty) return false;
-    // UUID ma myślniki i hex-digits; zmienna długość -> wykryj długi ciąg z myślnikami lub same hexy
-    final uuidLike = RegExp(r'^[0-9a-fA-F\-]{12,}$');
-    return uuidLike.hasMatch(t);
+    return ClassesRepository.uuidRe.hasMatch(t);
   }
 
   // Preferowany tekst do wyświetlenia jako "kod grupy" (nie pokazuj surowego id)
@@ -105,11 +103,11 @@ class _GroupScheduleScreenState extends State<GroupScheduleScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString('fav_plans');
-      if (raw == null || raw.isEmpty) { setState(()=> _isFav = false); return; }
+      if (raw == null || raw.isEmpty) { if (mounted) setState(()=> _isFav = false); return; }
       final List<dynamic> l = jsonDecode(raw);
-      final key = widget.groupId != null && widget.groupId!.isNotEmpty ? 'group:${widget.groupId}' : 'group:${widget.groupCode ?? ''}';
-      setState(() => _isFav = l.map((e)=>e.toString()).contains(key));
-    } catch (_) { setState(()=> _isFav = false); }
+      final key = ClassesRepository.canonicalFavKey(groupId: widget.groupId, groupCode: widget.groupCode);
+      if (mounted) setState(() => _isFav = l.map((e)=>e.toString()).contains(key));
+    } catch (_) { if (mounted) setState(()=> _isFav = false); }
   }
 
   Future<void> _toggleFavorite() async {
@@ -117,9 +115,10 @@ class _GroupScheduleScreenState extends State<GroupScheduleScreen> {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString('fav_plans');
       final List<String> list = raw == null || raw.isEmpty ? [] : List<String>.from(jsonDecode(raw).map((e)=>e.toString()));
-      final key = widget.groupId != null && widget.groupId!.isNotEmpty ? 'group:${widget.groupId}' : 'group:${widget.groupCode ?? ''}';
-      if (list.contains(key)) { list.remove(key); setState(()=> _isFav = false); }
-      else { list.add(key); setState(()=> _isFav = true); }
+      final key = ClassesRepository.canonicalFavKey(groupId: widget.groupId, groupCode: widget.groupCode);
+      final exists = list.contains(key);
+      if (exists) { list.remove(key); if (mounted) setState(()=> _isFav = false); }
+      else { list.add(key); if (mounted) setState(()=> _isFav = true); }
       await prefs.setString('fav_plans', jsonEncode(list));
       // Aktualizuj również mapę etykiet (fav_labels) tak, by Drawer mógł wyświetlić kod grupy
       try {
@@ -129,7 +128,7 @@ class _GroupScheduleScreenState extends State<GroupScheduleScreen> {
           final dec = jsonDecode(rawLabels);
           if (dec is Map) dec.forEach((k,v){ if (k is String && v is String) labels[k]=v; });
         }
-        if (list.contains(key)) {
+        if (!exists) {
           var label = _displayGroupCode ?? widget.groupCode ?? widget.groupName ?? '';
           if (label.isEmpty && (widget.groupId != null && widget.groupId!.isNotEmpty)) {
             try {
@@ -145,7 +144,7 @@ class _GroupScheduleScreenState extends State<GroupScheduleScreen> {
       } catch (_) {}
       // notify parent (e.g. Drawer) to refresh UI if provided
       try { widget.onToggleFavorite?.call(); } catch(_) {}
-      setState(() { _favAnimating = true; });
+      if (mounted) setState(() { _favAnimating = true; });
       Future.delayed(const Duration(milliseconds: 260), () { if (mounted) setState(() { _favAnimating = false; }); });
     } catch (e) {
       // ignore
@@ -158,7 +157,8 @@ class _GroupScheduleScreenState extends State<GroupScheduleScreen> {
         : (_resolvedGroupCode != null && _resolvedGroupCode!.trim().isNotEmpty ? _resolvedGroupCode!.trim() : null);
     if ((_availableSubgroups == null || _availableSubgroups!.isEmpty) && (effectiveCode != null && effectiveCode.isNotEmpty)) {
       try {
-        final subs = await ClassesRepository.getSubgroupsForGroup(effectiveCode);
+        // Wymuś świeże pobranie, aby zawsze pokazywać aktualne podgrupy z bazy
+        final subs = await ClassesRepository.getSubgroupsForGroup(effectiveCode, forceRefresh: true);
         if (mounted) setState(() => _availableSubgroups = subs);
       } catch (_) {}
       return;
@@ -219,11 +219,20 @@ class _GroupScheduleScreenState extends State<GroupScheduleScreen> {
     }
   }
 
+  DateTime _mondayOfWeek(DateTime d) {
+    final wd = d.weekday; // 1=Mon
+    return DateTime(d.year, d.month, d.day - (wd - 1));
+  }
+
   void _nextWeek(){
-    _onDaySelected(_selectedDay.add(const Duration(days:7)));
+    final candidate = _selectedDay.add(const Duration(days:7));
+    final monday = _mondayOfWeek(candidate);
+    _onDaySelected(monday);
   }
   void _prevWeek(){
-    _onDaySelected(_selectedDay.subtract(const Duration(days:7)));
+    final candidate = _selectedDay.subtract(const Duration(days:7));
+    final monday = _mondayOfWeek(candidate);
+    _onDaySelected(monday);
   }
 
   void _onSubgroupChangedToggle(String value) {
@@ -235,59 +244,40 @@ class _GroupScheduleScreenState extends State<GroupScheduleScreen> {
     if (widget.classes == null) _loadClassesForDay();
   }
 
+  String _subtitleText() {
+    final code = _displayGroupCode;
+    if (code == null || code.isEmpty) return '';
+    final sel = _selectedSubgroups;
+    if (sel != null && sel.isNotEmpty) {
+      // Gdy wybrano 1-2 podgrupy, pokaż je obok kodu; jeśli więcej, pokaż tylko kod
+      if (sel.length <= 2) {
+        return '$code ${sel.join(', ')}';
+      }
+    }
+    return code;
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final heartColor = _isFav ? cs.primary : null;
 
-    // Use either provided classes or loaded classes
-    // final allClasses = widget.classes ?? _loadedClasses ?? <ClassModel>[];
-    // Filter by selected day using startTime
-    // final classesForDay = allClasses.where((c) {
-    //   final st = c.startTime.toLocal();
-    //   final sameDay = st.year == _selectedDay.year && st.month == _selectedDay.month && st.day == _selectedDay.day;
-    //   final subgroupMatch = _selectedSubgroup == null || _selectedSubgroup!.isEmpty || c.subgroup == null || c.subgroup == _selectedSubgroup;
-    //   return sameDay && subgroupMatch;
-    // }).toList();
-    // CalendarDayView will receive the available classes (either provided or loaded).
-    // Filtering by day/subgroup is handled inside CalendarDayView or by repository fetch.
-
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        centerTitle: false,
-        leading: IconButton(
-          icon: const Icon(MyUz.chevron_left, size: 24),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        titleSpacing: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Theme.of(context).colorScheme.onSurface,
-        elevation: 0,
-        title: Align(
-          alignment: Alignment.centerLeft,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Plan grupy', style: Theme.of(context).textTheme.titleLarge),
-              if (_displayGroupCode != null)
-                Text(_displayGroupCode!, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
-        ),
+      appBar: ScheduleAppBar(
+        title: 'Plan grupy',
+        subtitle: _subtitleText(),
+        onBack: () => Navigator.of(context).pop(),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: AnimatedScale(
+          ScheduleAppBarAction(
+            icon: AnimatedScale(
               scale: _favAnimating ? 1.15 : 1.0,
               duration: const Duration(milliseconds: 220),
               curve: Curves.easeOutBack,
-              child: IconButton(
-                icon: Icon(_isFav ? Icons.favorite : Icons.favorite_border, color: heartColor),
-                onPressed: _toggleFavorite,
-                tooltip: _isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych',
-              ),
+              child: Icon(_isFav ? Icons.favorite : Icons.favorite_border, color: heartColor),
             ),
+            tooltip: _isFav ? 'Usuń z ulubionych' : 'Dodaj do ulubionych',
+            onTap: _toggleFavorite,
           ),
         ],
       ),
