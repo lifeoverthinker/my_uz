@@ -3,8 +3,6 @@ import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/services/classes_repository.dart';
 import 'package:my_uz/screens/calendar/components/calendar_day_view.dart';
 import 'package:my_uz/screens/calendar/components/calendar_view.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'package:my_uz/widgets/schedule_app_bar.dart';
 
 class GroupScheduleScreen extends StatefulWidget {
@@ -101,54 +99,33 @@ class _GroupScheduleScreenState extends State<GroupScheduleScreen> {
 
   Future<void> _loadFavoriteStatus() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('fav_plans');
-      if (raw == null || raw.isEmpty) { if (mounted) setState(()=> _isFav = false); return; }
-      final List<dynamic> l = jsonDecode(raw);
       final key = ClassesRepository.canonicalFavKey(groupId: widget.groupId, groupCode: widget.groupCode);
-      if (mounted) setState(() => _isFav = l.map((e)=>e.toString()).contains(key));
+      final fav = await ClassesRepository.isFavorite(key);
+      if (mounted) setState(() => _isFav = fav);
     } catch (_) { if (mounted) setState(()=> _isFav = false); }
   }
 
   Future<void> _toggleFavorite() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('fav_plans');
-      final List<String> list = raw == null || raw.isEmpty ? [] : List<String>.from(jsonDecode(raw).map((e)=>e.toString()));
       final key = ClassesRepository.canonicalFavKey(groupId: widget.groupId, groupCode: widget.groupCode);
-      final exists = list.contains(key);
-      if (exists) { list.remove(key); if (mounted) setState(()=> _isFav = false); }
-      else { list.add(key); if (mounted) setState(()=> _isFav = true); }
-      await prefs.setString('fav_plans', jsonEncode(list));
-      // Aktualizuj również mapę etykiet (fav_labels) tak, by Drawer mógł wyświetlić kod grupy
-      try {
-        final rawLabels = prefs.getString('fav_labels');
-        Map<String,String> labels = {};
-        if (rawLabels != null && rawLabels.isNotEmpty) {
-          final dec = jsonDecode(rawLabels);
-          if (dec is Map) dec.forEach((k,v){ if (k is String && v is String) labels[k]=v; });
-        }
-        if (!exists) {
-          var label = _displayGroupCode ?? widget.groupCode ?? widget.groupName ?? '';
-          if (label.isEmpty && (widget.groupId != null && widget.groupId!.isNotEmpty)) {
-            try {
-              final metaTry = await ClassesRepository.getGroupById(widget.groupId!);
-              if (metaTry != null) label = (metaTry['kod_grupy'] as String?) ?? (metaTry['nazwa'] as String?) ?? '';
-            } catch (_) {}
-          }
-          if (label.isNotEmpty) labels[key] = label;
-        } else {
-           labels.remove(key);
-         }
-        await prefs.setString('fav_labels', jsonEncode(labels));
-      } catch (_) {}
-      // notify parent (e.g. Drawer) to refresh UI if provided
+      String label = _displayGroupCode ?? widget.groupCode ?? widget.groupName ?? '';
+      if (label.isEmpty && (widget.groupId != null && widget.groupId!.isNotEmpty)) {
+        try {
+          final metaTry = await ClassesRepository.getGroupById(widget.groupId!);
+          if (metaTry != null) label = (metaTry['kod_grupy'] as String?) ?? (metaTry['nazwa'] as String?) ?? '';
+        } catch (_) {}
+      }
+      await ClassesRepository.toggleFavorite(key, label: label.isEmpty ? null : label);
+      final fav = await ClassesRepository.isFavorite(key);
+      if (mounted) {
+        setState(() {
+          _isFav = fav;
+          _favAnimating = true;
+        });
+      }
       try { widget.onToggleFavorite?.call(); } catch(_) {}
-      if (mounted) setState(() { _favAnimating = true; });
       Future.delayed(const Duration(milliseconds: 260), () { if (mounted) setState(() { _favAnimating = false; }); });
-    } catch (e) {
-      // ignore
-    }
+    } catch (_) {}
   }
 
   Future<void> _maybeLoadSubgroups() async {

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:my_uz/services/classes_repository.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import 'package:my_uz/widgets/teacher_info_modal.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/screens/calendar/components/calendar_day_view.dart';

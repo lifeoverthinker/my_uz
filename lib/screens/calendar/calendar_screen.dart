@@ -15,6 +15,7 @@ import 'package:my_uz/screens/calendar/teacher_schedule_screen.dart';
 import 'package:my_uz/screens/calendar/tasks_screen.dart';
 import 'package:my_uz/screens/home/details/task_edit_sheet.dart';
 import 'package:my_uz/services/local_user_store.dart';
+import 'package:my_uz/models/task_model.dart';
 
 /// Ekran kalendarza – widok tygodniowy + dzienny timeline (siatka godzinowa).
 class CalendarScreen extends StatefulWidget {
@@ -528,30 +529,26 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
       String label = labelsMap.containsKey(s) ? labelsMap[s]! : '';
 
       if (type == 'group') {
-        // token może być id (UUID) albo kodem (np. IF-3B)
         final isUuid = ClassesRepository.uuidRe.hasMatch(token);
-        String effectiveId = token; // użyjemy do nawigacji
+        String effectiveId = token;
         if (label.isEmpty) {
           if (isUuid) {
-            // token wygląda na id - spróbuj pobrać meta po id dla czytelnej etykiety
             try {
               final meta = await ClassesRepository.getGroupById(token);
               if (meta != null) label = (meta['kod_grupy'] as String?) ?? (meta['nazwa'] as String?) ?? token;
             } catch (_) {}
           } else {
-            // token wygląda na kod grupy (np. IF-3B)
             label = token;
             try {
               final resolvedId = await ClassesRepository.resolveGroupIdForCode(token);
               if (resolvedId != null && resolvedId.isNotEmpty) {
-                effectiveId = resolvedId; // używaj id dalej
+                effectiveId = resolvedId;
                 final meta2 = await ClassesRepository.getGroupById(resolvedId);
                 if (meta2 != null) label = (meta2['kod_grupy'] as String?) ?? (meta2['nazwa'] as String?) ?? label;
               }
             } catch (_) {}
           }
         } else {
-          // Jeśli mamy label, ale token to kod, spróbuj ustalić effectiveId do nawigacji
           if (!isUuid) {
             try {
               final resolvedId = await ClassesRepository.resolveGroupIdForCode(token);
@@ -576,7 +573,7 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
       out.add({'type': type, 'id': token, 'label': label});
     }
 
-    // --- Validate stored fav_subgroups: ensure saved selected subgroups exist for given group ---
+    // Walidacja fav_subgroups
     try {
       final rawFavSubs = prefs.getString('fav_subgroups');
       if (rawFavSubs != null && rawFavSubs.isNotEmpty) {
@@ -589,12 +586,10 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
               if (entryKey is! String) continue;
               if (value is! List) { normalized[entryKey] = <String>[]; continue; }
               final saved = value.map((e) => e.toString()).toList();
-              // Only process keys like 'group:<id>'
               if (!entryKey.startsWith('group:')) { normalized[entryKey] = saved; continue; }
               final parts = entryKey.split(':');
               if (parts.length != 2) { normalized[entryKey] = saved; continue; }
               final gid = parts[1];
-              // Resolve group code via meta if possible
               String? code;
               try {
                 final meta = await ClassesRepository.getGroupById(gid);
@@ -602,26 +597,19 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
               } catch (_) { code = null; }
               List<String> allowed = [];
               if (code != null && code.isNotEmpty) {
-                try {
-                  allowed = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true);
-                } catch (_) { allowed = []; }
+                try { allowed = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true); } catch (_) { allowed = []; }
               }
               if (allowed.isEmpty) {
-                // No subgroups available -> normalize to empty list
                 if (saved.isNotEmpty) normalized[entryKey] = <String>[];
               } else {
                 final allowedSet = allowed.map((s) => s.trim()).where((s) => s.isNotEmpty).toSet();
                 final filtered = saved.where((s) => allowedSet.contains(s)).toList();
                 if (filtered.length != saved.length) normalized[entryKey] = filtered;
               }
-            } catch (_) {
-              // ignore individual entry errors
-            }
+            } catch (_) {}
           }
           if (normalized.isNotEmpty) {
-            try {
-              await prefs.setString('fav_subgroups', jsonEncode(normalized));
-            } catch (_) {}
+            try { await prefs.setString('fav_subgroups', jsonEncode(normalized)); } catch (_) {}
           }
         }
       }
@@ -634,7 +622,6 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
     if (!mounted) return;
     setState(() { _favorites = out; });
     return;
-
   }
 
   Future<void> _removeFavoriteEntry(Map<String,String> entry) async {
@@ -647,7 +634,6 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
         newList.addAll(l.map((e)=>e.toString()).where((s) => s != '${entry['type']}:${entry['id']}'));
       }
       await prefs.setString('fav_plans', jsonEncode(newList));
-      // remove label as well
       try {
         final rawLabels = prefs.getString('fav_labels');
         if (rawLabels != null && rawLabels.isNotEmpty) {
@@ -768,20 +754,8 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
                             }
                           } catch (_) {}
                           final prefs = await SharedPreferences.getInstance();
-                          Map<String, List<String>> favSubgroups = {};
-                          try {
-                            final raw = prefs.getString('fav_subgroups');
-                            if (raw != null && raw.isNotEmpty) {
-                              final decoded = jsonDecode(raw);
-                              if (decoded is Map) {
-                                decoded.forEach((k, v) {
-                                  if (k is String && v is List) {
-                                    favSubgroups[k] = v.map((e) => e.toString()).toList();
-                                  }
-                                });
-                              }
-                            }
-                          } catch (_) {}
+                          // Load selected subgroups for this favorite group using repository helper
+                          Map<String, List<String>> favSubgroups = await ClassesRepository.loadFavSubgroupsMap();
                           final favKey = 'group:${fav['id']!}';
                           List<String>? selectedSubs = favSubgroups[favKey];
                           if (selectedSubs != null && selectedSubs.isNotEmpty) {
@@ -805,21 +779,8 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
                                 selectedSubgroups: selectedSubs,
                                 onToggleFavorite: () async { await _loadFavorites(); },
                                 onSubgroupSelected: (subs) async {
-                                  final prefs = await SharedPreferences.getInstance();
-                                  Map<String, List<String>> favSubgroups = {};
-                                  try {
-                                    final raw = prefs.getString('fav_subgroups');
-                                    if (raw != null && raw.isNotEmpty) {
-                                      final decoded = jsonDecode(raw);
-                                      if (decoded is Map) {
-                                        decoded.forEach((k, v) {
-                                          if (k is String && v is List) {
-                                            favSubgroups[k] = v.map((e) => e.toString()).toList();
-                                          }
-                                        });
-                                      }
-                                    }
-                                  } catch (_) {}
+                                  // Update selected subgroups for this favorite group using repository helper
+                                  Map<String, List<String>> favSubgroups = await ClassesRepository.loadFavSubgroupsMap();
                                   List<String> toSave = subs ?? <String>[];
                                   try {
                                     List<String>? allowedSubs;
@@ -834,7 +795,7 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
                                     }
                                   } catch (_) {}
                                   favSubgroups[favKey] = toSave;
-                                  await prefs.setString('fav_subgroups', jsonEncode(favSubgroups));
+                                  await ClassesRepository.saveFavSubgroupsMap(favSubgroups);
                                 },
                               ))).then((res){ setState((){}); });
                         },
