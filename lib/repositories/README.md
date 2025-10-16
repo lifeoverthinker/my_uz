@@ -156,7 +156,7 @@ final updatedGrade = existingGrade.copyWith(
 await GradesRepository.update(updatedGrade);
 ```
 
-### 5. Pamietaj o ID
+### 5. Pamiętaj o ID
 
 Przy tworzeniu nowych obiektów zawsze generuj unikalne ID:
 
