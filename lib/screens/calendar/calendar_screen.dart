@@ -12,6 +12,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:my_uz/screens/calendar/group_schedule_screen.dart';
 import 'package:my_uz/screens/calendar/teacher_schedule_screen.dart';
+import 'package:my_uz/screens/calendar/tasks_screen.dart';
+import 'package:my_uz/screens/home/details/task_edit_sheet.dart';
+import 'package:my_uz/services/local_user_store.dart';
 
 /// Ekran kalendarza – widok tygodniowy + dzienny timeline (siatka godzinowa).
 class CalendarScreen extends StatefulWidget {
@@ -251,10 +254,12 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
             onTapMonth: _activeSection=='calendar'? _toggleMonthView : (){},
             onMenu: ()=> setState(()=> _drawerOpen=true),
             onSearch: _openSearchPlaceholder,
-            onAdd: _openAddTaskPlaceholder,
+            onAdd: _openAddTask,
           ),
           if (_activeSection=='calendar') topCalendarRegion,
-          if (_activeSection=='calendar') bodyContent else Expanded(child: Center(child: Text(_activeSection=='schedule'?'Terminarz – miejsce na implementację.':'Porównaj plany – miejsce na implementację.'))),
+          if (_activeSection=='calendar') bodyContent else Expanded(
+            child: _activeSection=='schedule' ? const TasksScreen() : Center(child: Text(_activeSection=='compare'?'Porównaj plany – miejsce na implementację.':'Terminarz – miejsce na implementację.')),
+          ),
         ])),
         if (_drawerOpen) Positioned.fill(
           child: GestureDetector(
@@ -327,33 +332,21 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       // TODO: w przyszłości obsłużyć wybór nauczyciela
     });
   }
-  void _openAddTaskPlaceholder(){
-    showModalBottomSheet(context: context, builder: (_) => const _PlaceholderSheet(title: 'Dodaj zadanie', description: 'Formularz dodawania zadania pojawi się tutaj.'));
-  }
-}
-
-class _PlaceholderSheet extends StatelessWidget {
-  final String title; final String description;
-  const _PlaceholderSheet({required this.title, required this.description});
-  @override
-  Widget build(BuildContext context){
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24,16,24,32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-            Text(description, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 20),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(onPressed: ()=>Navigator.pop(context), child: const Text('Zamknij')),
-          )
-        ],
-      ),
-    );
+  void _openAddTask(){
+    TaskModel? pendingModel;
+    String? pendingDesc;
+    TaskEditSheet.show(
+      context,
+      null,
+      initialDate: DateTime.now(),
+      onSave: (m) => pendingModel = m,
+      onSaveDescription: (d) => pendingDesc = d,
+    ).then((_) async {
+      if (pendingModel != null) {
+        await LocalUserStore.upsertTask(pendingModel!, description: pendingDesc);
+        if (mounted && _activeSection == 'schedule') setState(() {});
+      }
+    });
   }
 }
 
@@ -745,151 +738,148 @@ class _CalendarDrawerState extends State<_CalendarDrawer> {
                     _item(icon: MyUz.book_open_01, label: 'Terminarz', active: widget.activeSection=='schedule', onTap: ()=>widget.onSelectSection('schedule')),
                     _item(icon: MyUz.switch_horizontal_02, label: 'Porównaj plany', active: widget.activeSection=='compare', onTap: ()=>widget.onSelectSection('compare')),
                     _divider(),
-                    GestureDetector(
-                      onLongPress: () async {
-                        try {
-                          final prefs = await SharedPreferences.getInstance();
-                          final fp = prefs.getString('fav_plans') ?? '<empty>';
-                          final fl = prefs.getString('fav_labels') ?? '<empty>';
-                          if (!mounted) return;
-                          await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-                            title: const Text('Debug prefs'),
-                            content: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('fav_plans:'), SelectableText(fp), const SizedBox(height:8), const Text('fav_labels:'), SelectableText(fl)])),
-                            actions: [TextButton(onPressed: ()=>Navigator.of(ctx).pop(), child: const Text('Zamknij'))],
-                          ));
-                        } catch (_) {}
-                      },
-                      child: _sectionLabel('Ulubione'),
-                    ),
-                    // Lista ulubionych (grupy + nauczyciele)
-                    for (final fav in _favorites)
-                      Row(children:[
-                        Expanded(child: _item(
-                          icon: fav['type']=='teacher' ? MyUz.user_01 : MyUz.users_01,
-                          label: fav['label'] ?? '${fav['type']}:${fav['id']}',
-                          onTap: () async {
-                            final navigator = Navigator.of(context);
-                            if (fav['type']=='group') {
-                              // Ensure we provide groupCode and subgroups to GroupScheduleScreen for consistent UI
-                              String? code;
-                              String? name;
-                              List<String>? subgroups;
-                              // Attempt to read group meta by id or code
-                              try {
-                                final meta = await ClassesRepository.getGroupById(fav['id']!);
-                                if (meta != null) {
-                                  final k = (meta['kod_grupy'] as String?)?.trim() ?? '';
-                                  code = k.isNotEmpty ? k : null;
-                                  final n = (meta['nazwa'] as String?)?.trim() ?? '';
-                                  name = n.isNotEmpty ? n : null;
-                                } else {
-                                  final label = (fav['label'] ?? '').toString().trim();
-                                  final isUuid = ClassesRepository.uuidRe.hasMatch(label);
-                                  // treat label as group code jeśli nie wygląda jak UUID
-                                  if (!isUuid && label.isNotEmpty) code = label;
-                                  name = null;
-                                }
-                                if (code != null && code.isNotEmpty) {
-                                  try { subgroups = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true); } catch (_) { subgroups = null; }
-                                }
-                              } catch (_) {}
-                              // Odczytaj mapę wyboru podgrup dla ulubionych
-                              final prefs = await SharedPreferences.getInstance();
-                              Map<String, List<String>> favSubgroups = {};
-                              try {
-                                final raw = prefs.getString('fav_subgroups');
-                                if (raw != null && raw.isNotEmpty) {
-                                  final decoded = jsonDecode(raw);
-                                  if (decoded is Map) {
-                                    decoded.forEach((k, v) {
-                                      if (k is String && v is List) {
-                                        favSubgroups[k] = v.map((e) => e.toString()).toList();
-                                      }
-                                    });
-                                  }
-                                }
-                              } catch (_) {}
-                              // Klucz do mapy: 'group:<id>'
-                              final favKey = 'group:${fav['id']!}';
-                              List<String>? selectedSubs = favSubgroups[favKey];
-                              // Jeśli mamy listę dostępnych podgrup (pobranych powyżej), przefiltruj zapisane wybrane podgrupy
-                              if (selectedSubs != null && selectedSubs.isNotEmpty) {
-                                if (subgroups != null && subgroups.isNotEmpty) {
-                                  final allowed = subgroups.map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
-                                  selectedSubs = selectedSubs.where((s)=> allowed.contains(s)).toList();
-                                  if (selectedSubs.isEmpty) selectedSubs = <String>[]; // normalizacja
-                                } else if (code != null && code.isNotEmpty) {
-                                  // Brak lokalnej listy subgrup — spróbuj pobrać teraz i przefiltruj
-                                  try {
-                                    final remoteSubs = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true);
-                                    final allowed = remoteSubs.map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
-                                    selectedSubs = selectedSubs.where((s)=> allowed.contains(s)).toList();
-                                  } catch (_) {
-                                    // jeśli nie uda się pobrać, pozostaw jak jest (bez filtrowania)
-                                  }
-                                }
-                              }
-                               navigator.push(MaterialPageRoute(builder: (_) => GroupScheduleScreen(
-                                     groupCode: code,
-                                     groupId: fav['id']!,
-                                     groupName: name,
-                                     subgroups: subgroups,
-                                     selectedSubgroups: selectedSubs,
-                                     onToggleFavorite: () async { await _loadFavorites(); },
-                                     onSubgroupSelected: (subs) async {
-                                       // Zapisz wybór podgrup dla tego ulubionego
-                                       final prefs = await SharedPreferences.getInstance();
-                                       Map<String, List<String>> favSubgroups = {};
-                                       try {
-                                         final raw = prefs.getString('fav_subgroups');
-                                         if (raw != null && raw.isNotEmpty) {
-                                           final decoded = jsonDecode(raw);
-                                           if (decoded is Map) {
-                                             decoded.forEach((k, v) {
-                                               if (k is String && v is List) {
-                                                 favSubgroups[k] = v.map((e) => e.toString()).toList();
-                                               }
-                                             });
-                                           }
-                                         }
-                                       } catch (_) {}
-                                       // przed zapisem przefiltruj subs względem aktualnie dostępnych podgrup (jeśli możemy je pobrać)
-                                       List<String> toSave = subs ?? <String>[];
-                                       try {
-                                         List<String>? allowedSubs;
-                                         if (code != null && code.isNotEmpty) {
-                                           allowedSubs = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true);
-                                         } else if (subgroups != null) {
-                                           allowedSubs = subgroups;
-                                         }
-                                         if (allowedSubs != null) {
-                                           final allowed = allowedSubs.map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
-                                           toSave = toSave.where((s) => allowed.contains(s)).toList();
-                                         }
-                                       } catch (_) {}
-                                       favSubgroups[favKey] = toSave;
-                                       await prefs.setString('fav_subgroups', jsonEncode(favSubgroups));
-                                     },
-                                   ))).then((res){ setState((){}); });
-                            } else if (fav['type']=='teacher') {
-                               final meta = await ClassesRepository.getTeacherDetails(fav['id']!);
-                               final name = meta?['nazwa'] as String? ?? (fav['label'] ?? '');
-                               if (!mounted) return;
-                               navigator.push(MaterialPageRoute(builder: (_) => TeacherScheduleScreen(
-                                     teacherId: fav['id']!,
-                                     teacherName: name,
-                                     onToggleFavorite: () async { await _loadFavorites(); },
-                                   ))).then((res){ setState((){}); });
+                    // --- Grupy ---
+                    _sectionLabel('Grupy'),
+                    ..._favorites.where((f)=> f['type']=='group').map((fav)=> Row(children:[
+                      Expanded(child: _item(
+                        icon: MyUz.users_01,
+                        label: fav['label'] ?? '${fav['type']}:${fav['id']}',
+                        onTap: () async {
+                          final navigator = Navigator.of(context);
+                          // Ensure we provide groupCode and subgroups to GroupScheduleScreen for consistent UI
+                          String? code;
+                          String? name;
+                          List<String>? subgroups;
+                          try {
+                            final meta = await ClassesRepository.getGroupById(fav['id']!);
+                            if (meta != null) {
+                              final k = (meta['kod_grupy'] as String?)?.trim() ?? '';
+                              code = k.isNotEmpty ? k : null;
+                              final n = (meta['nazwa'] as String?)?.trim() ?? '';
+                              name = n.isNotEmpty ? n : null;
+                            } else {
+                              final label = (fav['label'] ?? '').toString().trim();
+                              final isUuid = ClassesRepository.uuidRe.hasMatch(label);
+                              if (!isUuid && label.isNotEmpty) code = label;
+                              name = null;
                             }
-                          },
-                        )),
-                        // Zamieniono ikonę kosza na serduszko — klik usuwa (odznacza) z ulubionych.
-                        IconButton(
-                          icon: Icon(Icons.favorite, color: Theme.of(context).colorScheme.primary),
-                          onPressed: () => _removeFavoriteEntry(fav),
-                          tooltip: 'Usuń z ulubionych',
-                        ),
-                      ]),
+                            if (code != null && code.isNotEmpty) {
+                              try { subgroups = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true); } catch (_) { subgroups = null; }
+                            }
+                          } catch (_) {}
+                          final prefs = await SharedPreferences.getInstance();
+                          Map<String, List<String>> favSubgroups = {};
+                          try {
+                            final raw = prefs.getString('fav_subgroups');
+                            if (raw != null && raw.isNotEmpty) {
+                              final decoded = jsonDecode(raw);
+                              if (decoded is Map) {
+                                decoded.forEach((k, v) {
+                                  if (k is String && v is List) {
+                                    favSubgroups[k] = v.map((e) => e.toString()).toList();
+                                  }
+                                });
+                              }
+                            }
+                          } catch (_) {}
+                          final favKey = 'group:${fav['id']!}';
+                          List<String>? selectedSubs = favSubgroups[favKey];
+                          if (selectedSubs != null && selectedSubs.isNotEmpty) {
+                            if (subgroups != null && subgroups.isNotEmpty) {
+                              final allowed = subgroups.map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
+                              selectedSubs = selectedSubs.where((s)=> allowed.contains(s)).toList();
+                              if (selectedSubs.isEmpty) selectedSubs = <String>[];
+                            } else if (code != null && code.isNotEmpty) {
+                              try {
+                                final remoteSubs = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true);
+                                final allowed = remoteSubs.map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
+                                selectedSubs = selectedSubs.where((s)=> allowed.contains(s)).toList();
+                              } catch (_) {}
+                            }
+                          }
+                          navigator.push(MaterialPageRoute(builder: (_) => GroupScheduleScreen(
+                                groupCode: code,
+                                groupId: fav['id']!,
+                                groupName: name,
+                                subgroups: subgroups,
+                                selectedSubgroups: selectedSubs,
+                                onToggleFavorite: () async { await _loadFavorites(); },
+                                onSubgroupSelected: (subs) async {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  Map<String, List<String>> favSubgroups = {};
+                                  try {
+                                    final raw = prefs.getString('fav_subgroups');
+                                    if (raw != null && raw.isNotEmpty) {
+                                      final decoded = jsonDecode(raw);
+                                      if (decoded is Map) {
+                                        decoded.forEach((k, v) {
+                                          if (k is String && v is List) {
+                                            favSubgroups[k] = v.map((e) => e.toString()).toList();
+                                          }
+                                        });
+                                      }
+                                    }
+                                  } catch (_) {}
+                                  List<String> toSave = subs ?? <String>[];
+                                  try {
+                                    List<String>? allowedSubs;
+                                    if (code != null && code.isNotEmpty) {
+                                      allowedSubs = await ClassesRepository.getSubgroupsForGroup(code, forceRefresh: true);
+                                    } else if (subgroups != null) {
+                                      allowedSubs = subgroups;
+                                    }
+                                    if (allowedSubs != null) {
+                                      final allowed = allowedSubs.map((s)=>s.trim()).where((s)=>s.isNotEmpty).toSet();
+                                      toSave = toSave.where((s) => allowed.contains(s)).toList();
+                                    }
+                                  } catch (_) {}
+                                  favSubgroups[favKey] = toSave;
+                                  await prefs.setString('fav_subgroups', jsonEncode(favSubgroups));
+                                },
+                              ))).then((res){ setState((){}); });
+                        },
+                      )),
+                      IconButton(
+                        icon: Icon(Icons.favorite, color: Theme.of(context).colorScheme.primary),
+                        onPressed: () => _removeFavoriteEntry(fav),
+                        tooltip: 'Usuń z ulubionych',
+                      ),
+                    ])),
+                    if (_favorites.where((f)=> f['type']=='group').isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal:16, vertical: 8),
+                        child: Text('Brak ulubionych grup', style: Theme.of(context).textTheme.bodySmall),
+                      ),
+                    _divider(),
+                    // --- Nauczyciele ---
+                    _sectionLabel('Nauczyciele'),
+                    ..._favorites.where((f)=> f['type']=='teacher').map((fav)=> Row(children:[
+                      Expanded(child: _item(
+                        icon: MyUz.user_01,
+                        label: fav['label'] ?? '${fav['type']}:${fav['id']}',
+                        onTap: () async {
+                          final navigator = Navigator.of(context);
+                          final meta = await ClassesRepository.getTeacherDetails(fav['id']!);
+                          final name = meta?['nazwa'] as String? ?? (fav['label'] ?? '');
+                          if (!mounted) return;
+                          navigator.push(MaterialPageRoute(builder: (_) => TeacherScheduleScreen(
+                                teacherId: fav['id']!,
+                                teacherName: name,
+                                onToggleFavorite: () async { await _loadFavorites(); },
+                              ))).then((res){ setState((){}); });
+                        },
+                      )),
+                      IconButton(
+                        icon: Icon(Icons.favorite, color: Theme.of(context).colorScheme.primary),
+                        onPressed: () => _removeFavoriteEntry(fav),
+                        tooltip: 'Usuń z ulubionych',
+                      ),
+                    ])),
+                    if (_favorites.where((f)=> f['type']=='teacher').isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal:16, vertical: 8),
+                        child: Text('Brak ulubionych nauczycieli', style: Theme.of(context).textTheme.bodySmall),
+                      ),
                     _divider(),
                     _sectionLabel('Udostępnione terminarze'),
                     _item(icon: MyUz.bookmark, label: 'Terminarz Leny'),

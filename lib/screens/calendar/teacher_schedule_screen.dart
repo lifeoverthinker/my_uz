@@ -50,15 +50,6 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
   }
 
   Future<void> _toggleFavorite() async {
-    // Jeśli rodzic dostarczył callback (Drawer/Lista ulubionych) -> powiadom go i nie zmieniaj lokalnego storage tutaj.
-    if (widget.onToggleFavorite != null) {
-      widget.onToggleFavorite!();
-      if (mounted) setState(() => _isFavorite = !_isFavorite);
-      if (mounted) setState(() => _favAnimating = true);
-      Future.delayed(const Duration(milliseconds: 260), () { if (mounted) setState(() { _favAnimating = false; }); });
-      return;
-    }
-
     try {
       final key = 'teacher:${widget.teacherId}';
       final label = widget.teacherName.isNotEmpty ? widget.teacherName : widget.teacherId;
@@ -70,9 +61,12 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
           _favAnimating = true;
         });
       }
+      // powiadom rodzica (np. Drawer), aby mógł przeładować listę ulubionych
+      try { widget.onToggleFavorite?.call(); } catch (_) {}
+
       Future.delayed(const Duration(milliseconds: 260), () { if (mounted) setState(() { _favAnimating = false; }); });
 
-      // Informacja dla użytkownika
+      // Feedback
       if (mounted) {
         final snack = _isFavorite ? 'Dodano do ulubionych' : 'Usunięto z ulubionych';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(snack)));

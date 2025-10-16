@@ -243,9 +243,19 @@ class ClassesRepository {
     if (_groupIdCache.containsKey(groupCode)) return _groupIdCache[groupCode];
     try {
       final res = await Supa.client.from('grupy').select('id').eq('kod_grupy', groupCode).limit(1).maybeSingle();
-      if (res == null || res['id'] == null) { _groupIdCache[groupCode] = null; return null; }
-      final id = res['id'] as String; (await SharedPreferences.getInstance()).setString(_prefGroupId, id); _groupIdCache[groupCode]=id; return id;
-    } catch (_) { _groupIdCache[groupCode]=null; return null; }
+      if (res == null || res['id'] == null) {
+        _groupIdCache[groupCode] = null;
+        return null;
+      }
+      final id = res['id'] as String;
+      // IMPORTANT: do NOT persist this resolved id into SharedPreferences here.
+      // Persisting would override user's default groupId (onb_group_id) when just previewing another plan.
+      _groupIdCache[groupCode] = id; // only warm in-memory cache
+      return id;
+    } catch (_) {
+      _groupIdCache[groupCode] = null;
+      return null;
+    }
   }
   static Future<String?> _resolveGroupIdRobust(String group) async {
     final tried = <String>{};
