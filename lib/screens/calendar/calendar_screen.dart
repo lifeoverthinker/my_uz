@@ -15,7 +15,9 @@ import 'package:my_uz/screens/calendar/teacher_schedule_screen.dart';
 import 'package:my_uz/screens/calendar/tasks_screen.dart';
 import 'package:my_uz/screens/home/details/task_edit_sheet.dart';
 import 'package:my_uz/services/local_user_store.dart';
+import 'package:my_uz/services/user_tasks_repository.dart';
 import 'package:my_uz/models/task_model.dart';
+import 'package:my_uz/providers/calendar_provider.dart';
 
 /// Ekran kalendarza – widok tygodniowy + dzienny timeline (siatka godzinowa).
 class CalendarScreen extends StatefulWidget {
@@ -48,6 +50,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Use CalendarProvider to ensure week is loaded and keep local snapshot
     _ensureWeekLoaded(_focusedDay);
   }
   @override
@@ -63,55 +66,22 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   void _toggleMonthView(){ setState(()=> _isMonthView = !_isMonthView); }
   Future<void> _ensureWeekLoaded(DateTime anyDay) async {
     final monday = _mondayOfWeek(anyDay);
-    if (_weekCache.containsKey(monday)) {
-      if (mounted) {
-        setState(() { _allClasses = _weekCache[monday]!; });
-      }
+    final provider = CalendarProvider.instance;
+    if (provider.weekCache.containsKey(monday)) {
+      if (mounted) setState(() { _allClasses = provider.weekCache[monday]!; _loading = provider.loading; _error = provider.error; _errorMsg = provider.errorMsg; });
       return;
     }
-    await _fetchWeekData(monday);
-    // Prefetch sąsiednich tygodni (fire & forget)
-    _fetchWeekData(monday.subtract(const Duration(days: 7)));
-    _fetchWeekData(monday.add(const Duration(days: 7)));
-  }
 
-  Future<void> _fetchWeekData(DateTime monday) async {
-    final mondayKey = _stripTime(monday);
-    if (_loadingWeeks.contains(mondayKey)) return;
-    _loadingWeeks.add(mondayKey);
-    if (mondayKey == _mondayOfWeek(_focusedDay)) {
-      setState(() { _loading = true; _error = false; _errorMsg = null; });
-    }
-    try {
-      // Prefer temporary override (from search preview) — do NOT persist it here.
-      String? groupCode;
-      List<String> subgroups = const [];
-      String? groupId;
-      if (_overrideGroupCode != null || _overrideGroupId != null) {
-        groupCode = _overrideGroupCode;
-        groupId = _overrideGroupId;
-        subgroups = _overrideSubgroups ?? const [];
-      } else {
-        final ctx = await ClassesRepository.loadGroupContext();
-        groupCode = ctx.$1;
-        subgroups = ctx.$2;
-        groupId = ctx.$3;
-      }
-      final list = await ClassesRepository.fetchWeek(mondayKey, groupCode: groupCode, subgroups: subgroups, groupId: groupId);
-      if (!mounted) return;
-      _weekCache[mondayKey] = list;
-      if (_mondayOfWeek(_focusedDay)==mondayKey) {
-        setState(()=> _allClasses = list);
-      }
-    } catch (e) {
-      if (!mounted) return;
-      if (_mondayOfWeek(_focusedDay)==mondayKey) {
-        setState(() { _error = true; _errorMsg = e.toString(); _allClasses = []; });
-      }
-    } finally {
-      _loadingWeeks.remove(mondayKey);
-      if (mounted && _mondayOfWeek(_focusedDay)==mondayKey) setState(()=> _loading = false);
-    }
+    // Ask provider to load week (it will also prefetch neighbors)
+    setState(() { _loading = true; _error = false; _errorMsg = null; });
+    await provider.ensureWeekLoaded(anyDay, overrideGroupCode: _overrideGroupCode, overrideGroupId: _overrideGroupId, overrideSubgroups: _overrideSubgroups);
+    if (!mounted) return;
+    setState(() {
+      _allClasses = provider.weekCache[monday] ?? [];
+      _loading = provider.loading;
+      _error = provider.error;
+      _errorMsg = provider.errorMsg;
+    });
   }
 
   void _selectDay(DateTime day) {
@@ -249,17 +219,36 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
             ),
           ),
         SafeArea(child: Column(children:[
-          _CalendarTopBar(
-            monthTitle: monthTitle,
-            isMonthOpen: _isMonthView && _activeSection=='calendar',
-            onTapMonth: _activeSection=='calendar'? _toggleMonthView : (){},
-            onMenu: ()=> setState(()=> _drawerOpen=true),
-            onSearch: _openSearchPlaceholder,
-            onAdd: _openAddTask,
-          ),
+          // Conditional header: calendar top bar or Terminarz header
+          if (_activeSection == 'calendar')
+            _CalendarTopBar(
+              monthTitle: monthTitle,
+              isMonthOpen: _isMonthView && _activeSection=='calendar',
+              onTapMonth: _activeSection=='calendar'? _toggleMonthView : (){},
+              onMenu: ()=> setState(()=> _drawerOpen=true),
+              onSearch: _openSearchPlaceholder,
+              onAdd: _openAddTask,
+            )
+          else if (_activeSection == 'schedule')
+            // White header for Terminarz with add button and overflow menu
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Row(
+                children: [
+                  Text('Terminarz', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 20, fontWeight: FontWeight.w600, color: const Color(0xFF1D192B))),
+                  const Spacer(),
+                  IconButton(icon: const Icon(Icons.add), onPressed: _openAddTask, tooltip: 'Dodaj zadanie'),
+                  IconButton(icon: const Icon(Icons.more_vert), onPressed: () { /* TODO: zarządzanie terminarzem */ }, tooltip: 'Opcje terminarza'),
+                ],
+              ),
+            )
+          else
+            const SizedBox.shrink(),
+
           if (_activeSection=='calendar') topCalendarRegion,
           if (_activeSection=='calendar') bodyContent else Expanded(
-            child: _activeSection=='schedule' ? const TasksScreen() : Center(child: Text(_activeSection=='compare'?'Porównaj plany – miejsce na implementację.':'Terminarz – miejsce na implementację.')),
+            child: _activeSection=='schedule' ? const TasksScreen(showAppBar: false) : Center(child: Text(_activeSection=='compare'?'Porównaj plany – miejsce na implementację.':'Terminarz – miejsce na implementację.')),
           ),
         ])),
         if (_drawerOpen) Positioned.fill(
@@ -344,7 +333,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       onSaveDescription: (d) => pendingDesc = d,
     ).then((_) async {
       if (pendingModel != null) {
-        await LocalUserStore.upsertTask(pendingModel!, description: pendingDesc);
+        await UserTasksRepository.instance.upsertTask(pendingModel!, description: pendingDesc);
         if (mounted && _activeSection == 'schedule') setState(() {});
       }
     });

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:my_uz/models/class_model.dart';
 
 // Rezerwa po lewej aby kolumny dni wyrównały się z osią timeline:
@@ -144,16 +143,18 @@ class _CalendarViewState extends State<CalendarView> {
         ? (() {
             final newKeyStr = _mondayOfWeekLocal(widget.focusedDay).toIso8601String();
             return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              switchInCurve: Curves.easeInOut,
-              switchOutCurve: Curves.easeInOut,
+              duration: const Duration(milliseconds: 360),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInOutCubic,
               transitionBuilder: (childWidget, animation) {
-                return FadeTransition(opacity: animation, child: childWidget);
+                // Slide + Fade for a smoother week change feel
+                final offsetAnimation = Tween<Offset>(begin: Offset(_slideDir.toDouble() * 0.25, 0), end: Offset.zero).animate(animation);
+                return SlideTransition(position: offsetAnimation, child: FadeTransition(opacity: animation, child: childWidget));
               },
               child: SizedBox(key: ValueKey(newKeyStr), child: grid),
             );
           })()
-        : grid;
+         : grid;
 
     // Jeśli gesty są wyłączone, zwróć child bez Listener
     if (!widget.enableSwipe) {
@@ -191,55 +192,59 @@ class _CalendarViewState extends State<CalendarView> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      // contentWidth: szerokość dostępna wewnątrz paddingu (po obu stronach po 16px)
-      final contentWidth = constraints.maxWidth - 32;
-      // obszar od pionowej linii do końca frame'a to contentWidth - (kCalendarLeftReserve + 1)
-      final available = (contentWidth - (kCalendarLeftReserve + 1)).clamp(0.0, double.infinity);
-      final itemW = available / 7;
-      const rowHeight = 38.0; // DayCell: 32 + 6 marg.
-      final targetRows = isWeekView ? 1 : 6;
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 340),
-          curve: Curves.easeInOutCubic,
-          alignment: Alignment.topCenter,
-          child: ClipRect(
-            child: SizedBox(
-              height: rowHeight * targetRows,
-              child: Column(
-                children: [
-                  for (int w = 0; w < 6; w++)
-                    _AnimatedMonthRow(
-                      visible: !isWeekView || w == _weekIndexOf(selectedDay),
-                      opacityVisible: !isWeekView || w == _weekIndexOf(selectedDay),
-                      height: rowHeight,
-                      child: Row(
-                        children: [
-                          const SizedBox(width: kCalendarLeftReserve),
-                          for (int d = 0; d < 7; d++)
-                            SizedBox(
-                              width: itemW,
-                              child: _DayCell(
-                                day: days[w * 7 + d],
-                                isSelected: _isSameDay(days[w * 7 + d], selectedDay),
-                                isOutside: days[w * 7 + d].month != focusedMonth.month,
-                                hasClasses: (classesByDay[DateTime(days[w * 7 + d].year, days[w * 7 + d].month, days[w * 7 + d].day)] ?? const []).isNotEmpty,
-                                onTap: () => onTap(days[w * 7 + d]),
-                                size: 34,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // contentWidth: szerokość dostępna wewnątrz paddingu (po obu stronach po 16px)
+        final contentWidth = constraints.maxWidth - 32;
+        // obszar od pionowej linii do końca frame'a to contentWidth - (kCalendarLeftReserve + 1)
+        final available = (contentWidth - (kCalendarLeftReserve + 1)).clamp(0.0, double.infinity);
+        final itemW = available / 7;
+        const rowHeight = 38.0; // DayCell: 32 + 6 marg.
+        final targetRows = isWeekView ? 1 : 6;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 420),
+            curve: Curves.easeInOutCubic,
+            // animate the overall height between 1 and 6 rows; ClipRect ensures overflow is hidden
+            height: rowHeight * targetRows,
+            child: ClipRect(
+              child: SizedBox(
+                // keep inner Column layout stable (always 6 rows rendered), rely on clipping
+                child: Column(
+                  children: [
+                    for (int w = 0; w < 6; w++)
+                      _AnimatedMonthRow(
+                        visible: !isWeekView || w == _weekIndexOf(selectedDay),
+                        opacityVisible: !isWeekView || w == _weekIndexOf(selectedDay),
+                        height: rowHeight,
+                        child: Row(
+                          children: [
+                            const SizedBox(width: kCalendarLeftReserve),
+                            for (int d = 0; d < 7; d++)
+                              SizedBox(
+                                width: itemW,
+                                child: _DayCell(
+                                  day: days[w * 7 + d],
+                                  isSelected: _isSameDay(days[w * 7 + d], selectedDay),
+                                  isOutside: days[w * 7 + d].month != focusedMonth.month,
+                                  hasClasses: (classesByDay[DateTime(days[w * 7 + d].year, days[w * 7 + d].month, days[w * 7 + d].day)] ?? const []).isNotEmpty,
+                                  onTap: () => onTap(days[w * 7 + d]),
+                                  size: 34,
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 
   int _weekIndexOf(DateTime day) {
@@ -353,20 +358,26 @@ class _AnimatedMonthRow extends StatelessWidget {
   const _AnimatedMonthRow({required this.visible, required this.opacityVisible, required this.height, required this.child});
   @override
   Widget build(BuildContext context) {
-    return AnimatedOpacity(
-      duration: const Duration(milliseconds: 260),
-      curve: Curves.easeInOut,
-      opacity: opacityVisible ? 1 : 0,
-      child: SizedBox(
-        height: visible ? height : 0, // jeśli niewidoczny -> wysokość 0, AnimatedSize animuje zmianę
-        child: ClipRect(
-          child: Align(
-            alignment: Alignment.topCenter,
-            heightFactor: visible ? 1 : 0,
-            child: child,
+    // Animate the row height between 0 and `height` and fade opacity.
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
+      height: visible ? height : 0,
+      child: IgnorePointer(
+        ignoring: !opacityVisible,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeInOut,
+          opacity: opacityVisible ? 1 : 0,
+          child: ClipRect(
+            child: Align(
+              alignment: Alignment.topCenter,
+              heightFactor: visible ? 1 : 0,
+              child: SizedBox(height: height, child: child),
+            ),
           ),
         ),
       ),
     );
-  }
-}
+   }
+ }

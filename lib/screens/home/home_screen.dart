@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:my_uz/supabase.dart'; // nieużywane po refaktoryzacji – zostawione zakomentowane dla ewentualnych przyszłych zadań
 import 'package:my_uz/services/classes_repository.dart';
+import 'package:my_uz/services/user_tasks_repository.dart';
 
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/theme/app_colors.dart';
@@ -15,6 +16,7 @@ import 'package:my_uz/models/event_model.dart';
 // DODANE: ekran szczegółów zajęć
 import 'package:my_uz/screens/home/details/class_details.dart';
 import 'package:my_uz/screens/home/details/task_details.dart';
+import 'package:my_uz/screens/home/details/task_edit_sheet.dart';
 
 // SEKCJE
 import 'components/upcoming_classes.dart';
@@ -45,13 +47,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
    Timer? _refreshTimer; // periodyczne sprawdzanie zmiany dnia
 
    List<ClassModel> _classes = const [];
-   late final List<TaskModel> _tasks;
-   late final List<EventModel> _events;
+   List<TaskModel> _tasks = const [];
+   // Zamiast `late` inicjalizujemy od razu pustą listą, żeby uniknąć
+   // LateInitializationError, gdy komponent renderuje się przed załadowaniem mocków/danych.
+   List<EventModel> _events = const [];
 
    @override
    void initState() {
      super.initState();
-     _buildMocks();
+     // Zamiast lokalnych mocków ładujemy zadania użytkownika z Supabase (jeśli dostępne)
+     _loadTasks();
      WidgetsBinding.instance.addObserver(this);
      _loadPrefs();
      _loadTodayClasses();
@@ -132,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
        final sal = p.getString(_kPrefOnbSalutation)?.trim();
        // use centralized loader for group prefs to avoid mismatch with calendar
        final (String? groupCode, List<String> subs) = await ClassesRepository.loadGroupPrefs();
-       // Dodatkowo spróbuj pobrać metadane grupy (wydział/kierunek/tryb) i złożyć krótką linię pod powitaniem
+       // Dodatkowo spróbuj pobrać metadane grupy (wydział/kierunek/tryb) i złożyć krótką linie pod powitaniem
        String? subtitle;
        try {
          final meta = await ClassesRepository.loadGroupMeta();
@@ -193,6 +198,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
      }
    }
 
+   Future<void> _loadTasks() async {
+     try {
+       final tasks = await UserTasksRepository.instance.fetchUserTasks();
+       if (!mounted) return;
+       setState(() {
+         _tasks = tasks;
+       });
+     } catch (e) {
+       debugPrint('[Home][_loadTasks] err $e');
+       if (!mounted) return;
+       setState(() { _tasks = const []; });
+     }
+   }
+
    @override
    Widget build(BuildContext context) {
      final cs = Theme.of(context).colorScheme;
@@ -249,24 +268,67 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                            const SizedBox(height: 12),
                            TasksSection(
                              tasks: _tasks,
-                             onTap: (task) {
+                             onTap: (task) async {
+                               // Pobierz opis (lokalnie/serwer) i otwórz arkusz szczegółów
+                               final desc = await UserTasksRepository.instance.getTaskDescription(task.id) ?? '';
+                               if (!mounted) return;
                                TaskDetailsSheet.show(
                                  context,
                                  task,
-                                 description: '',
+                                 description: desc,
                                  relatedClass: _classes.where((c) => c.subject == task.subject).isNotEmpty
                                      ? _classes.where((c) => c.subject == task.subject).first
                                      : null,
-                                 onEdit: () {
-                                   // TODO: obsługa edycji zadania
+                                 onEdit: () async {
+                                   // Otwórz arkusz edycji i zapisz wynik przez repozytorium
+                                   TaskModel? _lastSaved;
+                                   await TaskEditSheet.show(
+                                     context,
+                                     task,
+                                     initialDate: task.deadline,
+                                     initialTitle: task.title,
+                                     initialDescription: desc,
+                                     onSave: (newTask) async {
+                                       _lastSaved = await UserTasksRepository.instance.upsertTask(newTask);
+                                       if (!mounted) return;
+                                       setState(() {
+                                         final idx = _tasks.indexWhere((t) => t.id == _lastSaved!.id);
+                                         if (idx != -1) _tasks[idx] = _lastSaved!;
+                                         else _tasks.insert(0, _lastSaved!);
+                                       });
+                                     },
+                                     onSaveDescription: (d) async {
+                                       try {
+                                         if (_lastSaved != null) {
+                                           await UserTasksRepository.instance.upsertTask(_lastSaved!.copyWith(), description: d);
+                                         } else {
+                                           // as fallback, spróbuj znaleźć zadanie po id w liście i zaktualizować
+                                           final maybe = _tasks.firstWhere((t) => t.id == task.id, orElse: () => task);
+                                           await UserTasksRepository.instance.upsertTask(maybe.copyWith(), description: d);
+                                         }
+                                       } catch (_) {}
+                                     },
+                                   );
                                  },
-                                 onDelete: () {
-                                   // TODO: obsługa usuwania zadania
+                                 onDelete: () async {
+                                   await UserTasksRepository.instance.deleteTask(task.id);
+                                   if (!mounted) return;
+                                   setState(() { _tasks.removeWhere((t) => t.id == task.id); });
                                  },
-                                 onToggleCompleted: (completed) {
+                                 onToggleCompleted: (completed) async {
+                                   await UserTasksRepository.instance.setTaskCompleted(task.id, completed);
+                                   if (!mounted) return;
                                    setState(() {
                                      final idx = _tasks.indexWhere((t) => t.id == task.id);
                                      if (idx != -1) _tasks[idx] = _tasks[idx].copyWith(completed: completed);
+                                   });
+                                 },
+                                 onSaveEdit: (updated) async {
+                                   final saved = await UserTasksRepository.instance.upsertTask(updated);
+                                   if (!mounted) return;
+                                   setState(() {
+                                     final idx = _tasks.indexWhere((t) => t.id == saved.id);
+                                     if (idx != -1) _tasks[idx] = saved; else _tasks.insert(0, saved);
                                    });
                                  },
                                );

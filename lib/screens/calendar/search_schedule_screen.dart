@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/services/classes_repository.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_uz/screens/calendar/group_schedule_screen.dart'; // added: preview screen
 import 'package:my_uz/screens/calendar/teacher_schedule_screen.dart';
 
@@ -33,10 +31,6 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
       final favs = await ClassesRepository.loadFavorites();
       if (mounted) setState(() => _favorites = favs);
     } catch (_) {}
-  }
-
-  Future<void> _saveFavorites() async {
-    try { await ClassesRepository.saveFavorites(_favorites); } catch (_) {}
   }
 
   void _onQueryChanged(String q){
@@ -134,9 +128,11 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
              textInputAction: TextInputAction.search,
              decoration: InputDecoration(
                hintText: 'Szukaj planu grupy lub nauczyciela',
-               border: InputBorder.none,
+               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+               filled: true,
+               fillColor: Colors.white,
                isDense: true,
-               contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+               contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
              ),
              onChanged: _onQueryChanged,
            ),
@@ -152,8 +148,6 @@ class _SearchScheduleScreenState extends State<SearchScheduleScreen> {
        body: SafeArea(
          child: Column(
            children: [
-            // full-width divider pod AppBar, zgodnie z wytycznymi
-            const Divider(height: 1, thickness: 1),
              Expanded(
                child: _loading
                  ? const Center(child: CircularProgressIndicator())

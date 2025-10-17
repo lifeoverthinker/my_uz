@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_uz/models/task_model.dart';
-import 'package:my_uz/services/local_user_store.dart';
+import 'package:my_uz/providers/tasks_provider.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/screens/home/details/task_edit_sheet.dart';
@@ -45,7 +45,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   Future<void> _toggleCompleted(bool v) async {
     setState(() => _model = _model.copyWith(completed: v));
-    await LocalUserStore.setTaskCompleted(_model.id, v);
+    await TasksProvider.instance.setTaskCompleted(_model.id, v);
     widget.onToggleCompleted?.call(v);
   }
 
@@ -62,8 +62,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       onSaveDescription: (d) => editedDesc = d,
     );
     if (edited != null) {
-      final saved = await LocalUserStore.upsertTask(edited!, description: editedDesc);
-      setState(() { _model = saved; _desc = editedDesc; });
+      // Use provider to persist and refresh centralized state
+      await TasksProvider.instance.editTask(TaskWithDescription(edited!.copyWith(id: _model.id), editedDesc));
+      setState(() { _model = edited!.copyWith(id: _model.id); _desc = editedDesc; });
       widget.onEdit?.call(_model, _desc);
     }
   }
@@ -76,7 +77,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       cancelText: 'Anuluj',
     );
     if (ok == true) {
-      await LocalUserStore.deleteTask(_model.id);
+      await TasksProvider.instance.deleteTask(_model.id);
       widget.onDelete?.call();
       if (mounted) Navigator.of(context).maybePop();
     }
@@ -168,7 +169,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               Expanded(
                 child: ElevatedButton(
                   onPressed: _edit,
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.myUZSysLightPrimary, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(backgroundColor: cs.primary, foregroundColor: cs.onPrimary),
                   child: const Text('Edytuj'),
                 ),
               ),
@@ -207,4 +208,3 @@ class _InfoTile extends StatelessWidget {
     );
   }
 }
-

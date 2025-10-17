@@ -6,6 +6,7 @@ import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/widgets/confirm_modal.dart';
 import 'package:my_uz/widgets/date_picker.dart';
+import 'package:my_uz/services/classes_repository.dart';
 
 /// Arkusz edycji zadania w stylu Google Calendar / spójny z TaskDetailsSheet
 class TaskEditSheet {
@@ -64,16 +65,28 @@ class _TaskEditSheetContentState extends State<_TaskEditSheetContent> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   late DateTime _deadline;
-  late String _type;
-  late String _subject;
+  String _type = '';
+  String _subject = '';
   bool _completed = false;
 
-  final List<String> _types = [
+  // dynamiczne listy + fallbacki
+  List<String> _types = const [];
+  List<String> _subjects = const [];
+  bool _loadingSubjects = true;
+  bool _loadingTypes = true;
+
+  // fallbacki w razie braku danych z bazy
+  static const List<String> _fallbackTypes = [
     'Laboratorium','Egzamin','Projekt','Kolokwium','Wykład','Ćwiczenia','Seminarium','Zaliczenie',
   ];
-  final List<String> _subjects = [
-    'Bazy danych','Analiza II','Programowanie obiektowe','Fizyka','Algebra','PPO','Matematyka','Algorytmy','Inny',
-  ];
+
+  // wartości początkowe do porównań "czy zmieniono"
+  late final String _initialTitle;
+  late final String _initialDescription;
+  late final DateTime _initialDate;
+  late final String _initialSubject;
+  late final String _initialType;
+  late final bool _initialCompleted;
 
   @override
   void initState() {
@@ -81,10 +94,79 @@ class _TaskEditSheetContentState extends State<_TaskEditSheetContent> {
     _titleController = TextEditingController(text: widget.initialTitle ?? '');
     _descController = TextEditingController(text: widget.initialDescription ?? '');
     _deadline = widget.initialDate;
-    _type = widget.task?.type ?? _types.first;
     _completed = widget.task?.completed ?? false;
-    _subject = widget.task?.subject ?? _subjects.first;
+    _subject = widget.task?.subject ?? '';
+    _type = widget.task?.type ?? '';
+
+    _initialTitle = widget.initialTitle ?? '';
+    _initialDescription = widget.initialDescription ?? '';
+    _initialDate = widget.initialDate;
+    _initialSubject = _subject;
+    _initialType = _type;
+    _initialCompleted = _completed;
+
     _titleController.addListener(() => setState(() {}));
+
+    // Załaduj przedmioty i typy asynchronicznie z repozytorium
+    _loadSubjectsAndTypes();
+  }
+
+  Future<void> _loadSubjectsAndTypes() async {
+    setState(() { _loadingSubjects = true; _loadingTypes = true; });
+    try {
+      final subs = await ClassesRepository.getSubjectsForDefaultGroup();
+      // Upewnij się, że podczas edycji obecny przedmiot jest na liście
+      final List<String> subjects = [...subs];
+      if (_subject.isNotEmpty && !subjects.contains(_subject)) subjects.add(_subject);
+      if (subjects.isEmpty) {
+        // brak danych – dodaj "Inny" jako sensowny placeholder
+        subjects.add('Inny');
+      }
+      subjects.sort((a,b)=> a.toLowerCase().compareTo(b.toLowerCase()));
+      String nextSubject = _subject.isNotEmpty ? _subject : subjects.first;
+      if (!mounted) return;
+      setState(() {
+        _subjects = subjects;
+        _subject = nextSubject;
+        _loadingSubjects = false;
+      });
+      await _loadTypesFor(_subject);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        // awaria – fallback tylko do "Inny"
+        _subjects = ['Inny'];
+        if (_subject.isEmpty) _subject = 'Inny';
+        _loadingSubjects = false;
+      });
+      await _loadTypesFor(_subject);
+    }
+  }
+
+  Future<void> _loadTypesFor(String subject) async {
+    setState(() { _loadingTypes = true; });
+    try {
+      final t = await ClassesRepository.getTypesForSubjectInDefaultGroup(subject);
+      final List<String> types = [...t];
+      // zachowaj typ edytowanego zadania, jeśli nie ma go w zbiorze
+      if (_type.isNotEmpty && !types.contains(_type)) types.add(_type);
+      if (types.isEmpty) types.addAll(_fallbackTypes);
+      types.sort((a,b)=> a.toLowerCase().compareTo(b.toLowerCase()));
+      String nextType = _type.isNotEmpty ? _type : types.first;
+      if (!mounted) return;
+      setState(() {
+        _types = types;
+        _type = nextType;
+        _loadingTypes = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _types = [..._fallbackTypes];
+        if (_type.isEmpty) _type = _fallbackTypes.first;
+        _loadingTypes = false;
+      });
+    }
   }
 
   @override
@@ -105,12 +187,12 @@ class _TaskEditSheetContentState extends State<_TaskEditSheetContent> {
   }
 
   bool get _hasChanges {
-    return _titleController.text.trim() != (widget.initialTitle ?? '') ||
-        _descController.text.trim() != (widget.initialDescription ?? '') ||
-        _deadline != widget.initialDate ||
-        _type != (widget.task?.type ?? _types.first) ||
-        _completed != (widget.task?.completed ?? false) ||
-        _subject != (widget.task?.subject ?? _subjects.first);
+    return _titleController.text.trim() != _initialTitle ||
+        _descController.text.trim() != _initialDescription ||
+        _deadline != _initialDate ||
+        _type != _initialType ||
+        _completed != _initialCompleted ||
+        _subject != _initialSubject;
   }
 
   Future<bool> _confirmDiscard() async {
@@ -131,9 +213,9 @@ class _TaskEditSheetContentState extends State<_TaskEditSheetContent> {
     final newTask = TaskModel(
       id: widget.task?.id ?? '',
       title: _titleController.text.trim(),
-      subject: _subject,
+      subject: _subject.isEmpty ? 'Inny' : _subject,
       deadline: _deadline,
-      type: _type,
+      type: _type.isEmpty ? null : _type,
       completed: _completed,
     );
     widget.onSave?.call(newTask);
@@ -201,20 +283,29 @@ class _TaskEditSheetContentState extends State<_TaskEditSheetContent> {
                     // Przedmiot
                     Text('Przedmiot', style: AppTextStyle.myUZLabelLarge.copyWith(color: const Color(0xFF5F6368))),
                     const SizedBox(height: 8),
-                    _SimpleDropdown(
-                      value: _subject,
-                      values: _subjects,
-                      onChanged: (v) => setState(() => _subject = v),
-                    ),
+                    if (_loadingSubjects)
+                      _ShimmerDropdownPlaceholder()
+                    else
+                      _SimpleDropdown(
+                        value: _subject.isNotEmpty ? _subject : (_subjects.isNotEmpty ? _subjects.first : 'Inny'),
+                        values: _subjects.contains(_subject) ? _subjects : [..._subjects, if (_subject.isNotEmpty) _subject],
+                        onChanged: (v) async {
+                          setState(() { _subject = v; });
+                          await _loadTypesFor(v);
+                        },
+                      ),
                     const SizedBox(height: 24),
                     // Typ
                     Text('Typ', style: AppTextStyle.myUZLabelLarge.copyWith(color: const Color(0xFF5F6368))),
                     const SizedBox(height: 8),
-                    _SimpleDropdown(
-                      value: _type,
-                      values: _types,
-                      onChanged: (v) => setState(() => _type = v),
-                    ),
+                    if (_loadingTypes)
+                      _ShimmerDropdownPlaceholder()
+                    else
+                      _SimpleDropdown(
+                        value: _type.isNotEmpty ? _type : (_types.isNotEmpty ? _types.first : _fallbackTypes.first),
+                        values: _types.contains(_type) ? _types : [..._types, if (_type.isNotEmpty) _type],
+                        onChanged: (v) => setState(() => _type = v),
+                      ),
                     const SizedBox(height: 24),
                     const _FullBleedDivider(),
                     const SizedBox(height: 20),
@@ -288,7 +379,11 @@ class _TaskEditSheetContentState extends State<_TaskEditSheetContent> {
         _IconButtonSlot(
           icon: MyUz.x_close,
           tooltip: 'Zamknij',
-          onTap: () async { if (await _confirmDiscard()) Navigator.of(context).maybePop(); },
+          onTap: () async {
+            if (await _confirmDiscard() && mounted) {
+              Navigator.of(context).maybePop();
+            }
+          },
         ),
         const Spacer(),
         AnimatedOpacity(
@@ -415,6 +510,21 @@ class _SimpleDropdown extends StatelessWidget {
           items: values.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: (v) { if (v!=null) onChanged(v); },
         ),
+      ),
+    );
+  }
+}
+
+class _ShimmerDropdownPlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    // prosty placeholder bez zależności – wyszarzony box na czas ładowania
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3EDF7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE7E0EC)),
       ),
     );
   }

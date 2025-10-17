@@ -69,7 +69,8 @@ class ScheduleAppBar extends StatelessWidget implements PreferredSizeWidget {
       child: Container(
         height: 72,
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-        color: Theme.of(context).scaffoldBackgroundColor,
+        // Force white background for schedule-related app bars
+        color: Colors.white,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [

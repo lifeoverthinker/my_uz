@@ -1061,7 +1061,7 @@ class _OptionCardRadio extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       splashFactory: NoSplash.splashFactory,
-      overlayColor: MaterialStateProperty.all(Colors.transparent),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 56),
         child: Container(
@@ -1147,7 +1147,7 @@ class _ChoicePill extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         splashFactory: NoSplash.splashFactory,
-        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

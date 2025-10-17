@@ -6,41 +6,29 @@ import 'package:my_uz/services/classes_repository.dart';
 import 'package:my_uz/widgets/cards/task_card.dart';
 import 'package:my_uz/screens/home/details/task_edit_sheet.dart';
 import 'package:my_uz/screens/calendar/task_details_screen.dart';
-import 'package:my_uz/services/local_user_store.dart';
+import 'package:my_uz/services/local_user_store.dart'; // keep for TaskWithDescription type
+import 'package:my_uz/providers/tasks_provider.dart';
+import 'package:my_uz/providers/user_plan_provider.dart';
 
 enum _TaskFilter { all, today, upcoming, completed }
 
 class TasksScreen extends StatefulWidget {
-  const TasksScreen({super.key});
+  const TasksScreen({super.key, this.showAppBar = true});
+
+  final bool showAppBar;
 
   @override
   State<TasksScreen> createState() => _TasksScreenState();
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  bool _loading = true;
-  List<TaskWithDescription> _items = const [];
-  _TaskFilter _filter = _TaskFilter.all;
+  final TasksProvider _provider = TasksProvider.instance;
 
   @override
   void initState() {
     super.initState();
-    _refresh();
-  }
-
-  Future<void> _refresh() async {
-    setState(() => _loading = true);
-    final list = await LocalUserStore.loadTaskEntries();
-    list.sort((a, b) {
-      final ad = a.model.deadline;
-      final bd = b.model.deadline;
-      final cmp = ad.compareTo(bd);
-      if (cmp != 0) return cmp;
-      // nieukończone wyżej
-      if (a.model.completed != b.model.completed) return a.model.completed ? 1 : -1;
-      return a.model.title.toLowerCase().compareTo(b.model.title.toLowerCase());
-    });
-    if (mounted) setState(() { _items = list; _loading = false; });
+    // initial load
+    _provider.refresh();
   }
 
   Future<void> _addTask() async {
@@ -54,8 +42,7 @@ class _TasksScreenState extends State<TasksScreen> {
       onSaveDescription: (d) => pendingDesc = d,
     );
     if (pendingModel != null) {
-      await LocalUserStore.upsertTask(pendingModel!, description: pendingDesc);
-      await _refresh();
+      await _provider.addTask(TaskWithDescription(pendingModel!, pendingDesc));
     }
   }
 
@@ -72,39 +59,36 @@ class _TasksScreenState extends State<TasksScreen> {
       onSaveDescription: (d) => editedDesc = d,
     );
     if (editedModel != null) {
-      await LocalUserStore.upsertTask(editedModel!, description: editedDesc);
-      await _refresh();
+      await _provider.editTask(TaskWithDescription(editedModel!, editedDesc));
     }
   }
 
   Future<void> _deleteTask(TaskModel model) async {
-    await LocalUserStore.deleteTask(model.id);
-    await _refresh();
+    await _provider.deleteTask(model.id);
   }
 
   Future<void> _toggleCompleted(TaskModel model, bool completed) async {
-    await LocalUserStore.setTaskCompleted(model.id, completed);
-    await _refresh();
+    await _provider.setTaskCompleted(model.id, completed);
   }
 
-  Iterable<(DateTime, List<TaskWithDescription>)> _groupedFiltered() {
+  Iterable<(DateTime, List<TaskWithDescription>)> _groupedFiltered(List<TaskWithDescription> items) {
     final now = DateTime.now();
     bool isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
     Iterable<TaskWithDescription> filtered;
-    switch (_filter) {
-      case _TaskFilter.today:
-        filtered = _items.where((e) => isSameDay(e.model.deadline, now));
+    switch (_provider.filter) {
+      case TaskFilter.today:
+        filtered = items.where((e) => isSameDay(e.model.deadline, now));
         break;
-      case _TaskFilter.upcoming:
+      case TaskFilter.upcoming:
         final todayStart = DateTime(now.year, now.month, now.day);
-        filtered = _items.where((e) => !e.model.completed && e.model.deadline.isAfter(todayStart.subtract(const Duration(seconds: 1))));
+        filtered = items.where((e) => !e.model.completed && e.model.deadline.isAfter(todayStart.subtract(const Duration(seconds: 1))));
         break;
-      case _TaskFilter.completed:
-        filtered = _items.where((e) => e.model.completed);
+      case TaskFilter.completed:
+        filtered = items.where((e) => e.model.completed);
         break;
-      case _TaskFilter.all:
-        filtered = _items;
+      case TaskFilter.all:
+        filtered = items;
         break;
     }
 
@@ -128,61 +112,122 @@ class _TasksScreenState extends State<TasksScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Terminarz zadań'),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addTask,
-        backgroundColor: AppColors.myUZSysLightPrimary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _items.isEmpty
-              ? _EmptyState(onAdd: _addTask)
-              : RefreshIndicator(
-                  onRefresh: _refresh,
-                  child: ListView(
-                    padding: const EdgeInsets.only(bottom: 96),
-                    children: [
-                      const SizedBox(height: 8),
-                      _Filters(
-                        value: _filter,
-                        onChanged: (f) => setState(() => _filter = f),
-                      ),
-                      const SizedBox(height: 8),
-                      for (final (day, list) in _groupedFiltered()) ...[
-                        _DayHeader(label: _formatHeader(day)),
-                        const SizedBox(height: 8),
-                        ...list.map((it) => _TaskListItem(
-                              model: it.model,
-                              description: it.description,
-                              onOpen: () async {
-                                await Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => TaskDetailsScreen(
-                                      task: it.model,
-                                      description: it.description,
-                                      onEdit: (m, d) => _editTask(m, d),
-                                      onToggleCompleted: (v) => _toggleCompleted(it.model, v),
-                                      onDelete: () => _deleteTask(it.model),
+    return AnimatedBuilder(
+      animation: _provider,
+      builder: (context, _) {
+        final loading = _provider.loading;
+        final items = _provider.items;
+        return Scaffold(
+          appBar: widget.showAppBar
+              ? AppBar(
+                  title: const Text('Terminarz'),
+                  actions: [
+                    IconButton(
+                      tooltip: 'Dodaj zadanie',
+                      icon: const Icon(Icons.add),
+                      onPressed: _addTask,
+                    ),
+                  ],
+                )
+              : null,
+          body: loading
+              ? const Center(child: CircularProgressIndicator())
+              : items.isEmpty
+                  ? _EmptyState()
+                  : RefreshIndicator(
+                      onRefresh: () => _provider.refresh(forceRefresh: true),
+                      child: ListView(
+                        padding: const EdgeInsets.only(bottom: 96),
+                        children: [
+                          const SizedBox(height: 8),
+                          _Filters(
+                            value: _provider.filter,
+                            onChanged: (f) => setState(() => _provider.filter = f),
+                          ),
+                          const SizedBox(height: 8),
+                          for (final (day, list) in _groupedFiltered(items)) ...[
+                            // Render date column on the left and stacked cards on the right
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Left date column (month short + circular day)
+                                  SizedBox(
+                                    width: 56,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _formatMonthShort(day.month),
+                                          style: const TextStyle(
+                                            color: Color(0xFF6750A4),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          width: 28,
+                                          height: 28,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF6750A4),
+                                            borderRadius: BorderRadius.circular(100),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(day.day.toString(), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500, height: 1)),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                );
-                                await _refresh();
-                              },
-                              onEdit: () => _editTask(it.model, it.description),
-                              onToggleCompleted: (v) => _toggleCompleted(it.model, v),
-                              onDelete: () => _deleteTask(it.model),
-                            )),
-                        const SizedBox(height: 8),
-                      ],
-                    ],
-                  ),
-                ),
+                                  const SizedBox(width: 12),
+
+                                  // Right column: stacked task cards for this date
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        for (final it in list) ...[
+                                          _GroupedTaskItem(
+                                            model: it.model,
+                                            description: it.description,
+                                            onOpen: () async {
+                                              await Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => TaskDetailsScreen(
+                                                    task: it.model,
+                                                    description: it.description,
+                                                    onEdit: (m, d) => _provider.editTask(TaskWithDescription(m, d)),
+                                                    onToggleCompleted: (v) => _provider.setTaskCompleted(it.model.id, v),
+                                                    onDelete: () => _provider.deleteTask(it.model.id),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            onEdit: () => _editTask(it.model, it.description),
+                                            onToggleCompleted: (v) => _provider.setTaskCompleted(it.model.id, v),
+                                            onDelete: () => _provider.deleteTask(it.model.id),
+                                          ),
+                                          const SizedBox(height: 8),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ],
+                      ),
+                    ),
+        );
+      },
     );
+  }
+
+  String _formatMonthShort(int m) {
+    const mies = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+    return mies[m-1];
   }
 }
 
@@ -293,6 +338,46 @@ class _TaskListItem extends StatelessWidget {
   }
 }
 
+class _GroupedTaskItem extends StatelessWidget {
+  final TaskModel model;
+  final String? description;
+  final VoidCallback onOpen;
+  final VoidCallback onEdit;
+  final ValueChanged<bool> onToggleCompleted;
+  final VoidCallback onDelete;
+  const _GroupedTaskItem({required this.model, required this.description, required this.onOpen, required this.onEdit, required this.onToggleCompleted, required this.onDelete});
+
+  String _ddmm(DateTime d) => '${d.day.toString().padLeft(2,'0')}.${d.month.toString().padLeft(2,'0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final initials = ClassesRepository.initialsFromName(model.subject);
+    final desc = 'Do: ${_ddmm(model.deadline)} • ${model.subject}${model.type != null ? ' • ${model.type}' : ''}';
+
+    return Dismissible(
+      key: ValueKey(model.id),
+      background: Container(alignment: Alignment.centerLeft, padding: const EdgeInsets.symmetric(horizontal:16), color: Colors.green.withValues(alpha:0.1), child: Row(children:[Icon(Icons.check, color: Colors.green), const SizedBox(width:8), Text('Zaliczone', style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600))])),
+      secondaryBackground: Container(alignment: Alignment.centerRight, padding: const EdgeInsets.symmetric(horizontal:16), color: Colors.red.withValues(alpha:0.1), child: Row(mainAxisAlignment: MainAxisAlignment.end, children:[Icon(Icons.delete, color: Colors.red), const SizedBox(width:8), Text('Usuń', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600))])),
+      confirmDismiss: (dir) async {
+        if (dir == DismissDirection.startToEnd) { onToggleCompleted(!model.completed); return false; } else { onDelete(); return true; }
+      },
+      child: InkWell(
+        onTap: onOpen,
+        onLongPress: onEdit,
+        child: TaskCard(
+          title: model.title,
+          description: 'Do: ${_ddmm(model.deadline)} • ${model.subject}',
+          initial: ClassesRepository.initialsFromName(model.subject),
+          backgroundColor: AppColors.myUZSysLightSecondaryContainer,
+          avatarColor: cs.primary,
+          showAvatar: true,
+        ),
+      ),
+    );
+  }
+}
+
 class _Filters extends StatelessWidget {
   final _TaskFilter value;
   final ValueChanged<_TaskFilter> onChanged;
@@ -328,8 +413,7 @@ class _Filters extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  final VoidCallback onAdd;
-  const _EmptyState({required this.onAdd});
+  const _EmptyState();
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -342,11 +426,11 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text('Brak zadań', style: AppTextStyle.myUZTitleMedium.copyWith(color: Theme.of(context).colorScheme.onSurface)),
             const SizedBox(height: 8),
-            Text('Dodaj pierwsze zadanie, aby zacząć zarządzać terminami.',
-                textAlign: TextAlign.center,
-                style: AppTextStyle.myUZBodySmall.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            const SizedBox(height: 16),
-            ElevatedButton(onPressed: onAdd, child: const Text('Dodaj zadanie')),
+            Text(
+              'Dodaj pierwsze zadanie z przycisku + w prawym górnym rogu.',
+              textAlign: TextAlign.center,
+              style: AppTextStyle.myUZBodySmall.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
           ],
         ),
       ),

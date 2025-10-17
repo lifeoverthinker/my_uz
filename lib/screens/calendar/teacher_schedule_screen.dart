@@ -148,7 +148,6 @@ class _TeacherScheduleScreenState extends State<TeacherScheduleScreen> {
             onPrevWeek: _goToPrevWeekMonday,
             onNextWeek: _goToNextWeekMonday,
           ),
-          const Divider(height: 1),
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())

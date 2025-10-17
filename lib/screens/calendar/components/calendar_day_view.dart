@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/widgets/cards/class_card.dart';
@@ -141,9 +142,14 @@ class _CalendarDayViewState extends State<CalendarDayView> {
     );
     const verticalLineX = _labelWidth + _labelFragmentGap + _smallSegment;
     const cardLeft = verticalLineX + 1; // przylega do linii pionowej
-    // szerokość dostępna: containerWidth - cardLeft - prawy padding (=_hPad)
-    const double safeMargin = 4.0; // zapas, żeby zaokrąglony róg nie był przycinany
-    final availableWidth = (containerWidth - cardLeft - _hPad - safeMargin).clamp(80.0, containerWidth);
+    // Compute available width so that the card's right edge ends exactly desiredRightGap
+    // from the outer frame. containerWidth is the inner width (after symmetric padding of _hPad),
+    // so full widget width == containerWidth + 2*_hPad.
+    const double desiredRightGap = 8.0;
+    final fullWidth = containerWidth + 2 * _hPad;
+    final leftFull = _hPad + cardLeft; // distance from full widget left
+    final availableWidth = (fullWidth - leftFull - desiredRightGap).clamp(80.0, fullWidth - leftFull - desiredRightGap);
+    // (layout calculation for availableWidth)
     return Positioned(
       top: startPos + 1,
       left: cardLeft,
