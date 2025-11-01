@@ -2,15 +2,11 @@ import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:my_uz/models/task_model.dart';
-import 'package:my_uz/services/local_user_store.dart';
+import 'package:my_uz/services/sqlite_user_store.dart';
 import 'package:my_uz/supabase.dart';
 
 /// UserTasksRepository – synchronizacja z tabelą `user_tasks` w Supabase.
-/// Refaktoryzacja:
-/// - instancyjne repozytorium (wstrzykiwanie SupabaseClient) dla testowalności
-/// - krótkoterminowy cache pamięciowy + clearCache()
-/// - timeout + try/catch + rethrow dla zewnętrznych wywołań
-/// - zachowano kompatybilny `instance` do stopniowej migracji
+/// Prostszą wersję: lokalny store = SqliteUserStore (po migracji).
 class UserTasksRepository {
   final SupabaseClient _client;
   final Duration _timeout;
@@ -28,31 +24,53 @@ class UserTasksRepository {
         _timeout = timeout ?? const Duration(seconds: 8);
 
   /// Domyślna instancja dla kompatybilności (używa singletonu Supa.client).
-  /// W nowym kodzie preferuj wstrzykiwanie repozytorium z konstruktorów/providerów.
   static final UserTasksRepository instance =
-      UserTasksRepository(client: Supa.client);
+  UserTasksRepository(client: Supa.client);
 
-  // ---------- Backward-compatible static wrappers ----------
-  // These allow existing call sites (UserTasksRepository.fetchUserTasks()) to continue
-  // working while new code should inject an instance.
-  // static Future<List<TaskModel>> fetchUserTasks({bool forceRefresh = false}) =>
-  //     instance.fetchUserTasks(forceRefresh: forceRefresh);
+  // ----- Local storage helpers (SQLite only) -----
+  Future<List<TaskModel>> _loadLocalTasks() async {
+    try {
+      final tuples = await SqliteUserStore.loadTasks();
+      return tuples.map((t) => t.$1).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
 
-  // static Future<TaskModel> upsertTask(TaskModel task, {String? description}) =>
-  //     instance.upsertTask(task, description: description);
+  Future<void> _saveLocalTasks(List<TaskModel> tasks) async {
+    try {
+      final tuples = tasks.map((t) => (t, null as String?)).toList();
+      await SqliteUserStore.saveTasks(tuples);
+    } catch (_) {}
+  }
 
-  // static Future<void> deleteTask(String id) => instance.deleteTask(id);
+  Future<TaskModel> _upsertLocalTask(TaskModel task, {String? description}) async {
+    try {
+      return await SqliteUserStore.upsertTask(task, description: description);
+    } catch (_) {
+      return task;
+    }
+  }
 
-  // Keep original name for compatibility -- many callers use setTaskCompleted
-  // static Future<void> setTaskCompleted(String id, bool completed) =>
-  //     instance.setTaskCompleted(id, completed);
+  Future<void> _deleteLocalTask(String id) async {
+    try {
+      await SqliteUserStore.deleteTask(id);
+    } catch (_) {}
+  }
 
-  // static Future<String?> getTaskDescription(String id) => instance.getTaskDescription(id);
+  Future<void> _setLocalTaskCompleted(String id, bool completed) async {
+    try {
+      await SqliteUserStore.setTaskCompleted(id, completed);
+    } catch (_) {}
+  }
 
-  // static void clearCacheStatic() => instance.clearCache();
-
-  // NOTE: removed static wrappers to avoid duplicate declarations with instance methods.
-  // Use UserTasksRepository.instance.method(...) or inject IUserTasksRepository instead.
+  Future<String?> _getLocalTaskDescription(String id) async {
+    try {
+      return await SqliteUserStore.getTaskDescription(id);
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Wyczyść cache w pamięci.
   void clearCache() {
@@ -72,7 +90,7 @@ class UserTasksRepository {
       return _tasksCache!;
     }
 
-    // Najpierw spróbuj pobrać z Supabase, w razie błędu fallback do LocalUserStore.
+    // Najpierw spróbuj pobrać z Supabase, w razie błędu fallback do lokalnego SQLite.
     try {
       final future = _client.from('user_tasks').select('*');
       final rows = await future.timeout(_timeout) as List<dynamic>;
@@ -84,7 +102,6 @@ class UserTasksRepository {
           final normalized = <String, dynamic>{};
           normalized['id'] = map['id']?.toString() ?? '';
           normalized['title'] = map['title']?.toString() ?? map['name']?.toString() ?? '';
-          // deadline może być String ISO lub DateTime
           final dl = map['deadline'] ?? map['due_date'] ?? map['due'];
           if (dl is String) normalized['deadline'] = dl;
           else if (dl is DateTime) normalized['deadline'] = dl.toIso8601String();
@@ -101,8 +118,7 @@ class UserTasksRepository {
 
       // Zapisz lokalną kopię (opcja) – mapowanie bez opisu
       try {
-        final tuples = out.map((t) => (t, null as String?)).toList();
-        await LocalUserStore.saveTasks(tuples);
+        await _saveLocalTasks(out);
       } catch (_) {}
 
       // Ustaw cache
@@ -110,36 +126,25 @@ class UserTasksRepository {
       _tasksCacheExpiry = DateTime.now().add(defaultCacheTtl);
 
       return out;
-    } on TimeoutException catch (te) {
+    } on TimeoutException {
       // Timeout -> fallback do lokalnego store
-      try {
-        final local = await LocalUserStore.loadTasks();
-        final result = local.map((t) => t.$1).toList();
-        // ustaw cache z lokalnych
-        _tasksCache = result;
-        _tasksCacheExpiry = DateTime.now().add(defaultCacheTtl);
-        return result;
-      } catch (_) {
-        rethrow;
-      }
-    } catch (e) {
+      final result = await _loadLocalTasks();
+      _tasksCache = result;
+      _tasksCacheExpiry = DateTime.now().add(defaultCacheTtl);
+      return result;
+    } catch (_) {
       // inny błąd -> fallback do lokalnego store
-      try {
-        final local = await LocalUserStore.loadTasks();
-        final result = local.map((t) => t.$1).toList();
-        _tasksCache = result;
-        _tasksCacheExpiry = DateTime.now().add(defaultCacheTtl);
-        return result;
-      } catch (_) {
-        rethrow;
-      }
+      final result = await _loadLocalTasks();
+      _tasksCache = result;
+      _tasksCacheExpiry = DateTime.now().add(defaultCacheTtl);
+      return result;
     }
   }
 
-  /// Upsert zadania: najpierw zapisz lokalnie (LocalUserStore.upsertTask generuje id jeśli brak),
+  /// Upsert zadania: najpierw zapisz lokalnie (SqliteUserStore.upsertTask generuje id jeśli brak),
   /// następnie spróbuj zapisać na Supabase (best-effort). Zwraca zapisany lokalny model.
   Future<TaskModel> upsertTask(TaskModel task, {String? description}) async {
-    final savedLocal = await LocalUserStore.upsertTask(task, description: description);
+    final savedLocal = await _upsertLocalTask(task, description: description);
     // Aktualizuj cache lokalnie
     _tasksCache = (_tasksCache ?? []).where((t) => t.id != savedLocal.id).toList()..add(savedLocal);
     _tasksCacheExpiry = DateTime.now().add(defaultCacheTtl);
@@ -149,8 +154,6 @@ class UserTasksRepository {
       final map = savedLocal.toMap();
       if (description != null && description.trim().isNotEmpty) map['description'] = description.trim();
       await _client.from('user_tasks').upsert(map).timeout(_timeout);
-    } on TimeoutException catch (_) {
-      // best-effort: pozostaw lokalnie i rzuć dalej jeśli potrzebne
     } catch (_) {
       // best-effort: ignoruj błąd z serwera
     }
@@ -160,7 +163,7 @@ class UserTasksRepository {
   /// Usuń zadanie lokalnie i na serwerze (best-effort).
   Future<void> deleteTask(String id) async {
     try {
-      await LocalUserStore.deleteTask(id);
+      await _deleteLocalTask(id);
     } catch (_) {}
     // Aktualizuj cache
     _tasksCache = _tasksCache?.where((t) => t.id != id).toList();
@@ -173,7 +176,7 @@ class UserTasksRepository {
   /// Ustaw status ukończenia: lokalnie + serwer (best-effort)
   Future<void> setTaskCompleted(String id, bool completed) async {
     try {
-      await LocalUserStore.setTaskCompleted(id, completed);
+      await _setLocalTaskCompleted(id, completed);
     } catch (_) {}
     // Aktualizuj cache
     if (_tasksCache != null) {
@@ -190,7 +193,7 @@ class UserTasksRepository {
     if (_descCache.containsKey(id)) return _descCache[id];
 
     try {
-      final descLocal = await LocalUserStore.getTaskDescription(id);
+      final descLocal = await _getLocalTaskDescription(id);
       if (descLocal != null) {
         _descCache[id] = descLocal;
         return descLocal;
@@ -205,7 +208,7 @@ class UserTasksRepository {
         _descCache[id] = d;
         return d;
       }
-    } on TimeoutException catch (_) {
+    } on TimeoutException {
       // ignore
     } catch (_) {}
     return null;

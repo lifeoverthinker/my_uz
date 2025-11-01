@@ -759,7 +759,7 @@ class _Page3BodyState extends State<_Page3Body> {
                         suffixIcon: _group == null
                             ? IconButton(
                                 onPressed: _confirmGroup,
-                                icon: Icon(MyUz.search_sm, color: cs.primary),
+                                icon: Icon(MyUz.search, color: cs.primary),
                                 splashColor: Colors.transparent,
                                 highlightColor: Colors.transparent,
                               )
@@ -822,7 +822,7 @@ class _Page3BodyState extends State<_Page3Body> {
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               child: Row(
                                 children: [
-                                  Icon(MyUz.search_sm, color: Theme.of(context).colorScheme.primary, size: 18),
+                                  Icon(MyUz.search, color: Theme.of(context).colorScheme.primary, size: 18),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(

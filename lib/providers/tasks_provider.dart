@@ -1,15 +1,11 @@
-// filepath: c:\Users\Martyna\Documents\GitHub\my_uz\lib\providers\tasks_provider.dart
 import 'package:flutter/foundation.dart';
-import 'package:my_uz/services/user_tasks_repository.dart';
 import 'package:my_uz/services/i_user_tasks_repository.dart';
-import 'package:my_uz/services/local_user_store.dart';
+import 'package:my_uz/services/sqlite_user_store.dart';
 import 'package:my_uz/providers/user_plan_provider.dart';
 
 enum TaskFilter { all, today, upcoming, completed }
 
 /// Provider odpowiedzialny za listę zadań użytkownika.
-/// - centralizuje fetchy do `UserTasksRepository`.
-/// - subskrybuje `UserPlanProvider` i czyści/cache/odświeża po zmianie planu.
 class TasksProvider extends ChangeNotifier {
   bool loading = false;
   List<TaskWithDescription> items = const [];
@@ -20,15 +16,12 @@ class TasksProvider extends ChangeNotifier {
   final Listenable _planListenable;
   final IUserTasksRepository _repo;
 
-  /// Production default (uses global UserPlanProvider)
   TasksProvider._internal()
       : _planListenable = UserPlanProvider.instance,
         _repo = DefaultUserTasksRepository() {
     _planListenable.addListener(_onPlanChanged);
   }
 
-  /// Public constructor for tests / alternative wiring. Pass a custom [planListenable]
-  /// (e.g., a fake ChangeNotifier) to control plan changes in tests.
   TasksProvider({Listenable? planListenable, IUserTasksRepository? repository})
       : _planListenable = planListenable ?? UserPlanProvider.instance,
         _repo = repository ?? DefaultUserTasksRepository() {

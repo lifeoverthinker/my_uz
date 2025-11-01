@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/supabase.dart';
 
-/// Repozytorium pobierania zajęć: dzień / tygzień / dowolny zakres.
+/// Repozytorium pobierania zajęć: dzień / tydzień / dowolny zakres.
+/// Plik gotowy do podmiany — zawiera defensywną normalizację dat (toLocal)
+/// aby wyeliminować błędy przesunięcia dni wynikające z niejednolitego formatu dat
+/// zwracanego przez backend.
 class ClassesRepository {
   // Injected Supabase client (instance-based). For backwards compatibility we provide
   // a default static `instance` that uses the singleton from lib/supabase.dart.
@@ -46,6 +50,7 @@ class ClassesRepository {
   static Future<void> saveFavorites(Set<String> favs) async {
     final p = await SharedPreferences.getInstance();
     await p.setString(_prefFavPlans, jsonEncode(favs.toList()));
+    _notifyFavoritesChanged();
   }
 
   /// Toggle favorite entry (key like 'group:<id>' or 'teacher:<id>').
@@ -53,7 +58,7 @@ class ClassesRepository {
   static Future<void> toggleFavorite(String key, {String? label}) async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_prefFavPlans);
-    final List<String> list = raw == null || raw.isEmpty ? [] : List<String>.from(jsonDecode(raw).map((e) => e.toString()));
+    final List<String> list = raw == null || raw.isEmpty ? [] : List<String>.from(jsonDecode(raw) as List<dynamic>).map((e) => e.toString()).toList();
     final exists = list.contains(key);
     if (exists) {
       list.remove(key);
@@ -77,6 +82,7 @@ class ClassesRepository {
       }
       await p.setString(_prefFavLabels, jsonEncode(labels));
     } catch (_) {}
+    _notifyFavoritesChanged();
   }
 
   static Future<bool> isFavorite(String key) async {
@@ -233,7 +239,7 @@ class ClassesRepository {
   static final Map<String,_RangeCacheEntry> _rangeCache = {};
   static const Duration _cacheTtl = Duration(minutes: 5);
   // Cache dla list podgrup (key: groupCode -> entry)
-  static final Map<String,_SubgroupsCacheEntry> _subgroupsCache = {};
+  static final Map<String, _SubgroupsCacheEntry> _subgroupsCache = {};
   static const Duration _subgroupsCacheTtl = Duration(minutes: 30);
   /// Cache dla unikalnych przedmiotów (key: groupId -> entry)
   static final Map<String, _SubjectsCacheEntry> _subjectsByGroupCache = {};
@@ -264,10 +270,98 @@ class ClassesRepository {
 
   static String _trim(String? s) => (s ?? '').trim();
 
+  /// --- DATE NORMALIZATION HELPERS (kluczowe) ---
+  /// Normalizuje pola datowe w rzędzie zwróconym z backendu.
+  /// Jeśli pole jest String albo DateTime - spróbuje sparsować i zamienić na local ISO string.
+  /// Obsługuje najczęściej używane nazwy pól: 'od'/'do' oraz 'start'/'end' (i warianty).
+  static Map<String, dynamic> _normalizeRowDates(Map<String, dynamic> row) {
+    final out = Map<String, dynamic>.from(row);
+
+    void _normKey(String key) {
+      try {
+        if (!out.containsKey(key)) return;
+        final v = out[key];
+        if (v == null) return;
+        if (v is DateTime) {
+          out[key] = v.toLocal().toIso8601String();
+        } else if (v is String) {
+          // Jeśli parse się nie powiedzie, zostawiamy oryginalny string (bez crasha).
+          try {
+            final parsed = DateTime.parse(v);
+            out[key] = parsed.toLocal().toIso8601String();
+          } catch (_) {
+            // spróbuj rozpoznac format "YYYY-MM-DD HH:MM:SS" lub z kropkami
+            try {
+              final parts = v.split(RegExp(r'[ T]'));
+              if (parts.isNotEmpty) {
+                final datePart = parts[0];
+                final timePart = parts.length > 1 ? parts[1] : '00:00:00';
+                final dateSegments = datePart.split(RegExp(r'[-/.]')).map((s) => int.tryParse(s) ?? 0).toList();
+                final timeSegments = timePart.split(RegExp(r'[:.]')).map((s) => int.tryParse(s) ?? 0).toList();
+                if (dateSegments.length >= 3) {
+                  final d = DateTime(
+                    dateSegments[0],
+                    dateSegments[1],
+                    dateSegments[2],
+                    timeSegments.isNotEmpty ? timeSegments[0] : 0,
+                    timeSegments.length > 1 ? timeSegments[1] : 0,
+                    timeSegments.length > 2 ? timeSegments[2] : 0,
+                  );
+                  out[key] = d.toLocal().toIso8601String();
+                }
+              }
+            } catch (_) {
+              // ignore
+            }
+          }
+        }
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    // list of common date keys in schedules backend
+    const possibleKeys = <String>['od', 'do', 'start', 'end', 'czas_od', 'czas_do', 'date', 'dt'];
+    for (final k in possibleKeys) _normKey(k);
+
+    return out;
+  }
+
+  /// Konwertuje surowy rząd (Map) z backendu do Map gotowego dla ClassModel,
+  /// dodatkowo normalizuje daty (zamienia na ISO w local) i zwraca.
+  static Map<String, dynamic> _prepareRowForClassModel(Map<String, dynamic> raw) {
+    final normalized = _normalizeRowDates(raw);
+    final out = Map<String, dynamic>.from(normalized);
+
+    // Standardowe mapowanie nazw na pola oczekiwane przez ClassModel
+    // (u Ciebie w ClassModel może być inna konwencja — dopasuj jeśli trzeba).
+    if (out.containsKey('od') && out['od'] != null) {
+      out['startTime'] = out['od'];
+    } else if (out.containsKey('start') && out['start'] != null) {
+      out['startTime'] = out['start'];
+    }
+
+    if (out.containsKey('do') && out['do'] != null) {
+      out['endTime'] = out['do'];
+    } else if (out.containsKey('end') && out['end'] != null) {
+      out['endTime'] = out['end'];
+    }
+
+    return out;
+  }
+
+  /// Helper: zamienia pojedynczy rząd na ClassModel korzystając z normalizacji.
+  static ClassModel parseRowToClassModel(Map<String, dynamic> raw) {
+    final prepared = _prepareRowForClassModel(raw);
+    // Jeśli ClassModel.fromMap potrafi obsłużyć ISO stringy -> DateTime.parse(...).toLocal()
+    // to wystarczy. Jeśli nie, można tutaj sparsować prepared['startTime'] -> DateTime.parse(...).toLocal()
+    return ClassModel.fromMap(prepared);
+  }
+
   /// Zwraca kanoniczny klucz ulubionego planu: 'group:<id>' jeśli id dostępne, inaczej 'group:<code>'
   static String canonicalFavKey({String? groupId, String? groupCode}) {
     if (groupId != null && groupId.trim().isNotEmpty) {
-      return 'group:${groupId.trim()}';
+      return 'group:$groupId';
     }
     return 'group:${(groupCode ?? '').trim()}';
   }
@@ -349,7 +443,7 @@ class ClassesRepository {
     final tried = <String>{};
     Future<String?> attempt(String g) async { if (tried.contains(g)) return null; tried.add(g); return await _resolveGroupId(g); }
     final variants = [group, group.replaceAll('-', ''), group.replaceAll(' ', ''), group.replaceAll('-', ' '), group.toUpperCase(), group.toLowerCase()];
-    for (final v in variants) { final id = await attempt(v); if (id!=null) return id; }
+    for (final v in variants) { final id = await attempt(v); if (id != null) return id; }
     return null;
   }
 
@@ -405,8 +499,6 @@ class ClassesRepository {
     }
     // ID cache może być nieaktualne – usuń istniejące entry dla tej grupy
     _groupIdCache.remove(code);
-    // Usuń zapisany group id – wymusi resolver asynchronicznie
-    try { await p.remove(_prefGroupId); } catch (_) {}
     _clearCaches();
     print('[ClassesRepo][setGroupPrefs] saved code=$code, subs=${subgroups.join(',')}');
 
@@ -470,7 +562,7 @@ class ClassesRepository {
     final start = DateTime(from.year, from.month, from.day, from.hour, from.minute);
     final end = DateTime(to.year, to.month, to.day, to.hour, to.minute);
     lastRangeFrom = start; lastRangeTo = end; lastRangeRows = 0; lastRangeVariant = 'none';
-    if (group.isEmpty && (groupId==null || groupId.trim().isEmpty)) { print('[ClassesRepo][range] brak groupCode/groupId – zwracam pustą listę'); return const []; }
+    if (group.isEmpty && (groupId == null || groupId.trim().isEmpty)) { print('[ClassesRepo][range] brak groupCode/groupId – zwracam pustą listę'); return const []; }
 
     // Serwerowo pobieramy CAŁY zakres bez filtrów podgrup (poza grupą) – filtr lokalnie daje pełną kontrolę.
     List data = <dynamic>[];
@@ -551,8 +643,8 @@ class ClassesRepository {
     }
 
     // 5) jeśli nadal pusto, spróbuj bezpośrednio po id (ostatnia deska ratunku)
-    if (data.isEmpty && !resolvedGroupId.isNullOrEmpty) {
-      final id = resolvedGroupId!;
+    if (data.isEmpty && resolvedGroupId != null && resolvedGroupId.isNotEmpty) {
+      final id = resolvedGroupId;
       try {
         final rows = await _supabaseClient.from('zajecia_grupy').select().eq('id', id).maybeSingle();
         if (rows != null) data = [rows];
@@ -572,7 +664,16 @@ class ClassesRepository {
 
     for (int i=0;i<data.length;i++){ final d=data[i]; if(d is Map && d.containsKey('grupy')) d.remove('grupy'); }
     final list = <ClassModel>[];
-    for (final r in data) { try { list.add(ClassModel.fromMap(Map<String,dynamic>.from(r as Map))); } catch(e){ print('[ClassesRepo][range][PARSE] $e'); } }
+    for (final r in data) {
+      try {
+        // użyj defensywnego parsera, który normalizuje daty do lokalnej strefy
+        final prepared = Map<String,dynamic>.from(r as Map);
+        final model = parseRowToClassModel(prepared);
+        list.add(model);
+      } catch(e){
+        print('[ClassesRepo][range][PARSE] $e');
+      }
+    }
 
     final lowerSubs = subgroups.map((e)=>e.toLowerCase()).toSet();
     if (lowerSubs.isNotEmpty) {
@@ -672,7 +773,7 @@ class ClassesRepository {
           final rpc = await _supabaseClient.rpc('get_subgroups_for_group', params: {'p_kod_grupy': g});
           if (rpc != null && rpc is List) {
             final List<String> out = rpc.map((e)=> e.toString()).toList();
-            _subgroupsCache[g] = _SubgroupsCacheEntry(out, DateTime.now());
+            _subgroupsCache[g] = _SubgroupsCacheEntry(out);
             return out;
           }
         } catch (e) { print('[ClassesRepo][subgroups] rpc err $e'); }
@@ -741,7 +842,13 @@ class ClassesRepository {
           .order('od', ascending: true) as List<dynamic>;
       final list = <ClassModel>[];
       for (final r in data) {
-        try { list.add(ClassModel.fromMap(Map<String,dynamic>.from(r as Map))); } catch (e) { print('[ClassesRepo][teacherRange][PARSE] $e'); }
+        try {
+          final prepared = Map<String,dynamic>.from(r as Map);
+          final model = parseRowToClassModel(prepared);
+          list.add(model);
+        } catch (e) {
+          print('[ClassesRepo][teacherRange][PARSE] $e');
+        }
       }
       return list;
     } catch (e) {
@@ -801,7 +908,7 @@ class ClassesRepository {
     var normalized = instRaw.replaceAll('\r', '').replaceAll('\t', ' ');
     // Usuń zero-width i soft-hyphen oraz innych kontrolnych, zamień NBSP na zwykłą spację
     normalized = normalized
-        .replaceAll(RegExp(r'[\u200B\u200C\u200D\u2060\u00AD]'), '')
+        .replaceAll(RegExp(r'[\u200B\u200C\u200D\u2060\u00AD]'), ' ')
         .replaceAll('\u00A0', ' ');
 
     // Rozbijaj po nowych liniach, usuń puste i przytnij
@@ -1040,6 +1147,71 @@ class ClassesRepository {
     }
   }
 
+  /// Referencyjne zapytania SQL (PostgreSQL) do agregacji typów zajęć per przedmiot.
+  /// Przechowywane w kodzie dla wygody dev/DB – można użyć przy tworzeniu widoków/RPC.
+  static const String subjectTypesAggregationSQL = r'''
+-- Agregacja rodzajów zajęć (rz/typ/type) per przedmiot dla wskazanej grupy.
+-- Wersja PostgreSQL.
+
+-- Wariant 1: parametr: kod_grupy (jedna grupa)
+-- Zwraca jedną linię na przedmiot oraz listę typów zajęć jako połączony string.
+-- Używa kolumn typ/rz/type w zależności od dostępności.
+WITH src AS (
+  SELECT
+    z.przedmiot,
+    COALESCE(NULLIF(TRIM(z.typ), ''), NULLIF(TRIM(z.rz), ''), NULLIF(TRIM(z.type), '')) AS rodzaj
+  FROM zajecia_grupy z
+  JOIN grupy g ON z.grupa_id = g.id
+  WHERE g.kod_grupy = :kod_grupy
+)
+SELECT
+  przedmiot,
+  STRING_AGG(DISTINCT rodzaj, ', ' ORDER BY rodzaj) AS rodzaje_zajec
+FROM src
+WHERE rodzaj IS NOT NULL AND rodzaj <> ''
+GROUP BY przedmiot
+ORDER BY przedmiot;
+
+-- Wariant 2: dla wielu grup (lista kodów)
+WITH src AS (
+  SELECT
+    g.kod_grupy,
+    z.przedmiot,
+    COALESCE(NULLIF(TRIM(z.typ), ''), NULLIF(TRIM(z.rz), ''), NULLIF(TRIM(z.type), '')) AS rodzaj
+  FROM zajecia_grupy z
+  JOIN grupy g ON z.grupa_id = g.id
+  WHERE g.kod_grupy = ANY(:kody_grup)
+)
+SELECT
+  kod_grupy,
+  przedmiot,
+  STRING_AGG(DISTINCT rodzaj, ', ' ORDER BY rodzaj) AS rodzaje_zajec
+FROM src
+WHERE rodzaj IS NOT NULL AND rodzaj <> ''
+GROUP BY kod_grupy, przedmiot
+ORDER BY kod_grupy, przedmiot;
+
+-- Wariant 3 (pivot/flag): kolumny-flagii dla popularnych typów
+WITH src AS (
+  SELECT
+    z.przedmiot,
+    LOWER(COALESCE(NULLIF(TRIM(z.typ), ''), NULLIF(TRIM(z.rz), ''), NULLIF(TRIM(z.type), ''))) AS rodzaj
+  FROM zajecia_grupy z
+  JOIN grupy g ON z.grupa_id = g.id
+  WHERE g.kod_grupy = :kod_grupy
+)
+SELECT
+  przedmiot,
+  MAX(CASE WHEN rodzaj IN ('wykład','wyklad','wyk') THEN 1 ELSE 0 END) AS ma_wyklad,
+  MAX(CASE WHEN rodzaj IN ('ćwiczenia','cwiczenia','ćw','cw') THEN 1 ELSE 0 END) AS ma_cwiczenia,
+  MAX(CASE WHEN rodzaj IN ('laboratorium','labor','lab') THEN 1 ELSE 0 END) AS ma_laboratorium,
+  MAX(CASE WHEN rodzaj IN ('projekt','proj') THEN 1 ELSE 0 END) AS ma_projekt,
+  MAX(CASE WHEN rodzaj IN ('seminarium','sem') THEN 1 ELSE 0 END) AS ma_seminarium
+FROM src
+GROUP BY przedmiot
+ORDER BY przedmiot;
+''';
+
   /// Instance wrapper to clear all internal caches. Allows callers to invoke
   /// `ClassesRepository.instance.clearCache()` without touching internals.
   void clearCache() {
@@ -1050,28 +1222,41 @@ class ClassesRepository {
   static void clearAllCaches() {
     _clearCaches();
   }
- }
 
- class _RangeCacheEntry {
+  // Favorites stream (broadcast) to allow UI to react to changes.
+  static final StreamController<Set<String>> _favoritesController = StreamController<Set<String>>.broadcast();
+
+  /// Public stream of favorite keys (e.g. 'group:<id>' or 'teacher:<id>')
+  static Stream<Set<String>> get favoritesStream => _favoritesController.stream;
+
+  static void _notifyFavoritesChanged() async {
+    try {
+      final favs = await loadFavorites();
+      if (!_favoritesController.isClosed) _favoritesController.add(favs);
+    } catch (_) {}
+  }
+}
+
+class _RangeCacheEntry {
   final List<ClassModel> data;
   final DateTime inserted = DateTime.now();
   _RangeCacheEntry(this.data);
- }
+}
 
- class _SubgroupsCacheEntry {
+class _SubgroupsCacheEntry {
   final List<String> data;
   final DateTime inserted = DateTime.now();
   _SubgroupsCacheEntry(this.data);
- }
+}
 
- class _SubjectsCacheEntry {
+class _SubjectsCacheEntry {
   final List<String> data;
   final DateTime inserted = DateTime.now();
   _SubjectsCacheEntry(this.data);
- }
+}
 
- class _TypesCacheEntry {
+class _TypesCacheEntry {
   final List<String> data;
   final DateTime inserted = DateTime.now();
   _TypesCacheEntry(this.data);
- }
+}

@@ -1,108 +1,198 @@
 import 'package:flutter/material.dart';
-import 'package:my_uz/theme/app_colors.dart';
-import 'package:my_uz/theme/text_style.dart';
+import 'package:intl/intl.dart';
+import 'package:my_uz/icons/my_uz_icons.dart';
 
-/// TaskCard – karta “Zadania”
-/// Figma height: 84 px
-/// Wyliczenie: 12 (padding top) + 20 (LabelLarge) + 8 + 32 (2×BodySmall) + 12 (padding bottom) = 84
+/// TaskCard – wygląd jak w makiecie + kompaktowy layout bez zbędnych odstępów.
+/// - szerokość 264 zapewnia rodzic
+/// - tło: #E8DEF8 (możesz nadpisać przez backgroundColor)
+/// - tytuł (Inter 14 w500 #222)
+/// - meta (ikona kalendarza + data „dzień mies.”)
+/// - druga linia: subject (albo type gdy subject pusty)
+/// - opcjonalny awatar 32x32 z inicjałem po prawej
 class TaskCard extends StatelessWidget {
-  static const double _kHeightTask = 84;
-  // Opcjonalne hugging (domyślnie false by zachować look)
-  final bool hugHeight;
-
   final String title;
-  final String description;
-  final String? initial;
-  final Color? backgroundColor;
-  final Color? avatarColor;
+  final DateTime deadline;
+  final String subject;
+  final String? type;
+  final VoidCallback? onTap;
   final bool showAvatar;
+  final Color? backgroundColor;
 
   const TaskCard({
     super.key,
     required this.title,
-    required this.description,
-    this.initial,
-    this.backgroundColor,
-    this.avatarColor,
+    required this.deadline,
+    required this.subject,
+    this.type,
+    this.onTap,
     this.showAvatar = true,
-    this.hugHeight = false,
+    this.backgroundColor,
   });
+
+  static const _kPad = 12.0;
+  static const _kGap = 16.0;
+  static const _kAvatarSize = 32.0;
+
+  static const _titleStyle = TextStyle(
+    color: Color(0xFF222222),
+    fontSize: 14,
+    fontFamily: 'Inter',
+    fontWeight: FontWeight.w500,
+    height: 1.43,
+    letterSpacing: 0.10,
+  );
+
+  static const _metaStyle = TextStyle(
+    color: Color(0xFF494949),
+    fontSize: 12,
+    fontFamily: 'Inter',
+    fontWeight: FontWeight.w400,
+    height: 1.33,
+    letterSpacing: 0.40,
+  );
+
+  static const _subStyle = TextStyle(
+    color: Color(0xFF494949),
+    fontSize: 12,
+    fontFamily: 'Inter',
+    fontWeight: FontWeight.w400,
+    height: 1.33,
+    letterSpacing: 0.40,
+  );
+
+  String get _secondaryText {
+    final s = subject.trim();
+    if (s.isNotEmpty) return s;
+    final t = (type ?? '').trim();
+    if (t.isNotEmpty) return t;
+    return '';
+  }
+
+  String get _initial {
+    final base = subject.trim().isNotEmpty ? subject : title;
+    if (base.trim().isEmpty) return '?';
+    final r = base.trim().characters.first;
+    return r.toUpperCase();
+  }
+
+  String _dayMonth(DateTime d) {
+    final day = DateFormat('d', 'pl').format(d);
+    final mon = DateFormat('LLL', 'pl').format(d);
+    return '$day $mon';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final scale = MediaQuery.of(context).textScaleFactor;
-    final adaptive = hugHeight || scale > 1.0;
+    final hasAvatar = showAvatar;
+    final textWidth = hasAvatar ? 192.0 : 240.0;
 
-    final inner = Container(
-      padding: const EdgeInsets.all(12),
-      decoration: ShapeDecoration(
-        color: backgroundColor ?? AppColors.myUZSysLightSecondaryContainer,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      child: Row(
+    final textColumn = SizedBox(
+      width: textWidth,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Teksty
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: hugHeight ? 2 : 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyle.myUZLabelLarge.copyWith(
-                    color: const Color(0xFF1D192B),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  description,
-                  maxLines: hugHeight ? 3 : 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyle.myUZBodySmall.copyWith(color: const Color(0xFF49454F)),
-                ),
-              ],
-            ),
-          ),
-          if (showAvatar)
-            Padding(
-              padding: const EdgeInsets.only(left: 16),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: ShapeDecoration(
-                  color: avatarColor ?? cs.primary,
-                  shape: const OvalBorder(),
-                ),
-                alignment: Alignment.center,
+          Text(title, style: _titleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(MyUz.calendar, size: 16, color: Color(0xFF494949)),
+              const SizedBox(width: 6),
+              Flexible(
                 child: Text(
-                  initial ?? '',
+                  _dayMonth(deadline),
+                  style: _metaStyle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyle.myUZTitleMedium.copyWith(
-                    color: cs.onPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
                 ),
               ),
-            )
-          else
-            const SizedBox.shrink(),
+            ],
+          ),
+          if (_secondaryText.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(_secondaryText, style: _subStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ],
         ],
       ),
     );
 
-    if (adaptive) {
-      return inner; // rośnie naturalnie
-    }
+    final avatar = hasAvatar
+        ? SizedBox(
+      width: _kAvatarSize,
+      height: _kAvatarSize,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Container(
+              width: _kAvatarSize,
+              height: _kAvatarSize,
+              decoration: const ShapeDecoration(
+                color: Color(0xFF7D5260),
+                shape: OvalBorder(),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            top: 0,
+            child: SizedBox(
+              width: _kAvatarSize,
+              height: _kAvatarSize,
+              child: Center(
+                child: Text(
+                  _initial,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFFFFBFE),
+                    fontSize: 16,
+                    fontFamily: 'Roboto',
+                    fontWeight: FontWeight.w500,
+                    height: 1.50,
+                    letterSpacing: 0.15,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    )
+        : const SizedBox.shrink();
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: _kHeightTask),
-      child: inner,
+    final content = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Flexible(child: textColumn),
+        if (hasAvatar) ...[
+          const SizedBox(width: _kGap),
+          avatar,
+        ],
+      ],
+    );
+
+    final card = Container(
+      padding: const EdgeInsets.all(_kPad),
+      decoration: ShapeDecoration(
+        color: backgroundColor ?? const Color(0xFFE8DEF8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: content,
+    );
+
+    if (onTap == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: card,
+      ),
     );
   }
 }

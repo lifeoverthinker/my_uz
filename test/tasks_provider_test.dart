@@ -48,6 +48,8 @@ void main() {
     final fakeRepo = FakeTasksRepo();
     final fakePlan = FakePlanProvider();
 
+    // provider is created to trigger internal subscriptions; it's intentionally unused by name in the test
+    // ignore: unused_local_variable
     final provider = TasksProvider(planListenable: fakePlan, repository: fakeRepo);
 
     // At start, no calls
@@ -65,4 +67,3 @@ void main() {
     expect(fakeRepo.fetchCalled, isTrue);
   });
 }
-

@@ -1,26 +1,24 @@
-// filepath: c:\Users\Martyna\Documents\GitHub\my_uz\lib\providers\calendar_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/services/classes_repository.dart';
 import 'package:my_uz/providers/user_plan_provider.dart';
 
-/// Provider centralizujący pobieranie tygodni/zakresów dla kalendarza i cache.
+/// Prostszy provider tygodniowy: mapuje monday -> lista zajęć.
+/// - Mniej flag, prostsza semantyka
+/// - Możliwość wstrzyknięcia fetchWeek / loadGroupContext dla testów
 class CalendarProvider extends ChangeNotifier {
   final Map<DateTime, List<ClassModel>> weekCache = {};
   final Set<DateTime> loadingWeeks = {};
-  bool loading = false;
+  bool get loading => loadingWeeks.isNotEmpty;
   bool error = false;
-  String? errorMsg;
+  String? lastError;
 
   static final CalendarProvider instance = CalendarProvider._internal();
 
-  // Injectable hooks for testability
   final Future<List<ClassModel>> Function(DateTime, {String? groupCode, List<String> subgroups, String? groupId}) _fetchWeek;
   final Future<(String?, List<String>, String?)> Function() _loadGroupContext;
 
-  /// Public constructor for tests / alternative wiring. Pass a custom [planListenable]
-  /// (e.g., a fake ChangeNotifier) and optional hooks to override network/prefs access.
   CalendarProvider({
     Listenable? planListenable,
     Future<List<ClassModel>> Function(DateTime, {String? groupCode, List<String> subgroups, String? groupId})? fetchWeek,
@@ -37,19 +35,17 @@ class CalendarProvider extends ChangeNotifier {
   }
 
   void _onPlanChanged() {
-    // When plan changes, clear cache and proactively prefetch current week.
+    // przy zmianie planu czyścimy cache i prosimy o załadowanie aktualnego tygodnia
     clearCache();
-    // try to prefetch the week for today (best-effort)
     ensureWeekLoaded(DateTime.now());
-    notifyListeners();
   }
 
   void clearCache() {
     weekCache.clear();
     loadingWeeks.clear();
-    loading = false;
     error = false;
-    errorMsg = null;
+    lastError = null;
+    notifyListeners();
   }
 
   DateTime _mondayOfWeek(DateTime d) {
@@ -59,20 +55,24 @@ class CalendarProvider extends ChangeNotifier {
 
   DateTime _stripTime(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  /// Ensure the given week is loaded (returns immediately if cached).
+  /// Ensure the week is loaded. This implementation awaits the network call
+  /// which makes it simpler to reason about in UI code.
   Future<void> ensureWeekLoaded(DateTime anyDay, {String? overrideGroupCode, String? overrideGroupId, List<String>? overrideSubgroups}) async {
     final monday = _mondayOfWeek(anyDay);
-    final mondayKey = _stripTime(monday);
-    if (weekCache.containsKey(mondayKey)) return;
-    unawaited(_fetchWeekData(mondayKey, overrideGroupCode: overrideGroupCode, overrideGroupId: overrideGroupId, overrideSubgroups: overrideSubgroups));
-  }
+    final key = _stripTime(monday);
+    if (weekCache.containsKey(key)) return;
 
-  Future<void> _fetchWeekData(DateTime mondayKey, {String? overrideGroupCode, String? overrideGroupId, List<String>? overrideSubgroups}) async {
-    if (loadingWeeks.contains(mondayKey)) return;
-    loadingWeeks.add(mondayKey);
-    loading = true;
+    if (loadingWeeks.contains(key)) {
+      // jeśli już w trakcie ładowania, poczekaj aż się skończy (proste)
+      while (loadingWeeks.contains(key)) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+      return;
+    }
+
+    loadingWeeks.add(key);
     error = false;
-    errorMsg = null;
+    lastError = null;
     notifyListeners();
 
     try {
@@ -90,18 +90,35 @@ class CalendarProvider extends ChangeNotifier {
         groupId = ctx.$3;
       }
 
-      final list = await _fetchWeek(mondayKey, groupCode: groupCode, subgroups: subgroups, groupId: groupId);
-      weekCache[mondayKey] = list;
-
-      // prefetch neighbors
-      unawaited(_fetchWeekData(mondayKey.subtract(const Duration(days: 7)), overrideGroupCode: overrideGroupCode, overrideGroupId: overrideGroupId, overrideSubgroups: overrideSubgroups));
-      unawaited(_fetchWeekData(mondayKey.add(const Duration(days: 7)), overrideGroupCode: overrideGroupCode, overrideGroupId: overrideGroupId, overrideSubgroups: overrideSubgroups));
+      final list = await _fetchWeek(key, groupCode: groupCode, subgroups: subgroups, groupId: groupId).timeout(const Duration(seconds: 12));
+      weekCache[key] = list;
+      // opcjonalnie prefetch neighboring weeks (fire-and-forget)
+      unawaited(_prefetchNeighbor(key.subtract(const Duration(days: 7)), groupCode, groupId, subgroups));
+      unawaited(_prefetchNeighbor(key.add(const Duration(days: 7)), groupCode, groupId, subgroups));
+    } on TimeoutException {
+      error = true;
+      lastError = 'Timeout podczas pobierania danych z serwera';
     } catch (e) {
       error = true;
-      errorMsg = e.toString();
+      lastError = e.toString();
     } finally {
-      loadingWeeks.remove(mondayKey);
-      loading = loadingWeeks.isNotEmpty;
+      loadingWeeks.remove(key);
+      notifyListeners();
+    }
+  }
+
+  Future<void> _prefetchNeighbor(DateTime mondayKey, String? groupCode, String? groupId, List<String> subgroups) async {
+    final k = _stripTime(mondayKey);
+    if (weekCache.containsKey(k) || loadingWeeks.contains(k)) return;
+    loadingWeeks.add(k);
+    notifyListeners();
+    try {
+      final list = await _fetchWeek(k, groupCode: groupCode, subgroups: subgroups, groupId: groupId).timeout(const Duration(seconds: 12));
+      weekCache[k] = list;
+    } catch (_) {
+      // fail silently for prefetch
+    } finally {
+      loadingWeeks.remove(k);
       notifyListeners();
     }
   }

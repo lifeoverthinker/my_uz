@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_uz/navigation/bottom_navigation.dart';
 import 'package:my_uz/screens/onboarding/onboarding_navigator.dart';
@@ -14,9 +15,12 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicjalizacja formatów dat PL (dla Intl).
   await initializeDateFormatting('pl');
   await initializeDateFormatting('pl_PL');
 
+  // Ustawienia systemowego UI.
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
@@ -24,6 +28,7 @@ Future<void> main() async {
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
+  // Supabase (bez crashowania aplikacji).
   try {
     await Supa.init();
   } catch (e) {
@@ -73,6 +78,27 @@ class _MyBootstrapState extends State<MyBootstrap> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       navigatorKey: navigatorKey,
+
+      // Lokalizacje – wymagane przez Material Date/Time pickery i inne komponenty.
+      supportedLocales: const [
+        Locale('pl'),
+        Locale('en'),
+      ],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      localeResolutionCallback: (deviceLocale, supported) {
+        // Preferuj język urządzenia, jeśli wspierany; w przeciwnym razie PL.
+        if (deviceLocale != null) {
+          for (final loc in supported) {
+            if (loc.languageCode == deviceLocale.languageCode) return loc;
+          }
+        }
+        return const Locale('pl');
+      },
+
       home: _body(),
     );
   }
@@ -99,20 +125,22 @@ class _MyBootstrapState extends State<MyBootstrap> {
         ),
       );
     }
+
     if (!_ready) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
     return _onboardingComplete
         ? const HomePage()
         : OnboardingNavigator(
-            onFinishOnboarding: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setBool('onboarding_complete', true);
-              navigatorKey.currentState?.pushReplacement(
-                MaterialPageRoute(builder: (_) => const HomePage()),
-              );
-            },
-          );
+      onFinishOnboarding: () async {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('onboarding_complete', true);
+        navigatorKey.currentState?.pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      },
+    );
   }
 }
 
@@ -127,9 +155,9 @@ class _HomePageState extends State<HomePage> {
 
   // Uporządkowane strony zgodnie z kolejnością zakładek w dolnej nawigacji.
   final List<Widget> _pages = const [
-    HomeScreen(),         // 0
-    CalendarScreen(),     // 1
-    IndexScreen(),        // 2 (Indeks)
+    HomeScreen(), // 0
+    CalendarScreen(), // 1
+    IndexScreen(), // 2 (Indeks)
     PlaceholderPage(title: 'Konto'), // 3 (Konto)
   ];
 

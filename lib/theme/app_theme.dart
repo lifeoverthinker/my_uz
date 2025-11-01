@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 
-/// Klasa zawierająca definicje motywów aplikacji MyUZ
 abstract class AppTheme {
-  /// Motyw jasny aplikacji
   static ThemeData get lightTheme {
     return ThemeData(
-      // Kolory podstawowe
       colorScheme: const ColorScheme(
         brightness: Brightness.light,
         primary: AppColors.myUZSysLightPrimary,
@@ -41,8 +38,6 @@ abstract class AppTheme {
         inversePrimary: AppColors.myUZSysLightInversePrimary,
         surfaceTint: AppColors.myUZSysLightSurfaceTint,
       ),
-
-      // Style tekstu
       textTheme: const TextTheme(
         displayLarge: AppTextStyle.myUZDisplayLarge,
         displayMedium: AppTextStyle.myUZDisplayMedium,
@@ -60,11 +55,17 @@ abstract class AppTheme {
         labelMedium: AppTextStyle.myUZLabelMedium,
         labelSmall: AppTextStyle.myUZLabelSmall,
       ),
-
-      // Ustawienia komponentów
       useMaterial3: true,
-
-      // Konfiguracja AppBar
+      switchTheme: SwitchThemeData(
+        thumbColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) return AppColors.myUZSysLightPrimary;
+          return Colors.white;
+        }),
+        trackColor: MaterialStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(MaterialState.selected)) return AppColors.myUZSysLightPrimary.withOpacity(0.54);
+          return Colors.grey.shade300;
+        }),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.myUZSysLightSurface,
         foregroundColor: AppColors.myUZSysLightOnSurface,
@@ -74,8 +75,6 @@ abstract class AppTheme {
           color: AppColors.myUZSysLightOnSurface,
         ),
       ),
-
-      // Konfiguracja BottomNavigationBar
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.myUZSysLightSurface,
         selectedItemColor: AppColors.myUZSysLightPrimary,
@@ -85,8 +84,6 @@ abstract class AppTheme {
         selectedLabelStyle: AppTextStyle.myUZLabelMedium,
         unselectedLabelStyle: AppTextStyle.myUZLabelMedium,
       ),
-
-      // Konfiguracja przycisków
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.myUZSysLightPrimary,
@@ -98,8 +95,6 @@ abstract class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
       ),
-
-      // Konfiguracja kart
       cardTheme: const CardThemeData(
         color: AppColors.myUZSysLightSurfaceContainerLow,
         elevation: 1,
@@ -111,10 +106,8 @@ abstract class AppTheme {
     );
   }
 
-  /// Motyw ciemny aplikacji
   static ThemeData get darkTheme {
     return ThemeData(
-      // Kolory podstawowe dla ciemnego motywu
       colorScheme: const ColorScheme(
         brightness: Brightness.dark,
         primary: AppColors.myUZSysDarkPrimary,
@@ -148,8 +141,6 @@ abstract class AppTheme {
         inversePrimary: AppColors.myUZSysDarkInversePrimary,
         surfaceTint: AppColors.myUZSysDarkSurfaceTint,
       ),
-
-      // Style tekstu
       textTheme: const TextTheme(
         displayLarge: AppTextStyle.myUZDisplayLarge,
         displayMedium: AppTextStyle.myUZDisplayMedium,
@@ -167,11 +158,17 @@ abstract class AppTheme {
         labelMedium: AppTextStyle.myUZLabelMedium,
         labelSmall: AppTextStyle.myUZLabelSmall,
       ),
-
-      // Ustawienia komponentów dla ciemnego motywu
       useMaterial3: true,
-
-      // Konfiguracja AppBar
+      switchTheme: SwitchThemeData(
+        thumbColor: MaterialStateProperty.resolveWith<Color>((states) {
+          if (states.contains(MaterialState.selected)) return AppColors.myUZSysDarkPrimary;
+          return Colors.white;
+        }),
+        trackColor: MaterialStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(MaterialState.selected)) return AppColors.myUZSysDarkPrimary.withOpacity(0.54);
+          return Colors.grey.shade700;
+        }),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.myUZSysDarkSurface,
         foregroundColor: AppColors.myUZSysDarkOnSurface,
@@ -181,8 +178,6 @@ abstract class AppTheme {
           color: AppColors.myUZSysDarkOnSurface,
         ),
       ),
-
-      // Konfiguracja BottomNavigationBar
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.myUZSysDarkSurface,
         selectedItemColor: AppColors.myUZSysDarkPrimary,
@@ -192,8 +187,6 @@ abstract class AppTheme {
         selectedLabelStyle: AppTextStyle.myUZLabelMedium,
         unselectedLabelStyle: AppTextStyle.myUZLabelMedium,
       ),
-
-      // Konfiguracja przycisków
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.myUZSysDarkPrimary,
@@ -205,8 +198,6 @@ abstract class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
       ),
-
-      // Konfiguracja kart
       cardTheme: const CardThemeData(
         color: AppColors.myUZSysDarkSurfaceContainerLow,
         elevation: 1,

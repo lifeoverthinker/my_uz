@@ -6,14 +6,14 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:my_uz/main.dart';
 
 void main() {
   testWidgets('App boots and shows HomeScreen (onboarding skipped)', (WidgetTester tester) async {
-    // Wymuszamy ustawienie preferencji onboarding_complete na true (pomijamy realny onboarding)
-    // Ponieważ widget test nie uruchamia SharedPreferences normalnie, można pominąć i po prostu
-    // odpalić HomePage bezpośrednio – ale tu testujemy start MyBootstrap.
+    // Mockujemy SharedPreferences tak, żeby onboarding uznany był za ukończony
+    SharedPreferences.setMockInitialValues({'onboarding_complete': true});
 
     await tester.pumpWidget(const MyBootstrap());
     await tester.pumpAndSettle();

@@ -33,6 +33,8 @@ void main() {
     final fakeLoadCtx = FakeLoadGroupContext();
     final fakePlan = FakePlanProvider();
 
+    // provider is created to trigger internal subscriptions; it's intentionally unused by name in the test
+    // ignore: unused_local_variable
     final provider = CalendarProvider(planListenable: fakePlan, fetchWeek: fakeFetch.call, loadGroupContext: fakeLoadCtx.call);
 
     expect(fakeFetch.called, isFalse);
@@ -48,4 +50,3 @@ void main() {
     expect(fakeFetch.called, isTrue, reason: 'fetchWeek should be invoked to prefetch current week');
   });
 }
-
