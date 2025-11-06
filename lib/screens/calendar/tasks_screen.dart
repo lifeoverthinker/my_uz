@@ -49,9 +49,10 @@ class _TasksScreenState extends State<TasksScreen> {
   Future<void> _openDetails(TaskModel task) async {
     final desc = await UserTasksRepository.instance.getTaskDescription(task.id) ?? '';
     if (!mounted) return;
+    // TaskDetailsSheet.show expects positional (context, task, ...)
     await TaskDetailsSheet.show(
       context,
-      task: task,
+      task,
       description: desc,
       onDelete: () async {
         await UserTasksRepository.instance.deleteTask(task.id);
@@ -193,7 +194,11 @@ class _TasksScreenState extends State<TasksScreen> {
             if (_openingSheet) return;
             _openingSheet = true;
             try {
-              final saved = await TaskEditSheet.show(context, null, initialDate: DateTime.now());
+              final saved = await TaskEditSheet.showWithOptions(
+                context,
+                initial: null,
+                initialDate: DateTime.now(),
+              );
               if (saved != null) {
                 try {
                   await UserTasksRepository.instance.upsertTask(saved);

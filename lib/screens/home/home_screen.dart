@@ -167,9 +167,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _openTaskDetails(TaskModel task) async {
     final desc = await UserTasksRepository.instance.getTaskDescription(task.id) ?? '';
     if (!mounted) return;
+    // TaskDetailsSheet.show expects positional (context, task, ...)
     await TaskDetailsSheet.show(
       context,
-      task: task,
+      task,
       description: desc,
       relatedClass: _classes.where((c) => c.subject == task.subject).isNotEmpty
           ? _classes.firstWhere((c) => c.subject == task.subject)

@@ -238,7 +238,12 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
           Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SearchScheduleScreen()));
         },
         onAdd: () async {
-          final saved = await TaskEditSheet.show(context, null, initialDate: DateTime.now());
+          // Use showWithOptions to pass initialDate explicitly
+          final saved = await TaskEditSheet.showWithOptions(
+            context,
+            initial: null,
+            initialDate: DateTime.now(),
+          );
           if (saved != null) {
             try {
               await UserTasksRepository.instance.upsertTask(saved);
@@ -256,7 +261,11 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
           _CircleIconButton(
               icon: const Icon(Icons.add),
               onPressed: () async {
-                final saved = await TaskEditSheet.show(context, null, initialDate: DateTime.now());
+                final saved = await TaskEditSheet.showWithOptions(
+                  context,
+                  initial: null,
+                  initialDate: DateTime.now(),
+                );
                 if (saved != null) {
                   try {
                     await UserTasksRepository.instance.upsertTask(saved);
@@ -593,11 +602,16 @@ class _DrawerItem extends StatelessWidget {
             children: [
               Icon(icon, color: isActive ? Theme.of(context).primaryColor : const Color(0xFF49454F)),
               const SizedBox(width: 12),
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  color: isActive ? Theme.of(context).primaryColor : const Color(0xFF49454F),
+              // Make label ellipsize when too long to avoid overflow in drawer
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                    color: isActive ? Theme.of(context).primaryColor : const Color(0xFF49454F),
+                  ),
                 ),
               ),
             ],
