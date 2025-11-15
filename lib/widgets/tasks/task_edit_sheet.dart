@@ -6,54 +6,18 @@ import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/services/classes_repository.dart';
 import 'package:my_uz/services/rz_dictionary.dart';
-import 'package:my_uz/widgets/sheet_scaffold.dart';
-import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 
 import 'package:my_uz/widgets/date_picker.dart';
-import 'package:my_uz/widgets/full_width_divider.dart';
-
-class TaskEditSheet {
-  /// POPRAWKA: Zmieniono zwracany typ z TaskModel? na Map<String, dynamic>?
-  static Future<Map<String, dynamic>?> show(
-      BuildContext context, {
-        TaskModel? initial,
-        DateTime? initialDate,
-        String? initialDescription,
-      }) {
-    // POPRAWKA: Zmieniono typ generyczny
-    return SheetScaffold.showAsModal<Map<String, dynamic>>(
-      context,
-      child: TaskEditSheetContent(
-        initial: initial,
-        initialDate: initialDate,
-        initialDescription: initialDescription,
-        onSave: null,
-        onClose: () => Navigator.pop(context),
-      ),
-    );
-  }
-
-  static Future<Map<String, dynamic>?> showWithOptions(
-      BuildContext context, {
-        TaskModel? initial,
-        DateTime? initialDate,
-        String? initialDescription,
-      }) =>
-      show(
-        context,
-        initial: initial,
-        initialDate: initialDate,
-        initialDescription: initialDescription,
-      );
-}
+import 'package:my_uz/utils/constants.dart';
+import 'package:my_uz/widgets/sheet_scaffold.dart';
 
 class TaskEditSheetContent extends StatefulWidget {
   final TaskModel? initial;
   final DateTime? initialDate;
   final String? initialDescription;
   final VoidCallback? onClose;
-  final ValueChanged<TaskModel>? onSave;
+  final Function(TaskModel, String?)? onSave;
 
   const TaskEditSheetContent({
     super.key,
@@ -65,18 +29,18 @@ class TaskEditSheetContent extends StatefulWidget {
   });
 
   @override
-  State<TaskEditSheetContent> createState() => _TaskEditSheetContentState();
+  TaskEditSheetContentState createState() => TaskEditSheetContentState();
 }
 
-class _TaskEditSheetContentState extends State<TaskEditSheetContent> {
+class TaskEditSheetContentState extends State<TaskEditSheetContent> {
   late TextEditingController _titleCtrl;
   late TextEditingController _descCtrl;
   late String _selectedSubject;
   late String _selectedType;
   late DateTime _selectedDeadline;
-  bool _isSaving = false;
 
   List<String> _availableTypes = [];
+  Future<List<String>>? _subjectsFuture;
 
   @override
   void initState() {
@@ -87,6 +51,7 @@ class _TaskEditSheetContentState extends State<TaskEditSheetContent> {
     _selectedType = widget.initial?.type ?? '';
     _selectedDeadline = widget.initialDate ?? widget.initial?.deadline ?? DateTime.now();
 
+    _subjectsFuture = ClassesRepository.getSubjectsForDefaultGroup();
     if (_selectedSubject.isNotEmpty) {
       _fetchTypesForSubject(_selectedSubject);
     }
@@ -99,7 +64,7 @@ class _TaskEditSheetContentState extends State<TaskEditSheetContent> {
     super.dispose();
   }
 
-  Future<void> _handleSave() async {
+  Future<void> publicHandleSave() async {
     if (_titleCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tytuł nie może być pusty')),
@@ -107,7 +72,6 @@ class _TaskEditSheetContentState extends State<TaskEditSheetContent> {
       return;
     }
 
-    setState(() => _isSaving = true);
     try {
       final task = TaskModel(
         id: widget.initial?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
@@ -118,22 +82,18 @@ class _TaskEditSheetContentState extends State<TaskEditSheetContent> {
         completed: widget.initial?.completed ?? false,
       );
 
-      // POPRAWKA: Pobieramy też opis
       final description = _descCtrl.text.trim();
 
       if (widget.onSave != null) {
-        // Scenariusz edycji (z TaskDetailsSheet)
-        widget.onSave!(task);
+        widget.onSave!(task, description);
       } else if (mounted) {
-        // Scenariusz dodawania (z Modala)
-        // POPRAWKA: Zwracamy Mapę zamiast samego TaskModel
         Navigator.of(context).pop({
           'task': task,
           'description': description,
         });
       }
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      // (nic do zrobienia)
     }
   }
 
@@ -153,7 +113,6 @@ class _TaskEditSheetContentState extends State<TaskEditSheetContent> {
     }
   }
 
-  // ... (Reszta pliku _showDateTimePicker, _buildSubjectPickerField itp. bez zmian) ...
   Future<void> _showDateTimePicker(BuildContext context) async {
     final selected = await ModalDatePicker.show(
       context,
@@ -163,245 +122,133 @@ class _TaskEditSheetContentState extends State<TaskEditSheetContent> {
     );
     if (selected != null) {
       if (!mounted) return;
-      final time = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.fromDateTime(_selectedDeadline),
-      );
-      if (time != null && mounted) {
-        setState(() => _selectedDeadline =
-            DateTime(selected.year, selected.month, selected.day, time.hour, time.minute));
-      }
+      setState(() => _selectedDeadline =
+          DateTime(selected.year, selected.month, selected.day));
     }
   }
 
-  Future<void> _showNotificationPicker() async {
-    // ...
-  }
-
-  // Ta metoda nie jest już wywoływana, ale może zostać użyta w przyszłości
-  Future<void> _showDescriptionEdit(BuildContext context) async {
-    // ...
-  }
-
-  Widget _buildSubjectPickerField(BuildContext context) {
+  /// Klikalny wiersz (zastępuje _EditRow)
+  Widget _ClickableRow({
+    required IconData icon,
+    required Widget child,
+    VoidCallback? onTap,
+  }) {
     final cs = Theme.of(context).colorScheme;
-    return FutureBuilder<List<String>>(
-      future: ClassesRepository.getSubjectsForDefaultGroup(),
-      builder: (context, snapshot) {
-        final subjects = snapshot.data ?? [];
-        final hasSubjects = subjects.isNotEmpty;
-        final currentLabel = _selectedSubject.isNotEmpty ? _selectedSubject : 'Wybierz przedmiot';
-
-        if (snapshot.connectionState == ConnectionState.waiting && subjects.isEmpty) {
-          return const LinearProgressIndicator();
-        }
-
-        return Row(
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        // 1. POPRAWKA: Dodano padding horyzontalny do wiersza
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center, // Centrowanie
           children: [
-            Icon(MyUz.book_open_01, size: 20, color: cs.onSurfaceVariant),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedSubject.isNotEmpty ? _selectedSubject : null,
-                  isExpanded: true,
-                  hint: Text(
-                    currentLabel,
-                    style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurface),
-                  ),
-                  icon: Icon(Icons.chevron_right, size: 20, color: cs.onSurfaceVariant),
-                  items: subjects.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value, style: AppTextStyle.myUZBodySmall),
-                    );
-                  }).toList(),
-                  onChanged: hasSubjects ? (String? newValue) {
-                    if (newValue != null) {
-                      setState(() {
-                        _selectedSubject = newValue;
-                        _selectedType = '';
-                        _availableTypes = [];
-                      });
-                      _fetchTypesForSubject(newValue);
-                    }
-                  } : null,
-                ),
-              ),
+            AdaptiveIconSlot(
+              iconSize: 20,
+              child: Icon(icon, size: 20, color: cs.onSurfaceVariant),
             ),
+            const SizedBox(width: kIconToTextGap),
+            Expanded(child: child),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildTypePickerField(BuildContext context) {
+  /// 2. POPRAWKA: Nowy, połączony wiersz dla Przedmiotu i Typu
+  Widget _buildCombinedSubjectTypeField(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final hasTypes = _availableTypes.isNotEmpty;
-    final canSelectType = _selectedSubject.isNotEmpty && hasTypes;
+    final textStyle = AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurface);
 
-    final String currentLabel;
+    final canSelectType = _selectedSubject.isNotEmpty;
+    final String typeLabel;
     if (_selectedSubject.isEmpty) {
-      currentLabel = 'Najpierw wybierz przedmiot';
+      typeLabel = 'Najpierw wybierz przedmiot';
     } else if (_selectedType.isNotEmpty) {
-      currentLabel = RzDictionary.getDescription(_selectedType);
-    } else if (hasTypes) {
-      currentLabel = 'Wybierz typ';
+      typeLabel = RzDictionary.getDescription(_selectedType);
     } else {
-      currentLabel = 'Brak typów dla przedmiotu';
+      typeLabel = 'Wybierz typ (opcjonalnie)';
     }
 
-    return Row(
-      children: [
-        Icon(MyUz.check_square_broken, size: 20, color: cs.onSurfaceVariant),
-        const SizedBox(width: 12),
-        Expanded(
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _selectedType.isNotEmpty ? _selectedType : null,
-              isExpanded: true,
-              hint: Text(
-                currentLabel,
-                style: AppTextStyle.myUZBodySmall.copyWith(
-                  color: canSelectType ? cs.onSurface : cs.onSurfaceVariant,
-                ),
-              ),
-              icon: Icon(Icons.chevron_right, size: 20, color: cs.onSurfaceVariant),
-              items: _availableTypes.map((String abbr) {
-                return DropdownMenuItem<String>(
-                  value: abbr,
-                  child: Text(RzDictionary.getDescription(abbr), style: AppTextStyle.myUZBodySmall),
-                );
-              }).toList(),
-              onChanged: canSelectType ? (String? newValue) {
-                if (newValue != null) {
-                  setState(() => _selectedType = newValue);
-                }
-              } : null,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isEditing = widget.initial != null;
-
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return Padding(
+      // 3. POPRAWKA: Dodano padding horyzontalny
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 12, 16, 12),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: Icon(MyUz.x_close, color: cs.onSurface),
-                  tooltip: 'Anuluj',
-                  onPressed: widget.onClose,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    isEditing ? 'Edytuj zadanie' : 'Dodaj zadanie',
-                    style: AppTextStyle.myUZTitleLarge.copyWith(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 20,
-                    ),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: _isSaving ? null : _handleSave,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.myUZSysLightPrimary,
-                  ),
-                  child: Text(
-                    'Zapisz',
-                    style: AppTextStyle.myUZLabelLarge.copyWith(color: Colors.white),
-                  ),
-                ),
-              ],
+          AdaptiveIconSlot(
+            iconSize: 20,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12.0), // Wyrównaj ikonę z pierwszym polem
+              child: Icon(MyUz.book_open_01, size: 20, color: cs.onSurfaceVariant),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: TextField(
-              controller: _titleCtrl,
-              maxLines: null,
-              style: AppTextStyle.myUZHeadlineSmall,
-              decoration: InputDecoration(
-                hintText: 'Dodaj tytuł',
-                border: InputBorder.none,
-                hintStyle: AppTextStyle.myUZHeadlineSmall.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ),
-          const FullWidthDivider(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          const SizedBox(width: kIconToTextGap),
+          Expanded(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSubjectPickerField(context),
-                const SizedBox(height: 12),
-                const FullWidthDivider(),
-                const SizedBox(height: 16),
-                _buildTypePickerField(context),
-                const SizedBox(height: 12),
-                const FullWidthDivider(),
-                const SizedBox(height: 16),
-                _EditableField(
-                  icon: MyUz.calendar,
-                  label: DateFormat('d MMM y, HH:mm', 'pl_PL').format(_selectedDeadline),
-                  onTap: () => _showDateTimePicker(context),
-                ),
-                const SizedBox(height: 12),
-                const FullWidthDivider(),
-                const SizedBox(height: 16),
-                _EditableField(
-                  icon: Icons.notifications_outlined,
-                  label: 'Dodaj powiadomienie',
-                  onTap: _showNotificationPicker,
-                ),
-                const SizedBox(height: 12),
-                const FullWidthDivider(),
-                const SizedBox(height: 16),
+                // --- Wybór Przedmiotu ---
+                FutureBuilder<List<String>>(
+                  future: _subjectsFuture,
+                  builder: (context, snapshot) {
+                    final subjects = snapshot.data ?? [];
+                    final hasSubjects = subjects.isNotEmpty;
+                    final currentLabel = _selectedSubject.isNotEmpty ? _selectedSubject : 'Wybierz przedmiot';
 
-                // --- POCZĄTEK POPRAWKI OPISU ---
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2.0),
-                      child: Icon(Icons.notes, size: 20, color: cs.onSurfaceVariant),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _descCtrl, // Użyj istniejącego kontrolera
-                        maxLines: 5,
-                        minLines: 2,
-                        style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurface),
-                        decoration: InputDecoration(
-                          hintText: 'Dodaj opis',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                          hintStyle: AppTextStyle.myUZBodySmall.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
+                    return DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedSubject.isNotEmpty ? _selectedSubject : null,
+                        isExpanded: true,
+                        hint: Text(
+                          currentLabel,
+                          style: textStyle.copyWith(color: cs.onSurfaceVariant),
                         ),
+                        icon: const SizedBox.shrink(),
+                        items: subjects.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value, style: textStyle),
+                          );
+                        }).toList(),
+                        onChanged: hasSubjects ? (String? newValue) {
+                          if (newValue != null) {
+                            setState(() {
+                              _selectedSubject = newValue;
+                              _selectedType = '';
+                              _availableTypes = [];
+                            });
+                            _fetchTypesForSubject(newValue);
+                          }
+                        } : null,
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-                // --- KONIEC POPRAWKI OPISU ---
+
+                // --- Wybór Typu (dynamicznie) ---
+                // Pojawia się tylko po wybraniu przedmiotu
+                if (canSelectType)
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedType.isNotEmpty ? _selectedType : null,
+                      isExpanded: true,
+                      hint: Text(
+                        typeLabel,
+                        style: textStyle.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                      icon: const SizedBox.shrink(),
+                      items: _availableTypes.map((String abbr) {
+                        return DropdownMenuItem<String>(
+                          value: abbr,
+                          child: Text(RzDictionary.getDescription(abbr), style: textStyle),
+                        );
+                      }).toList(),
+                      onChanged: canSelectType ? (String? newValue) {
+                        if (newValue != null) {
+                          setState(() => _selectedType = newValue);
+                        }
+                      } : null,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -409,63 +256,102 @@ class _TaskEditSheetContentState extends State<TaskEditSheetContent> {
       ),
     );
   }
-}
 
-// Widżet pomocniczy _EditableField (bez zmian)
-class _EditableField extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String? subtitle;
-  final VoidCallback onTap;
-
-  const _EditableField({
-    required this.icon,
-    required this.label,
-    this.subtitle,
-    required this.onTap,
-  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
+
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // --- POLE TYTUŁU ---
           Padding(
-            padding: const EdgeInsets.only(top: 2.0),
-            child: Icon(icon, size: 20, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+            // 4. POPRAWKA: Dodano padding horyzontalny
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: AppTextStyle.myUZBodySmall.copyWith(
-                    color: cs.onSurface,
+                const AdaptiveIconSlot(iconSize: 24, child: SizedBox()),
+                const SizedBox(width: kIconToTextGap),
+                Expanded(
+                  child: TextField(
+                    controller: _titleCtrl,
+                    maxLines: null,
+                    autofocus: true,
+                    style: AppTextStyle.myUZHeadlineMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Dodaj tytuł',
+                      border: InputBorder.none,
+                      hintStyle: AppTextStyle.myUZHeadlineMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurfaceVariant.withOpacity(0.7),
+                      ),
+                    ),
                   ),
                 ),
-                if (subtitle != null && subtitle!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle!,
-                    style: AppTextStyle.myUZBodySmall.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
               ],
             ),
           ),
+
+          const Divider(height: 1, thickness: 1), // --- SEPARATOR ---
+
+          // --- GRUPA: DATA ---
+          _ClickableRow(
+            icon: MyUz.calendar,
+            onTap: () => _showDateTimePicker(context),
+            child: Text(
+              // 5. POPRAWKA: Format daty
+              DateFormat('E, d MMM y', 'pl_PL').format(_selectedDeadline),
+              style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurface),
+            ),
+          ),
+
+          const Divider(height: 1, thickness: 1), // --- SEPARATOR ---
+
+          // --- GRUPA: PRZEDMIOT I TYP ---
+          _buildCombinedSubjectTypeField(context),
+
+          const Divider(height: 1, thickness: 1), // --- SEPARATOR ---
+
+          // --- GRUPA: OPIS ---
           Padding(
-            padding: const EdgeInsets.only(top: 2.0),
-            child: Icon(Icons.chevron_right, size: 20, color: cs.onSurfaceVariant),
+            // 6. POPRAWKA: Dodano padding horyzontalny
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              // 7. POPRAWKA: Wyrównanie ikonki opisu
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                AdaptiveIconSlot(
+                  iconSize: 20,
+                  child: Padding(
+                    padding: const EdgeInsets.all(0),
+                    child: Icon(Icons.notes, size: 20, color: cs.onSurfaceVariant),
+                  ),
+                ),
+                const SizedBox(width: kIconToTextGap),
+                Expanded(
+                  child: TextField(
+                    controller: _descCtrl,
+                    maxLines: null,
+                    minLines: 3,
+                    style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurface),
+                    decoration: InputDecoration(
+                      hintText: 'Dodaj opis',
+                      border: InputBorder.none,
+                      hintStyle: AppTextStyle.myUZBodySmall.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

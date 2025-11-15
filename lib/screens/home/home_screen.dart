@@ -1,6 +1,6 @@
 // Plik: lib/screens/home/home_screen.dart
 import 'dart:async';
-import 'package:flutter/material.dart'; // <-- POPRAWKA IMPORTU
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:my_uz/providers/tasks_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,7 +17,6 @@ import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/models/event_model.dart';
 
 // Szczegóły/edycja
-import 'package:my_uz/widgets/tasks/task_details.dart';
 import 'package:my_uz/screens/home/details/class_details.dart';
 import 'package:my_uz/screens/home/details/event_details.dart';
 
@@ -26,7 +25,8 @@ import 'components/upcoming_classes.dart';
 import 'components/tasks_section.dart';
 import 'components/events_section.dart';
 
-import 'package:my_uz/widgets/top_menu_button.dart';
+// Import dla filtrowania dat
+import 'package:my_uz/utils/date_utils.dart' as date_utils;
 
 /// HomeScreen – Dashboard (Figma – obraz 4)
 class HomeScreen extends StatefulWidget {
@@ -58,13 +58,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Timer? _refreshTimer;
 
   List<ClassModel> _classes = const [];
-  List<TaskModel> _tasks = const []; // To będzie teraz zasilane przez providera
+  List<TaskModel> _tasks = const []; // Ta lista będzie teraz filtrowana
   List<EventModel> _events = const [];
 
   @override
   void initState() {
     super.initState();
-    // 1. Pobierz zadania przez Providera
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TasksProvider>().refresh();
     });
@@ -87,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadPrefs() async {
+    // ... (bez zmian)
     try {
       final p = await SharedPreferences.getInstance();
       final mode = p.getString(_kPrefOnbMode);
@@ -137,6 +137,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadTodayClasses() async {
+    // ... (bez zmian)
     if (_classesLoading) return;
     setState(() => _classesLoading = true);
     try {
@@ -159,21 +160,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _onTapClass(ClassModel c) async {
+    // ... (bez zmian)
     await ClassDetailsSheet.open(context, c);
   }
 
   void _onTapEvent(EventModel e) {
+    // ... (bez zmian)
     EventDetailsSheet.open(context, e);
   }
 
   Future<void> _openTaskDetails(TaskModel task) async {
-    // Użyj ujednoliconej metody z TasksProvider
+    // ... (bez zmian)
     if (!mounted) return;
     await context.read<TasksProvider>().openTaskDetails(context, task);
   }
 
   @override
   void dispose() {
+    // ... (bez zmian)
     WidgetsBinding.instance.removeObserver(this);
     _refreshTimer?.cancel();
     super.dispose();
@@ -181,19 +185,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // ... (bez zmian)
     if (state == AppLifecycleState.resumed) {
       _loadPrefs();
       _loadTodayClasses();
-      // Odśwież zadania przy powrocie do aplikacji
       if (mounted) context.read<TasksProvider>().refresh();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Pobierz stan zadań z TasksProvider
+    // 1. POPRAWKA: Pobranie i filtrowanie zadań
     final tasksProvider = context.watch<TasksProvider>();
-    _tasks = tasksProvider.items.map((e) => e.model).toList();
+    final allTasks = tasksProvider.items.map((e) => e.model).toList();
+
+    // Definiuj bieżący tydzień
+    final now = DateTime.now();
+    final monday = date_utils.mondayOfWeek(now);
+    final sunday = monday.add(const Duration(days: 7));
+
+    // Pokaż aktywne zadania z bieżącego tygodnia
+    _tasks = allTasks.where((task) {
+      final deadline = task.deadline;
+      return !task.completed &&
+          (deadline.isAfter(monday) || date_utils.isSameDay(deadline, monday)) &&
+          deadline.isBefore(sunday);
+    }).toList();
+
+    // Sortuj wg daty
+    _tasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+
 
     final cs = Theme.of(context).colorScheme;
     const double footerTopSpacing = 10;
@@ -252,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                       const SizedBox(height: 12),
                       TasksSection(
-                        tasks: _tasks, // Użyj listy zadań z providera
+                        tasks: _tasks, // Przekaż przefiltrowaną listę
                         onTap: _openTaskDetails,
                         onGoToTasks: () => widget.onNavigateToCalendar(1),
                       ),
@@ -276,8 +297,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 }
 
+// Reszta pliku (_Header, _ContentContainer, HomeFooter, _ActionCircle, _plDate, _noop)
+// pozostaje bez zmian.
+
 /// HEADER
 class _Header extends StatelessWidget {
+  // ... (bez zmian)
   final String dateText;
   final String greetingName;
   final String? subtitle;
@@ -341,6 +366,7 @@ class _Header extends StatelessWidget {
 }
 
 class _ContentContainer extends StatelessWidget {
+  // ... (bez zmian)
   final Widget child;
   const _ContentContainer({required this.child});
 
@@ -354,6 +380,7 @@ class _ContentContainer extends StatelessWidget {
 }
 
 class HomeFooter extends StatelessWidget {
+  // ... (bez zmian)
   final Color color;
   const HomeFooter({super.key, required this.color});
 
@@ -375,6 +402,7 @@ class HomeFooter extends StatelessWidget {
 }
 
 class _ActionCircle extends StatelessWidget {
+  // ... (bez zmian)
   final IconData icon;
   final String? tooltip;
   final VoidCallback onTap;
@@ -435,8 +463,8 @@ class _ActionCircle extends StatelessWidget {
   }
 }
 
-/// Data PL: Wtorek, 16 lipca
 String _plDate(DateTime d) {
+  // ... (bez zmian)
   const dni = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela'];
   const mies = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
   return '${dni[d.weekday - 1]}, ${d.day} ${mies[d.month - 1]}';

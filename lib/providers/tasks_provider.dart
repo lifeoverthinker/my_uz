@@ -1,12 +1,10 @@
 // Plik: lib/providers/tasks_provider.dart
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart'; // <-- DODANO
+import 'package:flutter/material.dart';
 import 'package:my_uz/services/i_user_tasks_repository.dart';
-// POPRAWKA: Usunięto nieużywany import
-// import 'package:my_uz/services/sqlite_user_store.dart';
 import 'package:my_uz/providers/user_plan_provider.dart';
 import 'package:my_uz/models/task_model.dart';
-import 'package:my_uz/widgets/tasks/task_details.dart'; // <-- DODANO
+import 'package:my_uz/widgets/tasks/task_details.dart';
 
 enum TaskFilter { all, today, upcoming, completed }
 
@@ -70,20 +68,16 @@ class TasksProvider extends ChangeNotifier {
     }
   }
 
-  /// POPRAWKA: Dodana metoda pomocnicza
   String? getTaskDescription(String id) {
     try {
-      // Znajdź opis w już załadowanej liście 'items'
       final entry = items.firstWhere((it) => it.model.id == id);
       return entry.description;
     } catch (e) {
-      // Nie znaleziono w cache
       return null;
     }
   }
 
-  /// DODANA METODA (Zasada DRY - Don't Repeat Yourself)
-  /// Otwiera modal detali i zarządza logiką zapisu/usunięcia/edycji
+  /// Otwiera istniejące zadanie
   Future<void> openTaskDetails(BuildContext context, TaskModel task) async {
     final desc = getTaskDescription(task.id);
     if (!context.mounted) return;
@@ -92,30 +86,59 @@ class TasksProvider extends ChangeNotifier {
       context,
       task,
       description: desc,
-      // relatedClass: ... (można dodać logikę szukania zajęć, jeśli potrzebne)
+      startInEditMode: false, // Otwórz w trybie detali
       onDelete: () async {
-        await deleteTask(task.id); // Użyj metody providera
+        await deleteTask(task.id);
         if (context.mounted) Navigator.of(context).pop();
       },
       onToggleCompleted: (completed) async {
-        await setTaskCompleted(task.id, completed); // Użyj metody providera
+        await setTaskCompleted(task.id, completed);
       },
-      onSaveEdit: (updatedTask) async {
-        // Przy edycji zachowaj istniejący opis
-        final existingDesc = getTaskDescription(updatedTask.id);
-        await upsertTask(updatedTask, description: existingDesc); // Użyj metody providera
+      onSaveEdit: (updatedTask, newDescription) async {
+        await upsertTask(updatedTask, description: newDescription);
       },
     );
   }
 
+  /// Otwiera nowe, puste zadanie w trybie edycji
+  Future<void> showAddTaskSheet(BuildContext context) async {
+    if (!context.mounted) return;
 
-  /// POPRAWKA: Dodana metoda do zapisu (zastępuje starą 'upsertTask')
+    // Utwórz tymczasowy model dla nowego zadania
+    final newTask = TaskModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(), // Tymczasowe ID
+      title: '',
+      deadline: DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
+      subject: '',
+      completed: false,
+    );
+
+    await TaskDetailsSheet.show(
+      context,
+      newTask,
+      description: '',
+      startInEditMode: true, // Otwórz od razu w trybie edycji
+      onDelete: () {
+        // "Usuń" po prostu zamyka modal, bo zadanie nie jest zapisane
+        if (context.mounted) Navigator.of(context).pop();
+      },
+      onToggleCompleted: (completed) {
+        // Ignoruj, zadanie nie jest jeszcze zapisane
+      },
+      onSaveEdit: (updatedTask, newDescription) async {
+        // Zapisz nowe zadanie
+        await upsertTask(updatedTask, description: newDescription);
+        // Po zapisie, provider sam odświeży listę,
+        // a formularz przełączy się w tryb detali (dzięki _handleSave)
+      },
+    );
+  }
+
   Future<void> upsertTask(TaskModel task, {String? description}) async {
     await _repo.upsertTask(task, description: description);
     await refresh();
   }
 
-  /// POPRAWKA: Uproszczono metodę, by wywoływała główną funkcję upsert
   Future<void> addTask(TaskModel task, String? description) async {
     await upsertTask(task, description: description);
   }

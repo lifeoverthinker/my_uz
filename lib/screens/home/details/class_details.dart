@@ -1,12 +1,12 @@
+// Plik: lib/screens/home/details/class_details.dart
 import 'package:flutter/material.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
-import 'package:my_uz/models/class_model.dart'; // <<< POPRAWIONY IMPORT
+import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/widgets/sheet_scaffold.dart';
+import 'package:my_uz/utils/constants.dart'; // Import globalnych stałych
 
-/// Arkusz szczegółów zajęć – Google Calendar style
-/// Używa teraz reużywalnego SheetScaffold dla spójności.
 abstract class ClassDetailsSheet {
   static Future<void> open(BuildContext context, ClassModel c) {
     return showModalBottomSheet<void>(
@@ -22,7 +22,7 @@ abstract class ClassDetailsSheet {
 
 const double _kMinChildFraction = 0.40;
 const double _kMaxChildFraction = 1.0;
-const double _kIconToTextGap = 12;
+// Stała _kIconToTextGap została przeniesiona do constants.dart
 
 class _ClassDetailsDraggable extends StatelessWidget {
   final ClassModel classModel;
@@ -119,13 +119,13 @@ class _DetailsContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center, // center vs icon slot
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const AdaptiveIconSlot(
               iconSize: 16,
               child: _TypeColorMarker(color: AppColors.myUZSysLightPrimaryContainer),
             ),
-            const SizedBox(width: _kIconToTextGap),
+            const SizedBox(width: kIconToTextGap), // Użycie stałej globalnej
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,12 +154,12 @@ class _DetailsContent extends StatelessWidget {
         ),
         const SizedBox(height: headerBottomGap),
         if (typeLabel != null) ...[
-          DetailRow(icon: MyUz.stand, label: typeLabel),
+          DetailRow(icon: MyUz.stand, label: typeLabel), // Błąd był tutaj
           const SizedBox(height: rowVerticalGap),
         ],
-        DetailRow(icon: MyUz.marker_pin_04, label: classModel.room.isNotEmpty ? classModel.room : 'Sala -'),
-        const SizedBox(height: 0),
-        DetailRow(icon: MyUz.user_01, label: classModel.lecturer.isNotEmpty ? classModel.lecturer : 'Prowadzący -'),
+        DetailRow(icon: MyUz.marker_pin_04, label: classModel.room.isNotEmpty ? classModel.room : 'Sala -'), // Błąd był tutaj
+        const SizedBox(height: 12), // Przywrócono 12 (zamiast 0) dla odstępu
+        DetailRow(icon: MyUz.user_01, label: classModel.lecturer.isNotEmpty ? classModel.lecturer : 'Prowadzący -'), // Błąd był tutaj
       ],
     );
   }
@@ -214,3 +214,39 @@ class _TypeColorMarker extends StatelessWidget {
     );
   }
 }
+
+// +++ POCZĄTEK BRAKUJĄCEGO KODU +++
+// Ta klasa została przypadkowo usunięta w poprzedniej wersji
+
+class DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const DetailRow({super.key, required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    // const double kIconToTextGap = 12; // Używamy teraz stałej globalnej
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center, // Wyrównanie do środka
+      children: [
+        AdaptiveIconSlot(
+          iconSize: 20,
+          child: Icon(icon, size: 20, color: AppColors.myUZSysLightPrimary),
+        ),
+        const SizedBox(width: kIconToTextGap), // Użycie stałej globalnej
+        Expanded(
+          child: Text(
+            label,
+            style: AppTextStyle.myUZBodyMedium.copyWith(
+              color: cs.onSurface,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+// +++ KONIEC BRAKUJĄCEGO KODU +++

@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/models/class_model.dart';
-import 'package:my_uz/models/task_model.dart'; // <-- POPRAWKA: Dodano import
 import 'package:my_uz/providers/calendar_provider.dart';
-// POPRAWKA: Dodano importy providerów
 import 'package:my_uz/providers/tasks_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -16,10 +14,7 @@ import 'package:my_uz/screens/calendar/teacher_schedule_screen.dart';
 import 'package:my_uz/screens/calendar/search_schedule_screen.dart';
 import 'package:my_uz/screens/calendar/tasks_screen.dart';
 import 'package:my_uz/services/classes_repository.dart';
-// POPRAWKA: Usunięto bezpośredni import repozytorium
-// import 'package:my_uz/services/user_tasks_repository.dart';
-import 'package:my_uz/utils/date_utils.dart'; // <-- POPRAWKA: Dodano brakujący import
-import 'package:my_uz/widgets/tasks/task_edit_sheet.dart';
+import 'package:my_uz/utils/date_utils.dart';
 import 'package:my_uz/widgets/top_menu_button.dart';
 import 'dart:async';
 
@@ -205,7 +200,6 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
         } else if (type == 'teacher') {
           if (label.isEmpty) {
             try {
-              // POPRAWKA: Użyj 'teacherId' (zgodnie z class_model.dart)
               final meta = await ClassesRepository.getTeacherDetails(token);
               if (meta != null) label = (meta['nazwa'] as String?) ?? token;
             } catch (_) {
@@ -248,20 +242,8 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
           Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SearchScheduleScreen()));
         },
         onAdd: () async {
-          // POPRAWKA: Oczekujemy Mapy i używamy Providera
-          final result = await TaskEditSheet.showWithOptions(
-            context,
-            initial: null,
-            initialDate: DateTime.now(),
-          );
-          if (result != null) {
-            try {
-              final task = result['task'] as TaskModel;
-              final desc = result['description'] as String?;
-              if (mounted) {
-                await context.read<TasksProvider>().addTask(task, desc);
-              }
-            } catch (_) {}
+          if (mounted) {
+            await context.read<TasksProvider>().showAddTaskSheet(context);
           }
         },
       );
@@ -274,20 +256,8 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
           _CircleIconButton(
               icon: const Icon(Icons.add),
               onPressed: () async {
-                // POPRAWKA: Oczekujemy Mapy i używamy Providera
-                final result = await TaskEditSheet.showWithOptions(
-                  context,
-                  initial: null,
-                  initialDate: DateTime.now(),
-                );
-                if (result != null) {
-                  try {
-                    final task = result['task'] as TaskModel;
-                    final desc = result['description'] as String?;
-                    if (mounted) {
-                      await context.read<TasksProvider>().addTask(task, desc);
-                    }
-                  } catch (_) {}
+                if (mounted) {
+                  await context.read<TasksProvider>().showAddTaskSheet(context);
                 }
               }),
           const SizedBox(width: 8),
@@ -343,7 +313,9 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
                     : AnimatedSwitcher(
                   duration: const Duration(milliseconds: 220),
                   child: SizedBox(
+                    // --- POPRAWKA TUTAJ ---
                     key: ValueKey<String>(_selectedDay.toIso8601String()),
+                    // --- KONIEC POPRAWKI ---
                     child: CalendarDayView(day: _selectedDay, classes: selectedClasses, onNextDay: _nextDay, onPrevDay: _prevDay),
                   ),
                 ),
@@ -619,7 +591,6 @@ class _DrawerItem extends StatelessWidget {
             children: [
               Icon(icon, color: isActive ? Theme.of(context).primaryColor : const Color(0xFF49454F)),
               const SizedBox(width: 12),
-              // Make label ellipsize when too long to avoid overflow in drawer
               Expanded(
                 child: Text(
                   label,

@@ -1,18 +1,13 @@
 // Plik: lib/screens/calendar/tasks_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-// POPRAWKA: Usunięto nieużywany import
-// import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/providers/tasks_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/widgets/cards/task_card.dart';
-import 'package:my_uz/widgets/tasks/task_details.dart';
-import 'package:my_uz/widgets/tasks/task_edit_sheet.dart';
-
-// POPRAWKA: Import dla MyUz (AppBar)
 import 'package:my_uz/icons/my_uz_icons.dart';
+import 'package:my_uz/theme/app_colors.dart';
 
 class TasksScreen extends StatefulWidget {
   final bool showAppBar;
@@ -22,9 +17,8 @@ class TasksScreen extends StatefulWidget {
   State<TasksScreen> createState() => _TasksScreenState();
 }
 
-class _TasksScreenState extends State<TasksScreen> {
-  bool _openingSheet = false; // guard
-
+// 1. Dodano 'with TickerProviderStateMixin' dla TabBar
+class _TasksScreenState extends State<TasksScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
@@ -34,29 +28,111 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   Future<void> _openDetails(TaskModel task) async {
-    final provider = context.read<TasksProvider>();
-    final desc = provider.getTaskDescription(task.id);
     if (!mounted) return;
+    await context.read<TasksProvider>().openTaskDetails(context, task);
+  }
 
-    await TaskDetailsSheet.show(
-      context,
-      task,
-      description: desc,
-      onDelete: () async {
-        await provider.deleteTask(task.id);
-        if (mounted) Navigator.of(context).pop();
-      },
-      onToggleCompleted: (completed) async {
-        await provider.setTaskCompleted(task.id, completed);
-      },
-      onSaveEdit: (updatedTask) async {
-        await provider.upsertTask(
-          updatedTask,
-          description: desc,
-        );
-      },
+  PreferredSizeWidget? _buildAppBar(BuildContext tabContext) {
+    if (!widget.showAppBar) return null;
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(100),
+          onTap: () => Navigator.of(context).pop({'openDrawer': true}),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFF7F2F9)),
+            alignment: Alignment.center,
+            child: const Icon(MyUz.menu_01, color: Color(0xFF1D1B20)),
+          ),
+        ),
+      ),
+      title: const Text('Terminarz', style: TextStyle(color: Color(0xFF1D1B20), fontWeight: FontWeight.w600)),
+      centerTitle: false,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add, color: Color(0xFF1D1B20)),
+          onPressed: () async {
+            if (mounted) {
+              await context.read<TasksProvider>().showAddTaskSheet(context);
+            }
+          },
+        ),
+        IconButton(icon: const Icon(MyUz.dots_vertical, color: Color(0xFF1D1B20)), onPressed: () {}),
+        const SizedBox(width: 6),
+      ],
+      // 2. Dodano TabBar
+      bottom: TabBar(
+        controller: DefaultTabController.of(tabContext),
+        tabs: const [
+          Tab(text: 'Aktywne'),
+          Tab(text: 'Zakończone'),
+        ],
+        labelColor: AppColors.myUZSysLightPrimary,
+        unselectedLabelColor: AppColors.myUZSysLightOnSurfaceVariant,
+        indicatorColor: AppColors.myUZSysLightPrimary,
+      ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<TasksProvider>();
+
+    // 3. Podział zadań na dwie listy
+    final allTasksWithDesc = provider.items;
+    final activeTasks = allTasksWithDesc.where((t) => !t.model.completed).map((t) => t.model).toList();
+    final completedTasks = allTasksWithDesc.where((t) => t.model.completed).map((t) => t.model).toList();
+
+    // 4. Zastosowanie DefaultTabController
+    return DefaultTabController(
+      length: 2, // Dwie zakładki
+      child: Builder(
+          builder: (tabContext) {
+            return Scaffold(
+              backgroundColor: Colors.white,
+              appBar: _buildAppBar(tabContext),
+              body: provider.loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
+                controller: DefaultTabController.of(tabContext),
+                children: [
+                  // Zakładka "Aktywne"
+                  _TaskList(
+                    tasks: activeTasks,
+                    onTap: _openDetails,
+                    emptyMessage: 'Brak aktywnych zadań',
+                  ),
+                  // Zakładka "Zakończone"
+                  _TaskList(
+                    tasks: completedTasks,
+                    onTap: _openDetails,
+                    emptyMessage: 'Brak zakończonych zadań',
+                  ),
+                ],
+              ),
+            );
+          }
+      ),
+    );
+  }
+}
+
+/// 5. Reużywalna lista zadań, aby uniknąć duplikacji kodu
+class _TaskList extends StatelessWidget {
+  final List<TaskModel> tasks;
+  final ValueChanged<TaskModel> onTap;
+  final String emptyMessage;
+
+  const _TaskList({
+    required this.tasks,
+    required this.onTap,
+    required this.emptyMessage,
+  });
 
   Map<DateTime, List<TaskModel>> _groupByDay(List<TaskModel> list) {
     final map = <DateTime, List<TaskModel>>{};
@@ -108,8 +184,7 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _groupRow(DateTime date, List<TaskModel> tasks) {
-    final cs = Theme.of(context).colorScheme;
+  Widget _groupRow(BuildContext context, DateTime date, List<TaskModel> tasks) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
@@ -129,9 +204,8 @@ class _TasksScreenState extends State<TasksScreen> {
                       subject: t.subject,
                       type: t.type,
                       showAvatar: false,
-                      backgroundColor: cs.surface,
-                      // POPRAWKA: Ten parametr JEST zdefiniowany w task_card.dart
-                      onTap: () => _openDetails(t),
+                      backgroundColor: AppColors.myUZSysLightPrimaryContainer,
+                      onTap: () => onTap(t),
                     ),
                   ),
                 ],
@@ -143,79 +217,20 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  PreferredSizeWidget? _buildAppBar() {
-    if (!widget.showAppBar) return null;
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(100),
-          onTap: () => Navigator.of(context).pop({'openDrawer': true}),
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFF7F2F9)),
-            alignment: Alignment.center,
-            child: const Icon(MyUz.menu_01, color: Color(0xFF1D1B20)),
-          ),
-        ),
-      ),
-      title: const Text('Terminarz', style: TextStyle(color: Color(0xFF1D1B20), fontWeight: FontWeight.w600)),
-      centerTitle: false,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.add, color: Color(0xFF1D1B20)),
-          onPressed: () async {
-            if (_openingSheet) return;
-            _openingSheet = true;
-            try {
-              final result = await TaskEditSheet.showWithOptions(
-                context,
-                initial: null,
-                initialDate: DateTime.now(),
-              );
-
-              if (result != null) {
-                final task = result['task'] as TaskModel;
-                final desc = result['description'] as String?;
-
-                if (mounted) {
-                  await context.read<TasksProvider>().addTask(task, desc);
-                }
-              }
-            } finally {
-              _openingSheet = false;
-            }
-          },
-        ),
-        IconButton(icon: const Icon(MyUz.dots_vertical, color: Color(0xFF1D1B20)), onPressed: () {}),
-        const SizedBox(width: 6),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TasksProvider>();
+    if (tasks.isEmpty) {
+      return Center(child: Text(emptyMessage, style: AppTextStyle.myUZBodySmall));
+    }
 
-    final tasks = provider.items.map((e) => e.model).toList();
     final grouped = _groupByDay(tasks);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: _buildAppBar(),
-      body: provider.loading
-          ? const Center(child: CircularProgressIndicator())
-          : (tasks.isEmpty
-          ? Center(child: Text('Brak zadań', style: AppTextStyle.myUZBodySmall))
-          : ListView(
-        padding: const EdgeInsets.only(top: 12, bottom: 24),
-        children: [
-          for (final entry in grouped.entries) _groupRow(entry.key, entry.value),
-        ],
-      )),
+    return ListView(
+      padding: const EdgeInsets.only(top: 12, bottom: 24),
+      children: [
+        for (final entry in grouped.entries)
+          _groupRow(context, entry.key, entry.value),
+      ],
     );
   }
 }
