@@ -1,20 +1,12 @@
+// Plik: lib/screens/home/details/class_details.dart
 import 'package:flutter/material.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
+import 'package:my_uz/widgets/sheet_scaffold.dart';
+import 'package:my_uz/utils/constants.dart'; // Import globalnych stałych
 
-/// Arkusz szczegółów zajęć – wariant “Google Calendar style”
-/// RÓŻNICE vs poprzednia wersja:
-/// - NIE zajmuje całego ekranu przy starcie (initialChildSize ~55% wysokości – można przeciągnąć wyżej).
-/// - DraggableScrollableSheet (expand:false) wewnątrz showModalBottomSheet.
-/// - Brak sztucznego wymuszania wysokości -> koniec z overflow / żółtymi liniami.
-/// - Możliwość dalszego przeciągnięcia do maxChildSize (95% ekranu) jak w Calendar.
-/// - Natywna animacja wejścia/wyjścia (slide + fade barrier) Material3.
-///
-/// TODO (opcjonalnie później):
-/// - Dynamiczne dostosowanie initialChildSize do realnej wysokości treści (pomiar po build).
-/// - Akcje (Edytuj / Usuń) w dolnym sticky obszarze.
 abstract class ClassDetailsSheet {
   static Future<void> open(BuildContext context, ClassModel c) {
     return showModalBottomSheet<void>(
@@ -28,16 +20,10 @@ abstract class ClassDetailsSheet {
   }
 }
 
-// KONFIG (fraction wysokości ekranu)
 const double _kMinChildFraction = 0.40;
-const double _kMaxChildFraction = 1.0; // Zmieniono z 0.95 na 1.0
-const double _kTopRadius = 24;
-const double _kHitArea = 48; // hit area dla ikon/markera ala Material (min 48x48)
-const double _kCircleSmall = 32; // dla ikon 16/20
-const double _kCircleLarge = 40; // dla ikon 24
-const double _kIconToTextGap = 12; // odstęp ikona -> tekst
+const double _kMaxChildFraction = 1.0;
+// Stała _kIconToTextGap została przeniesiona do constants.dart
 
-/// Kontener z DraggableScrollableSheet (peek -> expand)
 class _ClassDetailsDraggable extends StatelessWidget {
   final ClassModel classModel;
   const _ClassDetailsDraggable({required this.classModel});
@@ -47,10 +33,10 @@ class _ClassDetailsDraggable extends StatelessWidget {
     return DraggableScrollableSheet(
       expand: false,
       minChildSize: _kMinChildFraction,
-      initialChildSize: 1.0, // Zmieniono na pełną wysokość od razu
+      initialChildSize: 1.0,
       maxChildSize: _kMaxChildFraction,
       builder: (context, scrollController) {
-        return _SheetScaffold(
+        return _SheetScaffoldBody(
           scrollController: scrollController,
           child: _DetailsContent(classModel: classModel),
         );
@@ -59,25 +45,25 @@ class _ClassDetailsDraggable extends StatelessWidget {
   }
 }
 
-/// Szkielet arkusza: tło + uchwyt + przycisk X + przewijalna treść
-class _SheetScaffold extends StatelessWidget {
+class _SheetScaffoldBody extends StatelessWidget {
   final Widget child;
   final ScrollController scrollController;
-  const _SheetScaffold({required this.child, required this.scrollController});
+  const _SheetScaffoldBody({required this.child, required this.scrollController});
 
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
     const horizontal = 16.0;
-    const handleTopGap = 8.0; // od górnej krawędzi arkusza do uchwytu
-    const handleToXGap = 8.0; // uchwyt -> X
-    const xToHeaderGap = 12.0; // X -> nagłówek (kolorowy marker + tytuł)
+    const handleTopGap = 8.0;
+    const handleToXGap = 8.0;
+    const xToHeaderGap = 12.0;
+
     return Container(
       margin: EdgeInsets.zero,
       padding: EdgeInsets.only(top: topPadding + handleTopGap),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(_kTopRadius)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(color: Color(0x4C000000), blurRadius: 3, offset: Offset(0, 1)),
           BoxShadow(color: Color(0x26000000), blurRadius: 8, offset: Offset(0, 4), spreadRadius: 3),
@@ -88,14 +74,11 @@ class _SheetScaffold extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Grip
-            const _Grip(),
+            const GripHandle(),
             const SizedBox(height: handleToXGap),
-            // Pasek akcji (tylko X na razie)
             Row(
               children: [
-                // Przycisk X w tym samym 48x48 slocie co ikony sekcji (circle 40 dla ikony 24)
-                _AdaptiveIconSlot(
+                AdaptiveIconSlot(
                   iconSize: 24,
                   semanticsLabel: 'Zamknij szczegóły zajęć',
                   isButton: true,
@@ -106,7 +89,6 @@ class _SheetScaffold extends StatelessWidget {
               ],
             ),
             const SizedBox(height: xToHeaderGap),
-            // Treść przewijalna
             Expanded(
               child: SingleChildScrollView(
                 controller: scrollController,
@@ -120,7 +102,6 @@ class _SheetScaffold extends StatelessWidget {
   }
 }
 
-/// Właściwa treść (nagłówek + sekcje ikon)
 class _DetailsContent extends StatelessWidget {
   final ClassModel classModel;
   const _DetailsContent({required this.classModel});
@@ -131,20 +112,20 @@ class _DetailsContent extends StatelessWidget {
     final typeLabel = _mapType(classModel.type);
     final dateLine = _dateLine(classModel.startTime, classModel.endTime);
 
-    const headerBottomGap = 28.0; // zwiększony odstęp od nagłówka do sekcji szczegółów
+    const headerBottomGap = 28.0;
     const rowVerticalGap = 12.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const _AdaptiveIconSlot(
-              iconSize: 16, // marker 16 w kole 32
+            const AdaptiveIconSlot(
+              iconSize: 16,
               child: _TypeColorMarker(color: AppColors.myUZSysLightPrimaryContainer),
             ),
-            const SizedBox(width: _kIconToTextGap),
+            const SizedBox(width: kIconToTextGap), // Użycie stałej globalnej
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,7 +136,7 @@ class _DetailsContent extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF1D192B),
                     ),
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 6),
@@ -173,17 +154,15 @@ class _DetailsContent extends StatelessWidget {
         ),
         const SizedBox(height: headerBottomGap),
         if (typeLabel != null) ...[
-          _DetailRow(icon: MyUz.stand, label: typeLabel),
+          DetailRow(icon: MyUz.stand, label: typeLabel), // Błąd był tutaj
           const SizedBox(height: rowVerticalGap),
         ],
-        _DetailRow(icon: MyUz.marker_pin_04, label: classModel.room.isNotEmpty ? classModel.room : 'Sala -'),
-        const SizedBox(height: 0), // odstęp zredukowany do 0 na życzenie
-        _DetailRow(icon: MyUz.user_01, label: classModel.lecturer.isNotEmpty ? classModel.lecturer : 'Prowadzący -'),
+        DetailRow(icon: MyUz.marker_pin_04, label: classModel.room.isNotEmpty ? classModel.room : 'Sala -'), // Błąd był tutaj
+        const SizedBox(height: 12), // Przywrócono 12 (zamiast 0) dla odstępu
+        DetailRow(icon: MyUz.user_01, label: classModel.lecturer.isNotEmpty ? classModel.lecturer : 'Prowadzący -'), // Błąd był tutaj
       ],
     );
   }
-
-  // --- FORMATOWANIE DATY / TYP ---
 
   static String _dateLine(DateTime start, DateTime end) {
     final now = DateTime.now();
@@ -197,7 +176,7 @@ class _DetailsContent extends StatelessWidget {
     } else if (startDay == tomorrow) {
       dayLabel = 'Jutro';
     } else {
-      dayLabel = _plWeekday(start.weekday); // np. Środa
+      dayLabel = _plWeekday(start.weekday);
     }
 
     final monthShort = _plMonthShort(start.month);
@@ -206,161 +185,20 @@ class _DetailsContent extends StatelessWidget {
         ? '$dayLabel, ${start.day} $monthShort ${start.year}'
         : '$dayLabel, ${start.day} $monthShort';
 
-    // en dash (U+2013) z odstępami po bokach jak w Google Calendar
     final timePart = '${_hhmm(start)} – ${_hhmm(end)}';
     return '$datePart • $timePart';
   }
 
-  static String _hhmm(DateTime d) =>
-      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-
-  static String _plWeekday(int weekday) {
-    const dni = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'];
-    return dni[weekday - 1];
-  }
-
-  static String _plMonthShort(int m) {
-    const mies = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
-    return mies[m - 1];
-  }
-
+  static String _hhmm(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  static String _plWeekday(int weekday) { const dni = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela']; return dni[weekday - 1]; }
+  static String _plMonthShort(int m) { const mies = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru']; return mies[m - 1]; }
   static String? _mapType(String? raw) {
-    if (raw == null) return null;
-    final r = raw.trim();
+    final r = (raw ?? '').trim();
     if (r.isEmpty) return null;
-    final u = r.toUpperCase();
-    // Pełna mapa skrótów -> nazwy
-    switch (u) {
-      case 'R': return 'Rezerwacja';
-      case 'BHP': return 'Szkolenie BHP';
-      case 'C': return 'Ćwiczenia';
-      case 'CZ': return 'Ćwiczenia / Zdalne';
-      case 'Ć': return 'Ćwiczenia';
-      case 'ĆL': return 'Ćwiczenia i laboratorium';
-      case 'E': return 'Egzamin';
-      case 'E/Z': return 'Egzamin / Zdalne';
-      case 'I': return 'Inne';
-      case 'K': return 'Konwersatorium';
-      case 'L': return 'Laboratorium';
-      case 'P': return 'Projekt';
-      case 'PRA': return 'Praktyka';
-      case 'PRO': return 'Proseminarium';
-      case 'PRZ': return 'Praktyka zawodowa';
-      case 'P/Z': return 'Projekt / Zdalne';
-      case 'S': return 'Seminarium';
-      case 'SK': return 'Samokształcenie';
-      case 'T': return 'Zajęcia terenowe';
-      case 'W': return 'Wykład';
-      case 'WAR': return 'Warsztaty';
-      case 'W+C': return 'Wykład i ćwiczenia';
-      case 'WĆL': return 'Wykład + ćwiczenia + laboratorium';
-      case 'W+K': return 'Wykłady + konwersatoria';
-      case 'W+L': return 'Wykład i laboratorium';
-      case 'W+P': return 'Wykład + projekt';
-      case 'WW': return 'Wykład i warsztaty';
-      case 'W/Z': return 'Wykład / Zdalne';
-      case 'Z': return 'Zdalne';
-      case 'ZK': return 'Zajęcia kliniczne';
-      case 'ZP': return 'Zajęcia praktyczne';
-    }
-    // Dotychczasowe skróty (zachowane – mogą wystąpić inną wielkością lub wariantem)
-    if (u.startsWith('WYK')) return 'Wykład';
-    if (u.startsWith('LAB')) return 'Laboratorium';
-    if (u == 'ĆW' || u == 'CW' || u.startsWith('ĆW') || u.startsWith('CW')) return 'Ćwiczenia';
-    if (u.startsWith('SEM')) return 'Seminarium';
-    if (u.startsWith('PROJ')) return 'Projekt';
-    if (u.startsWith('KON')) return 'Konwersatorium';
-    if (u == 'WF') return 'Wychowanie fizyczne';
-    if (u.startsWith('LEKT')) return 'Lektorat';
-    if (u.startsWith('EGZ')) return 'Egzamin';
-    if (u.startsWith('KOL')) return 'Kolokwium';
-    // fallback – kapitalizacja pierwszej litery reszty
-    final lower = r.toLowerCase();
-    return lower[0].toUpperCase() + lower.substring(1);
+    return r;
   }
 }
 
-/// Uchwyt (grip) – 40x4, radius 2
-class _Grip extends StatelessWidget {
-  const _Grip();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 4,
-      decoration: BoxDecoration(
-        color: Colors.black26,
-        borderRadius: BorderRadius.circular(2),
-      ),
-    );
-  }
-}
-
-/// Slot ikony w stylu Google: 48x48 hit area, centralne koło (32 lub 40) z ikoną.
-class _AdaptiveIconSlot extends StatelessWidget {
-  final double iconSize; // 16/20/24
-  final Widget child; // glif lub marker
-  final VoidCallback? onTap;
-  final String? semanticsLabel;
-  final bool isButton;
-  final bool alignTop; // new: allow top alignment
-  const _AdaptiveIconSlot({
-    required this.iconSize,
-    required this.child,
-    this.onTap,
-    this.semanticsLabel,
-    this.isButton = false,
-    this.alignTop = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final double circle = iconSize >= 24 ? _kCircleLarge : _kCircleSmall;
-    Widget inner = SizedBox(
-      width: _kHitArea,
-      height: _kHitArea,
-      child: Align(
-        alignment: alignTop ? Alignment.topCenter : Alignment.center,
-        child: Container(
-          margin: EdgeInsets.only(top: alignTop ? 4 : 0),
-          width: circle,
-          height: circle,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(circle / 2),
-          ),
-          alignment: Alignment.center,
-          child: SizedBox(
-            width: iconSize,
-            height: iconSize,
-            child: FittedBox(fit: BoxFit.contain, child: child),
-          ),
-        ),
-      ),
-    );
-
-    if (onTap != null) {
-      inner = Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(circle / 2),
-          splashColor: Colors.black12,
-          onTap: onTap,
-          child: inner,
-        ),
-      );
-    }
-    if (semanticsLabel != null) {
-      inner = Semantics(
-        button: isButton,
-        label: semanticsLabel,
-        child: inner,
-      );
-    }
-    return inner;
-  }
-}
-
-/// Kolorowy marker typu zajęć 16x16, radius 4
 class _TypeColorMarker extends StatelessWidget {
   final Color color;
   const _TypeColorMarker({required this.color});
@@ -377,29 +215,33 @@ class _TypeColorMarker extends StatelessWidget {
   }
 }
 
-/// Wiersz szczegółu (ikona + tekst)
-class _DetailRow extends StatelessWidget {
+// +++ POCZĄTEK BRAKUJĄCEGO KODU +++
+// Ta klasa została przypadkowo usunięta w poprzedniej wersji
+
+class DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _DetailRow({required this.icon, required this.label});
+  const DetailRow({super.key, required this.icon, required this.label});
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    // const double kIconToTextGap = 12; // Używamy teraz stałej globalnej
+
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center, // Wyrównanie do środka
       children: [
-        _AdaptiveIconSlot(
+        AdaptiveIconSlot(
           iconSize: 20,
-          child: Icon(icon, size: 20, color: cs.onSurface),
-          alignTop: true,
+          child: Icon(icon, size: 20, color: AppColors.myUZSysLightPrimary),
         ),
-        const SizedBox(width: _kIconToTextGap),
+        const SizedBox(width: kIconToTextGap), // Użycie stałej globalnej
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 2), // top-aligned text to match icon
-            child: Text(
-              label,
-              style: AppTextStyle.myUZBodyLarge.copyWith(color: cs.onSurface),
+          child: Text(
+            label,
+            style: AppTextStyle.myUZBodyMedium.copyWith(
+              color: cs.onSurface,
+              fontWeight: FontWeight.w400,
             ),
           ),
         ),
@@ -407,3 +249,4 @@ class _DetailRow extends StatelessWidget {
     );
   }
 }
+// +++ KONIEC BRAKUJĄCEGO KODU +++

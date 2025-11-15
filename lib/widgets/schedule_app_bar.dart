@@ -24,7 +24,6 @@ class ScheduleAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  // Zwiększamy wysokość preferowanego AppBar'a, żeby zmieścić dwie linie tekstu
   Size get preferredSize => const Size.fromHeight(72);
 
   @override
@@ -36,24 +35,22 @@ class ScheduleAppBar extends StatelessWidget implements PreferredSizeWidget {
         width: 48,
         height: 48,
         child: Center(
-          child: Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: a.onTap,
-              child: SizedBox(
-                width: 40,
-                height: 40,
-                child: Center(
-                  child: Tooltip(
-                    message: a.tooltip ?? '',
-                    preferBelow: false,
-                    child: IconTheme(
-                      data: IconThemeData(color: cs.onSurface, size: 24),
-                      child: a.icon,
-                    ),
-                  ),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: a.onTap,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                color: Color(0xFFF7F2F9),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Tooltip(
+                message: a.tooltip ?? '',
+                child: IconTheme(
+                  data: IconThemeData(color: cs.onSurface, size: 24),
+                  child: a.icon,
                 ),
               ),
             ),
@@ -62,61 +59,55 @@ class ScheduleAppBar extends StatelessWidget implements PreferredSizeWidget {
       );
     }
 
-    // (rightPadding zostało usunięte podczas refaktoryzacji układu — teraz używamy Row/Expanded)
+    // Wstrzykujemy odstęp 8 px między akcjami i zostawiamy ostatni najbardziej na prawo
+    final List<Widget> spacedActions = [];
+    for (int i = 0; i < actions.length; i++) {
+      spacedActions.add(actionSlot(actions[i]));
+      if (i != actions.length - 1) spacedActions.add(const SizedBox(width: 8));
+    }
 
     return SafeArea(
       bottom: false,
       child: Container(
         height: 72,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-        color: Theme.of(context).scaffoldBackgroundColor,
+        // Usuń lewy padding przy strzałce cofania
+        padding: const EdgeInsets.only(left: 0, right: 16, top: 10, bottom: 10),
+        color: Colors.white,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Leading back button (wszystko wyrównane do środka pionowo)
-            SizedBox(
-              width: 56,
-              child: Center(
-                child: Material(
-                  color: Colors.transparent,
-                  shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: onBack,
-                    child: const SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Center(
-                        child: Icon(MyUz.chevron_left, size: 24),
-                      ),
-                    ),
+            // Back bez dodatkowego lewego paddingu
+            Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onBack,
+                child: const SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Center(
+                    child: Icon(MyUz.chevron_left, size: 24),
                   ),
                 ),
               ),
             ),
-
-            // Title + subtitle w jednym Text.rich, ograniczone do 2 linii.
+            const SizedBox(width: 8),
             Expanded(
               child: Container(
                 alignment: Alignment.centerLeft,
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(text: title, style: AppTextStyle.myUZTitleLarge.copyWith(color: cs.onSurface)),
-                      if (subtitle != null && subtitle!.isNotEmpty) TextSpan(text: '\n${subtitle!}', style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant)),
-                    ],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: AppTextStyle.myUZTitleLarge.copyWith(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w500)),
+                    if (subtitle != null && subtitle!.isNotEmpty)
+                      Text(subtitle!, style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
                 ),
               ),
             ),
-
-            // Actions row (right)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: actions.map(actionSlot).toList(),
-            ),
+            Row(mainAxisSize: MainAxisSize.min, children: spacedActions),
           ],
         ),
       ),

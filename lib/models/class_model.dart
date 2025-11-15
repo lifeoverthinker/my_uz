@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Model danych zajęć (przedmiot, sala, prowadzący, czas).
 /// Minimalny, bez zbędnych zależności.
 /// Czas reprezentowany przez startTime / endTime (ISO8601).
@@ -35,27 +37,37 @@ class ClassModel {
       if (v is DateTime) {
         parsed = v;
       } else if (v is String) {
-        try { parsed = DateTime.parse(v); } catch (_) { parsed = null; }
+        try {
+          parsed = DateTime.parse(v);
+        } catch (_) {
+          parsed = null;
+        }
       } else if (v is int) {
         parsed = DateTime.fromMillisecondsSinceEpoch(v);
       } else {
-        try { parsed = DateTime.parse(v.toString()); } catch (_) { parsed = null; }
+        try {
+          parsed = DateTime.parse(v.toString());
+        } catch (_) {
+          parsed = null;
+        }
       }
       if (parsed == null) return null;
       return parsed.isUtc ? parsed.toLocal() : parsed;
     }
+
     String readString(String keyPrimary, [String? fallback]) {
-      final v = map[keyPrimary] ?? (fallback != null ? map[fallback] : null);
+      final dynamic v = map[keyPrimary] ?? (fallback != null ? map[fallback] : null);
       if (v == null) return '';
-      return v as String; // zakładamy poprawny typ – jeśli nie, rzuci
+      return v.toString();
     }
 
     final start = parseDateTimeFromDynamic(map['start_time'] ?? map['od']);
     final end = parseDateTimeFromDynamic(map['end_time'] ?? map['do_'] ?? map['do']);
     if (start == null || end == null) {
-      // Debug pomocniczy – jeżeli dane nie parsują się poprawnie
-      // ignore: avoid_print
-      print('[ClassModel][PARSE-WARN] invalid times start=${map['start_time'] ?? map['od']} end=${map['end_time'] ?? map['do_'] ?? map['do']} id=${map['id']}');
+      if (kDebugMode) {
+        // log only in debug to avoid polluting production logs
+        debugPrint('[ClassModel][PARSE-WARN] invalid times start=${map['start_time'] ?? map['od']} end=${map['end_time'] ?? map['do_'] ?? map['do']} id=${map['id']}');
+      }
     }
     return ClassModel(
       id: readString('id'),
@@ -64,10 +76,10 @@ class ClassModel {
       lecturer: readString('lecturer', 'nauczyciel'),
       startTime: start ?? DateTime.now(),
       endTime: end ?? (start ?? DateTime.now()).add(const Duration(hours: 1)),
-      uid: map['uid'] as String?,
-      type: map['type'] as String? ?? map['typ'] as String? ?? map['rz'] as String?,
-      groupCode: map['kod_grupy'] as String? ?? map['group_code'] as String?,
-      subgroup: map['podgrupa'] as String? ?? map['subgroup'] as String?,
+      uid: map['uid']?.toString(),
+      type: map['type']?.toString() ?? map['typ']?.toString() ?? map['rz']?.toString(),
+      groupCode: map['kod_grupy']?.toString() ?? map['group_code']?.toString(),
+      subgroup: map['podgrupa']?.toString() ?? map['subgroup']?.toString(),
     );
   }
 
@@ -112,7 +124,8 @@ class ClassModel {
   }
 
   @override
-  String toString() => 'ClassModel(id=$id, subject=$subject, room=$room, lecturer=$lecturer, startTime=$startTime, endTime=$endTime, uid=$uid, type=$type, groupCode=$groupCode, subgroup=$subgroup)';
+  String toString() =>
+      'ClassModel(id=$id, subject=$subject, room=$room, lecturer=$lecturer, startTime=$startTime, endTime=$endTime, uid=$uid, type=$type, groupCode=$groupCode, subgroup=$subgroup)';
 
   @override
   bool operator ==(Object other) {
