@@ -1,15 +1,19 @@
+// Plik: lib/widgets/tasks/task_details.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:my_uz/icons/my_uz_icons.dart';
+import 'package:my_uz/models/class_model.dart'; // Import potrzebny dla relatedClass
 import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/services/rz_dictionary.dart';
 import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
+import 'package:my_uz/widgets/tasks/task_edit_sheet.dart'; // Import dla onSaveEdit
 
 class TaskDetailsSheet extends StatefulWidget {
   final TaskModel task;
   final String? description;
+  final ClassModel? relatedClass; // To pole istnieje w Twoim pliku
   final VoidCallback? onDelete;
   final ValueChanged<bool>? onToggleCompleted;
   final ValueChanged<TaskModel>? onSaveEdit;
@@ -18,20 +22,20 @@ class TaskDetailsSheet extends StatefulWidget {
     super.key,
     required this.task,
     this.description,
+    this.relatedClass,
     this.onDelete,
     this.onToggleCompleted,
     this.onSaveEdit,
   });
 
-  // relatedClass dodane tylko dla kompatybilności z wywołaniami (np. w HomeScreen)
   static Future show(
       BuildContext context,
       TaskModel task, {
         String? description,
+        ClassModel? relatedClass, // Zmieniono Object na ClassModel
         VoidCallback? onDelete,
         ValueChanged<bool>? onToggleCompleted,
         ValueChanged<TaskModel>? onSaveEdit,
-        Object? relatedClass, // nieużywane
       }) {
     return showModalBottomSheet(
       context: context,
@@ -47,6 +51,7 @@ class TaskDetailsSheet extends StatefulWidget {
         child: TaskDetailsSheet(
           task: task,
           description: description,
+          relatedClass: relatedClass,
           onDelete: onDelete,
           onToggleCompleted: onToggleCompleted,
           onSaveEdit: onSaveEdit,
@@ -61,6 +66,8 @@ class TaskDetailsSheet extends StatefulWidget {
 
 class _TaskDetailsSheetState extends State<TaskDetailsSheet> {
   late bool _isCompleted;
+  // Stan do przełączania między widokiem detali a edycją
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -74,19 +81,38 @@ class _TaskDetailsSheetState extends State<TaskDetailsSheet> {
     if (mounted) setState(() => _isCompleted = next);
   }
 
+  // Funkcja do obsługi zapisu z TaskEditSheetContent
+  void _handleSave(TaskModel updatedTask) {
+    widget.onSaveEdit?.call(updatedTask);
+    // Po zapisie wróć do widoku detali
+    if (mounted) {
+      setState(() => _isEditing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Jeśli _isEditing, pokaż formularz edycji
+    if (_isEditing) {
+      return TaskEditSheetContent(
+        initial: widget.task,
+        initialDescription: widget.description,
+        initialDate: widget.task.deadline,
+        onSave: _handleSave, // Przekaż funkcję zapisu
+        onClose: () => setState(() => _isEditing = false), // Przycisk 'X' wraca do detali
+      );
+    }
+
+    // W przeciwnym razie, pokaż widok detali
     final cs = Theme.of(context).colorScheme;
 
-    // Data – format() zwraca nie-null String, więc bez zbędnego ??
     final deadlineStr =
     DateFormat('EEE, d MMM yyyy', 'pl_PL').format(widget.task.deadline);
 
-    // Tytuł – non-null w modelu
     final title = widget.task.title;
 
-    // Pola nullable normalizujemy do lokalnych Stringów
-    final subjectRaw = (widget.task.subject ?? '').trim();
+    // POPRAWKA: usunięto '??' z 'subject', bo jest nie-nullowalny
+    final subjectRaw = widget.task.subject.trim();
     final typeRaw = (widget.task.type ?? '').trim();
 
     final subject = subjectRaw.isEmpty ? '—' : subjectRaw;
@@ -109,11 +135,11 @@ class _TaskDetailsSheetState extends State<TaskDetailsSheet> {
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 const Spacer(),
-                // KLUCZOWE: callback, nie wynik wywołania (usuwa use_of_void_result)
                 IconButton(
                   icon: const Icon(MyUz.edit_05, size: 20),
                   tooltip: 'Edytuj',
-                  onPressed: () => widget.onSaveEdit?.call(widget.task),
+                  // Przełącz na tryb edycji
+                  onPressed: () => setState(() => _isEditing = true),
                 ),
                 IconButton(
                   icon: const Icon(MyUz.dots_vertical, size: 20),
@@ -139,7 +165,7 @@ class _TaskDetailsSheetState extends State<TaskDetailsSheet> {
 
             const SizedBox(height: 8),
 
-            // Kwadracik + tytuł + data (jak w class_details)
+            // Kwadracik + tytuł + data
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

@@ -1,3 +1,4 @@
+// Plik: lib/screens/home/components/events_section.dart
 import 'package:flutter/material.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/theme/text_style.dart';
@@ -6,9 +7,6 @@ import 'package:my_uz/models/event_model.dart';
 import 'package:my_uz/screens/home/details/event_details.dart';
 
 /// Sekcja: Wydarzenia — ujednolicona z ClassSection
-/// - padding 16
-/// - card width 264
-/// - list height 84 (kompakt)
 class EventsSection extends StatelessWidget {
   final List<EventModel> events;
   final ValueChanged<EventModel> onTap;
@@ -16,7 +14,8 @@ class EventsSection extends StatelessWidget {
   const EventsSection({super.key, required this.events, required this.onTap});
 
   static const double _kCardWidth = 264;
-  static const double _kListHeight = 84;
+  // POPRAWKA: Zmieniono wysokość z 84 na 68, aby pasowała do UpcomingClasses
+  static const double _kListHeight = 68;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +26,7 @@ class EventsSection extends StatelessWidget {
         _SectionHeader(icon: MyUz.marker_pin_04, label: 'Wydarzenia', color: cs.onSurface),
         const SizedBox(height: 12),
         SizedBox(
-          height: _kListHeight,
+          height: _kListHeight, // Używa teraz 68
           child: events.isEmpty ? _buildEmpty(cs) : _buildList(context),
         ),
       ]),
@@ -68,7 +67,7 @@ class EventsSection extends StatelessWidget {
                 description: e.description,
                 eventModel: e,
                 backgroundColor: bg,
-                hugHeight: true, // zachowanie jak ClassSection (dopasowanie do list height)
+                hugHeight: true,
               ),
             ),
           ),

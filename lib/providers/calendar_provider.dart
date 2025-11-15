@@ -1,12 +1,15 @@
+// Plik: lib/providers/calendar_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/services/classes_repository.dart';
 import 'package:my_uz/providers/user_plan_provider.dart';
 
+// POPRAWKA: Usunięto importy holiday
+// import 'package:my_uz/models/holiday_model.dart';
+// import 'package:my_uz/services/holiday_repository.dart';
+
 /// Prostszy provider tygodniowy: mapuje monday -> lista zajęć.
-/// - Mniej flag, prostsza semantyka
-/// - Możliwość wstrzyknięcia fetchWeek / loadGroupContext dla testów
 class CalendarProvider extends ChangeNotifier {
   final Map<DateTime, List<ClassModel>> weekCache = {};
   final Set<DateTime> loadingWeeks = {};
@@ -35,7 +38,6 @@ class CalendarProvider extends ChangeNotifier {
   }
 
   void _onPlanChanged() {
-    // przy zmianie planu czyścimy cache i prosimy o załadowanie aktualnego tygodnia
     clearCache();
     ensureWeekLoaded(DateTime.now());
   }
@@ -55,15 +57,12 @@ class CalendarProvider extends ChangeNotifier {
 
   DateTime _stripTime(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  /// Ensure the week is loaded. This implementation awaits the network call
-  /// which makes it simpler to reason about in UI code.
   Future<void> ensureWeekLoaded(DateTime anyDay, {String? overrideGroupCode, String? overrideGroupId, List<String>? overrideSubgroups}) async {
     final monday = _mondayOfWeek(anyDay);
     final key = _stripTime(monday);
     if (weekCache.containsKey(key)) return;
 
     if (loadingWeeks.contains(key)) {
-      // jeśli już w trakcie ładowania, poczekaj aż się skończy (proste)
       while (loadingWeeks.contains(key)) {
         await Future.delayed(const Duration(milliseconds: 50));
       }
@@ -90,9 +89,10 @@ class CalendarProvider extends ChangeNotifier {
         groupId = ctx.$3;
       }
 
+      // POPRAWKA: Usunięto HolidayRepository z Future.wait
       final list = await _fetchWeek(key, groupCode: groupCode, subgroups: subgroups, groupId: groupId).timeout(const Duration(seconds: 12));
+
       weekCache[key] = list;
-      // opcjonalnie prefetch neighboring weeks (fire-and-forget)
       unawaited(_prefetchNeighbor(key.subtract(const Duration(days: 7)), groupCode, groupId, subgroups));
       unawaited(_prefetchNeighbor(key.add(const Duration(days: 7)), groupCode, groupId, subgroups));
     } on TimeoutException {
@@ -116,10 +116,33 @@ class CalendarProvider extends ChangeNotifier {
       final list = await _fetchWeek(k, groupCode: groupCode, subgroups: subgroups, groupId: groupId).timeout(const Duration(seconds: 12));
       weekCache[k] = list;
     } catch (_) {
-      // fail silently for prefetch
+      // fail silently
     } finally {
       loadingWeeks.remove(k);
       notifyListeners();
     }
+  }
+
+  // POPRAWKA: Dodana metoda, której wymagał `home_screen.dart`
+  // i która używa poprawnych nazw pól z `class_model.dart`
+  ClassModel? findRelatedClass(ClassModel classModel) {
+    for (final week in weekCache.values) {
+      try {
+        final found = week.firstWhere(
+              (c) =>
+          c.id != classModel.id &&
+              // Użyj 'subject' i 'type' (zgodnie z class_model.dart)
+              (c.subject == classModel.subject) &&
+              (c.type == classModel.type) &&
+              c.startTime.weekday == classModel.startTime.weekday &&
+              c.startTime.hour == classModel.startTime.hour &&
+              c.startTime.minute == classModel.startTime.minute,
+        );
+        return found;
+      } catch (e) {
+        // .firstWhere rzuca błąd, jeśli nie znajdzie; ignorujemy i szukamy dalej
+      }
+    }
+    return null; // Nie znaleziono
   }
 }

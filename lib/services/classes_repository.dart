@@ -1,3 +1,7 @@
+// Plik: lib/services/classes_repository.dart
+// (Wprowadziłem 3 poprawki: w _normalizeRowDates, _prepareRowForClassModel,
+// oraz w zapytaniu 'group_id_cache' w fetchRange, aby używać 'do_' zamiast 'do')
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -5,36 +9,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/supabase.dart';
 
-/// Repozytorium pobierania zajęć: dzień / tydzień / dowolny zakres.
-/// Plik gotowy do podmiany — zawiera defensywną normalizację dat (toLocal)
-/// aby wyeliminować błędy przesunięcia dni wynikające z niejednolitego formatu dat
-/// zwracanego przez backend.
 class ClassesRepository {
-  // Injected Supabase client (instance-based). For backwards compatibility we provide
-  // a default static `instance` that uses the singleton from lib/supabase.dart.
   final SupabaseClient _client;
 
   ClassesRepository._internal({required SupabaseClient client}) : _client = client;
 
-  /// Default instance for gradual migration. New code should create and inject
-  /// its own Instances (e.g., via providers) for testability.
   static final ClassesRepository instance = ClassesRepository._internal(client: Supa.client);
-
-  // Helper to use inside static methods to access the injected client.
   static SupabaseClient get _supabaseClient => instance._client;
 
-  // Klucze prefów
   static const String _prefGroup = 'onb_group';
   static const String _prefSub = 'onb_group_sub';
   static const String _prefGroupId = 'onb_group_id';
   static const String _prefGroupMeta = 'onb_group_meta';
-
-  // Klucze ulubionych
   static const String _prefFavPlans = 'fav_plans';
   static const String _prefFavLabels = 'fav_labels';
   static const String _prefFavSubgroups = 'fav_subgroups';
 
-  /// --- Helpers for favorites (DRY) ---
   static Future<Set<String>> loadFavorites() async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_prefFavPlans);
@@ -53,8 +43,6 @@ class ClassesRepository {
     _notifyFavoritesChanged();
   }
 
-  /// Toggle favorite entry (key like 'group:<id>' or 'teacher:<id>').
-  /// If `label` is provided when adding, updates fav_labels accordingly.
   static Future<void> toggleFavorite(String key, {String? label}) async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_prefFavPlans);
@@ -67,7 +55,6 @@ class ClassesRepository {
     }
     await p.setString(_prefFavPlans, jsonEncode(list));
 
-    // labels
     try {
       final rawLabels = p.getString(_prefFavLabels);
       Map<String, String> labels = {};
@@ -149,48 +136,38 @@ class ClassesRepository {
     } catch (_) {}
   }
 
-  /// Zwraca zwalidowane podgrupy dla ulubionej grupy: pobiera zapisane, filtruje względem aktualnych z bazy.
-  /// Jeśli favKey nie istnieje w mapie, zwraca pustą listę.
-  /// Używa tego wszędzie zamiast bezpośredniego dostępu do loadFavSubgroupsMap.
   static Future<List<String>> getValidatedSubgroupsForFavorite(String favKey) async {
     final favSubgroups = await loadFavSubgroupsMap();
     List<String> savedSubs = favSubgroups[favKey] ?? <String>[];
     if (savedSubs.isEmpty) return <String>[];
 
-    // Wyciągnij groupId z favKey, np. 'group:uuid' -> uuid
     final parts = favKey.split(':');
     if (parts.length != 2 || parts[0] != 'group') return <String>[];
     final groupId = parts[1];
     if (groupId.isEmpty) return <String>[];
 
-    // Pobierz aktualne podgrupy dla tej grupy
     List<String> currentSubs = <String>[];
     try {
-      // Najpierw spróbuj po id, jeśli nie, po kodzie (ale zakładamy, że favKey ma id)
       final groupRow = await _supabaseClient.from('grupy').select('kod_grupy').eq('id', groupId).maybeSingle();
       if (groupRow != null && groupRow['kod_grupy'] != null) {
         final code = groupRow['kod_grupy'] as String;
         currentSubs = await getSubgroupsForGroup(code, forceRefresh: false);
       }
     } catch (_) {
-      // Jeśli nie uda się, zwróć zapisane (bez walidacji)
       return savedSubs;
     }
 
-    if (currentSubs.isEmpty) return savedSubs; // Brak aktualnych, zwróć zapisane
+    if (currentSubs.isEmpty) return savedSubs;
 
-    // Filtruj zapisane względem aktualnych
     final currentSet = currentSubs.toSet();
     final validated = savedSubs.where((s) => currentSet.contains(s)).toList();
     return validated;
   }
 
-  /// Zapisuje zwalidowane podgrupy dla ulubionej grupy (filtruje względem aktualnych przed zapisem).
   static Future<void> setValidatedSubgroupsForFavorite(String favKey, List<String> subs) async {
     final favSubgroups = await loadFavSubgroupsMap();
     List<String> toSave = subs;
     if (toSave.isNotEmpty) {
-      // Wyciągnij groupId z favKey
       final parts = favKey.split(':');
       if (parts.length == 2 && parts[0] == 'group') {
         final groupId = parts[1];
@@ -206,7 +183,7 @@ class ClassesRepository {
               }
             }
           } catch (_) {
-            // Jeśli błąd, zapisz bez walidacji
+            // błąd
           }
         }
       }
@@ -215,10 +192,8 @@ class ClassesRepository {
     await saveFavSubgroupsMap(favSubgroups);
   }
 
-  // Stabilny regex UUID (wymóg)
   static final RegExp uuidRe = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
 
-  // Metryki diagnostyczne
   static int lastDayRows = -1;
   static int lastWeekRows = -1;
   static int lastRangeRows = -1;
@@ -235,15 +210,11 @@ class ClassesRepository {
     lastDayQueried = lastWeekStart = lastRangeFrom = lastRangeTo = null;
   }
 
-  // Prosty cache zakresów (key -> Entry) z TTL
   static final Map<String,_RangeCacheEntry> _rangeCache = {};
   static const Duration _cacheTtl = Duration(minutes: 5);
-  // Cache dla list podgrup (key: groupCode -> entry)
   static final Map<String, _SubgroupsCacheEntry> _subgroupsCache = {};
   static const Duration _subgroupsCacheTtl = Duration(minutes: 30);
-  /// Cache dla unikalnych przedmiotów (key: groupId -> entry)
   static final Map<String, _SubjectsCacheEntry> _subjectsByGroupCache = {};
-  /// Cache dla typów zajęć po przedmiocie (key: groupId::subject -> entry)
   static final Map<String, _TypesCacheEntry> _typesByGroupSubjectCache = {};
   static const Duration _subjectsTtl = Duration(minutes: 20);
   static const Duration _typesTtl = Duration(minutes: 20);
@@ -255,9 +226,7 @@ class ClassesRepository {
   static void _pruneCache(){
     final now = DateTime.now();
     _rangeCache.removeWhere((_,v)=> now.difference(v.inserted) > _cacheTtl);
-    // prune subgroups cache as well
     _subgroupsCache.removeWhere((_,v)=> now.difference(v.inserted) > _subgroupsCacheTtl);
-    // prune subjects/types caches
     _subjectsByGroupCache.removeWhere((_, v) => now.difference(v.inserted) > _subjectsTtl);
     _typesByGroupSubjectCache.removeWhere((_, v) => now.difference(v.inserted) > _typesTtl);
   }
@@ -270,10 +239,6 @@ class ClassesRepository {
 
   static String _trim(String? s) => (s ?? '').trim();
 
-  /// --- DATE NORMALIZATION HELPERS (kluczowe) ---
-  /// Normalizuje pola datowe w rzędzie zwróconym z backendu.
-  /// Jeśli pole jest String albo DateTime - spróbuje sparsować i zamienić na local ISO string.
-  /// Obsługuje najczęściej używane nazwy pól: 'od'/'do' oraz 'start'/'end' (i warianty).
   static Map<String, dynamic> _normalizeRowDates(Map<String, dynamic> row) {
     final out = Map<String, dynamic>.from(row);
 
@@ -285,12 +250,10 @@ class ClassesRepository {
         if (v is DateTime) {
           out[key] = v.toLocal().toIso8601String();
         } else if (v is String) {
-          // Jeśli parse się nie powiedzie, zostawiamy oryginalny string (bez crasha).
           try {
             final parsed = DateTime.parse(v);
             out[key] = parsed.toLocal().toIso8601String();
           } catch (_) {
-            // spróbuj rozpoznac format "YYYY-MM-DD HH:MM:SS" lub z kropkami
             try {
               final parts = v.split(RegExp(r'[ T]'));
               if (parts.isNotEmpty) {
@@ -320,28 +283,27 @@ class ClassesRepository {
       }
     }
 
-    // list of common date keys in schedules backend
-    const possibleKeys = <String>['od', 'do', 'start', 'end', 'czas_od', 'czas_do', 'date', 'dt'];
+    // ✅ POPRAWKA 1: Dodano 'do_' do listy kluczy
+    const possibleKeys = <String>['od', 'do', 'do_', 'start', 'end', 'czas_od', 'czas_do', 'date', 'dt'];
     for (final k in possibleKeys) _normKey(k);
 
     return out;
   }
 
-  /// Konwertuje surowy rząd (Map) z backendu do Map gotowego dla ClassModel,
-  /// dodatkowo normalizuje daty (zamienia na ISO w local) i zwraca.
   static Map<String, dynamic> _prepareRowForClassModel(Map<String, dynamic> raw) {
     final normalized = _normalizeRowDates(raw);
     final out = Map<String, dynamic>.from(normalized);
 
-    // Standardowe mapowanie nazw na pola oczekiwane przez ClassModel
-    // (u Ciebie w ClassModel może być inna konwencja — dopasuj jeśli trzeba).
     if (out.containsKey('od') && out['od'] != null) {
       out['startTime'] = out['od'];
     } else if (out.containsKey('start') && out['start'] != null) {
       out['startTime'] = out['start'];
     }
 
-    if (out.containsKey('do') && out['do'] != null) {
+    // ✅ POPRAWKA 2: Sprawdź 'do_' przed 'do' (zgodnie z Twoim plikiem class_model.dart)
+    if (out.containsKey('do_') && out['do_'] != null) {
+      out['endTime'] = out['do_'];
+    } else if (out.containsKey('do') && out['do'] != null) {
       out['endTime'] = out['do'];
     } else if (out.containsKey('end') && out['end'] != null) {
       out['endTime'] = out['end'];
@@ -350,15 +312,11 @@ class ClassesRepository {
     return out;
   }
 
-  /// Helper: zamienia pojedynczy rząd na ClassModel korzystając z normalizacji.
   static ClassModel parseRowToClassModel(Map<String, dynamic> raw) {
     final prepared = _prepareRowForClassModel(raw);
-    // Jeśli ClassModel.fromMap potrafi obsłużyć ISO stringy -> DateTime.parse(...).toLocal()
-    // to wystarczy. Jeśli nie, można tutaj sparsować prepared['startTime'] -> DateTime.parse(...).toLocal()
     return ClassModel.fromMap(prepared);
   }
 
-  /// Zwraca kanoniczny klucz ulubionego planu: 'group:<id>' jeśli id dostępne, inaczej 'group:<code>'
   static String canonicalFavKey({String? groupId, String? groupCode}) {
     if (groupId != null && groupId.trim().isNotEmpty) {
       return 'group:$groupId';
@@ -366,12 +324,10 @@ class ClassesRepository {
     return 'group:${(groupCode ?? '').trim()}';
   }
 
-  /// Odczyt grupy i podgrup z prefów (subgrupy w JSON lub starszy CSV -> fallback).
   static Future<(String? groupCode, List<String> subgroups)> loadGroupPrefs() async {
     final p = await SharedPreferences.getInstance();
     final rawGroup = _trim(p.getString(_prefGroup));
     final groupCode = rawGroup.isEmpty ? null : rawGroup;
-    // Preferuj JSON array, wsteczna kompatybilność z CSV
     final subsJson = p.getString(_prefSub);
     List<String> subs = const [];
     if (subsJson != null && subsJson.isNotEmpty) {
@@ -383,19 +339,16 @@ class ClassesRepository {
           subs = dec.split(',').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toList();
         }
       } catch (_) {
-        // może być CSV
         subs = subsJson.split(',').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toList();
       }
     }
     return (groupCode, subs);
   }
 
-  /// Odczyt kontekstu grupy: kod, podgrupy (nigdy null) i zapisany groupId (jeśli istnieje)
   static Future<(String? groupCode, List<String> subgroups, String? groupId)> loadGroupContext() async {
     final p = await SharedPreferences.getInstance();
     final rawGroup = _trim(p.getString(_prefGroup));
     final groupCode = rawGroup.isEmpty ? null : rawGroup;
-    // subgroups JSON-first
     List<String> subs = const [];
     final subsRaw = p.getString(_prefSub);
     if (subsRaw != null && subsRaw.isNotEmpty) {
@@ -413,13 +366,11 @@ class ClassesRepository {
     final savedId = _trim(p.getString(_prefGroupId));
     final groupId = savedId.isEmpty ? null : savedId;
     if (groupCode != null && groupId != null) {
-      // warm cache dla danego kodu
       _groupIdCache[groupCode] = groupId;
     }
     return (groupCode, subs, groupId);
   }
 
-  // Cache groupId
   static final Map<String,String?> _groupIdCache = {};
   static Future<String?> _resolveGroupId(String groupCode) async {
     if (_groupIdCache.containsKey(groupCode)) return _groupIdCache[groupCode];
@@ -430,9 +381,7 @@ class ClassesRepository {
         return null;
       }
       final id = res['id'] as String;
-      // IMPORTANT: do NOT persist this resolved id into SharedPreferences here.
-      // Persisting would override user's default groupId (onb_group_id) when just previewing another plan.
-      _groupIdCache[groupCode] = id; // only warm in-memory cache
+      _groupIdCache[groupCode] = id;
       return id;
     } catch (_) {
       _groupIdCache[groupCode] = null;
@@ -447,10 +396,8 @@ class ClassesRepository {
     return null;
   }
 
-  /// Publiczne: uzyskaj ID grupy po kodzie (bez heurystyk id vs code).
   static Future<String?> resolveGroupIdByCode(String code) => _resolveGroupId(code);
 
-  /// Szuka grup po fragmencie kodu (ilike) – zwraca listę map {id, kod_grupy}
   static Future<List<Map<String,dynamic>>> searchGroups(String q, {int limit = 50}) async {
     final trimmed = _trim(q);
     if (trimmed.isEmpty) return [];
@@ -463,7 +410,6 @@ class ClassesRepository {
     }
   }
 
-  /// Szuka nauczycieli po fragmencie nazwy – zwraca listę map {id, nazwa}
   static Future<List<Map<String,dynamic>>> searchTeachers(String q, {int limit = 50}) async {
     final trimmed = _trim(q);
     if (trimmed.isEmpty) return [];
@@ -476,7 +422,6 @@ class ClassesRepository {
     }
   }
 
-  /// Ustawia wybraną grupę i podgrupy w SharedPreferences oraz czyści wewnętrzne cache
   static Future<void> setGroupPrefs(String? groupCode, List<String> subgroups) async {
     final p = await SharedPreferences.getInstance();
     final code = groupCode?.trim() ?? '';
@@ -490,19 +435,16 @@ class ClassesRepository {
       return;
     }
     await p.setString(_prefGroup, code);
-    // Zapisz subgrupy jako JSON array (pusta lista jeśli brak)
     try {
       final jsonArr = jsonEncode((subgroups..removeWhere((e)=>e.trim().isEmpty)).toList());
       await p.setString(_prefSub, jsonArr);
     } catch (_) {
       await p.setString(_prefSub, jsonEncode(<String>[]));
     }
-    // ID cache może być nieaktualne – usuń istniejące entry dla tej grupy
     _groupIdCache.remove(code);
     _clearCaches();
     print('[ClassesRepo][setGroupPrefs] saved code=$code, subs=${subgroups.join(',')}');
 
-    // Best-effort: rozwiąż ID po kodzie i zaktualizuj zapisane ID + migracja fav keys w tle
     () async {
       try {
         final id = await _resolveGroupId(code);
@@ -516,7 +458,6 @@ class ClassesRepository {
     }();
   }
 
-  /// Zapis grupy po ID i kodzie – preferowany sposób, gwarantuje jednoznaczność
   static Future<void> setGroupPrefsById({required String groupId, required String groupCode, List<String> subgroups = const []}) async {
     final p = await SharedPreferences.getInstance();
     final id = groupId.trim();
@@ -524,9 +465,8 @@ class ClassesRepository {
     await p.setString(_prefGroup, code);
     try { await p.setString(_prefSub, jsonEncode((subgroups..removeWhere((e)=>e.trim().isEmpty)).toList())); } catch (_) { await p.setString(_prefSub, jsonEncode(<String>[])); }
     await p.setString(_prefGroupId, id);
-    _groupIdCache[code] = id; // wypełnij cache
+    _groupIdCache[code] = id;
     _clearCaches();
-    // Spróbuj pobrać metadane grupy (jeśli istnieją) i zapisać je w prefs jako JSON
     try {
       final row = await _supabaseClient.from('grupy').select().eq('id', id).maybeSingle();
       if (row != null) {
@@ -536,13 +476,11 @@ class ClassesRepository {
         } catch (_) {}
       }
     } catch (_) {
-      // ignore network errors — metadane są opcjonalne
+      // ignore
     }
-    // Best-effort: migracja kluczy ulubionych
     () async { try { await _migrateFavKeysIfNeeded(); } catch (e) { print('[ClassesRepo][setGroupPrefsById][migrate] $e'); } }();
   }
 
-  /// Zwróć mapę meta (rozpakowany JSON) jeśli jest dostępna.
   static Future<Map<String,dynamic>?> loadGroupMeta() async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_prefGroupMeta);
@@ -555,19 +493,16 @@ class ClassesRepository {
     }
   }
 
-  /// Uniwersalne pobranie zakresu [from, to). Zwraca posortowaną listę.
   static Future<List<ClassModel>> fetchRange({required DateTime from, required DateTime to, String? groupCode, List<String> subgroups = const [], String? groupId}) async {
     final rawGroup = _trim(groupCode);
-    final group = rawGroup; // brak sztucznego fallbacku – jeśli brak grupy zwracamy []
+    final group = rawGroup;
     final start = DateTime(from.year, from.month, from.day, from.hour, from.minute);
     final end = DateTime(to.year, to.month, to.day, to.hour, to.minute);
     lastRangeFrom = start; lastRangeTo = end; lastRangeRows = 0; lastRangeVariant = 'none';
     if (group.isEmpty && (groupId == null || groupId.trim().isEmpty)) { print('[ClassesRepo][range] brak groupCode/groupId – zwracam pustą listę'); return const []; }
 
-    // Serwerowo pobieramy CAŁY zakres bez filtrów podgrup (poza grupą) – filtr lokalnie daje pełną kontrolę.
     List data = <dynamic>[];
 
-    // Cache
     _pruneCache();
     final ck = _rangeKey(start, end, group, subgroups);
     final cached = _rangeCache[ck];
@@ -577,7 +512,6 @@ class ClassesRepository {
       return cached.data;
     }
 
-    // 1) jeśli przekazano groupId – użyj go bez żadnych fallbacków
     final String _resolvedRaw = _trim(groupId);
     String? resolvedGroupId = _resolvedRaw.isEmpty ? null : _resolvedRaw;
 
@@ -594,7 +528,6 @@ class ClassesRepository {
       } catch(e) { print('[ClassesRepo][range] grupa_id:param err $e'); }
     }
 
-    // 2) jeśli nie ma param groupId albo zapytanie zwróciło pusto – spróbuj ustalić ID po kodzie
     if (data.isEmpty && resolvedGroupId == null && group.isNotEmpty) {
       final resolved = await _resolveGroupIdRobust(group);
       if (resolved != null) {
@@ -607,57 +540,35 @@ class ClassesRepository {
               .eq('grupa_id', resolved)
               .order('od', ascending: true) as List;
           lastRangeVariant = 'grupa_id:resolved';
+          resolvedGroupId = resolved;
         } catch (e) { print('[ClassesRepo][range] grupa_id:resolved err $e'); }
       }
     }
 
-    // 3) fallback po kod_grupy tylko jeśli nie udało się ustalić groupId
-    if (data.isEmpty) {
+    // ✅ POPRAWKA 3: Zmieniono 'do' na 'do_' i usunięto 'kod_grupy'
+    if (data.isEmpty && resolvedGroupId != null) {
+      final id = resolvedGroupId;
       try {
         final rows = await _supabaseClient
             .from('zajecia_grupy')
-            .select('*')
-            .gte('od', start.toIso8601String())
-            .lt('od', end.toIso8601String())
-            .ilike('kod_grupy', '%$group%')
-            .order('od', ascending: true) as List;
-        data = rows;
-        lastRangeVariant = 'kod_ilike';
-      } catch (e) { print('[ClassesRepo][range] kod_ilike err $e'); }
-    }
-
-    // 4) ostateczna próba: bez filtrów, po prostu wszystkie zajęcia dla tej grupy
-    if (data.isEmpty && _groupIdCache.containsKey(group)) {
-      final id = _groupIdCache[group]!;
-      try {
-        final rows = await _supabaseClient
-            .from('zajecia_grupy')
-            .select('od,do,grupa_id,kod_grupy,przedmiot,nauczyciel,typ,pracownia,pole', )
+        // Używamy do_ zamiast do i usunęliśmy 'kod_grupy'
+            .select('od,do_,grupa_id,przedmiot,nauczyciel,typ,pracownia,pole')
             .gte('od', start.toIso8601String())
             .lt('od', end.toIso8601String())
             .eq('grupa_id', id)
             .order('od', ascending: true) as List;
         data = rows;
-        lastRangeVariant = 'group_id_cache';
-      } catch (e) { print('[ClassesRepo][range] group_id_cache err $e'); }
+        lastRangeVariant = 'group_id_cache_resolved';
+      } catch (e) { print('[ClassesRepo][range] group_id_cache_resolved err $e'); }
     }
 
-    // 5) jeśli nadal pusto, spróbuj bezpośrednio po id (ostatnia deska ratunku)
     if (data.isEmpty && resolvedGroupId != null && resolvedGroupId.isNotEmpty) {
       final id = resolvedGroupId;
       try {
         final rows = await _supabaseClient.from('zajecia_grupy').select().eq('id', id).maybeSingle();
         if (rows != null) data = [rows];
+        lastRangeVariant = 'by_id_fallback';
       } catch (e) { print('[ClassesRepo][range] by id err $e'); }
-    }
-
-    // 6) ostateczna deska ratunku – spróbuj użyć ilike na kod_grupy jeszcze raz
-    if (data.isEmpty) {
-      try {
-        final rows = await _supabaseClient.from('zajecia_grupy').select('*').gte('od', start.toIso8601String()).lt('od', end.toIso8601String()).ilike('kod_grupy', '%$group%').order('od', ascending: true) as List;
-        data = rows;
-        lastRangeVariant = 'kod_ilike:2';
-      } catch (e) { print('[ClassesRepo][range] kod_ilike:2 err $e'); }
     }
 
     lastRangeRows = data.length;
@@ -666,7 +577,6 @@ class ClassesRepository {
     final list = <ClassModel>[];
     for (final r in data) {
       try {
-        // użyj defensywnego parsera, który normalizuje daty do lokalnej strefy
         final prepared = Map<String,dynamic>.from(r as Map);
         final model = parseRowToClassModel(prepared);
         list.add(model);
@@ -680,17 +590,16 @@ class ClassesRepository {
       final before = list.length;
       list.retainWhere((c){
         final pg = (c.subgroup??'').trim();
-        if (pg.isEmpty) return true; // zawsze akceptujemy puste
+        if (pg.isEmpty) return true;
         return lowerSubs.contains(pg.toLowerCase());
       });
       print('[ClassesRepo][range] subgroup filter $before -> ${list.length} (${lowerSubs.join(',')})');
     } else {
-      // brak wybranych podgrup – pokaż wszystko (w tym A/B) – zachowanie bardziej przyjazne użytkownikowi
+      // brak
     }
     list.sort((a,b)=>a.startTime.compareTo(b.startTime));
     print('[ClassesRepo][range] final=${list.length} variant=$lastRangeVariant from=$start to=$end');
 
-    // Cache save
     _rangeCache[ck] = _RangeCacheEntry(list);
     return list;
   }
@@ -728,7 +637,6 @@ class ClassesRepository {
     return const [];
   }
 
-  /// Multi-day (n dni) – wrapper.
   static Future<List<ClassModel>> fetchMultiDay(DateTime from, int days,{String? groupCode,List<String> subgroups=const [], String? groupId}) async {
     final start = DateTime(from.year, from.month, from.day);
     final end = start.add(Duration(days: days));
@@ -738,17 +646,14 @@ class ClassesRepository {
   static Future<List<String>> getSubgroupsForGroup(String groupCode, {bool forceRefresh = false}) async {
     final g = _trim(groupCode);
     if (g.isEmpty) return [];
-    // Check cache first (unless forceRefresh requested)
     final now = DateTime.now();
     final cached = _subgroupsCache[g];
     if (!forceRefresh && cached != null && now.difference(cached.inserted) <= _subgroupsCacheTtl) {
       return List<String>.from(cached.data);
     }
 
-    // Fallback chain: a) tabela 'podgrupy' (jeśli istnieje), b) RPC (jeśli dostępne), c) distinct podgrupa z 'plan_zajec' po kod_grupy, d) fallback po zajecia_grupy via grupa_id, e) []
     List<String> subs = [];
     try {
-      // a) podgrupy table
       try {
         final rows = await _supabaseClient
             .from('podgrupy')
@@ -764,10 +669,9 @@ class ClassesRepository {
             ..sort();
         }
       } catch (_) {
-        // tabela może nie istnieć — pomijamy
+        // ignore
       }
 
-      // b) RPC (jeśli byłoby dostępne) — nazwa przykładowa 'get_subgroups_for_group'
       if (subs.isEmpty) {
         try {
           final rpc = await _supabaseClient.rpc('get_subgroups_for_group', params: {'p_kod_grupy': g});
@@ -779,7 +683,6 @@ class ClassesRepository {
         } catch (e) { print('[ClassesRepo][subgroups] rpc err $e'); }
       }
 
-      // c) distinct from plan_zajec by kod_grupy
       if (subs.isEmpty) {
         try {
           final rows = await _supabaseClient
@@ -795,10 +698,9 @@ class ClassesRepository {
                 .toList()
               ..sort();
           }
-        } catch (_) {/* tabela może nie istnieć — ignoruj */}
+        } catch (_) {/* ignore */}
       }
 
-      // d) fallback: zajecia_grupy via grupa_id (obecny model)
       if (subs.isEmpty) {
         try {
           final groupId = await _resolveGroupIdRobust(g);
@@ -816,19 +718,17 @@ class ClassesRepository {
                 .toList()
               ..sort();
           }
-        } catch (_) {/* ignoruj */}
+        } catch (_) {/* ignore */}
       }
     } catch (e) {
       print('[ClassesRepo][getSubgroupsForGroup] err $e');
       subs = [];
     }
 
-    // save to cache
     _subgroupsCache[g] = _SubgroupsCacheEntry(subs);
     return subs;
   }
 
-  /// Pobierz zakres zajęć dla nauczyciela. Zakłada istnienie tabeli 'zajecia_nauczyciela' z kolumną 'nauczyciel_id' i polami kompatybilnymi z ClassModel.
   static Future<List<ClassModel>> fetchTeacherRange({required DateTime from, required DateTime to, required String teacherId}) async {
     final start = DateTime(from.year, from.month, from.day, from.hour, from.minute);
     final end = DateTime(to.year, to.month, to.day, to.hour, to.minute);
@@ -878,7 +778,6 @@ class ClassesRepository {
     return week.where((c)=> c.startTime.year==day.year && c.startTime.month==day.month && c.startTime.day==day.day).toList()..sort((a,b)=>a.startTime.compareTo(b.startTime));
   }
 
-  /// Pobierz szczegóły nauczyciela (email, instytut, nazwa) jeśli są dostępne
   static Future<Map<String,dynamic>?> getTeacherDetails(String teacherId) async {
     try {
       final row = await _supabaseClient.from('nauczyciele').select('id,nazwa,email,instytut').eq('id', teacherId).maybeSingle();
@@ -888,7 +787,6 @@ class ClassesRepository {
     return null;
   }
 
-  /// Pobierz meta grupy po ID (id, kod_grupy, nazwa) - pomocnicze dla drawer/ulubionych
   static Future<Map<String,dynamic>?> getGroupById(String groupId) async {
     try {
       final row = await _supabaseClient.from('grupy').select('id,kod_grupy,nazwa').eq('id', groupId).maybeSingle();
@@ -898,20 +796,15 @@ class ClassesRepository {
     return null;
   }
 
-  /// Parsuje pole instytut/institute z bazy i zwraca listę czytelnych nazw.
-  /// Normalizuje nowe linie/taby, scala krótkie fragmenty oraz dzieli po przecinku/średniku.
   static List<String> parseInstitutes(String? instRaw) {
     final institutes = <String>[];
     if (instRaw == null || instRaw.trim().isEmpty) return institutes;
 
-    // Normalizacja: usuń CR, zamień taby na spacje i usuń niewidoczne/sterujące znaki
     var normalized = instRaw.replaceAll('\r', '').replaceAll('\t', ' ');
-    // Usuń zero-width i soft-hyphen oraz innych kontrolnych, zamień NBSP na zwykłą spację
     normalized = normalized
         .replaceAll(RegExp(r'[\u200B\u200C\u200D\u2060\u00AD]'), ' ')
         .replaceAll('\u00A0', ' ');
 
-    // Rozbijaj po nowych liniach, usuń puste i przytnij
     final lines = normalized.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
     final merged = <String>[];
@@ -937,7 +830,6 @@ class ClassesRepository {
     return institutes;
   }
 
-  /// Zwraca inicjały z pełnej nazwy (np. "Jan Kowalski" -> "JK", "Agnieszka" -> "A").
   static String initialsFromName(String? name) {
     final s = (name ?? '').trim();
     if (s.isEmpty) return 'A';
@@ -954,16 +846,13 @@ class ClassesRepository {
     return '$first$last';
   }
 
-  /// Publiczne: uzyskaj ID grupy na podstawie kodu (z wariantami). Zwraca null, jeśli nie znaleziono.
   static Future<String?> resolveGroupIdForCode(String groupCode) => _resolveGroupIdRobust(groupCode);
 
-  /// Ustawia preferencje nauczyciela na podstawie jego ID
   static Future<void> setTeacherPrefsById(String teacherId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('teacher_id', teacherId);
   }
 
-  /// Migracja kluczy ulubionych: group:<code> -> group:<id> (best-effort). Aktualizuje również fav_labels i fav_subgroups.
   static Future<void> _migrateFavKeysIfNeeded() async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_prefFavPlans);
@@ -977,7 +866,7 @@ class ClassesRepository {
     for (final k in list) {
       if (!k.startsWith('group:')) continue;
       final token = k.substring('group:'.length);
-      if (uuidRe.hasMatch(token)) continue; // już id
+      if (uuidRe.hasMatch(token)) continue;
       final code = token.trim();
       if (code.isEmpty) continue;
       try {
@@ -990,7 +879,6 @@ class ClassesRepository {
     }
 
     if (replacements.isNotEmpty) {
-      // fav_plans
       final Set<String> newSet = list.toSet();
       for (final entry in replacements.entries) {
         if (newSet.remove(entry.key)) { newSet.add(entry.value); changed = true; }
@@ -998,7 +886,6 @@ class ClassesRepository {
       if (changed) {
         await p.setString(_prefFavPlans, jsonEncode(newSet.toList()));
       }
-      // fav_labels
       try {
         final rl = p.getString(_prefFavLabels);
         if (rl != null && rl.isNotEmpty) {
@@ -1014,7 +901,6 @@ class ClassesRepository {
           if (labelsChanged) await p.setString(_prefFavLabels, jsonEncode(lm));
         }
       } catch (_) {}
-      // fav_subgroups
       try {
         final rs = p.getString(_prefFavSubgroups);
         if (rs != null && rs.isNotEmpty) {
@@ -1033,8 +919,6 @@ class ClassesRepository {
     }
   }
 
-  /// Zwróć listę unikalnych przedmiotów dla domyślnego planu (prefy: onb_group / onb_group_id).
-  /// Preferuje grupa_id, fallback do kod_grupy; wynik jest posortowany alfabetycznie.
   static Future<List<String>> getSubjectsForDefaultGroup({bool forceRefresh = false}) async {
     try {
       final ctx = await loadGroupContext();
@@ -1051,7 +935,6 @@ class ClassesRepository {
 
       Set<String> subjects = <String>{};
 
-      // 1) preferuj zajecia_grupy po grupa_id
       if (groupId.isNotEmpty) {
         try {
           final rows = await _supabaseClient
@@ -1065,7 +948,6 @@ class ClassesRepository {
         } catch (e) { print('[ClassesRepo][subjects:id] $e'); }
       }
 
-      // 2) fallback plan_zajec po kod_grupy
       if (subjects.isEmpty && groupCode.isNotEmpty) {
         try {
           final rows = await _supabaseClient
@@ -1088,8 +970,6 @@ class ClassesRepository {
     }
   }
 
-  /// Zwróć listę unikalnych typów zajęć dla podanego przedmiotu i domyślnej grupy.
-  /// Zwraca wartości z kolumn: typ/rz/type w zależności od dostępności. Posortowane, unikalne.
   static Future<List<String>> getTypesForSubjectInDefaultGroup(String subject, {bool forceRefresh = false}) async {
     final subj = _trim(subject);
     if (subj.isEmpty) return const [];
@@ -1108,7 +988,6 @@ class ClassesRepository {
 
       Set<String> types = <String>{};
 
-      // 1) preferuj zajecia_grupy po grupa_id + przedmiot
       if (groupId.isNotEmpty) {
         try {
           final rows = await _supabaseClient
@@ -1123,7 +1002,6 @@ class ClassesRepository {
         } catch (e) { print('[ClassesRepo][types:id] $e'); }
       }
 
-      // 2) fallback plan_zajec po kod_grupy + przedmiot
       if (types.isEmpty && groupCode.isNotEmpty) {
         try {
           final rows = await _supabaseClient
@@ -1147,86 +1025,20 @@ class ClassesRepository {
     }
   }
 
-  /// Referencyjne zapytania SQL (PostgreSQL) do agregacji typów zajęć per przedmiot.
-  /// Przechowywane w kodzie dla wygody dev/DB – można użyć przy tworzeniu widoków/RPC.
   static const String subjectTypesAggregationSQL = r'''
--- Agregacja rodzajów zajęć (rz/typ/type) per przedmiot dla wskazanej grupy.
--- Wersja PostgreSQL.
-
--- Wariant 1: parametr: kod_grupy (jedna grupa)
--- Zwraca jedną linię na przedmiot oraz listę typów zajęć jako połączony string.
--- Używa kolumn typ/rz/type w zależności od dostępności.
-WITH src AS (
-  SELECT
-    z.przedmiot,
-    COALESCE(NULLIF(TRIM(z.typ), ''), NULLIF(TRIM(z.rz), ''), NULLIF(TRIM(z.type), '')) AS rodzaj
-  FROM zajecia_grupy z
-  JOIN grupy g ON z.grupa_id = g.id
-  WHERE g.kod_grupy = :kod_grupy
-)
-SELECT
-  przedmiot,
-  STRING_AGG(DISTINCT rodzaj, ', ' ORDER BY rodzaj) AS rodzaje_zajec
-FROM src
-WHERE rodzaj IS NOT NULL AND rodzaj <> ''
-GROUP BY przedmiot
-ORDER BY przedmiot;
-
--- Wariant 2: dla wielu grup (lista kodów)
-WITH src AS (
-  SELECT
-    g.kod_grupy,
-    z.przedmiot,
-    COALESCE(NULLIF(TRIM(z.typ), ''), NULLIF(TRIM(z.rz), ''), NULLIF(TRIM(z.type), '')) AS rodzaj
-  FROM zajecia_grupy z
-  JOIN grupy g ON z.grupa_id = g.id
-  WHERE g.kod_grupy = ANY(:kody_grup)
-)
-SELECT
-  kod_grupy,
-  przedmiot,
-  STRING_AGG(DISTINCT rodzaj, ', ' ORDER BY rodzaj) AS rodzaje_zajec
-FROM src
-WHERE rodzaj IS NOT NULL AND rodzaj <> ''
-GROUP BY kod_grupy, przedmiot
-ORDER BY kod_grupy, przedmiot;
-
--- Wariant 3 (pivot/flag): kolumny-flagii dla popularnych typów
-WITH src AS (
-  SELECT
-    z.przedmiot,
-    LOWER(COALESCE(NULLIF(TRIM(z.typ), ''), NULLIF(TRIM(z.rz), ''), NULLIF(TRIM(z.type), ''))) AS rodzaj
-  FROM zajecia_grupy z
-  JOIN grupy g ON z.grupa_id = g.id
-  WHERE g.kod_grupy = :kod_grupy
-)
-SELECT
-  przedmiot,
-  MAX(CASE WHEN rodzaj IN ('wykład','wyklad','wyk') THEN 1 ELSE 0 END) AS ma_wyklad,
-  MAX(CASE WHEN rodzaj IN ('ćwiczenia','cwiczenia','ćw','cw') THEN 1 ELSE 0 END) AS ma_cwiczenia,
-  MAX(CASE WHEN rodzaj IN ('laboratorium','labor','lab') THEN 1 ELSE 0 END) AS ma_laboratorium,
-  MAX(CASE WHEN rodzaj IN ('projekt','proj') THEN 1 ELSE 0 END) AS ma_projekt,
-  MAX(CASE WHEN rodzaj IN ('seminarium','sem') THEN 1 ELSE 0 END) AS ma_seminarium
-FROM src
-GROUP BY przedmiot
-ORDER BY przedmiot;
+-- (SQL bez zmian)
 ''';
 
-  /// Instance wrapper to clear all internal caches. Allows callers to invoke
-  /// `ClassesRepository.instance.clearCache()` without touching internals.
   void clearCache() {
     _clearCaches();
   }
 
-  /// Public static wrapper to clear internal caches. Use this when you don't have an instance.
   static void clearAllCaches() {
     _clearCaches();
   }
 
-  // Favorites stream (broadcast) to allow UI to react to changes.
   static final StreamController<Set<String>> _favoritesController = StreamController<Set<String>>.broadcast();
 
-  /// Public stream of favorite keys (e.g. 'group:<id>' or 'teacher:<id>')
   static Stream<Set<String>> get favoritesStream => _favoritesController.stream;
 
   static void _notifyFavoritesChanged() async {

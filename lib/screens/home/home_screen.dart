@@ -1,3 +1,4 @@
+// Plik: lib/screens/home/home_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,15 +17,29 @@ import 'package:my_uz/models/event_model.dart';
 
 // Szczegóły/edycja – nowe, spójne arkusze z widgets/
 import 'package:my_uz/widgets/tasks/task_details.dart';
+import 'package:my_uz/screens/home/details/class_details.dart';
+import 'package:my_uz/screens/home/details/event_details.dart';
+
 
 // SEKCJE
 import 'components/upcoming_classes.dart';
 import 'components/tasks_section.dart';
 import 'components/events_section.dart';
 
+// POPRAWKA: Usunięto import TopMenuButton, bo nie jest już używany w tym pliku
+// import 'package:my_uz/widgets/top_menu_button.dart';
+
 /// HomeScreen – Dashboard (Figma – obraz 4)
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  // Te parametry są wymagane przez main.dart (class HomePage), więc zostają
+  final VoidCallback onOpenDrawer;
+  final Function(int) onNavigateToCalendar;
+
+  const HomeScreen({
+    super.key,
+    required this.onOpenDrawer,
+    required this.onNavigateToCalendar
+  });
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -158,16 +173,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  void _onTapClass(ClassModel c) {
-    // Tu możesz wywołać arkusz szczegółów zajęć, jeśli chcesz
+  void _onTapClass(ClassModel c) async {
+    // Zgodnie z `class_details.dart`, metoda to `open`
+    await ClassDetailsSheet.open(context, c);
   }
 
-  void _onTapEvent(EventModel e) => debugPrint('[Home] event tap ${e.id}');
+  void _onTapEvent(EventModel e) {
+    // Zgodnie z `event_details.dart`, metoda to `open`
+    EventDetailsSheet.open(context, e);
+  }
 
   Future<void> _openTaskDetails(TaskModel task) async {
     final desc = await UserTasksRepository.instance.getTaskDescription(task.id) ?? '';
     if (!mounted) return;
-    // TaskDetailsSheet.show expects positional (context, task, ...)
+
     await TaskDetailsSheet.show(
       context,
       task,
@@ -233,6 +252,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 dateText: _plDate(DateTime.now()),
                 greetingName: _greetingName,
                 subtitle: _greetingSubtitle,
+                onOpenDrawer: widget.onOpenDrawer,
               ),
             ),
           ),
@@ -274,6 +294,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       TasksSection(
                         tasks: _tasks,
                         onTap: _openTaskDetails,
+                        onGoToTasks: () => widget.onNavigateToCalendar(1),
                       ),
                       const SizedBox(height: 12),
                       EventsSection(
@@ -295,12 +316,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 }
 
-/// HEADER – SafeArea + spacing z Figmy (zachowany wygląd, 2 kółka po prawej)
+/// HEADER
 class _Header extends StatelessWidget {
   final String dateText;
   final String greetingName;
   final String? subtitle;
-  const _Header({required this.dateText, required this.greetingName, this.subtitle});
+  final VoidCallback onOpenDrawer;
+
+  const _Header({
+    required this.dateText,
+    required this.greetingName,
+    this.subtitle,
+    required this.onOpenDrawer,
+  });
 
   static const double _hPad = 16;
   static const double _topAfterSafe = 8;
@@ -322,6 +350,7 @@ class _Header extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // POPRAWKA: Usunięto TopMenuButton() i SizedBox
                 Expanded(
                   child: Text(
                     dateText,
@@ -352,7 +381,9 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Biały panel z zaokrąglonym topem
+// ... (Reszta pliku _ContentContainer, HomeFooter, _ActionCircle, _plDate, _noop
+// jest poprawna i pozostaje bez zmian) ...
+
 class _ContentContainer extends StatelessWidget {
   final Widget child;
   const _ContentContainer({required this.child});

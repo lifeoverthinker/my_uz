@@ -1,31 +1,39 @@
+// Plik: lib/screens/home/components/tasks_section.dart
 import 'package:flutter/material.dart';
-import 'package:my_uz/icons/my_uz_icons.dart';
+import 'package:my_uz/icons/my_uz_icons.dart'; // POPRAWKA: Przywrócono import ikon
 import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/widgets/cards/task_card.dart';
+// POPRAWKA: Nie używamy już SectionHeader, więc import jest zbędny
+// import 'package:my_uz/widgets/section_header.dart';
+import 'package:my_uz/utils/date_utils.dart';
 
 /// Sekcja "Zadania" – wariant „hug height”
-/// - brak sztywnej wysokości listy; sekcja dopasowuje się do najwyższej karty
-/// - wszystkie karty mają tę samą wysokość (wysokość najwyższej karty), bez ucinania tekstu
-/// - padding poziomy 16, szerokość karty 264
 class TasksSection extends StatelessWidget {
   final List<TaskModel> tasks;
   final EdgeInsetsGeometry padding;
   final void Function(TaskModel task) onTap;
+  final VoidCallback onGoToTasks;
 
   const TasksSection({
     super.key,
     required this.tasks,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
     required this.onTap,
+    required this.onGoToTasks,
   });
 
   static const double _kCardWidth = 264;
+  // POPRAWKA: Używamy stałej wysokości, tak jak w UpcomingClassesSection
+  static const double _kListHeight = 68;
   static const double _kHeaderGap = 12;
 
+  //
+  // Logika filtrowania (bez zmian)
+  //
   static DateTime _monday(DateTime d) {
     final wd = d.weekday;
-    return DateTime(d.year, d.month, d.day).subtract(Duration(days: wd - 1));
+    return stripTime(d).subtract(Duration(days: wd - 1));
   }
 
   static DateTime _sunday(DateTime d) {
@@ -63,50 +71,62 @@ class TasksSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(MyUz.book_open_01, size: 20, color: cs.onSurface),
-              const SizedBox(width: 8),
-              Text('Zadania', style: AppTextStyle.myUZTitleMedium.copyWith(fontSize: 18, height: 1.33, fontWeight: FontWeight.w500, color: cs.onSurface)),
-            ],
-          ),
+          // POPRAWKA: Użyto niestandardowego Row (jak w UpcomingClasses)
+          // aby przywrócić ikonę i usunąć przycisk "Więcej".
+          Row(children: [
+            Icon(MyUz.book_open_01, size: 20, color: cs.onSurface),
+            const SizedBox(width: 8),
+            Text(
+                'Zadania',
+                style: AppTextStyle.myUZTitleMedium.copyWith(fontSize: 18, height: 1.33, fontWeight: FontWeight.w500, color: cs.onSurface)
+            ),
+            const Spacer(),
+            // Przycisk "Więcej" usunięty zgodnie z prośbą
+          ]),
           const SizedBox(height: _kHeaderGap),
-          if (visible.isEmpty)
-            Text('Brak zadań w tym i przyszłym tygodniu', style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant))
-          else
-          // Hug height: IntrinsicHeight + Row + SizedBox(height: double.infinity) w kartach
-            SingleChildScrollView(
+          // POPRAWKA: Użyto SizedBox o stałej wysokości
+          SizedBox(
+            height: _kListHeight,
+            child: visible.isEmpty
+                ? Align( // Wyrównanie do lewej, aby pasowało do list
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Brak zadań w tym i przyszłym tygodniu',
+                style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
+              ),
+            )
+                : SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              // POPRAWKA: Usunięto IntrinsicHeight
+              // Lista kart będzie się rozciągać do wysokości SizedBox (68)
               physics: const ClampingScrollPhysics(),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ...List.generate(visible.length, (i) {
-                      final task = visible[i];
-                      return Padding(
-                        padding: EdgeInsets.only(right: i == visible.length - 1 ? 0 : 12),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints.tightFor(width: _kCardWidth),
-                          child: SizedBox(
-                            height: double.infinity, // wyrównanie wysokości do najwyższej karty
-                            child: TaskCard(
-                              title: task.title,
-                              deadline: task.deadline,
-                              subject: task.subject,
-                              type: task.type,
-                              showAvatar: true,
-                              onTap: () => onTap(task),
-                            ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ...List.generate(visible.length, (i) {
+                    final task = visible[i];
+                    return Padding(
+                      padding: EdgeInsets.only(right: i == visible.length - 1 ? 0 : 12),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints.tightFor(width: _kCardWidth),
+                        child: SizedBox(
+                          height: double.infinity,
+                          child: TaskCard(
+                            title: task.title,
+                            deadline: task.deadline,
+                            subject: task.subject,
+                            type: task.type,
+                            showAvatar: true,
+                            onTap: () => onTap(task),
                           ),
                         ),
-                      );
-                    }),
-                    const SizedBox(width: 16),
-                  ],
-                ),
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
+          ),
         ],
       ),
     );
