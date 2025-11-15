@@ -1,10 +1,11 @@
 // Plik: lib/screens/home/home_screen.dart
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // <-- POPRAWKA IMPORTU
+import 'package:provider/provider.dart';
+import 'package:my_uz/providers/tasks_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:my_uz/services/classes_repository.dart';
-import 'package:my_uz/services/user_tasks_repository.dart';
 
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/theme/app_colors.dart';
@@ -15,23 +16,20 @@ import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/models/event_model.dart';
 
-// Szczegóły/edycja – nowe, spójne arkusze z widgets/
+// Szczegóły/edycja
 import 'package:my_uz/widgets/tasks/task_details.dart';
 import 'package:my_uz/screens/home/details/class_details.dart';
 import 'package:my_uz/screens/home/details/event_details.dart';
-
 
 // SEKCJE
 import 'components/upcoming_classes.dart';
 import 'components/tasks_section.dart';
 import 'components/events_section.dart';
 
-// POPRAWKA: Usunięto import TopMenuButton, bo nie jest już używany w tym pliku
-// import 'package:my_uz/widgets/top_menu_button.dart';
+import 'package:my_uz/widgets/top_menu_button.dart';
 
 /// HomeScreen – Dashboard (Figma – obraz 4)
 class HomeScreen extends StatefulWidget {
-  // Te parametry są wymagane przez main.dart (class HomePage), więc zostają
   final VoidCallback onOpenDrawer;
   final Function(int) onNavigateToCalendar;
 
@@ -51,26 +49,29 @@ const String _kPrefOnbFirst = 'onb_first';
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _greetingName = 'Student';
-  String? _greetingSubtitle; // dodatkowa linia pod powitaniem (wydział/kierunek/tryb)
-  String? _groupCode; // kod grupy
-  List<String> _subgroups = []; // lista podgrup
-  bool _loading = true; // ładowanie prefów
-  bool _classesLoading = false; // ładowanie zajęć
-  DateTime? _classesForDate; // data dla której aktualnie pokazujemy _classes
-  Timer? _refreshTimer; // periodyczne sprawdzanie zmiany dnia
+  String? _greetingSubtitle;
+  String? _groupCode;
+  List<String> _subgroups = [];
+  bool _loading = true;
+  bool _classesLoading = false;
+  DateTime? _classesForDate;
+  Timer? _refreshTimer;
 
   List<ClassModel> _classes = const [];
-  List<TaskModel> _tasks = const [];
+  List<TaskModel> _tasks = const []; // To będzie teraz zasilane przez providera
   List<EventModel> _events = const [];
 
   @override
   void initState() {
     super.initState();
-    _loadTasks();
+    // 1. Pobierz zadania przez Providera
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TasksProvider>().refresh();
+    });
     WidgetsBinding.instance.addObserver(this);
     _loadPrefs();
     _loadTodayClasses();
-    // odśwież po zmianie dnia
+
     _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       final now = DateTime.now();
       if (_classesForDate == null) {
@@ -157,65 +158,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadTasks() async {
-    try {
-      final tasks = await UserTasksRepository.instance.fetchUserTasks();
-      if (!mounted) return;
-      setState(() {
-        _tasks = tasks;
-      });
-    } catch (e) {
-      debugPrint('[Home][_loadTasks] err $e');
-      if (!mounted) return;
-      setState(() {
-        _tasks = const [];
-      });
-    }
-  }
-
   void _onTapClass(ClassModel c) async {
-    // Zgodnie z `class_details.dart`, metoda to `open`
     await ClassDetailsSheet.open(context, c);
   }
 
   void _onTapEvent(EventModel e) {
-    // Zgodnie z `event_details.dart`, metoda to `open`
     EventDetailsSheet.open(context, e);
   }
 
   Future<void> _openTaskDetails(TaskModel task) async {
-    final desc = await UserTasksRepository.instance.getTaskDescription(task.id) ?? '';
+    // Użyj ujednoliconej metody z TasksProvider
     if (!mounted) return;
-
-    await TaskDetailsSheet.show(
-      context,
-      task,
-      description: desc,
-      relatedClass: _classes.where((c) => c.subject == task.subject).isNotEmpty
-          ? _classes.firstWhere((c) => c.subject == task.subject)
-          : null,
-      onDelete: () async {
-        await UserTasksRepository.instance.deleteTask(task.id);
-        if (!mounted) return;
-        setState(() => _tasks.removeWhere((t) => t.id == task.id));
-      },
-      onToggleCompleted: (completed) async {
-        await UserTasksRepository.instance.setTaskCompleted(task.id, completed);
-        if (!mounted) return;
-        setState(() {
-          final i = _tasks.indexWhere((t) => t.id == task.id);
-          if (i != -1) _tasks[i] = _tasks[i].copyWith(completed: completed);
-        });
-      },
-      onSaveEdit: (updated) async {
-        final saved = await UserTasksRepository.instance.upsertTask(updated);
-        if (!mounted) return;
-        setState(() {
-          final i = _tasks.indexWhere((t) => t.id == saved.id);
-          if (i != -1) _tasks[i] = saved; else _tasks.add(saved);
-        });
-      },
-    );
+    await context.read<TasksProvider>().openTaskDetails(context, task);
   }
 
   @override
@@ -230,11 +184,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _loadPrefs();
       _loadTodayClasses();
+      // Odśwież zadania przy powrocie do aplikacji
+      if (mounted) context.read<TasksProvider>().refresh();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Pobierz stan zadań z TasksProvider
+    final tasksProvider = context.watch<TasksProvider>();
+    _tasks = tasksProvider.items.map((e) => e.model).toList();
+
     final cs = Theme.of(context).colorScheme;
     const double footerTopSpacing = 10;
 
@@ -292,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                       const SizedBox(height: 12),
                       TasksSection(
-                        tasks: _tasks,
+                        tasks: _tasks, // Użyj listy zadań z providera
                         onTap: _openTaskDetails,
                         onGoToTasks: () => widget.onNavigateToCalendar(1),
                       ),
@@ -350,7 +310,6 @@ class _Header extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // POPRAWKA: Usunięto TopMenuButton() i SizedBox
                 Expanded(
                   child: Text(
                     dateText,
@@ -380,9 +339,6 @@ class _Header extends StatelessWidget {
     );
   }
 }
-
-// ... (Reszta pliku _ContentContainer, HomeFooter, _ActionCircle, _plDate, _noop
-// jest poprawna i pozostaje bez zmian) ...
 
 class _ContentContainer extends StatelessWidget {
   final Widget child;

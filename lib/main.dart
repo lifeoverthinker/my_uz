@@ -5,25 +5,23 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:my_uz/providers/calendar_provider.dart';
 import 'package:my_uz/providers/tasks_provider.dart';
 import 'package:my_uz/providers/user_plan_provider.dart';
-import 'package:my_uz/screens/index/index_screen.dart';
-import 'package:my_uz/screens/onboarding/landing_page.dart';
-import 'package:my_uz/screens/onboarding/onboarding_navigator.dart';
-import 'package:my_uz/services/sqlite_user_store.dart';
-import 'package:my_uz/supabase.dart';
-import 'package:my_uz/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:my_uz/navigation/bottom_navigation.dart'; // Import dla HomePage
-import 'package:my_uz/screens/home/home_screen.dart'; // Import dla HomePage
-import 'package:my_uz/screens/calendar/calendar_screen.dart'; // Import dla HomePage
-import 'package:intl/date_symbol_data_local.dart'; // POPRAWKA: Ten import był w Twoim pliku, przywracam go
+import 'package:my_uz/navigation/bottom_navigation.dart';
+import 'package:my_uz/screens/onboarding/onboarding_navigator.dart';
+import 'package:my_uz/theme/app_theme.dart';
+import 'package:my_uz/screens/home/home_screen.dart';
+import 'package:my_uz/screens/calendar/calendar_screen.dart';
+import 'package:my_uz/screens/index/index_screen.dart';
+import 'package:my_uz/supabase.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:my_uz/services/sqlite_user_store.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // POPRAWKA: Przywrócono Twoją logikę 'intl'
   await initializeDateFormatting('pl');
   await initializeDateFormatting('pl_PL');
 
@@ -35,7 +33,6 @@ Future<void> main() async {
   ));
 
   try {
-    // POPRAWKA: Użyj `init()` zgodnie z Twoimi plikami
     await Supa.init();
     await SqliteUserStore.init();
   } catch (e) {
@@ -80,7 +77,6 @@ class _MyBootstrapState extends State<MyBootstrap> {
       final prefs = await SharedPreferences.getInstance();
       _onboardingComplete = prefs.getBool('onboarding_complete') ?? false;
 
-      // `context.read` działa, ponieważ MultiProvider jest *nad* MyBootstrap.
       await context.read<UserPlanProvider>().loadFromPrefs();
 
       if (!mounted) return;
@@ -99,7 +95,6 @@ class _MyBootstrapState extends State<MyBootstrap> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       navigatorKey: navigatorKey,
-
       supportedLocales: const [
         Locale('pl'),
         Locale('en'),
@@ -117,26 +112,7 @@ class _MyBootstrapState extends State<MyBootstrap> {
         }
         return const Locale('pl');
       },
-
       home: _body(),
-
-      // POPRAWKA: Przywrócono Twoje trasy (routes)
-      routes: {
-        '/home': (context) => const HomePage(),
-        '/onboarding': (context) => OnboardingNavigator(
-          onFinishOnboarding: () {
-            navigatorKey.currentState?.pushReplacementNamed('/home');
-          },
-        ),
-        '/landing': (context) => LandingPage(
-          onSkip: () {
-            navigatorKey.currentState?.pushReplacementNamed('/home');
-          },
-          onNext: () {
-            navigatorKey.currentState?.pushReplacementNamed('/onboarding');
-          },
-        ),
-      },
     );
   }
 
@@ -167,7 +143,6 @@ class _MyBootstrapState extends State<MyBootstrap> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // POPRAWKA: Przywrócono logikę OnboardingNavigator
     return _onboardingComplete
         ? const HomePage()
         : OnboardingNavigator(
@@ -182,7 +157,6 @@ class _MyBootstrapState extends State<MyBootstrap> {
   }
 }
 
-// Reszta pliku (HomePage, PlaceholderPage) bez zmian
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
   @override
@@ -192,21 +166,19 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _index = 0;
 
-  // POPRAWKA: Dodano klucz Scaffolda i funkcje
+  // POPRAWKA: Dodajemy klucz Scaffolda
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // POPRAWKA: Definiujemy funkcje do przekazania
   void _openDrawer() {
     _scaffoldKey.currentState?.openDrawer();
   }
 
   void _navigateToCalendar(int tabIndex) {
-    // Przełączamy zakładkę i upewniamy się, że CalendarScreen
-    // wie, którą wewnętrzną zakładkę pokazać (0 dla Planu, 1 dla Terminarza)
-    // TODO: przekazanie `tabIndex` do CalendarScreen, jeśli jest potrzebne
-    _onTap(1); // 1 to indeks Kalendarza w BottomNavigationBar
+    _onTap(1);
   }
 
-  // POPRAWKA: Zaktualizowano listę stron, aby przekazać parametry
+  // POPRAWKA: Inicjalizujemy listę w initState, aby mieć dostęp do funkcji
   late final List<Widget> _pages;
 
   @override
@@ -217,8 +189,8 @@ class _HomePageState extends State<HomePage> {
         onOpenDrawer: _openDrawer,
         onNavigateToCalendar: _navigateToCalendar,
       ), // 0
-      CalendarScreen(), // 1
-      IndexScreen(), // 2 (Indeks)
+      const CalendarScreen(), // 1
+      const IndexScreen(), // 2 (Indeks)
       const PlaceholderPage(title: 'Konto'), // 3 (Konto)
     ];
   }
@@ -230,11 +202,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // POPRAWKA: Dodano klucz (potrzebny dla _openDrawer)
+      // POPRAWKA: Przypisujemy klucz
       key: _scaffoldKey,
-      // POPRAWKA: Dodano szufladę (Drawer)
-      drawer: const Drawer(child: Center(child: Text("Szuflada"))), // Tymczasowy Drawer
-      appBar: (_index == 0 || _index == 1 || _index == 2) ? null : AppBar(title: Text(_titles[_index])),
+      // POPRAWKA: Dodajemy szufladę, aby przycisk miał co otwierać
+      drawer: const Drawer(
+        child: Center(child: Text("Szuflada Menu")),
+      ),
+      appBar: (_index == 0 || _index == 1 || _index == 2)
+          ? null
+          : AppBar(title: Text(_titles[_index])),
       body: _pages[_index],
       bottomNavigationBar: MyUZBottomNavigation(
         currentIndex: _index,

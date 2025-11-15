@@ -1,16 +1,13 @@
 // Plik: lib/providers/calendar_provider.dart
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'; // <-- POPRAWKA IMPORTU
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/services/classes_repository.dart';
 import 'package:my_uz/providers/user_plan_provider.dart';
-
-// POPRAWKA: Usunięto importy holiday
-// import 'package:my_uz/models/holiday_model.dart';
-// import 'package:my_uz/services/holiday_repository.dart';
+import 'package:my_uz/utils/date_utils.dart' as date_utils;
 
 /// Prostszy provider tygodniowy: mapuje monday -> lista zajęć.
-class CalendarProvider extends ChangeNotifier {
+class CalendarProvider extends ChangeNotifier { // <-- POPRAWKA DEFINICJI KLASY
   final Map<DateTime, List<ClassModel>> weekCache = {};
   final Set<DateTime> loadingWeeks = {};
   bool get loading => loadingWeeks.isNotEmpty;
@@ -50,16 +47,12 @@ class CalendarProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  DateTime _mondayOfWeek(DateTime d) {
-    final wd = d.weekday;
-    return DateTime(d.year, d.month, d.day - (wd - 1));
-  }
-
-  DateTime _stripTime(DateTime d) => DateTime(d.year, d.month, d.day);
+  // --- Usunięto zduplikowane funkcje (teraz używa date_utils) ---
 
   Future<void> ensureWeekLoaded(DateTime anyDay, {String? overrideGroupCode, String? overrideGroupId, List<String>? overrideSubgroups}) async {
-    final monday = _mondayOfWeek(anyDay);
-    final key = _stripTime(monday);
+    // Użyj funkcji z date_utils
+    final monday = date_utils.mondayOfWeek(anyDay);
+    final key = date_utils.stripTime(monday);
     if (weekCache.containsKey(key)) return;
 
     if (loadingWeeks.contains(key)) {
@@ -89,7 +82,6 @@ class CalendarProvider extends ChangeNotifier {
         groupId = ctx.$3;
       }
 
-      // POPRAWKA: Usunięto HolidayRepository z Future.wait
       final list = await _fetchWeek(key, groupCode: groupCode, subgroups: subgroups, groupId: groupId).timeout(const Duration(seconds: 12));
 
       weekCache[key] = list;
@@ -108,7 +100,8 @@ class CalendarProvider extends ChangeNotifier {
   }
 
   Future<void> _prefetchNeighbor(DateTime mondayKey, String? groupCode, String? groupId, List<String> subgroups) async {
-    final k = _stripTime(mondayKey);
+    // Użyj funkcji z date_utils
+    final k = date_utils.stripTime(mondayKey);
     if (weekCache.containsKey(k) || loadingWeeks.contains(k)) return;
     loadingWeeks.add(k);
     notifyListeners();
@@ -116,23 +109,20 @@ class CalendarProvider extends ChangeNotifier {
       final list = await _fetchWeek(k, groupCode: groupCode, subgroups: subgroups, groupId: groupId).timeout(const Duration(seconds: 12));
       weekCache[k] = list;
     } catch (_) {
-      // fail silently
+      // fail silently for prefetch
     } finally {
       loadingWeeks.remove(k);
       notifyListeners();
     }
   }
 
-  // POPRAWKA: Dodana metoda, której wymagał `home_screen.dart`
-  // i która używa poprawnych nazw pól z `class_model.dart`
   ClassModel? findRelatedClass(ClassModel classModel) {
     for (final week in weekCache.values) {
       try {
         final found = week.firstWhere(
               (c) =>
           c.id != classModel.id &&
-              // Użyj 'subject' i 'type' (zgodnie z class_model.dart)
-              (c.subject == classModel.subject) &&
+              (c.subject == classModel.subject) && // <-- POPRAWKA LITERÓWKI
               (c.type == classModel.type) &&
               c.startTime.weekday == classModel.startTime.weekday &&
               c.startTime.hour == classModel.startTime.hour &&

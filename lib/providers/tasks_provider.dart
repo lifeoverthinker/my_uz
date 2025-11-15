@@ -1,11 +1,21 @@
+// Plik: lib/providers/tasks_provider.dart
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart'; // <-- DODANO
 import 'package:my_uz/services/i_user_tasks_repository.dart';
-import 'package:my_uz/services/sqlite_user_store.dart';
+// POPRAWKA: Usunięto nieużywany import
+// import 'package:my_uz/services/sqlite_user_store.dart';
 import 'package:my_uz/providers/user_plan_provider.dart';
+import 'package:my_uz/models/task_model.dart';
+import 'package:my_uz/widgets/tasks/task_details.dart'; // <-- DODANO
 
 enum TaskFilter { all, today, upcoming, completed }
 
-/// Provider odpowiedzialny za listę zadań użytkownika.
+class TaskWithDescription {
+  final TaskModel model;
+  final String? description;
+  const TaskWithDescription(this.model, this.description);
+}
+
 class TasksProvider extends ChangeNotifier {
   bool loading = false;
   List<TaskWithDescription> items = const [];
@@ -29,7 +39,6 @@ class TasksProvider extends ChangeNotifier {
   }
 
   void _onPlanChanged() {
-    // When plan changes, clear repository cache and refresh
     clearCache();
     refresh();
   }
@@ -61,14 +70,54 @@ class TasksProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> addTask(TaskWithDescription entry) async {
-    await _repo.upsertTask(entry.model, description: entry.description);
+  /// POPRAWKA: Dodana metoda pomocnicza
+  String? getTaskDescription(String id) {
+    try {
+      // Znajdź opis w już załadowanej liście 'items'
+      final entry = items.firstWhere((it) => it.model.id == id);
+      return entry.description;
+    } catch (e) {
+      // Nie znaleziono w cache
+      return null;
+    }
+  }
+
+  /// DODANA METODA (Zasada DRY - Don't Repeat Yourself)
+  /// Otwiera modal detali i zarządza logiką zapisu/usunięcia/edycji
+  Future<void> openTaskDetails(BuildContext context, TaskModel task) async {
+    final desc = getTaskDescription(task.id);
+    if (!context.mounted) return;
+
+    await TaskDetailsSheet.show(
+      context,
+      task,
+      description: desc,
+      // relatedClass: ... (można dodać logikę szukania zajęć, jeśli potrzebne)
+      onDelete: () async {
+        await deleteTask(task.id); // Użyj metody providera
+        if (context.mounted) Navigator.of(context).pop();
+      },
+      onToggleCompleted: (completed) async {
+        await setTaskCompleted(task.id, completed); // Użyj metody providera
+      },
+      onSaveEdit: (updatedTask) async {
+        // Przy edycji zachowaj istniejący opis
+        final existingDesc = getTaskDescription(updatedTask.id);
+        await upsertTask(updatedTask, description: existingDesc); // Użyj metody providera
+      },
+    );
+  }
+
+
+  /// POPRAWKA: Dodana metoda do zapisu (zastępuje starą 'upsertTask')
+  Future<void> upsertTask(TaskModel task, {String? description}) async {
+    await _repo.upsertTask(task, description: description);
     await refresh();
   }
 
-  Future<void> editTask(TaskWithDescription entry) async {
-    await _repo.upsertTask(entry.model, description: entry.description);
-    await refresh();
+  /// POPRAWKA: Uproszczono metodę, by wywoływała główną funkcję upsert
+  Future<void> addTask(TaskModel task, String? description) async {
+    await upsertTask(task, description: description);
   }
 
   Future<void> deleteTask(String id) async {

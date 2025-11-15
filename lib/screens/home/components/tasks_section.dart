@@ -4,7 +4,7 @@ import 'package:my_uz/icons/my_uz_icons.dart'; // POPRAWKA: Przywrócono import 
 import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/widgets/cards/task_card.dart';
-// POPRAWKA: Nie używamy już SectionHeader, więc import jest zbędny
+// POPRAWKA: Usunięto SectionHeader, bo robimy własny nagłówek
 // import 'package:my_uz/widgets/section_header.dart';
 import 'package:my_uz/utils/date_utils.dart';
 
@@ -74,7 +74,7 @@ class TasksSection extends StatelessWidget {
           // POPRAWKA: Użyto niestandardowego Row (jak w UpcomingClasses)
           // aby przywrócić ikonę i usunąć przycisk "Więcej".
           Row(children: [
-            Icon(MyUz.book_open_01, size: 20, color: cs.onSurface),
+            Icon(MyUz.book_open_01, size: 20, color: cs.onSurface), // <-- Ikona wróciła
             const SizedBox(width: 8),
             Text(
                 'Zadania',
@@ -97,8 +97,7 @@ class TasksSection extends StatelessWidget {
             )
                 : SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              // POPRAWKA: Usunięto IntrinsicHeight
-              // Lista kart będzie się rozciągać do wysokości SizedBox (68)
+              padding: EdgeInsets.zero, // <-- POPRAWKA: Zapewnia wyrównanie do lewej
               physics: const ClampingScrollPhysics(),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

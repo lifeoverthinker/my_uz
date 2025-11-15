@@ -1,13 +1,18 @@
+// Plik: lib/screens/calendar/tasks_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:my_uz/icons/my_uz_icons.dart';
+// POPRAWKA: Usunięto nieużywany import
+// import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/models/task_model.dart';
 import 'package:my_uz/providers/tasks_provider.dart';
-import 'package:my_uz/services/user_tasks_repository.dart';
+import 'package:provider/provider.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/widgets/cards/task_card.dart';
 import 'package:my_uz/widgets/tasks/task_details.dart';
 import 'package:my_uz/widgets/tasks/task_edit_sheet.dart';
+
+// POPRAWKA: Import dla MyUz (AppBar)
+import 'package:my_uz/icons/my_uz_icons.dart';
 
 class TasksScreen extends StatefulWidget {
   final bool showAppBar;
@@ -18,66 +23,37 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  bool _loading = true;
   bool _openingSheet = false; // guard
-  List<TaskModel> _tasks = [];
 
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() => _loading = true);
-    try {
-      final tasks = await UserTasksRepository.instance.fetchUserTasks();
-      if (!mounted) return;
-      setState(() {
-        _tasks = tasks;
-        _loading = false;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _tasks = const [];
-        _loading = false;
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TasksProvider>().refresh();
+    });
   }
 
   Future<void> _openDetails(TaskModel task) async {
-    final desc = await UserTasksRepository.instance.getTaskDescription(task.id) ?? '';
+    final provider = context.read<TasksProvider>();
+    final desc = provider.getTaskDescription(task.id);
     if (!mounted) return;
-    // TaskDetailsSheet.show expects positional (context, task, ...)
+
     await TaskDetailsSheet.show(
       context,
       task,
       description: desc,
       onDelete: () async {
-        await UserTasksRepository.instance.deleteTask(task.id);
-        if (!mounted) return;
-        setState(() => _tasks.removeWhere((t) => t.id == task.id));
+        await provider.deleteTask(task.id);
+        if (mounted) Navigator.of(context).pop();
       },
       onToggleCompleted: (completed) async {
-        await UserTasksRepository.instance.setTaskCompleted(task.id, completed);
-        if (!mounted) return;
-        setState(() {
-          final idx = _tasks.indexWhere((t) => t.id == task.id);
-          if (idx != -1) _tasks[idx] = _tasks[idx].copyWith(completed: completed);
-        });
+        await provider.setTaskCompleted(task.id, completed);
       },
-      onSaveEdit: (updated) async {
-        final saved = await UserTasksRepository.instance.upsertTask(updated);
-        if (!mounted) return;
-        setState(() {
-          final idx = _tasks.indexWhere((t) => t.id == saved.id);
-          if (idx != -1) {
-            _tasks[idx] = saved;
-          } else {
-            _tasks.add(saved);
-          }
-        });
+      onSaveEdit: (updatedTask) async {
+        await provider.upsertTask(
+          updatedTask,
+          description: desc,
+        );
       },
     );
   }
@@ -153,7 +129,8 @@ class _TasksScreenState extends State<TasksScreen> {
                       subject: t.subject,
                       type: t.type,
                       showAvatar: false,
-                      backgroundColor: cs.secondaryContainer,
+                      backgroundColor: cs.surface,
+                      // POPRAWKA: Ten parametr JEST zdefiniowany w task_card.dart
                       onTap: () => _openDetails(t),
                     ),
                   ),
@@ -194,17 +171,19 @@ class _TasksScreenState extends State<TasksScreen> {
             if (_openingSheet) return;
             _openingSheet = true;
             try {
-              final saved = await TaskEditSheet.showWithOptions(
+              final result = await TaskEditSheet.showWithOptions(
                 context,
                 initial: null,
                 initialDate: DateTime.now(),
               );
-              if (saved != null) {
-                try {
-                  await UserTasksRepository.instance.upsertTask(saved);
-                  TasksProvider.instance.refresh();
-                  _load();
-                } catch (_) {}
+
+              if (result != null) {
+                final task = result['task'] as TaskModel;
+                final desc = result['description'] as String?;
+
+                if (mounted) {
+                  await context.read<TasksProvider>().addTask(task, desc);
+                }
               }
             } finally {
               _openingSheet = false;
@@ -219,14 +198,17 @@ class _TasksScreenState extends State<TasksScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final grouped = _groupByDay(_tasks);
+    final provider = context.watch<TasksProvider>();
+
+    final tasks = provider.items.map((e) => e.model).toList();
+    final grouped = _groupByDay(tasks);
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: _buildAppBar(),
-      body: _loading
+      body: provider.loading
           ? const Center(child: CircularProgressIndicator())
-          : (_tasks.isEmpty
+          : (tasks.isEmpty
           ? Center(child: Text('Brak zadań', style: AppTextStyle.myUZBodySmall))
           : ListView(
         padding: const EdgeInsets.only(top: 12, bottom: 24),

@@ -1,9 +1,14 @@
+// Plik: lib/screens/calendar/calendar_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 import 'package:my_uz/models/class_model.dart';
+import 'package:my_uz/models/task_model.dart'; // <-- POPRAWKA: Dodano import
 import 'package:my_uz/providers/calendar_provider.dart';
+// POPRAWKA: Dodano importy providerów
 import 'package:my_uz/providers/tasks_provider.dart';
+import 'package:provider/provider.dart';
+
 import 'package:my_uz/screens/calendar/components/calendar_day_view.dart';
 import 'package:my_uz/screens/calendar/components/calendar_view.dart';
 import 'package:my_uz/screens/calendar/group_schedule_screen.dart';
@@ -11,8 +16,9 @@ import 'package:my_uz/screens/calendar/teacher_schedule_screen.dart';
 import 'package:my_uz/screens/calendar/search_schedule_screen.dart';
 import 'package:my_uz/screens/calendar/tasks_screen.dart';
 import 'package:my_uz/services/classes_repository.dart';
-import 'package:my_uz/services/user_tasks_repository.dart';
-import 'package:my_uz/utils/date_utils.dart';
+// POPRAWKA: Usunięto bezpośredni import repozytorium
+// import 'package:my_uz/services/user_tasks_repository.dart';
+import 'package:my_uz/utils/date_utils.dart'; // <-- POPRAWKA: Dodano brakujący import
 import 'package:my_uz/widgets/tasks/task_edit_sheet.dart';
 import 'package:my_uz/widgets/top_menu_button.dart';
 import 'dart:async';
@@ -43,8 +49,6 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   bool _error = false;
   String? _errorMsg;
 
-  final CalendarProvider _provider = CalendarProvider.instance;
-
   bool _drawerLoading = true;
   List<Map<String, String>> _favorites = [];
   StreamSubscription? _favoritesSubscription;
@@ -53,9 +57,14 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _ensureWeekLoaded(_focusedDay);
+    final calendarProvider = context.read<CalendarProvider>();
+    final tasksProvider = context.read<TasksProvider>();
+
+    _ensureWeekLoaded(calendarProvider, _focusedDay);
     _loadDrawerData();
     _favoritesSubscription = ClassesRepository.favoritesStream.listen((_) => _loadDrawerData());
+
+    tasksProvider.refresh();
   }
 
   @override
@@ -74,19 +83,19 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
         _focusedDay = today;
         _selectedDay = today;
       });
-      _ensureWeekLoaded(today);
+      _ensureWeekLoaded(context.read<CalendarProvider>(), today);
     }
   }
 
-  Future<void> _ensureWeekLoaded(DateTime anyDay) async {
+  Future<void> _ensureWeekLoaded(CalendarProvider provider, DateTime anyDay) async {
     final monday = mondayOfWeek(anyDay);
-    if (_provider.weekCache.containsKey(monday)) {
+    if (provider.weekCache.containsKey(monday)) {
       if (!mounted) return;
       setState(() {
-        _allClasses = _provider.weekCache[monday]!;
-        _loading = _provider.loading;
-        _error = _provider.error;
-        _errorMsg = _provider.lastError;
+        _allClasses = provider.weekCache[monday]!;
+        _loading = provider.loading;
+        _error = provider.error;
+        _errorMsg = provider.lastError;
       });
       return;
     }
@@ -98,17 +107,17 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       _errorMsg = null;
     });
 
-    await _provider.ensureWeekLoaded(anyDay,
+    await provider.ensureWeekLoaded(anyDay,
         overrideGroupCode: _overrideGroupCode,
         overrideGroupId: _overrideGroupId,
         overrideSubgroups: _overrideSubgroups);
 
     if (!mounted) return;
     setState(() {
-      _allClasses = _provider.weekCache[monday] ?? [];
-      _loading = _provider.loading;
-      _error = _provider.error;
-      _errorMsg = _provider.lastError;
+      _allClasses = provider.weekCache[monday] ?? [];
+      _loading = provider.loading;
+      _error = provider.error;
+      _errorMsg = provider.lastError;
     });
   }
 
@@ -119,7 +128,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       _selectedDay = d0;
       _focusedDay = d0;
     });
-    _ensureWeekLoaded(d0);
+    _ensureWeekLoaded(context.read<CalendarProvider>(), d0);
   }
 
   void _prevWeek() {
@@ -130,7 +139,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       _focusedDay = monday;
       _selectedDay = monday;
     });
-    _ensureWeekLoaded(monday);
+    _ensureWeekLoaded(context.read<CalendarProvider>(), monday);
   }
 
   void _nextWeek() {
@@ -141,7 +150,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       _focusedDay = monday;
       _selectedDay = monday;
     });
-    _ensureWeekLoaded(monday);
+    _ensureWeekLoaded(context.read<CalendarProvider>(), monday);
   }
 
   void _prevDay() => _selectDay(_selectedDay.subtract(const Duration(days: 1)));
@@ -154,7 +163,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       _focusedDay = d;
       if (_isMonthView) _selectedDay = DateTime(d.year, d.month, 1);
     });
-    _ensureWeekLoaded(_focusedDay);
+    _ensureWeekLoaded(context.read<CalendarProvider>(), _focusedDay);
   }
 
   void _nextMonth() {
@@ -164,7 +173,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
       _focusedDay = d;
       if (_isMonthView) _selectedDay = DateTime(d.year, d.month, 1);
     });
-    _ensureWeekLoaded(_focusedDay);
+    _ensureWeekLoaded(context.read<CalendarProvider>(), _focusedDay);
   }
 
   Future<void> _loadDrawerData() async {
@@ -196,6 +205,7 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
         } else if (type == 'teacher') {
           if (label.isEmpty) {
             try {
+              // POPRAWKA: Użyj 'teacherId' (zgodnie z class_model.dart)
               final meta = await ClassesRepository.getTeacherDetails(token);
               if (meta != null) label = (meta['nazwa'] as String?) ?? token;
             } catch (_) {
@@ -238,16 +248,19 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
           Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SearchScheduleScreen()));
         },
         onAdd: () async {
-          // Use showWithOptions to pass initialDate explicitly
-          final saved = await TaskEditSheet.showWithOptions(
+          // POPRAWKA: Oczekujemy Mapy i używamy Providera
+          final result = await TaskEditSheet.showWithOptions(
             context,
             initial: null,
             initialDate: DateTime.now(),
           );
-          if (saved != null) {
+          if (result != null) {
             try {
-              await UserTasksRepository.instance.upsertTask(saved);
-              TasksProvider.instance.refresh();
+              final task = result['task'] as TaskModel;
+              final desc = result['description'] as String?;
+              if (mounted) {
+                await context.read<TasksProvider>().addTask(task, desc);
+              }
             } catch (_) {}
           }
         },
@@ -261,15 +274,19 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
           _CircleIconButton(
               icon: const Icon(Icons.add),
               onPressed: () async {
-                final saved = await TaskEditSheet.showWithOptions(
+                // POPRAWKA: Oczekujemy Mapy i używamy Providera
+                final result = await TaskEditSheet.showWithOptions(
                   context,
                   initial: null,
                   initialDate: DateTime.now(),
                 );
-                if (saved != null) {
+                if (result != null) {
                   try {
-                    await UserTasksRepository.instance.upsertTask(saved);
-                    TasksProvider.instance.refresh();
+                    final task = result['task'] as TaskModel;
+                    final desc = result['description'] as String?;
+                    if (mounted) {
+                      await context.read<TasksProvider>().addTask(task, desc);
+                    }
                   } catch (_) {}
                 }
               }),
