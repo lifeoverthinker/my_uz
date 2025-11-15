@@ -7,10 +7,8 @@ import 'package:my_uz/theme/text_style.dart';
 /// Użycie: await TeacherInfoModal.show(context, teacherId, teacherName);
 class TeacherInfoModal {
   static Future<void> show(BuildContext context, String teacherId, String fallbackName) async {
-    return showModalBottomSheet<void>(
+    return showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return FutureBuilder<Map<String,dynamic>?>(
           future: ClassesRepository.getTeacherDetails(teacherId),
@@ -21,62 +19,55 @@ class TeacherInfoModal {
             final name = details?['nazwa'] as String? ?? fallbackName;
             final email = details?['email'] as String?;
             final instRaw = details?['instytut'] as String? ?? details?['institute'] as String?;
+            // Użyj centralnego helpera z ClassesRepository, aby uniknąć duplikacji logiki i dziwnego dzielenia
             final institutes = ClassesRepository.parseInstitutes(instRaw);
 
-            return SafeArea(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: Text(loading ? 'Ładowanie...' : name, style: AppTextStyle.myUZTitleLarge.copyWith(fontWeight: FontWeight.w600))),
-                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(ctx).pop()),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (loading)
-                      const SizedBox(height: 80, child: Center(child: CircularProgressIndicator()))
-                    else ...[
-                      if (email != null && email.isNotEmpty) ...[
-                        const Text('E-mail:'),
-                        Row(
-                          children: [
-                            Expanded(child: SelectableText(email)),
-                            IconButton(
-                              icon: const Icon(Icons.copy, size: 20),
-                              onPressed: () async {
-                                final messenger = ScaffoldMessenger.of(ctx);
-                                await Clipboard.setData(ClipboardData(text: email));
-                                Navigator.of(ctx).pop();
-                                messenger.showSnackBar(const SnackBar(content: Text('Adres e-mail skopiowany')));
-                              },
-                              tooltip: 'Kopiuj e-mail',
-                            )
+            return AlertDialog(
+              title: Text(loading ? 'Ładowanie...' : name),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: loading
+                    ? const SizedBox(height: 80, child: Center(child: CircularProgressIndicator()))
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (email != null && email.isNotEmpty) ...[
+                            const Text('E-mail:'),
+                            Row(
+                              children: [
+                                Expanded(child: SelectableText(email)),
+                                IconButton(
+                                  icon: const Icon(Icons.copy, size: 20),
+                                  onPressed: () async {
+                                    final messenger = ScaffoldMessenger.of(ctx);
+                                    final navigator = Navigator.of(ctx);
+                                    await Clipboard.setData(ClipboardData(text: email));
+                                    navigator.pop();
+                                    messenger.showSnackBar(const SnackBar(content: Text('Adres e-mail skopiowany')));
+                                  },
+                                  tooltip: 'Kopiuj e-mail',
+                                )
+                              ],
+                            ),
                           ],
-                        ),
-                      ],
-                      if (institutes.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        SelectableText(
-                          institutes.join(', '),
-                          maxLines: 4,
-                          style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
-                        ),
-                      ],
-                      if ((email == null || email.isEmpty) && institutes.isEmpty)
-                        const Text('Brak dodatkowych informacji'),
-                    ],
-                  ],
-                ),
+                          if (institutes.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            // Pokaż instytuty skonsolidowane w jednym polu (maks. kilka linii) — użyj SelectableText aby można było kopować
+                            SelectableText(
+                              institutes.join(', '),
+                              maxLines: 4,
+                              style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
+                            ),
+                          ],
+                          if ((email == null || email.isEmpty) && institutes.isEmpty)
+                            const Text('Brak dodatkowych informacji'),
+                        ],
+                      ),
               ),
+              actions: [
+                TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Zamknij')),
+              ],
             );
           },
         );

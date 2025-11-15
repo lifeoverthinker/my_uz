@@ -1,30 +1,23 @@
-// Plik: lib/services/classes_repository.dart
-// (Wprowadziłem 3 poprawki: w _normalizeRowDates, _prepareRowForClassModel,
-// oraz w zapytaniu 'group_id_cache' w fetchRange, aby używać 'do_' zamiast 'do')
-
-import 'dart:async';
 import 'dart:convert';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_uz/models/class_model.dart';
 import 'package:my_uz/supabase.dart';
 
+/// Repozytorium pobierania zajęć: dzień / tygzień / dowolny zakres.
 class ClassesRepository {
-  final SupabaseClient _client;
-
-  ClassesRepository._internal({required SupabaseClient client}) : _client = client;
-
-  static final ClassesRepository instance = ClassesRepository._internal(client: Supa.client);
-  static SupabaseClient get _supabaseClient => instance._client;
-
+  // Klucze prefów
   static const String _prefGroup = 'onb_group';
   static const String _prefSub = 'onb_group_sub';
   static const String _prefGroupId = 'onb_group_id';
   static const String _prefGroupMeta = 'onb_group_meta';
+
+  // Klucze ulubionych
   static const String _prefFavPlans = 'fav_plans';
   static const String _prefFavLabels = 'fav_labels';
   static const String _prefFavSubgroups = 'fav_subgroups';
 
+  /// --- Helpers for favorites (DRY) ---
   static Future<Set<String>> loadFavorites() async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_prefFavPlans);
@@ -40,13 +33,14 @@ class ClassesRepository {
   static Future<void> saveFavorites(Set<String> favs) async {
     final p = await SharedPreferences.getInstance();
     await p.setString(_prefFavPlans, jsonEncode(favs.toList()));
-    _notifyFavoritesChanged();
   }
 
+  /// Toggle favorite entry (key like 'group:<id>' or 'teacher:<id>').
+  /// If `label` is provided when adding, updates fav_labels accordingly.
   static Future<void> toggleFavorite(String key, {String? label}) async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_prefFavPlans);
-    final List<String> list = raw == null || raw.isEmpty ? [] : List<String>.from(jsonDecode(raw) as List<dynamic>).map((e) => e.toString()).toList();
+    final List<String> list = raw == null || raw.isEmpty ? [] : List<String>.from(jsonDecode(raw).map((e) => e.toString()));
     final exists = list.contains(key);
     if (exists) {
       list.remove(key);
@@ -55,6 +49,7 @@ class ClassesRepository {
     }
     await p.setString(_prefFavPlans, jsonEncode(list));
 
+    // labels
     try {
       final rawLabels = p.getString(_prefFavLabels);
       Map<String, String> labels = {};
@@ -69,7 +64,6 @@ class ClassesRepository {
       }
       await p.setString(_prefFavLabels, jsonEncode(labels));
     } catch (_) {}
-    _notifyFavoritesChanged();
   }
 
   static Future<bool> isFavorite(String key) async {
@@ -136,64 +130,10 @@ class ClassesRepository {
     } catch (_) {}
   }
 
-  static Future<List<String>> getValidatedSubgroupsForFavorite(String favKey) async {
-    final favSubgroups = await loadFavSubgroupsMap();
-    List<String> savedSubs = favSubgroups[favKey] ?? <String>[];
-    if (savedSubs.isEmpty) return <String>[];
-
-    final parts = favKey.split(':');
-    if (parts.length != 2 || parts[0] != 'group') return <String>[];
-    final groupId = parts[1];
-    if (groupId.isEmpty) return <String>[];
-
-    List<String> currentSubs = <String>[];
-    try {
-      final groupRow = await _supabaseClient.from('grupy').select('kod_grupy').eq('id', groupId).maybeSingle();
-      if (groupRow != null && groupRow['kod_grupy'] != null) {
-        final code = groupRow['kod_grupy'] as String;
-        currentSubs = await getSubgroupsForGroup(code, forceRefresh: false);
-      }
-    } catch (_) {
-      return savedSubs;
-    }
-
-    if (currentSubs.isEmpty) return savedSubs;
-
-    final currentSet = currentSubs.toSet();
-    final validated = savedSubs.where((s) => currentSet.contains(s)).toList();
-    return validated;
-  }
-
-  static Future<void> setValidatedSubgroupsForFavorite(String favKey, List<String> subs) async {
-    final favSubgroups = await loadFavSubgroupsMap();
-    List<String> toSave = subs;
-    if (toSave.isNotEmpty) {
-      final parts = favKey.split(':');
-      if (parts.length == 2 && parts[0] == 'group') {
-        final groupId = parts[1];
-        if (groupId.isNotEmpty) {
-          try {
-            final groupRow = await _supabaseClient.from('grupy').select('kod_grupy').eq('id', groupId).maybeSingle();
-            if (groupRow != null && groupRow['kod_grupy'] != null) {
-              final code = groupRow['kod_grupy'] as String;
-              final currentSubs = await getSubgroupsForGroup(code, forceRefresh: false);
-              if (currentSubs.isNotEmpty) {
-                final currentSet = currentSubs.toSet();
-                toSave = toSave.where((s) => currentSet.contains(s)).toList();
-              }
-            }
-          } catch (_) {
-            // błąd
-          }
-        }
-      }
-    }
-    favSubgroups[favKey] = toSave;
-    await saveFavSubgroupsMap(favSubgroups);
-  }
-
+  // Stabilny regex UUID (wymóg)
   static final RegExp uuidRe = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
 
+  // Metryki diagnostyczne
   static int lastDayRows = -1;
   static int lastWeekRows = -1;
   static int lastRangeRows = -1;
@@ -210,14 +150,12 @@ class ClassesRepository {
     lastDayQueried = lastWeekStart = lastRangeFrom = lastRangeTo = null;
   }
 
+  // Prosty cache zakresów (key -> Entry) z TTL
   static final Map<String,_RangeCacheEntry> _rangeCache = {};
   static const Duration _cacheTtl = Duration(minutes: 5);
-  static final Map<String, _SubgroupsCacheEntry> _subgroupsCache = {};
+  // Cache dla list podgrup (key: groupCode -> entry)
+  static final Map<String,_SubgroupsCacheEntry> _subgroupsCache = {};
   static const Duration _subgroupsCacheTtl = Duration(minutes: 30);
-  static final Map<String, _SubjectsCacheEntry> _subjectsByGroupCache = {};
-  static final Map<String, _TypesCacheEntry> _typesByGroupSubjectCache = {};
-  static const Duration _subjectsTtl = Duration(minutes: 20);
-  static const Duration _typesTtl = Duration(minutes: 20);
   static String _rangeKey(DateTime from, DateTime to, String group, List<String> subs){
     final subsKey = subs.map((e)=>e.trim().toLowerCase()).toList()..sort();
     return '${from.millisecondsSinceEpoch}:${to.millisecondsSinceEpoch}:$group:${subsKey.join('|')}';
@@ -226,9 +164,8 @@ class ClassesRepository {
   static void _pruneCache(){
     final now = DateTime.now();
     _rangeCache.removeWhere((_,v)=> now.difference(v.inserted) > _cacheTtl);
+    // prune subgroups cache as well
     _subgroupsCache.removeWhere((_,v)=> now.difference(v.inserted) > _subgroupsCacheTtl);
-    _subjectsByGroupCache.removeWhere((_, v) => now.difference(v.inserted) > _subjectsTtl);
-    _typesByGroupSubjectCache.removeWhere((_, v) => now.difference(v.inserted) > _typesTtl);
   }
 
   static void _clearCaches() {
@@ -239,95 +176,20 @@ class ClassesRepository {
 
   static String _trim(String? s) => (s ?? '').trim();
 
-  static Map<String, dynamic> _normalizeRowDates(Map<String, dynamic> row) {
-    final out = Map<String, dynamic>.from(row);
-
-    void _normKey(String key) {
-      try {
-        if (!out.containsKey(key)) return;
-        final v = out[key];
-        if (v == null) return;
-        if (v is DateTime) {
-          out[key] = v.toLocal().toIso8601String();
-        } else if (v is String) {
-          try {
-            final parsed = DateTime.parse(v);
-            out[key] = parsed.toLocal().toIso8601String();
-          } catch (_) {
-            try {
-              final parts = v.split(RegExp(r'[ T]'));
-              if (parts.isNotEmpty) {
-                final datePart = parts[0];
-                final timePart = parts.length > 1 ? parts[1] : '00:00:00';
-                final dateSegments = datePart.split(RegExp(r'[-/.]')).map((s) => int.tryParse(s) ?? 0).toList();
-                final timeSegments = timePart.split(RegExp(r'[:.]')).map((s) => int.tryParse(s) ?? 0).toList();
-                if (dateSegments.length >= 3) {
-                  final d = DateTime(
-                    dateSegments[0],
-                    dateSegments[1],
-                    dateSegments[2],
-                    timeSegments.isNotEmpty ? timeSegments[0] : 0,
-                    timeSegments.length > 1 ? timeSegments[1] : 0,
-                    timeSegments.length > 2 ? timeSegments[2] : 0,
-                  );
-                  out[key] = d.toLocal().toIso8601String();
-                }
-              }
-            } catch (_) {
-              // ignore
-            }
-          }
-        }
-      } catch (_) {
-        // ignore
-      }
-    }
-
-    // ✅ POPRAWKA 1: Dodano 'do_' do listy kluczy
-    const possibleKeys = <String>['od', 'do', 'do_', 'start', 'end', 'czas_od', 'czas_do', 'date', 'dt'];
-    for (final k in possibleKeys) _normKey(k);
-
-    return out;
-  }
-
-  static Map<String, dynamic> _prepareRowForClassModel(Map<String, dynamic> raw) {
-    final normalized = _normalizeRowDates(raw);
-    final out = Map<String, dynamic>.from(normalized);
-
-    if (out.containsKey('od') && out['od'] != null) {
-      out['startTime'] = out['od'];
-    } else if (out.containsKey('start') && out['start'] != null) {
-      out['startTime'] = out['start'];
-    }
-
-    // ✅ POPRAWKA 2: Sprawdź 'do_' przed 'do' (zgodnie z Twoim plikiem class_model.dart)
-    if (out.containsKey('do_') && out['do_'] != null) {
-      out['endTime'] = out['do_'];
-    } else if (out.containsKey('do') && out['do'] != null) {
-      out['endTime'] = out['do'];
-    } else if (out.containsKey('end') && out['end'] != null) {
-      out['endTime'] = out['end'];
-    }
-
-    return out;
-  }
-
-  static ClassModel parseRowToClassModel(Map<String, dynamic> raw) {
-    final prepared = _prepareRowForClassModel(raw);
-    return ClassModel.fromMap(prepared);
-  }
-
+  /// Zwraca kanoniczny klucz ulubionego planu: 'group:<id>' jeśli id dostępne, inaczej 'group:<code>'
   static String canonicalFavKey({String? groupId, String? groupCode}) {
     if (groupId != null && groupId.trim().isNotEmpty) {
-      return 'group:$groupId';
+      return 'group:${groupId.trim()}';
     }
     return 'group:${(groupCode ?? '').trim()}';
   }
 
+  /// Odczyt grupy i podgrup z prefów (subgrupy w JSON lub starszy CSV -> fallback).
   static Future<(String? groupCode, List<String> subgroups)> loadGroupPrefs() async {
     final p = await SharedPreferences.getInstance();
     final rawGroup = _trim(p.getString(_prefGroup));
     final groupCode = rawGroup.isEmpty ? null : rawGroup;
+    // Preferuj JSON array, wsteczna kompatybilność z CSV
     final subsJson = p.getString(_prefSub);
     List<String> subs = const [];
     if (subsJson != null && subsJson.isNotEmpty) {
@@ -339,16 +201,19 @@ class ClassesRepository {
           subs = dec.split(',').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toList();
         }
       } catch (_) {
+        // może być CSV
         subs = subsJson.split(',').map((e)=>e.trim()).where((e)=>e.isNotEmpty).toList();
       }
     }
     return (groupCode, subs);
   }
 
+  /// Odczyt kontekstu grupy: kod, podgrupy (nigdy null) i zapisany groupId (jeśli istnieje)
   static Future<(String? groupCode, List<String> subgroups, String? groupId)> loadGroupContext() async {
     final p = await SharedPreferences.getInstance();
     final rawGroup = _trim(p.getString(_prefGroup));
     final groupCode = rawGroup.isEmpty ? null : rawGroup;
+    // subgroups JSON-first
     List<String> subs = const [];
     final subsRaw = p.getString(_prefSub);
     if (subsRaw != null && subsRaw.isNotEmpty) {
@@ -366,62 +231,60 @@ class ClassesRepository {
     final savedId = _trim(p.getString(_prefGroupId));
     final groupId = savedId.isEmpty ? null : savedId;
     if (groupCode != null && groupId != null) {
+      // warm cache dla danego kodu
       _groupIdCache[groupCode] = groupId;
     }
     return (groupCode, subs, groupId);
   }
 
+  // Cache groupId
   static final Map<String,String?> _groupIdCache = {};
   static Future<String?> _resolveGroupId(String groupCode) async {
     if (_groupIdCache.containsKey(groupCode)) return _groupIdCache[groupCode];
     try {
-      final res = await _supabaseClient.from('grupy').select('id').eq('kod_grupy', groupCode).limit(1).maybeSingle();
-      if (res == null || res['id'] == null) {
-        _groupIdCache[groupCode] = null;
-        return null;
-      }
-      final id = res['id'] as String;
-      _groupIdCache[groupCode] = id;
-      return id;
-    } catch (_) {
-      _groupIdCache[groupCode] = null;
-      return null;
-    }
+      final res = await Supa.client.from('grupy').select('id').eq('kod_grupy', groupCode).limit(1).maybeSingle();
+      if (res == null || res['id'] == null) { _groupIdCache[groupCode] = null; return null; }
+      final id = res['id'] as String; (await SharedPreferences.getInstance()).setString(_prefGroupId, id); _groupIdCache[groupCode]=id; return id;
+    } catch (_) { _groupIdCache[groupCode]=null; return null; }
   }
   static Future<String?> _resolveGroupIdRobust(String group) async {
     final tried = <String>{};
     Future<String?> attempt(String g) async { if (tried.contains(g)) return null; tried.add(g); return await _resolveGroupId(g); }
     final variants = [group, group.replaceAll('-', ''), group.replaceAll(' ', ''), group.replaceAll('-', ' '), group.toUpperCase(), group.toLowerCase()];
-    for (final v in variants) { final id = await attempt(v); if (id != null) return id; }
+    for (final v in variants) { final id = await attempt(v); if (id!=null) return id; }
     return null;
   }
 
+  /// Publiczne: uzyskaj ID grupy po kodzie (bez heurystyk id vs code).
   static Future<String?> resolveGroupIdByCode(String code) => _resolveGroupId(code);
 
+  /// Szuka grup po fragmencie kodu (ilike) – zwraca listę map {id, kod_grupy}
   static Future<List<Map<String,dynamic>>> searchGroups(String q, {int limit = 50}) async {
     final trimmed = _trim(q);
     if (trimmed.isEmpty) return [];
     try {
-      final rows = await _supabaseClient.from('grupy').select('id,kod_grupy').ilike('kod_grupy', '%$trimmed%').limit(limit) as List<dynamic>;
+      final rows = await Supa.client.from('grupy').select('id,kod_grupy').ilike('kod_grupy', '%$trimmed%').limit(limit) as List<dynamic>;
       return rows.map((r) => Map<String,dynamic>.from(r as Map)).toList();
     } catch (e) {
-      print('[ClassesRepo][searchGroups] err $e');
+      debugPrint('[ClassesRepo][searchGroups] err $e');
       return [];
     }
   }
 
+  /// Szuka nauczycieli po fragmencie nazwy – zwraca listę map {id, nazwa}
   static Future<List<Map<String,dynamic>>> searchTeachers(String q, {int limit = 50}) async {
     final trimmed = _trim(q);
     if (trimmed.isEmpty) return [];
     try {
-      final rows = await _supabaseClient.from('nauczyciele').select('id,nazwa').ilike('nazwa', '%$trimmed%').limit(limit) as List<dynamic>;
+      final rows = await Supa.client.from('nauczyciele').select('id,nazwa').ilike('nazwa', '%$trimmed%').limit(limit) as List<dynamic>;
       return rows.map((r) => Map<String,dynamic>.from(r as Map)).toList();
     } catch (e) {
-      print('[ClassesRepo][searchTeachers] err $e');
+      debugPrint('[ClassesRepo][searchTeachers] err $e');
       return [];
     }
   }
 
+  /// Ustawia wybraną grupę i podgrupy w SharedPreferences oraz czyści wewnętrzne cache
   static Future<void> setGroupPrefs(String? groupCode, List<String> subgroups) async {
     final p = await SharedPreferences.getInstance();
     final code = groupCode?.trim() ?? '';
@@ -431,33 +294,39 @@ class ClassesRepository {
       await p.remove(_prefGroupId);
       await p.remove(_prefGroupMeta);
       _clearCaches();
-      print('[ClassesRepo][setGroupPrefs] cleared (no group)');
+      debugPrint('[ClassesRepo][setGroupPrefs] cleared (no group)');
       return;
     }
     await p.setString(_prefGroup, code);
+    // Zapisz subgrupy jako JSON array (pusta lista jeśli brak)
     try {
       final jsonArr = jsonEncode((subgroups..removeWhere((e)=>e.trim().isEmpty)).toList());
       await p.setString(_prefSub, jsonArr);
     } catch (_) {
       await p.setString(_prefSub, jsonEncode(<String>[]));
     }
+    // ID cache może być nieaktualne – usuń istniejące entry dla tej grupy
     _groupIdCache.remove(code);
+    // Usuń zapisany group id – wymusi resolver asynchronicznie
+    try { await p.remove(_prefGroupId); } catch (_) {}
     _clearCaches();
-    print('[ClassesRepo][setGroupPrefs] saved code=$code, subs=${subgroups.join(',')}');
+    debugPrint('[ClassesRepo][setGroupPrefs] saved code=$code, subs=${subgroups.join(',')}');
 
+    // Best-effort: rozwiąż ID po kodzie i zaktualizuj zapisane ID + migracja fav keys w tle
     () async {
       try {
         final id = await _resolveGroupId(code);
         if (id != null && id.isNotEmpty) {
           await p.setString(_prefGroupId, id);
           _groupIdCache[code] = id;
-          print('[ClassesRepo][setGroupPrefs] resolved id=$id for $code');
+          debugPrint('[ClassesRepo][setGroupPrefs] resolved id=$id for $code');
           await _migrateFavKeysIfNeeded();
         }
-      } catch (e) { print('[ClassesRepo][setGroupPrefs][resolve/migrate] $e'); }
+      } catch (e) { debugPrint('[ClassesRepo][setGroupPrefs][resolve/migrate] $e'); }
     }();
   }
 
+  /// Zapis grupy po ID i kodzie – preferowany sposób, gwarantuje jednoznaczność
   static Future<void> setGroupPrefsById({required String groupId, required String groupCode, List<String> subgroups = const []}) async {
     final p = await SharedPreferences.getInstance();
     final id = groupId.trim();
@@ -465,10 +334,11 @@ class ClassesRepository {
     await p.setString(_prefGroup, code);
     try { await p.setString(_prefSub, jsonEncode((subgroups..removeWhere((e)=>e.trim().isEmpty)).toList())); } catch (_) { await p.setString(_prefSub, jsonEncode(<String>[])); }
     await p.setString(_prefGroupId, id);
-    _groupIdCache[code] = id;
+    _groupIdCache[code] = id; // wypełnij cache
     _clearCaches();
+    // Spróbuj pobrać metadane grupy (jeśli istnieją) i zapisać je w prefs jako JSON
     try {
-      final row = await _supabaseClient.from('grupy').select().eq('id', id).maybeSingle();
+      final row = await Supa.client.from('grupy').select().eq('id', id).maybeSingle();
       if (row != null) {
         try {
           final json = jsonEncode(row);
@@ -476,11 +346,13 @@ class ClassesRepository {
         } catch (_) {}
       }
     } catch (_) {
-      // ignore
+      // ignore network errors — metadane są opcjonalne
     }
-    () async { try { await _migrateFavKeysIfNeeded(); } catch (e) { print('[ClassesRepo][setGroupPrefsById][migrate] $e'); } }();
+    // Best-effort: migracja kluczy ulubionych
+    () async { try { await _migrateFavKeysIfNeeded(); } catch (e) { debugPrint('[ClassesRepo][setGroupPrefsById][migrate] $e'); } }();
   }
 
+  /// Zwróć mapę meta (rozpakowany JSON) jeśli jest dostępna.
   static Future<Map<String,dynamic>?> loadGroupMeta() async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_prefGroupMeta);
@@ -493,16 +365,19 @@ class ClassesRepository {
     }
   }
 
+  /// Uniwersalne pobranie zakresu [from, to). Zwraca posortowaną listę.
   static Future<List<ClassModel>> fetchRange({required DateTime from, required DateTime to, String? groupCode, List<String> subgroups = const [], String? groupId}) async {
     final rawGroup = _trim(groupCode);
-    final group = rawGroup;
+    final group = rawGroup; // brak sztucznego fallbacku – jeśli brak grupy zwracamy []
     final start = DateTime(from.year, from.month, from.day, from.hour, from.minute);
     final end = DateTime(to.year, to.month, to.day, to.hour, to.minute);
     lastRangeFrom = start; lastRangeTo = end; lastRangeRows = 0; lastRangeVariant = 'none';
-    if (group.isEmpty && (groupId == null || groupId.trim().isEmpty)) { print('[ClassesRepo][range] brak groupCode/groupId – zwracam pustą listę'); return const []; }
+    if (group.isEmpty && (groupId==null || groupId.trim().isEmpty)) { debugPrint('[ClassesRepo][range] brak groupCode/groupId – zwracam pustą listę'); return const []; }
 
+    // Serwerowo pobieramy CAŁY zakres bez filtrów podgrup (poza grupą) – filtr lokalnie daje pełną kontrolę.
     List data = <dynamic>[];
 
+    // Cache
     _pruneCache();
     final ck = _rangeKey(start, end, group, subgroups);
     final cached = _rangeCache[ck];
@@ -512,12 +387,13 @@ class ClassesRepository {
       return cached.data;
     }
 
+    // 1) jeśli przekazano groupId – użyj go bez żadnych fallbacków
     final String _resolvedRaw = _trim(groupId);
     String? resolvedGroupId = _resolvedRaw.isEmpty ? null : _resolvedRaw;
 
     if (resolvedGroupId != null) {
       try {
-        data = await _supabaseClient
+        data = await Supa.client
             .from('zajecia_grupy')
             .select('*')
             .gte('od', start.toIso8601String())
@@ -525,81 +401,73 @@ class ClassesRepository {
             .eq('grupa_id', resolvedGroupId)
             .order('od', ascending: true) as List;
         lastRangeVariant = 'grupa_id:param';
-      } catch(e) { print('[ClassesRepo][range] grupa_id:param err $e'); }
+      } catch(e) { debugPrint('[ClassesRepo][range] grupa_id:param err $e'); }
     }
 
+    // 2) jeśli nie ma param groupId albo zapytanie zwróciło pusto – spróbuj ustalić ID po kodzie
     if (data.isEmpty && resolvedGroupId == null && group.isNotEmpty) {
       final resolved = await _resolveGroupIdRobust(group);
       if (resolved != null) {
         try {
-          data = await _supabaseClient
+          data = await Supa.client
               .from('zajecia_grupy')
               .select('*')
               .gte('od', start.toIso8601String())
               .lt('od', end.toIso8601String())
               .eq('grupa_id', resolved)
               .order('od', ascending: true) as List;
-          lastRangeVariant = 'grupa_id:resolved';
-          resolvedGroupId = resolved;
-        } catch (e) { print('[ClassesRepo][range] grupa_id:resolved err $e'); }
+          lastRangeVariant = 'grupa_id:$resolved';
+        } catch(e) { debugPrint('[ClassesRepo][range] grupa_id resolved err $e'); }
       }
-    }
 
-    // ✅ POPRAWKA 3: Zmieniono 'do' na 'do_' i usunięto 'kod_grupy'
-    if (data.isEmpty && resolvedGroupId != null) {
-      final id = resolvedGroupId;
-      try {
-        final rows = await _supabaseClient
-            .from('zajecia_grupy')
-        // Używamy do_ zamiast do i usunęliśmy 'kod_grupy'
-            .select('od,do_,grupa_id,przedmiot,nauczyciel,typ,pracownia,pole')
-            .gte('od', start.toIso8601String())
-            .lt('od', end.toIso8601String())
-            .eq('grupa_id', id)
-            .order('od', ascending: true) as List;
-        data = rows;
-        lastRangeVariant = 'group_id_cache_resolved';
-      } catch (e) { print('[ClassesRepo][range] group_id_cache_resolved err $e'); }
-    }
-
-    if (data.isEmpty && resolvedGroupId != null && resolvedGroupId.isNotEmpty) {
-      final id = resolvedGroupId;
-      try {
-        final rows = await _supabaseClient.from('zajecia_grupy').select().eq('id', id).maybeSingle();
-        if (rows != null) data = [rows];
-        lastRangeVariant = 'by_id_fallback';
-      } catch (e) { print('[ClassesRepo][range] by id err $e'); }
+      // 3) fallback po kod_grupy tylko jeśli nie udało się ustalić groupId
+      if (data.isEmpty && resolved == null) {
+        final variants = <String>{
+          group,
+          group.replaceAll('-', ''),
+          group.replaceAll(' ', ''),
+          group.replaceAll('-', ' '),
+          group.toUpperCase(),
+          group.toLowerCase(),
+        };
+        for (final v in variants) {
+          if (v.isEmpty) continue;
+          try {
+            final rows = await Supa.client
+                .from('zajecia_grupy')
+                .select('*,grupy(kod_grupy)')
+                .gte('od', start.toIso8601String())
+                .lt('od', end.toIso8601String())
+                .eq('grupy.kod_grupy', v)
+                .order('od', ascending: true) as List;
+            if (rows.isNotEmpty) { data = rows; lastRangeVariant = 'kod_grupy:$v'; break; }
+          } catch (e) { debugPrint('[ClassesRepo][range] kod_grupy $v err $e'); }
+        }
+      }
     }
 
     lastRangeRows = data.length;
 
     for (int i=0;i<data.length;i++){ final d=data[i]; if(d is Map && d.containsKey('grupy')) d.remove('grupy'); }
     final list = <ClassModel>[];
-    for (final r in data) {
-      try {
-        final prepared = Map<String,dynamic>.from(r as Map);
-        final model = parseRowToClassModel(prepared);
-        list.add(model);
-      } catch(e){
-        print('[ClassesRepo][range][PARSE] $e');
-      }
-    }
+    for (final r in data) { try { list.add(ClassModel.fromMap(Map<String,dynamic>.from(r as Map))); } catch(e){ debugPrint('[ClassesRepo][range][PARSE] $e'); } }
 
     final lowerSubs = subgroups.map((e)=>e.toLowerCase()).toSet();
     if (lowerSubs.isNotEmpty) {
       final before = list.length;
       list.retainWhere((c){
         final pg = (c.subgroup??'').trim();
-        if (pg.isEmpty) return true;
+        if (pg.isEmpty) return true; // zawsze akceptujemy puste
         return lowerSubs.contains(pg.toLowerCase());
       });
-      print('[ClassesRepo][range] subgroup filter $before -> ${list.length} (${lowerSubs.join(',')})');
+      debugPrint('[ClassesRepo][range] subgroup filter $before -> ${list.length} (${lowerSubs.join(',')})');
     } else {
-      // brak
+      // brak wybranych podgrup – pokaż wszystko (w tym A/B) – zachowanie bardziej przyjazne użytkownikowi
     }
     list.sort((a,b)=>a.startTime.compareTo(b.startTime));
-    print('[ClassesRepo][range] final=${list.length} variant=$lastRangeVariant from=$start to=$end');
+    debugPrint('[ClassesRepo][range] final=${list.length} variant=$lastRangeVariant from=$start to=$end');
 
+    // Cache save
     _rangeCache[ck] = _RangeCacheEntry(list);
     return list;
   }
@@ -637,6 +505,7 @@ class ClassesRepository {
     return const [];
   }
 
+  /// Multi-day (n dni) – wrapper.
   static Future<List<ClassModel>> fetchMultiDay(DateTime from, int days,{String? groupCode,List<String> subgroups=const [], String? groupId}) async {
     final start = DateTime(from.year, from.month, from.day);
     final end = start.add(Duration(days: days));
@@ -646,16 +515,19 @@ class ClassesRepository {
   static Future<List<String>> getSubgroupsForGroup(String groupCode, {bool forceRefresh = false}) async {
     final g = _trim(groupCode);
     if (g.isEmpty) return [];
+    // Check cache first (unless forceRefresh requested)
     final now = DateTime.now();
     final cached = _subgroupsCache[g];
     if (!forceRefresh && cached != null && now.difference(cached.inserted) <= _subgroupsCacheTtl) {
       return List<String>.from(cached.data);
     }
 
+    // Fallback chain: a) tabela 'podgrupy' (jeśli istnieje), b) RPC (jeśli dostępne), c) distinct podgrupa z 'plan_zajec' po kod_grupy, d) fallback po zajecia_grupy via grupa_id, e) []
     List<String> subs = [];
     try {
+      // a) podgrupy table
       try {
-        final rows = await _supabaseClient
+        final rows = await Supa.client
             .from('podgrupy')
             .select('podgrupa')
             .eq('kod_grupy', g) as List<dynamic>;
@@ -669,23 +541,26 @@ class ClassesRepository {
             ..sort();
         }
       } catch (_) {
-        // ignore
+        // tabela może nie istnieć — pomijamy
       }
 
+      // b) RPC (jeśli byłoby dostępne) — nazwa przykładowa 'get_subgroups_for_group'
       if (subs.isEmpty) {
         try {
-          final rpc = await _supabaseClient.rpc('get_subgroups_for_group', params: {'p_kod_grupy': g});
-          if (rpc != null && rpc is List) {
-            final List<String> out = rpc.map((e)=> e.toString()).toList();
-            _subgroupsCache[g] = _SubgroupsCacheEntry(out);
-            return out;
+          final rpc = await Supa.client.rpc('get_subgroups_for_group', params: {'p_kod_grupy': g});
+          if (rpc is List) {
+            subs = rpc.map((e)=> e.toString()).where((s)=>s.trim().isNotEmpty).toSet().toList()..sort();
+          } else if (rpc is Map && rpc['subgroups'] is List) {
+            final l = rpc['subgroups'] as List;
+            subs = l.map((e)=> e.toString()).where((s)=>s.trim().isNotEmpty).toSet().toList()..sort();
           }
-        } catch (e) { print('[ClassesRepo][subgroups] rpc err $e'); }
+        } catch (_) {/* brak RPC lub błąd — ignoruj */}
       }
 
+      // c) distinct from plan_zajec by kod_grupy
       if (subs.isEmpty) {
         try {
-          final rows = await _supabaseClient
+          final rows = await Supa.client
               .from('plan_zajec')
               .select('podgrupa')
               .eq('kod_grupy', g) as List<dynamic>;
@@ -698,14 +573,15 @@ class ClassesRepository {
                 .toList()
               ..sort();
           }
-        } catch (_) {/* ignore */}
+        } catch (_) {/* tabela może nie istnieć — ignoruj */}
       }
 
+      // d) fallback: zajecia_grupy via grupa_id (obecny model)
       if (subs.isEmpty) {
         try {
           final groupId = await _resolveGroupIdRobust(g);
           if (groupId != null) {
-            final subRes = await _supabaseClient
+            final subRes = await Supa.client
                 .from('zajecia_grupy')
                 .select('podgrupa')
                 .eq('grupa_id', groupId)
@@ -718,22 +594,24 @@ class ClassesRepository {
                 .toList()
               ..sort();
           }
-        } catch (_) {/* ignore */}
+        } catch (_) {/* ignoruj */}
       }
     } catch (e) {
-      print('[ClassesRepo][getSubgroupsForGroup] err $e');
+      debugPrint('[ClassesRepo][getSubgroupsForGroup] err $e');
       subs = [];
     }
 
+    // save to cache
     _subgroupsCache[g] = _SubgroupsCacheEntry(subs);
     return subs;
   }
 
+  /// Pobierz zakres zajęć dla nauczyciela. Zakłada istnienie tabeli 'zajecia_nauczyciela' z kolumną 'nauczyciel_id' i polami kompatybilnymi z ClassModel.
   static Future<List<ClassModel>> fetchTeacherRange({required DateTime from, required DateTime to, required String teacherId}) async {
     final start = DateTime(from.year, from.month, from.day, from.hour, from.minute);
     final end = DateTime(to.year, to.month, to.day, to.hour, to.minute);
     try {
-      final data = await _supabaseClient
+      final data = await Supa.client
           .from('zajecia_nauczyciela')
           .select('*')
           .gte('od', start.toIso8601String())
@@ -742,17 +620,11 @@ class ClassesRepository {
           .order('od', ascending: true) as List<dynamic>;
       final list = <ClassModel>[];
       for (final r in data) {
-        try {
-          final prepared = Map<String,dynamic>.from(r as Map);
-          final model = parseRowToClassModel(prepared);
-          list.add(model);
-        } catch (e) {
-          print('[ClassesRepo][teacherRange][PARSE] $e');
-        }
+        try { list.add(ClassModel.fromMap(Map<String,dynamic>.from(r as Map))); } catch (e) { debugPrint('[ClassesRepo][teacherRange][PARSE] $e'); }
       }
       return list;
     } catch (e) {
-      print('[ClassesRepo][teacherRange] err $e');
+      debugPrint('[ClassesRepo][teacherRange] err $e');
       return const [];
     }
   }
@@ -778,33 +650,44 @@ class ClassesRepository {
     return week.where((c)=> c.startTime.year==day.year && c.startTime.month==day.month && c.startTime.day==day.day).toList()..sort((a,b)=>a.startTime.compareTo(b.startTime));
   }
 
+  /// Pobierz szczegóły nauczyciela (email, instytut, nazwa) jeśli są dostępne
   static Future<Map<String,dynamic>?> getTeacherDetails(String teacherId) async {
     try {
-      final row = await _supabaseClient.from('nauczyciele').select('id,nazwa,email,instytut').eq('id', teacherId).maybeSingle();
+      final row = await Supa.client.from('nauczyciele').select('id,nazwa,email,instytut').eq('id', teacherId).maybeSingle();
       if (row == null) return null;
       return Map<String,dynamic>.from(row as Map);
-    } catch (e) { print('[ClassesRepo][teacher] err $e'); }
-    return null;
+    } catch (e) {
+      debugPrint('[ClassesRepo][getTeacherDetails] err $e');
+      return null;
+    }
   }
 
+  /// Pobierz meta grupy po ID (id, kod_grupy, nazwa) - pomocnicze dla drawer/ulubionych
   static Future<Map<String,dynamic>?> getGroupById(String groupId) async {
     try {
-      final row = await _supabaseClient.from('grupy').select('id,kod_grupy,nazwa').eq('id', groupId).maybeSingle();
+      final row = await Supa.client.from('grupy').select('id,kod_grupy,nazwa').eq('id', groupId).maybeSingle();
       if (row == null) return null;
       return Map<String,dynamic>.from(row as Map);
-    } catch (e) { print('[ClassesRepo][getGroupById] err $e'); }
-    return null;
+    } catch (e) {
+      debugPrint('[ClassesRepo][getGroupById] err $e');
+      return null;
+    }
   }
 
+  /// Parsuje pole instytut/institute z bazy i zwraca listę czytelnych nazw.
+  /// Normalizuje nowe linie/taby, scala krótkie fragmenty oraz dzieli po przecinku/średniku.
   static List<String> parseInstitutes(String? instRaw) {
     final institutes = <String>[];
     if (instRaw == null || instRaw.trim().isEmpty) return institutes;
 
+    // Normalizacja: usuń CR, zamień taby na spacje i usuń niewidoczne/sterujące znaki
     var normalized = instRaw.replaceAll('\r', '').replaceAll('\t', ' ');
+    // Usuń zero-width i soft-hyphen oraz innych kontrolnych, zamień NBSP na zwykłą spację
     normalized = normalized
-        .replaceAll(RegExp(r'[\u200B\u200C\u200D\u2060\u00AD]'), ' ')
+        .replaceAll(RegExp(r'[\u200B\u200C\u200D\u2060\u00AD]'), '')
         .replaceAll('\u00A0', ' ');
 
+    // Rozbijaj po nowych liniach, usuń puste i przytnij
     final lines = normalized.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
     final merged = <String>[];
@@ -830,6 +713,7 @@ class ClassesRepository {
     return institutes;
   }
 
+  /// Zwraca inicjały z pełnej nazwy (np. "Jan Kowalski" -> "JK", "Agnieszka" -> "A").
   static String initialsFromName(String? name) {
     final s = (name ?? '').trim();
     if (s.isEmpty) return 'A';
@@ -846,13 +730,16 @@ class ClassesRepository {
     return '$first$last';
   }
 
+  /// Publiczne: uzyskaj ID grupy na podstawie kodu (z wariantami). Zwraca null, jeśli nie znaleziono.
   static Future<String?> resolveGroupIdForCode(String groupCode) => _resolveGroupIdRobust(groupCode);
 
+  /// Ustawia preferencje nauczyciela na podstawie jego ID
   static Future<void> setTeacherPrefsById(String teacherId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('teacher_id', teacherId);
   }
 
+  /// Migracja kluczy ulubionych: group:<code> -> group:<id> (best-effort). Aktualizuje również fav_labels i fav_subgroups.
   static Future<void> _migrateFavKeysIfNeeded() async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_prefFavPlans);
@@ -866,7 +753,7 @@ class ClassesRepository {
     for (final k in list) {
       if (!k.startsWith('group:')) continue;
       final token = k.substring('group:'.length);
-      if (uuidRe.hasMatch(token)) continue;
+      if (uuidRe.hasMatch(token)) continue; // już id
       final code = token.trim();
       if (code.isEmpty) continue;
       try {
@@ -879,6 +766,7 @@ class ClassesRepository {
     }
 
     if (replacements.isNotEmpty) {
+      // fav_plans
       final Set<String> newSet = list.toSet();
       for (final entry in replacements.entries) {
         if (newSet.remove(entry.key)) { newSet.add(entry.value); changed = true; }
@@ -886,6 +774,7 @@ class ClassesRepository {
       if (changed) {
         await p.setString(_prefFavPlans, jsonEncode(newSet.toList()));
       }
+      // fav_labels
       try {
         final rl = p.getString(_prefFavLabels);
         if (rl != null && rl.isNotEmpty) {
@@ -901,6 +790,7 @@ class ClassesRepository {
           if (labelsChanged) await p.setString(_prefFavLabels, jsonEncode(lm));
         }
       } catch (_) {}
+      // fav_subgroups
       try {
         final rs = p.getString(_prefFavSubgroups);
         if (rs != null && rs.isNotEmpty) {
@@ -918,135 +808,6 @@ class ClassesRepository {
       } catch (_) {}
     }
   }
-
-  static Future<List<String>> getSubjectsForDefaultGroup({bool forceRefresh = false}) async {
-    try {
-      final ctx = await loadGroupContext();
-      final groupCode = _trim(ctx.$1);
-      final groupId = _trim(ctx.$3);
-      final cacheKey = groupId.isNotEmpty ? 'id:$groupId' : 'code:${groupCode.toLowerCase()}';
-      _pruneCache();
-      if (!forceRefresh) {
-        final cached = _subjectsByGroupCache[cacheKey];
-        if (cached != null) {
-          return List<String>.from(cached.data);
-        }
-      }
-
-      Set<String> subjects = <String>{};
-
-      if (groupId.isNotEmpty) {
-        try {
-          final rows = await _supabaseClient
-              .from('zajecia_grupy')
-              .select('przedmiot')
-              .eq('grupa_id', groupId) as List<dynamic>;
-          for (final r in rows) {
-            final s = _trim(r['przedmiot'] as String?);
-            if (s.isNotEmpty) subjects.add(s);
-          }
-        } catch (e) { print('[ClassesRepo][subjects:id] $e'); }
-      }
-
-      if (subjects.isEmpty && groupCode.isNotEmpty) {
-        try {
-          final rows = await _supabaseClient
-              .from('plan_zajec')
-              .select('przedmiot')
-              .eq('kod_grupy', groupCode) as List<dynamic>;
-          for (final r in rows) {
-            final s = _trim(r['przedmiot'] as String?);
-            if (s.isNotEmpty) subjects.add(s);
-          }
-        } catch (e) { print('[ClassesRepo][subjects:plan_zajec] $e'); }
-      }
-
-      final list = subjects.toList()..sort((a,b)=> a.toLowerCase().compareTo(b.toLowerCase()));
-      _subjectsByGroupCache[cacheKey] = _SubjectsCacheEntry(list);
-      return list;
-    } catch (e) {
-      print('[ClassesRepo][getSubjectsForDefaultGroup] err $e');
-      return const [];
-    }
-  }
-
-  static Future<List<String>> getTypesForSubjectInDefaultGroup(String subject, {bool forceRefresh = false}) async {
-    final subj = _trim(subject);
-    if (subj.isEmpty) return const [];
-    try {
-      final ctx = await loadGroupContext();
-      final groupCode = _trim(ctx.$1);
-      final groupId = _trim(ctx.$3);
-      final cacheKey = (groupId.isNotEmpty ? 'id:$groupId' : 'code:${groupCode.toLowerCase()}') + '::' + subj.toLowerCase();
-      _pruneCache();
-      if (!forceRefresh) {
-        final cached = _typesByGroupSubjectCache[cacheKey];
-        if (cached != null) {
-          return List<String>.from(cached.data);
-        }
-      }
-
-      Set<String> types = <String>{};
-
-      if (groupId.isNotEmpty) {
-        try {
-          final rows = await _supabaseClient
-              .from('zajecia_grupy')
-              .select('typ,rz,type,przedmiot')
-              .eq('grupa_id', groupId)
-              .eq('przedmiot', subj) as List<dynamic>;
-          for (final r in rows) {
-            final t = _trim((r['typ'] as String?) ?? (r['rz'] as String?) ?? (r['type'] as String?));
-            if (t.isNotEmpty) types.add(t);
-          }
-        } catch (e) { print('[ClassesRepo][types:id] $e'); }
-      }
-
-      if (types.isEmpty && groupCode.isNotEmpty) {
-        try {
-          final rows = await _supabaseClient
-              .from('plan_zajec')
-              .select('typ,rz,type,przedmiot')
-              .eq('kod_grupy', groupCode)
-              .eq('przedmiot', subj) as List<dynamic>;
-          for (final r in rows) {
-            final t = _trim((r['typ'] as String?) ?? (r['rz'] as String?) ?? (r['type'] as String?));
-            if (t.isNotEmpty) types.add(t);
-          }
-        } catch (e) { print('[ClassesRepo][types:plan_zajec] $e'); }
-      }
-
-      final list = types.toList()..sort((a,b)=> a.toLowerCase().compareTo(b.toLowerCase()));
-      _typesByGroupSubjectCache[cacheKey] = _TypesCacheEntry(list);
-      return list;
-    } catch (e) {
-      print('[ClassesRepo][getTypesForSubjectInDefaultGroup] err $e');
-      return const [];
-    }
-  }
-
-  static const String subjectTypesAggregationSQL = r'''
--- (SQL bez zmian)
-''';
-
-  void clearCache() {
-    _clearCaches();
-  }
-
-  static void clearAllCaches() {
-    _clearCaches();
-  }
-
-  static final StreamController<Set<String>> _favoritesController = StreamController<Set<String>>.broadcast();
-
-  static Stream<Set<String>> get favoritesStream => _favoritesController.stream;
-
-  static void _notifyFavoritesChanged() async {
-    try {
-      final favs = await loadFavorites();
-      if (!_favoritesController.isClosed) _favoritesController.add(favs);
-    } catch (_) {}
-  }
 }
 
 class _RangeCacheEntry {
@@ -1059,16 +820,4 @@ class _SubgroupsCacheEntry {
   final List<String> data;
   final DateTime inserted = DateTime.now();
   _SubgroupsCacheEntry(this.data);
-}
-
-class _SubjectsCacheEntry {
-  final List<String> data;
-  final DateTime inserted = DateTime.now();
-  _SubjectsCacheEntry(this.data);
-}
-
-class _TypesCacheEntry {
-  final List<String> data;
-  final DateTime inserted = DateTime.now();
-  _TypesCacheEntry(this.data);
 }

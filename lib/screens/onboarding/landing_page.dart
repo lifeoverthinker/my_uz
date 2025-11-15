@@ -50,7 +50,7 @@ class LandingPage extends StatelessWidget {
                   child: Text(
                     'Witaj w MyUZ! 👋',
                     textAlign: TextAlign.center,
-                    style: tt.headlineMedium?.copyWith(color: cs.onSurface),
+                    style: tt.headlineMedium?.copyWith(color: cs.onBackground),
                   ),
                 ),
                 const SizedBox(height: 8),

@@ -26,7 +26,6 @@ class OnboardingPage6 extends StatelessWidget {
     return OnboardingFrame(
       pageIndex: 5, // 0-based (to jest 6. ekran)
       totalPages: 6,
-      hideNextArrowOnPageIndex: 5,
       onSkip: onSkip,
       onBack: onBack,
       onNext: onNext,
@@ -54,7 +53,7 @@ class OnboardingPage6 extends StatelessWidget {
                   child: Text(
                     'Mapa kampusu',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cs.onSurface),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cs.onBackground),
                   ),
                 ),
                 const SizedBox(height: 8),

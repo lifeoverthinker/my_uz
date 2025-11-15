@@ -18,7 +18,6 @@ class OnboardingFrame extends StatelessWidget {
   final VoidCallback? onBack;
   final VoidCallback onNext;
   final bool canProceed;
-  final int? hideNextArrowOnPageIndex; // jeśli ustawione, ukryje prawą strzałkę na tej stronie (0-based)
   final Widget child;
 
   const OnboardingFrame({
@@ -30,7 +29,6 @@ class OnboardingFrame extends StatelessWidget {
     required this.onNext,
     required this.child,
     this.canProceed = true,
-    this.hideNextArrowOnPageIndex,
   });
 
   @override
@@ -136,12 +134,8 @@ class OnboardingFrame extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(pageIndex == totalPages - 1 ? 'Gotowe!' : 'Dalej'),
-                            // Prawa strzałka tylko gdy to nie jest ostatnia strona
-                            // oraz gdy bieżąca strona nie jest na liście stron, dla których chcemy ją ukryć
-                            if (pageIndex != totalPages - 1 && pageIndex != hideNextArrowOnPageIndex) ...[
-                              const SizedBox(width: 8),
-                              const Icon(MyUz.chevron_right, size: 24),
-                            ],
+                            const SizedBox(width: 8),
+                            const Icon(MyUz.chevron_right, size: 24),
                           ],
                         ),
                       ),
