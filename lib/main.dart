@@ -8,6 +8,7 @@ import 'package:my_uz/screens/home/home_screen.dart';
 import 'package:my_uz/screens/calendar/calendar_screen.dart';
 import 'package:my_uz/screens/index/index_screen.dart';
 import 'package:my_uz/supabase.dart';
+import 'package:my_uz/services/database_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -28,6 +29,14 @@ Future<void> main() async {
     await Supa.init();
   } catch (e) {
     debugPrint('[Supa][ERROR] $e');
+  }
+
+  // Inicjalizacja lokalnej bazy danych
+  try {
+    await DatabaseService.database;
+    debugPrint('[Database] Initialized successfully');
+  } catch (e) {
+    debugPrint('[Database][ERROR] $e');
   }
 
   runApp(const MyBootstrap());
