@@ -14,6 +14,7 @@ import 'package:my_uz/screens/home/home_screen.dart';
 import 'package:my_uz/screens/calendar/calendar_screen.dart';
 import 'package:my_uz/screens/index/index_screen.dart';
 import 'package:my_uz/supabase.dart';
+import 'package:my_uz/services/database_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:my_uz/services/sqlite_user_store.dart';
 
@@ -39,16 +40,15 @@ Future<void> main() async {
     debugPrint('[Supa/DB][ERROR] $e');
   }
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => UserPlanProvider.instance),
-        ChangeNotifierProvider(create: (_) => CalendarProvider.instance),
-        ChangeNotifierProvider(create: (_) => TasksProvider.instance),
-      ],
-      child: const MyBootstrap(),
-    ),
-  );
+  // Inicjalizacja lokalnej bazy danych
+  try {
+    await DatabaseService.database;
+    debugPrint('[Database] Initialized successfully');
+  } catch (e) {
+    debugPrint('[Database][ERROR] $e');
+  }
+
+  runApp(const MyBootstrap());
 }
 
 class MyBootstrap extends StatefulWidget {
