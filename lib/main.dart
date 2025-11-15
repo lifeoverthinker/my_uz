@@ -1,11 +1,5 @@
-// Plik: lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:my_uz/providers/calendar_provider.dart';
-import 'package:my_uz/providers/tasks_provider.dart';
-import 'package:my_uz/providers/user_plan_provider.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:my_uz/navigation/bottom_navigation.dart';
 import 'package:my_uz/screens/onboarding/onboarding_navigator.dart';
@@ -14,14 +8,13 @@ import 'package:my_uz/screens/home/home_screen.dart';
 import 'package:my_uz/screens/calendar/calendar_screen.dart';
 import 'package:my_uz/screens/index/index_screen.dart';
 import 'package:my_uz/supabase.dart';
+import 'package:my_uz/services/database_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:my_uz/services/sqlite_user_store.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await initializeDateFormatting('pl');
   await initializeDateFormatting('pl_PL');
 
@@ -34,21 +27,19 @@ Future<void> main() async {
 
   try {
     await Supa.init();
-    await SqliteUserStore.init();
   } catch (e) {
-    debugPrint('[Supa/DB][ERROR] $e');
+    debugPrint('[Supa][ERROR] $e');
   }
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => UserPlanProvider.instance),
-        ChangeNotifierProvider(create: (_) => CalendarProvider.instance),
-        ChangeNotifierProvider(create: (_) => TasksProvider.instance),
-      ],
-      child: const MyBootstrap(),
-    ),
-  );
+  // Inicjalizacja lokalnej bazy danych
+  try {
+    await DatabaseService.database;
+    debugPrint('[Database] Initialized successfully');
+  } catch (e) {
+    debugPrint('[Database][ERROR] $e');
+  }
+
+  runApp(const MyBootstrap());
 }
 
 class MyBootstrap extends StatefulWidget {
@@ -76,14 +67,10 @@ class _MyBootstrapState extends State<MyBootstrap> {
     try {
       final prefs = await SharedPreferences.getInstance();
       _onboardingComplete = prefs.getBool('onboarding_complete') ?? false;
-
-      await context.read<UserPlanProvider>().loadFromPrefs();
-
       if (!mounted) return;
       setState(() => _ready = true);
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
-      debugPrint('Błąd _init: $e');
       setState(() => _error = true);
     }
   }
@@ -95,23 +82,6 @@ class _MyBootstrapState extends State<MyBootstrap> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       navigatorKey: navigatorKey,
-      supportedLocales: const [
-        Locale('pl'),
-        Locale('en'),
-      ],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      localeResolutionCallback: (deviceLocale, supported) {
-        if (deviceLocale != null) {
-          for (final loc in supported) {
-            if (loc.languageCode == deviceLocale.languageCode) return loc;
-          }
-        }
-        return const Locale('pl');
-      },
       home: _body(),
     );
   }
@@ -138,22 +108,20 @@ class _MyBootstrapState extends State<MyBootstrap> {
         ),
       );
     }
-
     if (!_ready) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
     return _onboardingComplete
         ? const HomePage()
         : OnboardingNavigator(
-      onFinishOnboarding: () async {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('onboarding_complete', true);
-        navigatorKey.currentState?.pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
-      },
-    );
+            onFinishOnboarding: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('onboarding_complete', true);
+              navigatorKey.currentState?.pushReplacement(
+                MaterialPageRoute(builder: (_) => const HomePage()),
+              );
+            },
+          );
   }
 }
 
@@ -166,34 +134,13 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _index = 0;
 
-  // POPRAWKA: Dodajemy klucz Scaffolda
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  // POPRAWKA: Definiujemy funkcje do przekazania
-  void _openDrawer() {
-    _scaffoldKey.currentState?.openDrawer();
-  }
-
-  void _navigateToCalendar(int tabIndex) {
-    _onTap(1);
-  }
-
-  // POPRAWKA: Inicjalizujemy listę w initState, aby mieć dostęp do funkcji
-  late final List<Widget> _pages;
-
-  @override
-  void initState() {
-    super.initState();
-    _pages = [
-      HomeScreen(
-        onOpenDrawer: _openDrawer,
-        onNavigateToCalendar: _navigateToCalendar,
-      ), // 0
-      const CalendarScreen(), // 1
-      const IndexScreen(), // 2 (Indeks)
-      const PlaceholderPage(title: 'Konto'), // 3 (Konto)
-    ];
-  }
+  // Uporządkowane strony zgodnie z kolejnością zakładek w dolnej nawigacji.
+  final List<Widget> _pages = const [
+    HomeScreen(),         // 0
+    CalendarScreen(),     // 1
+    IndexScreen(),        // 2 (Indeks)
+    PlaceholderPage(title: 'Konto'), // 3 (Konto)
+  ];
 
   static const _titles = ['Główna', 'Kalendarz', 'Indeks', 'Konto'];
 
@@ -202,15 +149,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // POPRAWKA: Przypisujemy klucz
-      key: _scaffoldKey,
-      // POPRAWKA: Dodajemy szufladę, aby przycisk miał co otwierać
-      drawer: const Drawer(
-        child: Center(child: Text("Szuflada Menu")),
-      ),
-      appBar: (_index == 0 || _index == 1 || _index == 2)
-          ? null
-          : AppBar(title: Text(_titles[_index])),
+      // Brak AppBar dla ekranu głównego, kalendarza i indeksu; pokazuj dla pozostałych (Konto)
+      appBar: (_index == 0 || _index == 1 || _index == 2) ? null : AppBar(title: Text(_titles[_index])),
       body: _pages[_index],
       bottomNavigationBar: MyUZBottomNavigation(
         currentIndex: _index,

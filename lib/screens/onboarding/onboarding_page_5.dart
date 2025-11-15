@@ -3,16 +3,16 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'onboarding_frame.dart';
 
-/// Onboarding 15 (mobile)
+/// Onboarding – Ekran 6 (mobile)
 /// Figma: padding top=12, bottom=32, horizontal=24
-/// Sta2e elementy zapewnia OnboardingFrame.
-/// r3dek: Ilustracja (paper-map), Tytu2y i opis.
-class OnboardingPage5 extends StatelessWidget {
+/// Stałe elementy zapewnia OnboardingFrame.
+/// Środek: Ilustracja (paper-map), Tytuły i opis.
+class OnboardingPage6 extends StatelessWidget {
   final VoidCallback onSkip;
   final VoidCallback onBack;
   final VoidCallback onNext;
 
-  const OnboardingPage5({
+  const OnboardingPage6({
     super.key,
     required this.onSkip,
     required this.onBack,
@@ -24,7 +24,7 @@ class OnboardingPage5 extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return OnboardingFrame(
-      pageIndex: 4, // 0-based (to jest 5. ekran)
+      pageIndex: 5, // 0-based (to jest 6. ekran)
       totalPages: 6,
       onSkip: onSkip,
       onBack: onBack,
@@ -39,28 +39,28 @@ class OnboardingPage5 extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Ilustracja 15: paper map (Figma: h=205)
+                // Ilustracja – paper map (Figma: h=205)
                 SvgPicture.asset(
                   'assets/images/illustrations/paper-map-rafiki.svg',
                   height: 205,
-                  semanticsLabel: 'Mapa kampusu 15 ilustracja',
+                  semanticsLabel: 'Mapa kampusu – ilustracja',
                 ),
                 const SizedBox(height: 24),
 
-                // Tytu2y i opis
+                // Tytuły i opis
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 312),
                   child: Text(
                     'Mapa kampusu',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cs.onSurface),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cs.onBackground),
                   ),
                 ),
                 const SizedBox(height: 8),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 312),
                   child: Text(
-                    'Nigdy si9 nie zagub',
+                    'Nigdy się nie zagub',
                     textAlign: TextAlign.center,
                     style: AppTextStyle.myUZTitleMedium.copyWith(
                       color: cs.primary,
@@ -72,7 +72,7 @@ class OnboardingPage5 extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 312),
                   child: Text(
-                    'Interaktywna mapa kampusu pomoe znale budynki uczelni, bibliotek i inne wane miejsca.',
+                    'Interaktywna mapa kampusu pomoże znaleźć budynki uczelni, bibliotekę i inne ważne miejsca.',
                     textAlign: TextAlign.center,
                     style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
                   ),

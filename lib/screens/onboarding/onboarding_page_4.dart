@@ -53,7 +53,7 @@ class OnboardingPage4 extends StatelessWidget {
                   child: Text(
                     'Terminarz i kalendarz',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cs.onSurface),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: cs.onBackground),
                   ),
                 ),
                 const SizedBox(height: 8),

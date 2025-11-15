@@ -1,280 +1,328 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:my_uz/icons/my_uz_icons.dart';
+import 'package:my_uz/theme/app_colors.dart';
+import 'package:my_uz/theme/text_style.dart';
+import 'onboarding_frame.dart';
 import 'package:my_uz/services/classes_repository.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-/// Onboarding step 3 — wybór grupy.
-/// - Pole wyszukiwania ma nieprzezroczyste tło (filled + fillColor)
-/// - Po wybraniu elementu z listy kontroler pola zostaje ustawiony na pełny display (kod/nazwa)
-/// - Jeśli wynik ma id, zapisujemy preferencję za pomocą setGroupPrefsById, w przeciwnym razie setGroupPrefs
+/// Onboarding – Ekran 3 (mobile)
+/// Figma: padding top=12, bottom=32, horizontal=24
+/// Środek: Ilustracja (settings), Tytuły, OutlinedTextField z lupą, po wyborze podgrupy A/B
 class OnboardingPage3 extends StatefulWidget {
-  final VoidCallback? onComplete;
+  final VoidCallback onSkip;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
 
-  const OnboardingPage3({super.key, this.onComplete});
+  const OnboardingPage3({
+    super.key,
+    required this.onSkip,
+    required this.onBack,
+    required this.onNext,
+  });
 
   @override
   State<OnboardingPage3> createState() => _OnboardingPage3State();
 }
 
 class _OnboardingPage3State extends State<OnboardingPage3> {
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
-
-  Timer? _debounce;
-  bool _loading = false;
-  List<Map<String, dynamic>> _results = [];
-  Map<String, dynamic>? _selected; // chosen entry from results (may contain id/kod_grupy)
-  String? _errorMsg;
-
-  @override
-  void initState() {
-    super.initState();
-  }
+  final _groupCtrl = TextEditingController();
+  String? _selectedGroupCode; // potwierdzony kod
+  String? _subgroup; // 'A' | 'B' | dowolna z listy dynamicznej
+  // Dynamicznie dostępne podgrupy dla wybranej grupy (jeśli backend je zwraca).
+  List<String> _availableSubgroups = const [];
+  bool _loadingSubs = false;
 
   @override
   void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    _focusNode.dispose();
+    _groupCtrl.dispose();
     super.dispose();
   }
 
-  void _onQueryChanged(String q) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () => _doSearch(q));
-  }
-
-  Future<void> _doSearch(String q) async {
-    final trimmed = q.trim();
-    if (trimmed.isEmpty) {
-      setState(() {
-        _results = [];
-        _errorMsg = null;
-      });
-      return;
-    }
-
+  Future<void> _confirmGroup() async {
+    final v = _groupCtrl.text.trim();
+    if (v.isEmpty) return;
     setState(() {
-      _loading = true;
-      _errorMsg = null;
+      _selectedGroupCode = v;
+      _subgroup = null;
+      _availableSubgroups = const [];
+      _loadingSubs = true;
     });
-
     try {
-      final rows = await ClassesRepository.searchGroups(trimmed, limit: 50);
+      final subs = await ClassesRepository.getSubgroupsForGroup(v, forceRefresh: true);
+      if (!mounted) return;
+      // Jeśli backend zwróci 1 podgrupę, możemy ją wstępnie zaznaczyć (UX). W innym wypadku użytkownik wybierze.
       setState(() {
-        _results = rows;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMsg = 'Błąd wyszukiwania';
-        _results = [];
-      });
-    } finally {
-      setState(() {
-        _loading = false;
-      });
-    }
-  }
-
-  String _displayForRow(Map<String, dynamic> row) {
-    // Try to prefer kod_grupy, fall back to nazwa, then id
-    final kod = (row['kod_grupy'] as String?)?.trim();
-    final nazwa = (row['nazwa'] as String?)?.trim();
-    final id = (row['id'] as String?)?.trim();
-    if (kod != null && kod.isNotEmpty) return kod + (nazwa != null && nazwa.isNotEmpty ? ' — $nazwa' : '');
-    if (nazwa != null && nazwa.isNotEmpty) return nazwa;
-    if (id != null && id.isNotEmpty) return id;
-    return row.toString();
-  }
-
-  Future<void> _onRowTap(Map<String, dynamic> row) async {
-    final kod = (row['kod_grupy'] as String?)?.trim();
-    final id = (row['id'] as String?)?.trim();
-    final nazwa = (row['nazwa'] as String?)?.trim();
-
-    final display = (kod != null && kod.isNotEmpty) ? (kod + (nazwa != null && nazwa.isNotEmpty ? ' — $nazwa' : '')) : (nazwa ?? id ?? '');
-    // set field text to full display so user sees chosen entry
-    _searchController.text = display;
-    // keep selection
-    setState(() {
-      _selected = row;
-      _results = [];
-      _errorMsg = null;
-    });
-    // unfocus to close keyboard
-    _focusNode.unfocus();
-
-    // persist as preferences (best-effort)
-    try {
-      if (id != null && id.isNotEmpty && kod != null && kod.isNotEmpty) {
-        // both id and code available -> save by id (preferred)
-        await ClassesRepository.setGroupPrefsById(groupId: id, groupCode: kod, subgroups: const []);
-      } else if (kod != null && kod.isNotEmpty) {
-        await ClassesRepository.setGroupPrefs(kod, const []);
-      } else if (id != null && id.isNotEmpty) {
-        // if only id available, try to resolve metadata for code first
-        final meta = await ClassesRepository.getGroupById(id);
-        final resolvedCode = meta != null ? (meta['kod_grupy'] as String?) : null;
-        if (resolvedCode != null && resolvedCode.isNotEmpty) {
-          await ClassesRepository.setGroupPrefsById(groupId: id, groupCode: resolvedCode, subgroups: const []);
-        } else {
-          // fallback: save groupId into prefs directly
-          final p = await SharedPreferences.getInstance();
-          await p.setString('onb_group_id', id);
+        _availableSubgroups = subs;
+        if (subs.length == 1) {
+          _subgroup = subs.first;
         }
-      }
-    } catch (e) {
-      // ignore save error (best-effort)
+        _loadingSubs = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _availableSubgroups = const []; _loadingSubs = false; });
     }
   }
 
-  Widget _buildSearchField(BuildContext context) {
-    return TextField(
-      controller: _searchController,
-      focusNode: _focusNode,
-      onChanged: _onQueryChanged,
-      textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        hintText: 'Wpisz kod grupy lub jej fragment (np. "10A")',
-        prefixIcon: const Icon(Icons.search),
-        filled: true,
-        // non-transparent background
-        fillColor: Theme.of(context).colorScheme.surface,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-        suffixIcon: _searchController.text.isNotEmpty
-            ? IconButton(
-          icon: const Icon(Icons.clear),
-          onPressed: () {
-            _searchController.clear();
-            _onQueryChanged('');
-            setState(() {
-              _results = [];
-              _selected = null;
-            });
-          },
-        )
-            : null,
-      ),
-    );
-  }
-
-  Widget _buildResults() {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (_errorMsg != null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Center(child: Text(_errorMsg!, style: const TextStyle(color: Colors.red))),
-      );
-    }
-    if (_results.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const ClampingScrollPhysics(),
-      itemCount: _results.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, idx) {
-        final row = _results[idx];
-        final display = _displayForRow(row);
-        return ListTile(
-          title: Text(display),
-          subtitle: row['id'] != null ? Text('ID: ${row['id']}') : null,
-          onTap: () => _onRowTap(row),
-        );
-      },
-    );
-  }
-
-  Future<void> _onContinue() async {
-    // If user typed custom text without selecting, try to save as code
-    if (_selected == null) {
-      final typed = _searchController.text.trim();
-      if (typed.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wybierz grupę lub wpisz jej kod.')));
-        return;
-      }
-      // save as code (best-effort)
-      try {
-        await ClassesRepository.setGroupPrefs(typed, const []);
-      } catch (_) {}
-    }
-    widget.onComplete?.call();
-  }
+  bool get _canProceed => _selectedGroupCode != null && _subgroup != null;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Onboarding — wybierz grupę'),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
-          child: Column(
-            children: [
-              const Text(
-                'Wybierz swoją grupę, aby zobaczyć plan i powiadomienia.',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 12),
-              _buildSearchField(context),
-              const SizedBox(height: 8),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildResults(),
-                      if (_selected != null) ...[
-                        const SizedBox(height: 12),
-                        Card(
-                          elevation: 0,
-                          child: ListTile(
-                            leading: const Icon(Icons.check_circle, color: Colors.green),
-                            title: Text(_displayForRow(_selected!)),
-                            subtitle: _selected!['id'] != null ? Text('Zapisano preferencje') : null,
-                            trailing: TextButton(
-                              child: const Text('Zmień'),
-                              onPressed: () {
-                                setState(() {
-                                  _selected = null;
-                                });
-                                _searchController.clear();
-                                _focusNode.requestFocus();
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    final hasGroup = _selectedGroupCode != null;
+    double illustrationHeight = 205;
+    if (hasGroup) illustrationHeight = 132;
+    if (bottomInset > 0) illustrationHeight = 96;
+
+    return OnboardingFrame(
+      pageIndex: 2,
+      totalPages: 6,
+      onSkip: widget.onSkip,
+      onBack: widget.onBack,
+      onNext: () async {
+        // Zapisz wybraną grupę i podgrupy przed przejściem dalej
+        await ClassesRepository.setGroupPrefs(_selectedGroupCode, _subgroup == null ? [] : [_subgroup!]);
+        widget.onNext();
+      },
+      canProceed: _canProceed,
+      child: ScrollConfiguration(
+        behavior: const _NoGlowScrollBehavior(),
+        child: AnimatedPadding(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _onContinue,
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child: Text('Kontynuuj'),
+                  // Ilustracja – settings-rafiki (Animated height)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 312),
+                    child: AnimatedContainer(
+                      height: illustrationHeight,
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutCubic,
+                      child: SvgPicture.asset(
+                        'assets/images/illustrations/settings-rafiki.svg',
+                        fit: BoxFit.contain,
+                        semanticsLabel: 'Ustawienia – ilustracja onboarding',
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+
+                  // Tytuły
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 312),
+                    child: Text(
+                      'Wybierz swoją grupę',
+                      textAlign: TextAlign.center,
+                      style: tt.headlineMedium?.copyWith(color: cs.onSurface),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 312),
+                    child: Text(
+                      'Znajdź swój plan zajęć',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyle.myUZTitleMedium.copyWith(
+                        color: cs.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 312),
+                    child: Text(
+                      'Wybierz swoją grupę i podgrupę, aby dostosować aplikację do Twojego rozkładu zajęć',
+                      textAlign: TextAlign.center,
+                      style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Label sekcji
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 312),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Wybierz swoją grupę:', style: AppTextStyle.myUZLabelSmall.copyWith(color: cs.primary)),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // OutlinedTextField 56 (labelText + lupa w suffixIcon) – bez osobnego przycisku
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 312),
+                    child: SizedBox(
+                      height: 56,
+                      child: TextField(
+                        controller: _groupCtrl,
+                        textInputAction: TextInputAction.search,
+                        onSubmitted: (_) => _confirmGroup(),
+                        style: tt.bodyLarge?.copyWith(color: cs.onSurface),
+                        decoration: InputDecoration(
+                          labelText: 'Kod grupy',
+                          labelStyle: AppTextStyle.myUZBodySmall.copyWith(color: AppColors.myUZSysLightOnSurfaceVariant),
+                          hintText: 'np. 23INF-SP',
+                          hintStyle: AppTextStyle.myUZBodyLarge.copyWith(color: AppColors.myUZSysLightOnSurfaceVariant),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: AppColors.myUZRefNeutralVariantNeutralVariant50, width: 1),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: cs.primary, width: 1),
+                          ),
+                          suffixIcon: IconButton(
+                            onPressed: _confirmGroup,
+                            icon: Icon(MyUz.search_sm, color: cs.primary),
+                            splashColor: Colors.transparent,
+                            highlightColor: Colors.transparent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  if (_selectedGroupCode != null)
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 312),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Wybrana grupa: $_selectedGroupCode',
+                          style: AppTextStyle.myUZLabelMedium.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+
+                  // Panel podgrup (po wyborze grupy) – animowany
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 280),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeOutCubic,
+                    transitionBuilder: (child, anim) {
+                      final slide = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(anim);
+                      return FadeTransition(opacity: anim, child: SlideTransition(position: slide, child: child));
+                    },
+                    child: _selectedGroupCode == null
+                        ? const SizedBox.shrink(key: ValueKey('panel_empty'))
+                        : Column(
+                            key: const ValueKey('panel_subgroups'),
+                            children: [
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 312),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text('Wybierz swoją podgrupę:', style: AppTextStyle.myUZLabelSmall.copyWith(color: cs.primary)),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (_loadingSubs)
+                                const SizedBox(
+                                  height: 32,
+                                  width: 32,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              else ...[
+                                // Renderuj listę podgrup z backendu, a jeśli brak — fallback A/B
+                                Builder(
+                                  builder: (context) {
+                                    final items = _availableSubgroups.isNotEmpty ? _availableSubgroups : const ['A', 'B'];
+                                    return Wrap(
+                                      alignment: WrapAlignment.center,
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: items.map((s) => _ChoicePill(
+                                        label: s,
+                                        selected: _subgroup == s,
+                                        onTap: () => setState(() => _subgroup = s),
+                                        cs: cs,
+                                      )).toList(),
+                                    );
+                                  },
+                                ),
+                                if (_availableSubgroups.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      'Brak zdefiniowanych podgrup — wybierz A lub B.',
+                                      style: AppTextStyle.myUZBodySmall.copyWith(color: cs.onSurfaceVariant),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                              ],
+                            ],
+                          ),
+                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
-            ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- POMOCNICZE (DRY/KISS) ---
+
+/// Bez overscroll-glow
+class _NoGlowScrollBehavior extends ScrollBehavior {
+  const _NoGlowScrollBehavior();
+  @override
+  Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) => child;
+}
+
+/// Pill/Chip – radius 16
+class _ChoicePill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  final ColorScheme cs;
+
+  const _ChoicePill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    required this.cs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? cs.primary : Colors.white,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(width: selected ? 0 : 1, color: selected ? Colors.transparent : cs.primary),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        splashFactory: NoSplash.splashFactory,
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            label,
+            style: AppTextStyle.myUZLabelMedium.copyWith(
+              color: selected ? cs.onPrimary : AppColors.myUZSysLightOnPrimaryFixedVariant,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ),
