@@ -3,32 +3,9 @@ import 'package:my_uz/theme/app_colors.dart';
 import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/icons/my_uz_icons.dart';
 
-/// Dokładna kopia Google Calendar date picker
-class ModalDatePicker {
+/// Nowa wersja – dialog centrowany (Material 3 style) zastępuje stary Date Picker.
+abstract class ModalDatePicker {
   static Future<DateTime?> show(BuildContext context, {
-    required DateTime initialDate,
-    DateTime? firstDate,
-    DateTime? lastDate,
-    Locale? locale,
-  }) {
-    return showModalBottomSheet<DateTime>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black54,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(24)),
-      ),
-      builder: (context) => _GoogleCalendarDatePicker(
-        initialDate: initialDate,
-        firstDate: firstDate ?? DateTime(2020),
-        lastDate: lastDate ?? DateTime(2100),
-      ),
-    );
-  }
-
-  /// Nowa wersja – dialog centrowany (Material 3 style) jak na zrzucie.
-  static Future<DateTime?> showCenterDialog(BuildContext context, {
     required DateTime initialDate,
     DateTime? firstDate,
     DateTime? lastDate,
@@ -42,9 +19,9 @@ class ModalDatePicker {
             constraints: const BoxConstraints(maxWidth: 360),
             child: Material(
               elevation: 4,
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              child: _GoogleCalendarDatePicker(
+              color: Colors.transparent, // Kolor ustawiany wewnątrz _M3DatePicker
+              borderRadius: BorderRadius.circular(28),
+              child: _M3DatePicker(
                 initialDate: initialDate,
                 firstDate: firstDate ?? DateTime(2020),
                 lastDate: lastDate ?? DateTime(2100),
@@ -55,41 +32,57 @@ class ModalDatePicker {
       },
     );
   }
+
+// Usunięto starą metodę showModalBottomSheet (ModalDatePicker.show), pozostawiono tylko showCenterDialog,
+// który teraz jest główną metodą show().
 }
 
-class _GoogleCalendarDatePicker extends StatefulWidget {
+// Zmieniono nazwę klasy i przebudowano ją całkowicie na styl Material 3.
+class _M3DatePicker extends StatefulWidget {
   final DateTime initialDate;
   final DateTime firstDate;
   final DateTime lastDate;
 
-  const _GoogleCalendarDatePicker({
+  const _M3DatePicker({
     required this.initialDate,
     required this.firstDate,
     required this.lastDate,
   });
 
   @override
-  State<_GoogleCalendarDatePicker> createState() => _GoogleCalendarDatePickerState();
+  State<_M3DatePicker> createState() => _M3DatePickerState();
 }
 
-class _GoogleCalendarDatePickerState extends State<_GoogleCalendarDatePicker> {
+class _M3DatePickerState extends State<_M3DatePicker> {
   late DateTime selectedDate;
   late DateTime displayMonth;
   late PageController _pageController;
 
+  // --- M3 COLORS & STYLES ---
+  static const Color _kPrimary = Color(0xFF6750A4);
+  static const Color _kOnPrimary = Colors.white;
+  static const Color _kOnSurface = Color(0xFF1D1B20);
+  static const Color _kOnSurfaceVariant = Color(0xFF49454F);
+  static const Color _kOutlineVariant = Color(0xFFCAC4D0);
+  static const Color _kSurfaceContainerHigh = Color(0xFFECE6F0);
+  static const double _kDayTileSize = 40.0;
+  static const double _kMonthNavHeight = 48.0;
+
+  // Polskie nazwy
   static const List<String> _monthNames = [
     'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
     'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'
   ];
-
   static const List<String> _monthShort = ['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru'];
+  // P, W, Ś, C, P, S, N (Pon, Wt, Śr, Czw, Pt, Sob, Niedz)
+  static const List<String> _dayNames = ['P', 'W', 'Ś', 'C', 'P', 'S', 'N'];
+  // --- KONIEC M3 COLORS & STYLES ---
 
-  static const List<String> _dayNames = ['p', 'w', 'ś', 'c', 'p', 's', 'n'];
 
   @override
   void initState() {
     super.initState();
-    selectedDate = widget.initialDate;
+    selectedDate = DateTime(widget.initialDate.year, widget.initialDate.month, widget.initialDate.day);
     displayMonth = DateTime(widget.initialDate.year, widget.initialDate.month);
     _pageController = PageController(
       initialPage: _monthsBetween(widget.firstDate, displayMonth),
@@ -106,179 +99,179 @@ class _GoogleCalendarDatePickerState extends State<_GoogleCalendarDatePicker> {
     return (to.year - from.year) * 12 + to.month - from.month;
   }
 
-  void _navigateMonth(int delta) {
-    final newMonth = DateTime(displayMonth.year, displayMonth.month + delta);
-    if (newMonth.isBefore(widget.firstDate) ||
-        newMonth.isAfter(DateTime(widget.lastDate.year, widget.lastDate.month + 1))) {
-      return;
-    }
+  void _onMonthPageChanged(int pageIndex) {
+    final months = _monthsBetween(widget.firstDate, DateTime(widget.firstDate.year, widget.firstDate.month));
+    final targetMonth = DateTime(
+      widget.firstDate.year,
+      widget.firstDate.month + pageIndex - months,
+    );
+    setState(() => displayMonth = targetMonth);
+  }
 
-    setState(() => displayMonth = newMonth);
+  void _navigateMonth(int delta) {
+    final targetPage = _pageController.page!.round() + delta;
     _pageController.animateToPage(
-      _monthsBetween(widget.firstDate, newMonth),
+      targetPage,
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
     );
+    // onPageChanged zaktualizuje displayMonth
+  }
+
+  String _formatSelectedDate(DateTime date) {
+    // Format: Wt, Sie 17
+    final plWeekdayShort = _dayNames[date.weekday == 7 ? 6 : date.weekday - 1]; // Niedz to 7, a nasza lista ma 7 elementów (0-6)
+    final plMonthShort = _monthShort[date.month - 1];
+    return '$plWeekdayShort, $plMonthShort ${date.day}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 10,
-            offset: Offset(0, -2),
-          ),
-        ],
+      width: 360,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: _kSurfaceContainerHigh,
+        borderRadius: BorderRadius.circular(28),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header z małym tytułem i ikonką
+          // Nagłówek (Header)
           Container(
-            padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 16, left: 24, right: 12, bottom: 12),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(width: 1, color: _kOutlineVariant),
+              ),
+            ),
             child: Row(
               children: [
-                Text(
-                  'Wybierz datę',
-                  style: AppTextStyle.myUZBodyMedium.copyWith(
-                    color: const Color(0xFF5F6368),
-                    fontWeight: FontWeight.w400,
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Wybierz dzień
+                      Text(
+                        'Wybierz dzień',
+                        style: AppTextStyle.myUZLabelLarge.copyWith(
+                          color: _kOnSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Wt, Sie 17
+                      Text(
+                        _formatSelectedDate(selectedDate),
+                        style: AppTextStyle.myUZDisplaySmall.copyWith(
+                          color: _kOnSurface,
+                          fontWeight: FontWeight.w400,
+                          fontSize: 32, // Zgodnie ze specyfikacją
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
+                // Ikona edycji
                 IconButton(
-                  icon: const Icon(
-                    MyUz.edit_02,
-                    size: 20,
-                    color: Color(0xFF5F6368),
-                  ),
-                  onPressed: () {},
-                  iconSize: 20,
-                  constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                  icon: Icon(MyUz.edit_02, size: 24, color: _kOnSurface),
+                  onPressed: () {}, // Funkcjonalność do zaimplementowania (może w innej wersji)
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 ),
               ],
             ),
           ),
 
-          // Główny tytuł daty - DUŻY
+          // Nawigacja miesiąca
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '${selectedDate.day} ${_monthShort[selectedDate.month - 1]} ${selectedDate.year}',
-              style: AppTextStyle.myUZDisplaySmall.copyWith(
-                color: const Color(0xFF202124),
-                fontWeight: FontWeight.w400,
-                fontSize: 32,
-                height: 1.2,
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Nawigacja miesiąca z dropdown i strzałkami
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 4, left: 16, right: 12, bottom: 4),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 // Dropdown miesiąc-rok
                 InkWell(
-                  onTap: () {},
-                  borderRadius: BorderRadius.circular(8),
+                  onTap: () {}, // Dropdown do zaimplementowania
+                  borderRadius: BorderRadius.circular(100),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.only(top: 10, left: 8, right: 4, bottom: 10),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           '${_monthNames[displayMonth.month - 1]} ${displayMonth.year}',
-                          style: AppTextStyle.myUZTitleMedium.copyWith(
-                            color: const Color(0xFF202124),
+                          textAlign: TextAlign.center,
+                          style: AppTextStyle.myUZLabelLarge.copyWith(
+                            color: _kOnSurfaceVariant,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 8),
                         const Icon(
                           MyUz.chevron_down,
                           size: 18,
-                          color: Color(0xFF5F6368),
+                          color: _kOnSurfaceVariant,
                         ),
                       ],
                     ),
                   ),
                 ),
-
-                const Spacer(),
-
                 // Strzałki nawigacji
-                IconButton(
-                  icon: const Icon(
-                    MyUz.chevron_left,
-                    size: 24,
-                    color: Color(0xFF202124),
-                  ),
-                  onPressed: () => _navigateMonth(-1),
-                  iconSize: 24,
-                ),
-
-                IconButton(
-                  icon: const Icon(
-                    MyUz.chevron_right,
-                    size: 24,
-                    color: Color(0xFF202124),
-                  ),
-                  onPressed: () => _navigateMonth(1),
-                  iconSize: 24,
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(MyUz.chevron_left, size: 24, color: _kOnSurface),
+                      onPressed: () => _navigateMonth(-1),
+                      iconSize: 24,
+                      constraints: const BoxConstraints(minWidth: _kMonthNavHeight, minHeight: _kMonthNavHeight),
+                    ),
+                    IconButton(
+                      icon: const Icon(MyUz.chevron_right, size: 24, color: _kOnSurface),
+                      onPressed: () => _navigateMonth(1),
+                      iconSize: 24,
+                      constraints: const BoxConstraints(minWidth: _kMonthNavHeight, minHeight: _kMonthNavHeight),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 12),
-
-          // Etykiety dni tygodnia - małe litery jak Google
+          // Etykiety dni tygodnia (Mon-Sun)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Row(
-              children: _dayNames.map((day) =>
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        day,
-                        style: AppTextStyle.myUZBodySmall.copyWith(
-                          color: const Color(0xFF5F6368),
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: SizedBox(
+              height: _kMonthNavHeight,
+              child: Row(
+                children: _dayNames.map((day) =>
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          day,
+                          style: AppTextStyle.myUZBodyLarge.copyWith( // Zgodnie ze specyfikacją
+                            color: _kOnSurface,
+                            fontWeight: FontWeight.w400,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ).toList(),
+                ).toList(),
+              ),
             ),
           ),
 
-          const SizedBox(height: 8),
-
-          // Kalendarz - dokładnie jak Google
+          // Kalendarz - PageView
           SizedBox(
-            height: 48 * 6,
+            height: _kMonthNavHeight * 6, // 6 wierszy po 48px
             child: PageView.builder(
               controller: _pageController,
-              onPageChanged: (page) {
-                final months = _monthsBetween(widget.firstDate, DateTime(widget.firstDate.year, widget.firstDate.month));
-                final targetMonth = DateTime(
-                  widget.firstDate.year,
-                  widget.firstDate.month + page - months,
-                );
-                setState(() => displayMonth = targetMonth);
-              },
+              onPageChanged: _onMonthPageChanged,
               itemBuilder: (context, pageIndex) {
+                // Obliczenie miesiąca na podstawie indexu PageView
                 final months = _monthsBetween(widget.firstDate, DateTime(widget.firstDate.year, widget.firstDate.month));
                 final month = DateTime(
                   widget.firstDate.year,
@@ -289,70 +282,93 @@ class _GoogleCalendarDatePickerState extends State<_GoogleCalendarDatePicker> {
             ),
           ),
 
-          // Przyciski akcji - dokładnie jak Google Calendar
+          // Przyciski akcji
           Container(
-            padding: const EdgeInsets.all(24),
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 4, left: 12, right: 12, bottom: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Anuluj
+                // Przycisk Clear (Wyczyść)
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(context).pop(null), // Zwraca null
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     minimumSize: Size.zero,
                   ),
                   child: Text(
-                    'Anuluj',
+                    'Wyczyść',
                     style: AppTextStyle.myUZLabelLarge.copyWith(
-                      color: AppColors.myUZSysLightPrimary,
+                      color: _kPrimary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-
-                const SizedBox(width: 8),
-
-                // OK
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(selectedDate),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    minimumSize: Size.zero,
-                  ),
-                  child: Text(
-                    'OK',
-                    style: AppTextStyle.myUZLabelLarge.copyWith(
-                      color: AppColors.myUZSysLightPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Przycisk Anuluj
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          minimumSize: Size.zero,
+                        ),
+                        child: Text(
+                          'Anuluj',
+                          style: AppTextStyle.myUZLabelLarge.copyWith(
+                            color: _kPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Przycisk OK
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(selectedDate),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          minimumSize: Size.zero,
+                        ),
+                        child: Text(
+                          'OK',
+                          style: AppTextStyle.myUZLabelLarge.copyWith(
+                            color: _kPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-
-          // Padding na dole
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+          // Usunięto dolny padding na SafeArea, ponieważ dialog jest centrowany.
         ],
       ),
     );
   }
 
   Widget _buildMonthGrid(DateTime month) {
+    // Mon=1 ... Sun=7. Chcemy, by poniedziałek był pierwszy (index 0).
     final firstDay = DateTime(month.year, month.month, 1);
-    final weekday = firstDay.weekday; // Mon=1 ... Sun=7
-    final int daysToSubtract = (weekday + 6) % 7; // poniedziałek ->0, wt->1 ... niedz->6
+    final weekday = firstDay.weekday;
+    // (1-1 + 7) % 7 = 0 dla poniedziałku (który jest indexem 0)
+    final int daysToSubtract = (weekday - 1 + 7) % 7;
     final startDate = firstDay.subtract(Duration(days: daysToSubtract));
 
+    final now = DateTime.now();
+
     return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
         childAspectRatio: 1,
-        mainAxisSpacing: 4,
-        crossAxisSpacing: 4,
+        mainAxisSpacing: 0,
+        crossAxisSpacing: 0,
       ),
       itemCount: 42,
       itemBuilder: (context, index) {
@@ -361,45 +377,49 @@ class _GoogleCalendarDatePickerState extends State<_GoogleCalendarDatePicker> {
         final isSelected = date.day == selectedDate.day &&
             date.month == selectedDate.month &&
             date.year == selectedDate.year;
-        final isToday = date.day == DateTime.now().day &&
-            date.month == DateTime.now().month &&
-            date.year == DateTime.now().year;
+        final isToday = date.day == now.day &&
+            date.month == now.month &&
+            date.year == now.year;
 
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: isCurrentMonth ? () {
-              setState(() => selectedDate = date);
-            } : null,
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.myUZSysLightPrimary
-                    : null,
-                borderRadius: BorderRadius.circular(20),
-                border: isToday && !isSelected
-                    ? Border.all(
-                  color: AppColors.myUZSysLightPrimary,
-                  width: 1,
-                )
-                    : null,
-              ),
-              child: Center(
-                child: Text(
-                  '${date.day}',
-                  style: AppTextStyle.myUZBodyMedium.copyWith(
-                    color: isSelected
-                        ? Colors.white
-                        : isCurrentMonth
-                        ? (isToday
-                        ? AppColors.myUZSysLightPrimary
-                        : const Color(0xFF202124))
-                        : const Color(0xFF9AA0A6),
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    fontSize: 14,
+        // Okrągły kształt dla każdego dnia
+        return Container(
+          width: _kMonthNavHeight,
+          height: _kMonthNavHeight,
+          alignment: Alignment.center,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isCurrentMonth ? () {
+                setState(() => selectedDate = date);
+              } : null,
+              borderRadius: BorderRadius.circular(100),
+              child: Container(
+                width: _kDayTileSize,
+                height: _kDayTileSize,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? _kPrimary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(100),
+                  border: isToday && !isSelected
+                      ? Border.all(
+                    color: _kPrimary,
+                    width: 1,
+                  )
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    '${date.day}',
+                    style: AppTextStyle.myUZBodyLarge.copyWith(
+                      fontSize: 16,
+                      fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                      color: isSelected
+                          ? _kOnPrimary
+                          : isCurrentMonth
+                          ? (isToday ? _kPrimary : _kOnSurface)
+                          : _kOnSurfaceVariant.withOpacity(0.4), // Nieaktywne dni z poprzedniego/następnego miesiąca
+                    ),
                   ),
                 ),
               ),

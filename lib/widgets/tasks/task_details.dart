@@ -173,101 +173,107 @@ class _TaskDetailsDraggableState extends State<_TaskDetailsDraggable> {
     final classKind =
     typeRaw.isEmpty ? '—' : RzDictionary.getDescription(typeRaw);
 
+    const headerBottomGap = 28.0; // Ujednolicony odstęp z ClassDetails
+    const rowVerticalGap = 12.0;
+
     return Container(
       key: const ValueKey('details'),
-      // 3. POPRAWKA: Dodanie paddingu, ponieważ SingleChildScrollView jest full-width
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AdaptiveIconSlot(
-                  iconSize: 24,
-                  child: InkWell(
-                    onTap: _toggleCompleted,
-                    borderRadius: BorderRadius.circular(6),
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        color: _isCompleted
-                            ? AppColors.myUZSysLightPrimary
-                            : AppColors.myUZSysLightPrimaryContainer,
-                      ),
-                      child: _isCompleted
-                          ? const Icon(MyUz.check, size: 14, color: Colors.white)
-                          : null,
+      // USUNIĘTO PADDING poziomy, ponieważ jest on w _SheetScaffoldBody,
+      // aby umożliwić pełną szerokość scroll view, jeśli będzie potrzebna.
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AdaptiveIconSlot(
+                iconSize: 24,
+                child: InkWell(
+                  onTap: _toggleCompleted,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      color: _isCompleted
+                          ? AppColors.myUZSysLightPrimary
+                          : AppColors.myUZSysLightPrimaryContainer,
                     ),
-                  ),
-                ),
-                const SizedBox(width: kIconToTextGap),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyle.myUZHeadlineMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        deadlineStr,
-                        style: AppTextStyle.myUZBodySmall.copyWith(
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _DetailRow(
-              label: 'Przedmiot',
-              value: subject,
-              icon: MyUz.book_open_01,
-            ),
-            const SizedBox(height: 12),
-            _DetailRow(
-              label: 'Rodaj zajęć',
-              value: classKind,
-              icon: MyUz.check_square_broken,
-            ),
-            const SizedBox(height: 16),
-            if ((widget.description ?? '').trim().isNotEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: cs.outlineVariant.withOpacity(0.5),
-                  ),
-                ),
-                child: Text(
-                  widget.description!.trim(),
-                  style: AppTextStyle.myUZBodySmall.copyWith(
-                    color: cs.onSurface,
-                    height: 1.5,
+                    child: _isCompleted
+                        ? const Icon(MyUz.check, size: 14, color: Colors.white)
+                        : null,
                   ),
                 ),
               ),
-            if ((widget.description ?? '').trim().isNotEmpty)
-              const SizedBox(height: 8),
+              const SizedBox(width: kIconToTextGap),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      // ZMIANA: Z HeadlineMedium na TitleLarge (jak w ClassDetails)
+                      style: AppTextStyle.myUZTitleLarge.copyWith(
+                        fontWeight: FontWeight.w500, // Z w600 na w500
+                        color: const Color(0xFF1D192B),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      deadlineStr,
+                      // ZMIANA: Z BodySmall na BodyMedium (jak w ClassDetails)
+                      style: AppTextStyle.myUZBodyMedium.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // ZMIANA: Z 16 na 28
+          const SizedBox(height: headerBottomGap),
+          _DetailRow(
+            label: 'Przedmiot',
+            value: subject,
+            icon: MyUz.book_open_01,
+          ),
+          const SizedBox(height: rowVerticalGap),
+          _DetailRow(
+            label: 'Rodaj zajęć',
+            value: classKind,
+            icon: MyUz.check_square_broken,
+          ),
+          const SizedBox(height: 16),
+          if ((widget.description ?? '').trim().isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: cs.outlineVariant.withOpacity(0.5),
+                ),
+              ),
+              child: Text(
+                widget.description!.trim(),
+                // ZMIANA: Z BodySmall na BodyMedium
+                style: AppTextStyle.myUZBodyMedium.copyWith(
+                  color: cs.onSurface,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          if ((widget.description ?? '').trim().isNotEmpty)
             const SizedBox(height: 8),
-          ],
-        ),
+          // USUNIĘTO: Ostatni SizedBox, ponieważ odstęp na dole jest już w _SheetScaffoldBody.
+        ],
       ),
     );
   }
@@ -315,20 +321,19 @@ class _SheetScaffoldBody extends StatelessWidget {
               spreadRadius: 3),
         ],
       ),
-      // 5. POPRAWKA: Usunięto Padding, aby scroll view był full-width
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Padding tylko dla GripHandle
-          Padding(
-            padding: EdgeInsets.only(top: topPadding + handleTopGap),
-            child: const GripHandle(),
-          ),
-          const SizedBox(height: handleToXGap),
-          // Padding tylko dla AppBar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: horizontal),
-            child: Row(
+      // ZMIANA: Przeniesienie top padding na Container (jak w ClassDetails)
+      padding: EdgeInsets.only(top: topPadding + handleTopGap),
+      child: Padding(
+        // ZMIANA: Ujednolicenie paddingu poziomego i dodanie 16.0 na dole (jak w ClassDetails)
+        padding: const EdgeInsets.fromLTRB(horizontal, 0, horizontal, 16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // GripHandle jest teraz bezpośrednio w kolumnie (bez własnego paddingu)
+            const GripHandle(),
+            const SizedBox(height: handleToXGap),
+            // AppBar jest teraz bezpośrednio w kolumnie (bez własnego paddingu)
+            Row(
               children: [
                 AdaptiveIconSlot(
                   iconSize: 24,
@@ -372,17 +377,16 @@ class _SheetScaffoldBody extends StatelessWidget {
                 ],
               ],
             ),
-          ),
-          const SizedBox(height: xToHeaderGap),
-          // 6. POPRAWKA: Expanded i SingleChildScrollView są teraz na zewnątrz
-          // i NIE MAJĄ paddingu, co pozwoli Dividerom być full-width
-          Expanded(
-            child: SingleChildScrollView(
-              controller: scrollController,
-              child: child, // Tu trafia AnimatedSwitcher
+            const SizedBox(height: xToHeaderGap),
+            // Expanded i SingleChildScrollView
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: child, // Tu trafia AnimatedSwitcher
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -424,7 +428,8 @@ class _DetailRow extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 value,
-                style: AppTextStyle.myUZBodySmall.copyWith(
+                // ZMIANA: Styl wartości z BodySmall na BodyMedium
+                style: AppTextStyle.myUZBodyMedium.copyWith(
                   color: cs.onSurface,
                 ),
               ),

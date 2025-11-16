@@ -276,6 +276,10 @@ class _MonthGrid extends StatelessWidget {
   }
 }
 
+// Ujednolicone kolory Material 3 Primary dla spójności z ModalDatePicker
+const Color _kM3Primary = Color(0xFF6750A4);
+const Color _kM3OnPrimary = Colors.white;
+
 class _DayCell extends StatelessWidget {
   final DateTime day;
   final bool isSelected;
@@ -300,7 +304,7 @@ class _DayCell extends StatelessWidget {
 
     Color textColor;
     if (isSelected) {
-      textColor = cs.onPrimary;
+      textColor = _kM3OnPrimary; // ZMIANA: Biały kolor tekstu dla zaznaczonego dnia (M3 OnPrimary)
     } else if (isOutside) {
       textColor = cs.onSurface.withAlpha((0.35 * 255).round());
     } else if (isPast) {
@@ -310,6 +314,7 @@ class _DayCell extends StatelessWidget {
     }
 
     const double diameter = 32;
+    // Nie zmieniamy dayTextStyle na stałe, bo dayTextStyle.color jest używany dla nieaktywnych kolorów.
     final TextStyle dayTextStyle = (baseStyle ?? const TextStyle()).copyWith(fontWeight: FontWeight.w600, fontSize: 16, color: textColor, height: 1);
 
     Widget circleContent(String text) => AnimatedContainer(
@@ -317,12 +322,20 @@ class _DayCell extends StatelessWidget {
       width: diameter,
       height: diameter,
       decoration: BoxDecoration(
-        color: isSelected ? cs.primary : (isToday ? cs.primary.withAlpha((0.16 * 255).round()) : Colors.transparent),
+        // ZMIANA: Tło dla wybranego dnia (M3 Primary) i usunięcie light-primary background dla isToday
+        color: isSelected ? _kM3Primary : Colors.transparent,
         borderRadius: BorderRadius.circular(diameter / 2),
-        border: isSelected ? null : (isToday ? Border.all(color: cs.primary.withAlpha((0.32 * 255).round()), width: 1) : null),
+        // ZMIANA: Obwódka dla dnia dzisiejszego (M3 Primary, brak przezroczystości)
+        border: isSelected ? null : (isToday ? Border.all(color: _kM3Primary, width: 1) : null),
       ),
       alignment: Alignment.center,
-      child: Text(text, style: dayTextStyle.copyWith(color: isSelected ? cs.onPrimary : (isToday ? cs.primary : dayTextStyle.color))),
+      child: Text(
+          text,
+          style: dayTextStyle.copyWith(
+            // ZMIANA: Kolor tekstu dla zaznaczonego (M3 OnPrimary) i dzisiejszego (M3 Primary)
+              color: isSelected ? _kM3OnPrimary : (isToday ? _kM3Primary : dayTextStyle.color)
+          )
+      ),
     );
 
     final bool showCircle = isSelected || isToday;
