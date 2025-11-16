@@ -178,8 +178,7 @@ class _TaskDetailsDraggableState extends State<_TaskDetailsDraggable> {
 
     return Container(
       key: const ValueKey('details'),
-      // USUNIĘTO PADDING poziomy, ponieważ jest on w _SheetScaffoldBody,
-      // aby umożliwić pełną szerokość scroll view, jeśli będzie potrzebna.
+      // USUNIĘTO PADDING poziomy, ponieważ jest on w _SheetScaffoldBody
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,13 +187,13 @@ class _TaskDetailsDraggableState extends State<_TaskDetailsDraggable> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AdaptiveIconSlot(
-                iconSize: 24,
+                iconSize: 20, // ZMIANA: Z 24 na 20 dla spójności z Class/Event Details
                 child: InkWell(
                   onTap: _toggleCompleted,
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
-                    width: 24,
-                    height: 24,
+                    width: 20, // ZMIANA: Z 24 na 20
+                    height: 20, // ZMIANA: Z 24 na 20
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(6),
                       color: _isCompleted
@@ -202,7 +201,7 @@ class _TaskDetailsDraggableState extends State<_TaskDetailsDraggable> {
                           : AppColors.myUZSysLightPrimaryContainer,
                     ),
                     child: _isCompleted
-                        ? const Icon(MyUz.check, size: 14, color: Colors.white)
+                        ? const Icon(MyUz.check, size: 12, color: Colors.white) // ZMIANA: Z 14 na 12 (na 20x20)
                         : null,
                   ),
                 ),
@@ -216,16 +215,16 @@ class _TaskDetailsDraggableState extends State<_TaskDetailsDraggable> {
                       title,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      // ZMIANA: Z HeadlineMedium na TitleLarge (jak w ClassDetails)
+                      // ZMIANA: Styl nagłówka z HeadlineMedium na TitleLarge (jak w class_details.dart)
                       style: AppTextStyle.myUZTitleLarge.copyWith(
-                        fontWeight: FontWeight.w500, // Z w600 na w500
-                        color: const Color(0xFF1D192B),
+                        fontWeight: FontWeight.w500, // Zmiana z w600 na w500
+                        color: const Color(0xFF1D192B), // Użycie stałego koloru jak w class_details
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       deadlineStr,
-                      // ZMIANA: Z BodySmall na BodyMedium (jak w ClassDetails)
+                      // ZMIANA: Styl daty z BodySmall na BodyMedium (jak w class_details.dart)
                       style: AppTextStyle.myUZBodyMedium.copyWith(
                         color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w400,
@@ -236,20 +235,20 @@ class _TaskDetailsDraggableState extends State<_TaskDetailsDraggable> {
               ),
             ],
           ),
-          // ZMIANA: Z 16 na 28
+          // ZMIANA: Odstęp na dole nagłówka z 16 na 28
           const SizedBox(height: headerBottomGap),
           _DetailRow(
             label: 'Przedmiot',
             value: subject,
             icon: MyUz.book_open_01,
           ),
-          const SizedBox(height: rowVerticalGap),
+          const SizedBox(height: rowVerticalGap), // Już jest 12
           _DetailRow(
             label: 'Rodaj zajęć',
             value: classKind,
             icon: MyUz.check_square_broken,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 16), // Odstęp przed opisem 16 (ok)
           if ((widget.description ?? '').trim().isNotEmpty)
             Container(
               width: double.infinity,
@@ -263,7 +262,7 @@ class _TaskDetailsDraggableState extends State<_TaskDetailsDraggable> {
               ),
               child: Text(
                 widget.description!.trim(),
-                // ZMIANA: Z BodySmall na BodyMedium
+                // ZMIANA: Styl opisu z BodySmall na BodyMedium
                 style: AppTextStyle.myUZBodyMedium.copyWith(
                   color: cs.onSurface,
                   height: 1.5,
@@ -272,7 +271,6 @@ class _TaskDetailsDraggableState extends State<_TaskDetailsDraggable> {
             ),
           if ((widget.description ?? '').trim().isNotEmpty)
             const SizedBox(height: 8),
-          // USUNIĘTO: Ostatni SizedBox, ponieważ odstęp na dole jest już w _SheetScaffoldBody.
         ],
       ),
     );
@@ -378,7 +376,6 @@ class _SheetScaffoldBody extends StatelessWidget {
               ],
             ),
             const SizedBox(height: xToHeaderGap),
-            // Expanded i SingleChildScrollView
             Expanded(
               child: SingleChildScrollView(
                 controller: scrollController,
