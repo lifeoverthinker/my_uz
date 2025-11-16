@@ -121,8 +121,8 @@ class _DetailsContent extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const AdaptiveIconSlot(
-              iconSize: 16,
+            AdaptiveIconSlot(
+              iconSize: 20, // Ustawiono na 20, aby pasowało do _TypeColorMarker
               child: _TypeColorMarker(color: AppColors.myUZSysLightPrimaryContainer),
             ),
             const SizedBox(width: kIconToTextGap), // Użycie stałej globalnej
@@ -154,12 +154,12 @@ class _DetailsContent extends StatelessWidget {
         ),
         const SizedBox(height: headerBottomGap),
         if (typeLabel != null) ...[
-          DetailRow(icon: MyUz.stand, label: typeLabel), // Błąd był tutaj
+          DetailRow(icon: MyUz.stand, label: typeLabel),
           const SizedBox(height: rowVerticalGap),
         ],
-        DetailRow(icon: MyUz.marker_pin_04, label: classModel.room.isNotEmpty ? classModel.room : 'Sala -'), // Błąd był tutaj
+        DetailRow(icon: MyUz.marker_pin_04, label: classModel.room.isNotEmpty ? classModel.room : 'Sala -'),
         const SizedBox(height: 12), // Przywrócono 12 (zamiast 0) dla odstępu
-        DetailRow(icon: MyUz.user_01, label: classModel.lecturer.isNotEmpty ? classModel.lecturer : 'Prowadzący -'), // Błąd był tutaj
+        DetailRow(icon: MyUz.user_01, label: classModel.lecturer.isNotEmpty ? classModel.lecturer : 'Prowadzący -'),
       ],
     );
   }
@@ -205,8 +205,8 @@ class _TypeColorMarker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 16,
-      height: 16,
+      width: 20, // POPRAWKA: Rozmiar 20x20
+      height: 20, // POPRAWKA: Rozmiar 20x20
       decoration: ShapeDecoration(
         color: color,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -233,7 +233,7 @@ class DetailRow extends StatelessWidget {
       children: [
         AdaptiveIconSlot(
           iconSize: 20,
-          child: Icon(icon, size: 20, color: AppColors.myUZSysLightPrimary),
+          child: Icon(icon, size: 20, color: const Color(0xFF1D192B)), // POPRAWKA: Ciemny kolor ikony
         ),
         const SizedBox(width: kIconToTextGap), // Użycie stałej globalnej
         Expanded(

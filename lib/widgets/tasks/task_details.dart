@@ -408,7 +408,7 @@ class _DetailRow extends StatelessWidget {
       children: [
         AdaptiveIconSlot(
           iconSize: 20,
-          child: Icon(icon, size: 20, color: AppColors.myUZSysLightPrimary),
+          child: Icon(icon, size: 20, color: const Color(0xFF1D192B)), // POPRAWKA: Ciemny kolor ikony
         ),
         const SizedBox(width: kIconToTextGap),
         Expanded(

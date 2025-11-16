@@ -5,17 +5,23 @@ import 'package:my_uz/theme/text_style.dart';
 import 'package:my_uz/widgets/cards/event_card.dart';
 import 'package:my_uz/models/event_model.dart';
 import 'package:my_uz/screens/home/details/event_details.dart';
+// USUNIĘTO: import 'package:my_uz/theme/app_colors.dart'; // Usunięty nieużywany import
 
 /// Sekcja: Wydarzenia — ujednolicona z ClassSection
 class EventsSection extends StatelessWidget {
   final List<EventModel> events;
   final ValueChanged<EventModel> onTap;
+  final VoidCallback? onGoToEvents;
 
-  const EventsSection({super.key, required this.events, required this.onTap});
+  const EventsSection({
+    super.key,
+    required this.events,
+    required this.onTap,
+    this.onGoToEvents,
+  });
 
   static const double _kCardWidth = 264;
-  // POPRAWKA: Zmieniono wysokość z 84 na 68, aby pasowała do UpcomingClasses
-  static const double _kListHeight = 68;
+  static const double _kListHeight = 68; // Wysokość ujednolicona
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +29,18 @@ class EventsSection extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _SectionHeader(icon: MyUz.marker_pin_04, label: 'Wydarzenia', color: cs.onSurface),
+        // Ujednolicony nagłówek (Icon, Title, Spacer, Action)
+        Row(children: [
+          Icon(MyUz.marker_pin_04, size: 20, color: cs.onSurface),
+          const SizedBox(width: 8),
+          Text('Wydarzenia', style: AppTextStyle.myUZTitleMedium.copyWith(fontSize: 18, height: 1.33, fontWeight: FontWeight.w500, color: cs.onSurface)),
+          const Spacer(),
+          if (onGoToEvents != null)
+            TextButton(
+              onPressed: onGoToEvents,
+              child: const Text('Więcej'),
+            )
+        ]),
         const SizedBox(height: 12),
         SizedBox(
           height: _kListHeight, // Używa teraz 68
@@ -67,7 +84,7 @@ class EventsSection extends StatelessWidget {
                 description: e.description,
                 eventModel: e,
                 backgroundColor: bg,
-                hugHeight: true,
+                hugHeight: false,
               ),
             ),
           ),
@@ -84,21 +101,5 @@ class EventsSection extends StatelessWidget {
       default:
         return const Color(0xFFDAF4D6);
     }
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  const _SectionHeader({required this.icon, required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(children: [
-      Icon(icon, size: 20, color: color),
-      const SizedBox(width: 8),
-      Text(label, style: AppTextStyle.myUZTitleMedium.copyWith(fontSize: 18, height: 1.33, fontWeight: FontWeight.w500, color: color)),
-    ]);
   }
 }

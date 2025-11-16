@@ -166,15 +166,13 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _index = 0;
 
-  // POPRAWKA: Dodajemy klucz Scaffolda
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  // POPRAWKA: Usunięto GlobalKey<ScaffoldState>
 
-  // POPRAWKA: Definiujemy funkcje do przekazania
-  void _openDrawer() {
-    _scaffoldKey.currentState?.openDrawer();
-  }
-
+  // POPRAWKA: Definiujemy funkcję do przekazania
   void _navigateToCalendar(int tabIndex) {
+    // Ta funkcja jest przekazywana do HomeScreen, aby
+    // przycisk "Zobacz wszystko" w zadaniach mógł przełączyć
+    // dolną nawigację na zakładkę Kalendarz (indeks 1)
     _onTap(1);
   }
 
@@ -186,7 +184,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _pages = [
       HomeScreen(
-        onOpenDrawer: _openDrawer,
+        // POPRAWKA: Usunięto onOpenDrawer
         onNavigateToCalendar: _navigateToCalendar,
       ), // 0
       const CalendarScreen(), // 1
@@ -202,12 +200,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // POPRAWKA: Przypisujemy klucz
-      key: _scaffoldKey,
-      // POPRAWKA: Dodajemy szufladę, aby przycisk miał co otwierać
-      drawer: const Drawer(
-        child: Center(child: Text("Szuflada Menu")),
-      ),
+      // POPRAWKA: Usunięto klucz
+      // POPRAWKA: Usunięto drawer (szufladę)
       appBar: (_index == 0 || _index == 1 || _index == 2)
           ? null
           : AppBar(title: Text(_titles[_index])),

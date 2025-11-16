@@ -1,3 +1,4 @@
+// Plik: lib/screens/calendar/tasks_section_by_day.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_uz/models/task_model.dart';
@@ -9,8 +10,14 @@ import 'package:my_uz/widgets/cards/task_card.dart';
 class TasksSectionByDay extends StatelessWidget {
   final List<TaskModel> tasks;
   final EdgeInsetsGeometry padding;
+  final ValueChanged<TaskModel> onTap; // Dodane pole
 
-  const TasksSectionByDay({super.key, required this.tasks, this.padding = const EdgeInsets.symmetric(horizontal: 16)});
+  const TasksSectionByDay({
+    super.key,
+    required this.tasks,
+    this.padding = const EdgeInsets.symmetric(horizontal: 16),
+    required this.onTap, // Dodany wymagany parametr
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +29,12 @@ class TasksSectionByDay extends StatelessWidget {
       child: Column(
         children: [
           for (final entry in groups.entries) ...[
-            _DateWithTasks(date: entry.key, tasks: entry.value, cardColor: cs.secondaryContainer),
+            _DateWithTasks(
+              date: entry.key,
+              tasks: entry.value,
+              cardColor: cs.secondaryContainer,
+              onTap: onTap, // Przekazanie onTap
+            ),
             const SizedBox(height: 16),
           ],
         ],
@@ -45,8 +57,14 @@ class _DateWithTasks extends StatelessWidget {
   final DateTime date;
   final List<TaskModel> tasks;
   final Color cardColor;
+  final ValueChanged<TaskModel> onTap; // Dodane pole
 
-  const _DateWithTasks({required this.date, required this.tasks, required this.cardColor});
+  const _DateWithTasks({
+    required this.date,
+    required this.tasks,
+    required this.cardColor,
+    required this.onTap, // Dodany wymagany parametr
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -98,8 +116,9 @@ class _DateWithTasks extends StatelessWidget {
                     deadline: task.deadline,
                     subject: task.subject,
                     type: task.type,
-                    showAvatar: false, // bez inicjału
-                    backgroundColor: cardColor, // fioletowy (secondaryContainer)
+                    showAvatar: false,
+                    backgroundColor: cardColor,
+                    onTap: () => onTap(task), // Naprawiona linia 96
                   ),
                 ),
               ],

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:my_uz/providers/tasks_provider.dart';
+import 'package:my_uz/providers/calendar_provider.dart'; // Użyty do ustawienia initialSection
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:my_uz/services/classes_repository.dart';
@@ -30,12 +31,11 @@ import 'package:my_uz/utils/date_utils.dart' as date_utils;
 
 /// HomeScreen – Dashboard (Figma – obraz 4)
 class HomeScreen extends StatefulWidget {
-  final VoidCallback onOpenDrawer;
+  // USUNIĘTO: onOpenDrawer
   final Function(int) onNavigateToCalendar;
 
   const HomeScreen({
     super.key,
-    required this.onOpenDrawer,
     required this.onNavigateToCalendar
   });
   @override
@@ -59,7 +59,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   List<ClassModel> _classes = const [];
   List<TaskModel> _tasks = const []; // Ta lista będzie teraz filtrowana
-  List<EventModel> _events = const [];
+
+  // --- POPRAWKA (REQ 4): Dostosowanie do event_model.dart ---
+  List<EventModel> _events = [
+    EventModel(
+      id: 'mock1',
+      title: 'Juwenalia UZ 2025',
+      description: 'Koncerty na kampusie A i B',
+      date: 'Piątek, 23 maj 2025', // Wymagane pole
+      time: '18:00 - 23:00',     // Wymagane pole
+      location: 'Kampus A, Aula', // Wymagane pole
+      freeEntry: true,           // Wymagane pole
+      colorVariant: 0,
+    ),
+    EventModel(
+      id: 'mock2',
+      title: 'Dzień Sportu',
+      description: 'Zawody międzywydziałowe',
+      date: 'Środa, 11 cze 2025', // Wymagane pole
+      time: '09:00 - 15:00',     // Wymagane pole
+      location: 'Stadion UZ',     // Wymagane pole
+      freeEntry: true,           // Wymagane pole
+      colorVariant: 1,
+    ),
+  ];
+  // --- KONIEC POPRAWKI (REQ 4) ---
+
 
   @override
   void initState() {
@@ -193,31 +218,115 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  // --- MODYFIKACJA (REQ 3): Poprawiona funkcja pomocnicza dla pustej listy zadań ---
+  // DODANO OGRANICZENIE WYSOKOŚCI I WYŚRODKOWANIE DLA TEKSTU, ABY BYŁO ZGODNE Z UpcomingClasses
+  Widget _buildEmptyTasks(BuildContext context, String message, VoidCallback onGoToTasks) {
+    const double _kListHeight = 68.0; // Stała wysokość listy kart
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(MyUz.book_open_01, size: 20, color: Theme.of(context).colorScheme.onSurface),
+              const SizedBox(width: 8),
+              Text(
+                'Zadania',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontSize: 18,
+                    height: 1.33,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).colorScheme.onSurface),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: onGoToTasks,
+                child: const Text('Więcej'), // Zmiana tekstu na "Więcej"
+              )
+            ],
+          ),
+          const SizedBox(height: 12),
+          // --- POPRAWKA: Wyrównanie i wysokość dla spójności ---
+          SizedBox(
+            height: _kListHeight, // Ograniczenie do wysokości listy (68px)
+            child: Align(
+              alignment: Alignment.centerLeft, // Wyśrodkowanie w pionie, wyrównanie do lewej
+              child: Text(
+                message,
+                style: AppTextStyle.myUZBodySmall.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ),
+          ),
+          // --- KONIEC POPRAWKI ---
+        ],
+      ),
+    );
+  }
+  // --- KONIEC MODYFIKACJI (REQ 3) ---
+
+
   @override
   Widget build(BuildContext context) {
-    // 1. POPRAWKA: Pobranie i filtrowanie zadań
+    // --- MODYFIKACJA (REQ 2 i 3): Nowa logika filtrowania zadań ---
     final tasksProvider = context.watch<TasksProvider>();
     final allTasks = tasksProvider.items.map((e) => e.model).toList();
+    final activeTasks = allTasks.where((task) => !task.completed).toList();
 
-    // Definiuj bieżący tydzień
+    // Definiuj granice tygodni
     final now = DateTime.now();
-    final monday = date_utils.mondayOfWeek(now);
-    final sunday = monday.add(const Duration(days: 7));
+    final currentMonday = date_utils.mondayOfWeek(now);
+    final currentSunday = currentMonday.add(const Duration(days: 7)); // Ekskluzywny koniec
+    final nextMonday = currentSunday;
+    final nextSunday = nextMonday.add(const Duration(days: 7)); // Ekskluzywny koniec
 
-    // Pokaż aktywne zadania z bieżącego tygodnia
-    _tasks = allTasks.where((task) {
+    List<TaskModel> tasksToShow;
+    String? tasksEmptyMessage;
+
+    // 1. Sprawdź bieżący tydzień
+    final tasksForCurrentWeek = activeTasks.where((task) {
       final deadline = task.deadline;
-      return !task.completed &&
-          (deadline.isAfter(monday) || date_utils.isSameDay(deadline, monday)) &&
-          deadline.isBefore(sunday);
+      return (deadline.isAfter(currentMonday) || date_utils.isSameDay(deadline, currentMonday)) &&
+          deadline.isBefore(currentSunday);
     }).toList();
 
-    // Sortuj wg daty
-    _tasks.sort((a, b) => a.deadline.compareTo(b.deadline));
+    if (tasksForCurrentWeek.isNotEmpty) {
+      tasksToShow = tasksForCurrentWeek;
+    } else {
+      // 2. Jeśli bieżący pusty, sprawdź następny tydzień
+      final tasksForNextWeek = activeTasks.where((task) {
+        final deadline = task.deadline;
+        return (deadline.isAfter(nextMonday) || date_utils.isSameDay(deadline, nextMonday)) &&
+            deadline.isBefore(nextSunday);
+      }).toList();
+
+      if (tasksForNextWeek.isNotEmpty) {
+        tasksToShow = tasksForNextWeek;
+      } else {
+        // 3. Jeśli oba puste, ustaw komunikat
+        tasksToShow = []; // Pusta lista
+        tasksEmptyMessage = 'Brak zadań w najbliższym czasie';
+      }
+    }
+
+    // Sortuj listę do pokazania i przypisz do _tasks
+    tasksToShow.sort((a, b) => a.deadline.compareTo(b.deadline));
+    _tasks = tasksToShow;
+    // --- KONIEC MODYFIKACJI (REQ 2 i 3) ---
 
 
     final cs = Theme.of(context).colorScheme;
     const double footerTopSpacing = 10;
+
+    // --- POPRAWKA: Funkcja onGoToTasks do Terminarza ---
+    final void Function() onGoToTasks = () {
+      // 1. Ustawia sekcję początkową na 'schedule' (Terminarz)
+      context.read<CalendarProvider>().initialSection = 'schedule';
+      // 2. Przełącza dolną nawigację na Kalendarz (indeks 1)
+      widget.onNavigateToCalendar(1);
+    };
+    // --- KONIEC POPRAWKI ---
 
     return Container(
       color: Colors.white,
@@ -233,7 +342,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 dateText: _plDate(DateTime.now()),
                 greetingName: _greetingName,
                 subtitle: _greetingSubtitle,
-                onOpenDrawer: widget.onOpenDrawer,
               ),
             ),
           ),
@@ -273,10 +381,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                       const SizedBox(height: 12),
                       TasksSection(
-                        tasks: _tasks, // Przekaż przefiltrowaną listę
+                        tasks: _tasks,
                         onTap: _openTaskDetails,
-                        onGoToTasks: () => widget.onNavigateToCalendar(1),
+                        onGoToTasks: onGoToTasks, // Użyj nowej funkcji
                       ),
+                      if (_tasks.isEmpty && tasksEmptyMessage != null)
+                        _buildEmptyTasks(context, tasksEmptyMessage, onGoToTasks), // Użyj nowej funkcji
                       const SizedBox(height: 12),
                       EventsSection(
                         events: _events,
@@ -306,13 +416,11 @@ class _Header extends StatelessWidget {
   final String dateText;
   final String greetingName;
   final String? subtitle;
-  final VoidCallback onOpenDrawer;
 
   const _Header({
     required this.dateText,
     required this.greetingName,
     this.subtitle,
-    required this.onOpenDrawer,
   });
 
   static const double _hPad = 16;

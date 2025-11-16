@@ -29,7 +29,9 @@ class CalendarScreen extends StatefulWidget {
 
 class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObserver {
   bool _isMonthView = false;
-  String _activeSection = 'calendar'; // 'calendar' | 'schedule'
+  // --- POPRAWKA: Stan początkowy jest ustawiany w initState ---
+  late String _activeSection; // 'calendar' | 'schedule'
+  // --- KONIEC POPRAWKI ---
   bool _drawerOpen = false;
 
   DateTime _selectedDay = stripTime(DateTime.now());
@@ -52,7 +54,15 @@ class _CalendarScreenState extends State<CalendarScreen> with WidgetsBindingObse
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // --- POPRAWKA: Ustaw stan początkowy na podstawie providera ---
     final calendarProvider = context.read<CalendarProvider>();
+    // Odczytaj żądaną sekcję (np. ustawioną przez HomeScreen)
+    _activeSection = calendarProvider.initialSection;
+    // Zresetuj wartość w providerze, aby nie wpływała na przyszłe nawigacje
+    calendarProvider.initialSection = 'calendar';
+    // --- KONIEC POPRAWKI ---
+
     final tasksProvider = context.read<TasksProvider>();
 
     _ensureWeekLoaded(calendarProvider, _focusedDay);
