@@ -36,11 +36,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.theme.AppFont
+// Usunięto błędny import: com.example.my_uz_android.ui.theme.AppFont
 
 // --- KOLORY Z FIGMY / FLUTTERA ---
-// Definiujemy je tutaj, aby idealnie pasowały do projektu,
-// niezależnie od globalnego motywu aplikacji.
 private val NavBackgroundColor = Color(0xFFFFFFFF) // Colors.white
 private val NavBorderColor = Color(0xFFEDE6F3)     // Color(0xFFEDE6F3)
 private val NavActiveColor = Color(0xFF381E72)     // Color(0xFF381E72)
@@ -111,8 +109,7 @@ fun AppNavigation() {
                             label = {
                                 Text(
                                     text = screen.title,
-                                    // Styl labelSmall z Type.kt ma: Inter, 11sp, w500, letterSpacing 0.5
-                                    // co idealnie pasuje do Twojego kodu Fluttera.
+                                    // Styl labelSmall z Type.kt
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (selected) NavActiveColor else NavInactiveColor
                                 )
@@ -127,7 +124,7 @@ fun AppNavigation() {
                                     restoreState = true
                                 }
                             },
-                            // Wyłączamy domyślne kolory Material3, bo sterujemy nimi ręcznie powyżej
+                            // Wyłączamy domyślne kolory Material3
                             colors = NavigationBarItemDefaults.colors(
                                 indicatorColor = Color.Transparent,
                                 selectedIconColor = NavActiveColor,
