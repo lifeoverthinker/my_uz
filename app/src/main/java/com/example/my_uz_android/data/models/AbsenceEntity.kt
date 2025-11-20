@@ -7,9 +7,8 @@ import androidx.room.PrimaryKey
 data class AbsenceEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-
     val subjectName: String,
     val date: Long,
-    val classType: String?,       // Np. "Laboratorium" (warto wiedzieć co opuszczono)
+    val classType: String?,
     val isExcused: Boolean = false
 )

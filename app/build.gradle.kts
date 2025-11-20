@@ -9,7 +9,7 @@ plugins {
     id("com.google.devtools.ksp") version "2.0.21-1.0.27"
 }
 
-// --- Ładowanie kluczy z pliku local.properties ---
+// --- 1. Odczytujemy local.properties ---
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
@@ -32,11 +32,12 @@ android {
             useSupportLibrary = true
         }
 
-        // --- WSTRZYKIWANIE KLUCZY DO BuildConfig ---
-        // Odczytujemy z local.properties, a jeśli brak - wstawiamy pusty ciąg, żeby się skompilowało
+        // --- 2. Wstrzykujemy klucze do BuildConfig ---
+        // Pobieramy z local.properties, a jeśli brak - wstawiamy pusty ciąg (żeby nie było błędu null)
         val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: ""
         val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: ""
 
+        // Tworzymy pola statyczne w klasie BuildConfig
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
     }
@@ -62,7 +63,7 @@ android {
 
     buildFeatures {
         compose = true
-        // To musi być włączone, aby klasa BuildConfig została wygenerowana
+        // WAŻNE: Musi być true, żeby klasa BuildConfig powstała
         buildConfig = true
     }
 
@@ -77,7 +78,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
-
     implementation("com.google.android.material:material:1.12.0")
 
     val composeBom = platform("androidx.compose:compose-bom:2024.09.00")
@@ -88,7 +88,6 @@ dependencies {
     implementation("androidx.compose.material3:material3")
 
     implementation("androidx.navigation:navigation-compose:2.7.7")
-
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     val supabaseVersion = "2.4.0"

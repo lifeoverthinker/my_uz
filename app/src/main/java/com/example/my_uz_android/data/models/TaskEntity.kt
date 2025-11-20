@@ -7,11 +7,10 @@ import androidx.room.PrimaryKey
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-
     val title: String,
     val description: String? = null,
-    val subjectName: String?,     // Aby powiązać zadanie z przedmiotem z planu
-    val dueDate: Long,            // Timestamp
+    val subjectName: String?,
+    val dueDate: Long,
     val isCompleted: Boolean = false,
-    val priority: Int = 1         // 1=Low, 2=Medium, 3=High
+    val priority: Int = 1
 )
