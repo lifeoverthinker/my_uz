@@ -2,6 +2,10 @@ package com.example.my_uz_android.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+// --- Dodane brakujące kolory ---
+val Pink40 = Color(0xFF7D5260)
+val Purple40 = Color(0xFF6650a4)
+
 // --- Light Theme Colors ---
 val md_theme_light_primary = Color(0xFF68548e)
 val md_theme_light_onPrimary = Color(0xFFffffff)
