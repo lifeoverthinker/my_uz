@@ -6,13 +6,9 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "settings")
 data class SettingsEntity(
     @PrimaryKey
-    val id: Int = 0, // Tylko jeden wiersz ustawień
-
-    // Kontekst studenta (używany w zapytaniach SQL do pobierania planu):
-    val selectedGroupCode: String? = null, // Np. "33INF-SSI-SP"
-    val selectedSubgroup: String? = null,  // Np. "grupa laboratoryjna 1" (do filtrowania `AND zg.podgrupa`)
-
-    // Wygląd i inne:
+    val id: Int = 0,
+    val selectedGroupCode: String? = null,
+    val selectedSubgroup: String? = null,
     val isDarkMode: Boolean = false,
     val notificationsEnabled: Boolean = true,
     val userName: String = "Student"

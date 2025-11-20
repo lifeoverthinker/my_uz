@@ -7,11 +7,10 @@ import androidx.room.PrimaryKey
 data class GradeEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-
-    val subjectName: String,      // Np. "Analiza Matematyczna"
-    val grade: Double,            // Np. 3.5
-    val weight: Int = 1,          // Waga oceny
-    val description: String?,     // Np. "Kolokwium 1"
+    val subjectName: String,
+    val grade: Double,
+    val weight: Int = 1,
+    val description: String?,
     val date: Long,
     val semester: Int = 1
 )
