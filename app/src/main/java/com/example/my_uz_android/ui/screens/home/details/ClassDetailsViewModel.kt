@@ -26,11 +26,11 @@ class ClassDetailsViewModel(
 
     private val classId: Int = checkNotNull(savedStateHandle["classId"])
 
-    // Pobieramy dane z repozytorium. Jeśli ID=999 i wynik z bazy to null, podstawiamy "Mocka".
+    // ZMIANA: Usunięto filterNotNull(), aby obsłużyć przypadek, gdy baza zwraca null (np. dla ID 999)
     val uiState: StateFlow<ClassDetailsUiState> = classRepository.getClassById(classId)
         .map { dbEntity ->
+            // Jeśli nie znaleziono w bazie, a ID to 999, użyj danych testowych (Mock)
             val entity = if (dbEntity == null && classId == 999) {
-                // Dane testowe dla widoku szczegółów (gdy baza pusta)
                 ClassEntity(
                     id = 999,
                     subjectName = "Podstawy systemów dyskretnych",
@@ -57,7 +57,7 @@ class ClassDetailsViewModel(
                 }
                 ClassDetailsUiState(classItem = entity, dayName = dayName)
             } else {
-                ClassDetailsUiState() // Nadal ładuje lub błąd
+                ClassDetailsUiState() // Pusty stan (ładowanie)
             }
         }
         .stateIn(

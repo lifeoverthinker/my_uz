@@ -28,7 +28,8 @@ import com.example.my_uz_android.ui.theme.MyUZTheme
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    onClassClick: (Int) -> Unit
+    onClassClick: (Int) -> Unit,
+    onEventClick: (Int) -> Unit // Dodano parametr
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -45,7 +46,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .background(backgroundColor)
         ) {
-            // --- 1. GÓRNY PASEK (Top: 58dp) ---
+            // 1. GÓRNY PASEK
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -64,6 +65,7 @@ fun HomeScreen(
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Mapa
                     Box(
                         modifier = Modifier
                             .size(48.dp)
@@ -80,6 +82,7 @@ fun HomeScreen(
                         }
                     }
 
+                    // Mail
                     Box(
                         modifier = Modifier
                             .size(48.dp)
@@ -105,7 +108,7 @@ fun HomeScreen(
                 }
             }
 
-            // --- 2. POWITANIE (Top: 106dp) ---
+            // 2. POWITANIE
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -132,7 +135,7 @@ fun HomeScreen(
                 )
             }
 
-            // --- 3. BIAŁA KARTA Z TREŚCIĄ (Top: 198dp) ---
+            // 3. BIAŁA KARTA
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
@@ -142,9 +145,8 @@ fun HomeScreen(
             ) {
                 LazyColumn(
                     contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
-                    // Usunięto globalne spacedBy(32.dp), sterujemy odstępami ręcznie
                 ) {
-                    // 1. Sekcja: Najbliższe zajęcia
+                    // Zajęcia
                     item {
                         UpcomingClasses(
                             classes = uiState.upcomingClasses,
@@ -153,20 +155,16 @@ fun HomeScreen(
                         )
                     }
 
-                    // Odstęp 10dp między sekcjami
                     item { Spacer(modifier = Modifier.height(10.dp)) }
 
-                    // 2. Sekcja: Zadania
+                    // Zadania
                     item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                // PADDING KONTENERA SEKCJI: 16 poziomo, 12 pionowo
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
-                            // ODSTĘP MIĘDZY NAGŁÓWKIEM A KARTAMI: 12dp
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Nagłówek (bez dodatkowego paddingu poziomego, bo kontener już ma)
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -195,7 +193,6 @@ fun HomeScreen(
                                 )
                             } else {
                                 LazyRow(
-                                    // Brak contentPadding, bo kontener ma już padding
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     itemsIndexed(uiState.upcomingTasks) { index, task ->
@@ -213,17 +210,14 @@ fun HomeScreen(
                         }
                     }
 
-                    // Odstęp 10dp między sekcjami
                     item { Spacer(modifier = Modifier.height(10.dp)) }
 
-                    // 3. Sekcja: Wydarzenia
+                    // Wydarzenia
                     item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                // PADDING KONTENERA SEKCJI: 16 poziomo, 12 pionowo
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
-                            // ODSTĘP MIĘDZY NAGŁÓWKIEM A KARTAMI: 12dp
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Row(
@@ -250,21 +244,24 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(3) { index ->
-                                    EventCardMock(index, backgroundColor = cardColorGreen)
+                                    // Obsługa kliknięcia - testowe ID 999
+                                    EventCardMock(
+                                        index = index,
+                                        backgroundColor = cardColorGreen,
+                                        onClick = { onEventClick(999) }
+                                    )
                                 }
                             }
                         }
                     }
 
-                    // Odstęp 10dp przed stopką
                     item { Spacer(modifier = Modifier.height(10.dp)) }
 
-                    // Stopka
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp), // Wyrównanie do lewej (z paddingiem kontenera)
+                                .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Text(
@@ -284,11 +281,12 @@ fun HomeScreen(
 }
 
 @Composable
-fun EventCardMock(index: Int, backgroundColor: Color) {
+fun EventCardMock(index: Int, backgroundColor: Color, onClick: () -> Unit) {
     val titles = listOf("Juwenalia 2025", "Targi Pracy IT", "Wystawa Robotów")
     val descriptions = listOf("Największa impreza roku!", "Znajdź staż marzeń", "Kampus A, Aula C")
 
     Card(
+        onClick = onClick, // Dodano obsługę kliknięcia
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         modifier = Modifier.width(264.dp),
         shape = RoundedCornerShape(8.dp)
