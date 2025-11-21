@@ -36,15 +36,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.my_uz_android.R
-// Usunięto błędny import: com.example.my_uz_android.ui.theme.AppFont
+import com.example.my_uz_android.ui.screens.home.HomeScreen
 
-// --- KOLORY Z FIGMY / FLUTTERA ---
-private val NavBackgroundColor = Color(0xFFFFFFFF) // Colors.white
-private val NavBorderColor = Color(0xFFEDE6F3)     // Color(0xFFEDE6F3)
-private val NavActiveColor = Color(0xFF381E72)     // Color(0xFF381E72)
-private val NavInactiveColor = Color(0xFF787579)   // Color(0xFF787579)
+// --- KOLORY Z FIGMY ---
+private val NavBackgroundColor = Color(0xFFFFFFFF)
+private val NavBorderColor = Color(0xFFEDE6F3)
+private val NavActiveColor = Color(0xFF381E72)
+private val NavInactiveColor = Color(0xFF787579)
 
-// Definicja ekranów
+// Definicja ekranów z Twoimi ikonami
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
     data object Calendar : Screen("calendar", "Kalendarz", R.drawable.ic_calendar)
@@ -68,8 +68,7 @@ fun AppNavigation() {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(NavBackgroundColor) // Białe tło
-                    // Rysujemy linię TYLKO na górze (width 1px w Figmie to ok. 1dp w Androidzie)
+                    .background(NavBackgroundColor)
                     .drawBehind {
                         val strokeWidth = 1.dp.toPx()
                         drawLine(
@@ -79,14 +78,13 @@ fun AppNavigation() {
                             strokeWidth = strokeWidth
                         )
                     }
-                    // Odsunięcie od dolnej krawędzi ekranu (na gesty/przyciski systemowe)
                     .windowInsetsPadding(WindowInsets.navigationBars)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(84.dp) // Wysokość paska
-                        .padding(bottom = 16.dp), // Padding dolny z Figmy
+                        .height(84.dp)
+                        .padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -101,15 +99,13 @@ fun AppNavigation() {
                                 Icon(
                                     painter = painterResource(id = screen.iconResId),
                                     contentDescription = screen.title,
-                                    modifier = Modifier.size(24.dp), // Wymuszamy rozmiar 24x24
-                                    // Ważne: Tintujemy ikonę na odpowiedni kolor
+                                    modifier = Modifier.size(24.dp),
                                     tint = if (selected) NavActiveColor else NavInactiveColor
                                 )
                             },
                             label = {
                                 Text(
                                     text = screen.title,
-                                    // Styl labelSmall z Type.kt
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (selected) NavActiveColor else NavInactiveColor
                                 )
@@ -124,7 +120,6 @@ fun AppNavigation() {
                                     restoreState = true
                                 }
                             },
-                            // Wyłączamy domyślne kolory Material3
                             colors = NavigationBarItemDefaults.colors(
                                 indicatorColor = Color.Transparent,
                                 selectedIconColor = NavActiveColor,
@@ -143,7 +138,7 @@ fun AppNavigation() {
             startDestination = Screen.Main.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Main.route) { PlaceholderScreen("Strona Główna") }
+            composable(Screen.Main.route) { HomeScreen() }
             composable(Screen.Calendar.route) { PlaceholderScreen("Kalendarz") }
             composable(Screen.Index.route) { PlaceholderScreen("Indeks Ocen") }
             composable(Screen.Account.route) { PlaceholderScreen("Konto Studenta") }
