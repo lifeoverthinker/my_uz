@@ -1,5 +1,6 @@
 package com.example.my_uz_android.ui.screens.home.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,7 +30,8 @@ import com.example.my_uz_android.ui.components.ClassCard
 fun UpcomingClasses(
     classes: List<ClassEntity>,
     emptyMessage: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClassClick: (Int) -> Unit
 ) {
     val purpleColor = Color(0xFFE8DEF8)
     val pinkColor = Color(0xFFFFD8E4)
@@ -38,7 +40,7 @@ fun UpcomingClasses(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Nagłówek sekcji z ikoną
+        // Nagłówek z ikoną kalendarza
         Row(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -77,7 +79,9 @@ fun UpcomingClasses(
                     ClassCard(
                         classItem = classItem,
                         backgroundColor = cardColor,
-                        modifier = Modifier.width(264.dp)
+                        modifier = Modifier
+                            .width(264.dp)
+                            .clickable { onClassClick(classItem.id) }
                     )
                 }
             }
