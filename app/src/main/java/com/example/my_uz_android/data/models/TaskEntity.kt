@@ -8,9 +8,8 @@ data class TaskEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val title: String,
-    val description: String? = null,
-    val subjectName: String?,
-    val dueDate: Long,
+    val description: String,
+    val dueDate: String, // Format ISO: "2023-10-27"
     val isCompleted: Boolean = false,
-    val priority: Int = 1
+    val subject: String? = null
 )

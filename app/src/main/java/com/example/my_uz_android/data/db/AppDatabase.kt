@@ -23,7 +23,7 @@ import com.example.my_uz_android.data.models.TaskEntity
         AbsenceEntity::class,
         SettingsEntity::class
     ],
-    version = 1,
+    version = 2, // ZMIANA: Wersja 2 wymusi przebudowanie bazy i naprawi crash
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -41,7 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "app_database")
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration() // Ważne: czyści starą bazę przy zmianie wersji
                     .build()
                     .also { Instance = it }
             }
