@@ -25,16 +25,16 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
-fun ClassDetailsScreen(
-    viewModel: ClassDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory),
+fun EventDetailsScreen(
+    viewModel: EventDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val classItem = uiState.classItem
+    val event = uiState.event
 
     val backgroundColor = Color(0xFFF7F2F9)
     val onBackgroundColor = Color(0xFF1D192B)
-    val purpleContainer = Color(0xFFE8DEF8)
+    val greenContainer = Color(0xFFDAF5D7)
 
     val offsetY = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
@@ -81,7 +81,7 @@ fun ClassDetailsScreen(
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 color = Color.White
             ) {
-                if (classItem != null) {
+                if (event != null) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -106,12 +106,12 @@ fun ClassDetailsScreen(
                             }
                         }
 
-                        // 2. TYTUŁ I DATA (Wyrównane do lewej z detalami)
+                        // 2. TYTUŁ I DATA
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.Top
                         ) {
-                            // Box 48x48 (stała szerokość kolumny ikon)
+                            // Box 48x48
                             Box(
                                 modifier = Modifier.size(48.dp),
                                 contentAlignment = Alignment.Center
@@ -119,20 +119,20 @@ fun ClassDetailsScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(20.dp)
-                                        .background(purpleContainer, RoundedCornerShape(4.dp))
+                                        .background(greenContainer, RoundedCornerShape(4.dp))
                                 )
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp)) // Stały odstęp
+                            Spacer(modifier = Modifier.width(16.dp))
 
                             Column(
                                 modifier = Modifier
-                                    .padding(top = 10.dp) // Optyczne wyrównanie do środka boxa 48dp
+                                    .padding(top = 10.dp)
                                     .weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = classItem.subjectName,
+                                    text = event.title,
                                     style = MaterialTheme.typography.headlineSmall.copy(
                                         fontSize = 22.sp,
                                         fontWeight = FontWeight.Normal,
@@ -141,7 +141,7 @@ fun ClassDetailsScreen(
                                     )
                                 )
                                 Text(
-                                    text = "${uiState.dayName}, 8 lip 2025 • ${classItem.startTime} – ${classItem.endTime}",
+                                    text = "${event.date} • ${event.timeRange}",
                                     style = MaterialTheme.typography.bodyMedium.copy(
                                         fontSize = 12.sp,
                                         color = Color(0xFF494949)
@@ -150,19 +150,17 @@ fun ClassDetailsScreen(
                             }
                         }
 
-                        // 3. SZCZEGÓŁY (Pionowa lista)
+                        // 3. SZCZEGÓŁY
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            ClassDetailRow(
-                                iconRes = R.drawable.ic_stand,
-                                text = classItem.classType
-                            )
-                            ClassDetailRow(
+                            // Lokalizacja
+                            EventDetailRow(
                                 iconRes = R.drawable.ic_marker_pin,
-                                text = classItem.room ?: "Brak sali"
+                                text = event.location
                             )
-                            ClassDetailRow(
-                                iconRes = R.drawable.ic_user,
-                                text = classItem.teacherName ?: "Brak danych"
+                            // Opis (Menu 2)
+                            EventDetailRow(
+                                iconRes = R.drawable.ic_menu_2,
+                                text = event.description
                             )
                         }
                     }
@@ -177,12 +175,12 @@ fun ClassDetailsScreen(
 }
 
 @Composable
-fun ClassDetailRow(iconRes: Int, text: String) {
+fun EventDetailRow(iconRes: Int, text: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
-        // Box 48x48 (stała szerokość kolumny ikon)
+        // Box 48x48
         Box(
             modifier = Modifier.size(48.dp),
             contentAlignment = Alignment.Center
@@ -195,7 +193,7 @@ fun ClassDetailRow(iconRes: Int, text: String) {
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp)) // Stały odstęp (taki sam jak w tytule)
+        Spacer(modifier = Modifier.width(16.dp))
 
         Text(
             text = text,
@@ -205,7 +203,6 @@ fun ClassDetailRow(iconRes: Int, text: String) {
                 fontWeight = FontWeight.Normal,
                 lineHeight = 20.sp
             ),
-            // Optyczne wyrównanie tekstu do środka ikony (48/2 - 20/2 = 14dp od góry)
             modifier = Modifier.padding(top = 14.dp)
         )
     }

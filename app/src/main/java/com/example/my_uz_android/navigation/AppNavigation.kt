@@ -4,24 +4,8 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -42,6 +26,7 @@ import androidx.navigation.navArgument
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.screens.home.HomeScreen
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsScreen
+import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen // Import ekranu wydarzeń
 
 private val NavBackgroundColor = Color(0xFFFFFFFF)
 private val NavBorderColor = Color(0xFFEDE6F3)
@@ -139,6 +124,9 @@ fun AppNavigation() {
                 HomeScreen(
                     onClassClick = { classId ->
                         navController.navigate("class_details/$classId")
+                    },
+                    onEventClick = { eventId -> // Dodano obsługę kliknięcia w wydarzenie
+                        navController.navigate("event_details/$eventId")
                     }
                 )
             }
@@ -146,26 +134,22 @@ fun AppNavigation() {
             composable(Screen.Index.route) { PlaceholderScreen("Indeks Ocen") }
             composable(Screen.Account.route) { PlaceholderScreen("Konto Studenta") }
 
-            // SZCZEGÓŁY ZAJĘĆ Z ANIMACJĄ WYSUWANIA Z DOŁU
             composable(
                 route = "class_details/{classId}",
                 arguments = listOf(navArgument("classId") { type = NavType.IntType }),
-                enterTransition = {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Up,
-                        animationSpec = tween(400)
-                    )
-                },
-                exitTransition = {
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Down,
-                        animationSpec = tween(400)
-                    )
-                }
+                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400)) },
+                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400)) }
             ) {
-                ClassDetailsScreen(
-                    onBackClick = { navController.popBackStack() }
-                )
+                ClassDetailsScreen(onBackClick = { navController.popBackStack() })
+            }
+
+            composable(
+                route = "event_details/{eventId}",
+                arguments = listOf(navArgument("eventId") { type = NavType.IntType }),
+                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400)) },
+                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400)) }
+            ) {
+                EventDetailsScreen(onBackClick = { navController.popBackStack() })
             }
         }
     }

@@ -3,11 +3,11 @@ package com.example.my_uz_android.di
 import android.content.Context
 import com.example.my_uz_android.data.db.AppDatabase
 import com.example.my_uz_android.data.repositories.ClassRepository
+import com.example.my_uz_android.data.repositories.EventRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.SupabaseUniversityRepository
 import com.example.my_uz_android.data.repositories.TasksRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
-// Ten import jest kluczowy:
 import io.github.jan.supabase.postgrest.postgrest
 
 interface AppContainer {
@@ -15,6 +15,7 @@ interface AppContainer {
     val universityRepository: UniversityRepository
     val classRepository: ClassRepository
     val tasksRepository: TasksRepository
+    val eventRepository: EventRepository // Dodano
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -28,7 +29,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val universityRepository: UniversityRepository by lazy {
-        // Przekazujemy moduł .postgrest, a nie cały obiekt klienta
         SupabaseUniversityRepository(AppModule.supabase.postgrest)
     }
 
@@ -38,5 +38,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val tasksRepository: TasksRepository by lazy {
         TasksRepository(database.tasksDao())
+    }
+
+    override val eventRepository: EventRepository by lazy {
+        EventRepository(database.eventDao())
     }
 }

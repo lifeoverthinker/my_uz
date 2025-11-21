@@ -8,18 +8,17 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
+import com.example.my_uz_android.ui.screens.home.details.EventDetailsViewModel
 import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
-        // OnboardingViewModel
         initializer {
             OnboardingViewModel(
                 myUZApplication().container.settingsRepository,
                 myUZApplication().container.universityRepository
             )
         }
-        // HomeViewModel
         initializer {
             HomeViewModel(
                 myUZApplication().container.settingsRepository,
@@ -28,11 +27,17 @@ object AppViewModelProvider {
                 myUZApplication().container.universityRepository
             )
         }
-        // NOWY: ClassDetailsViewModel
         initializer {
             ClassDetailsViewModel(
                 this.createSavedStateHandle(),
                 myUZApplication().container.classRepository
+            )
+        }
+        // NOWY: EventDetailsViewModel
+        initializer {
+            EventDetailsViewModel(
+                this.createSavedStateHandle(),
+                myUZApplication().container.eventRepository // Zakładam, że dodasz eventRepository do AppContainer
             )
         }
     }
