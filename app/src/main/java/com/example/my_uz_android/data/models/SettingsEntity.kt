@@ -10,7 +10,12 @@ data class SettingsEntity(
     val userName: String = "Student",
     val isAnonymous: Boolean = false,
     val selectedGroupCode: String? = null,
-    val selectedSubgroup: String? = null, // Przechowujemy jako String oddzielony przecinkami lub JSON
+    val selectedSubgroup: String? = null,
+    // Nowe pola
+    val faculty: String? = null,        // Wydział
+    val fieldOfStudy: String? = null,   // Kierunek
+    val studyMode: String? = null,      // Tryb (stacjonarne itp.)
+
     val isFirstRun: Boolean = true,
     val isDarkMode: Boolean = false,
     val notificationsEnabled: Boolean = true
