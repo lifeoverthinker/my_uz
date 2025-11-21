@@ -1,27 +1,35 @@
 package com.example.my_uz_android.ui
 
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.my_uz_android.MyUZApplication
+import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
         // Initializer dla OnboardingViewModel
         initializer {
-            val application = inventoryApplication()
             OnboardingViewModel(
-                settingsRepository = application.container.settingsRepository,
-                universityRepository = application.container.universityRepository
+                settingsRepository = myUzApplication().container.settingsRepository,
+                universityRepository = myUzApplication().container.universityRepository
             )
         }
 
-        // Tutaj dodasz inne ViewModele w przyszłości, np. HomeViewModel
+        // Initializer dla HomeViewModel
+        initializer {
+            val container = myUzApplication().container
+            HomeViewModel(
+                settingsRepository = container.settingsRepository,
+                classRepository = container.classRepository, // Upewnij się, że jest w AppContainer
+                tasksRepository = container.tasksRepository, // Upewnij się, że jest w AppContainer
+                universityRepository = container.universityRepository
+            )
+        }
     }
 }
 
-// Funkcja pomocnicza do pobierania instancji aplikacji
-fun CreationExtras.inventoryApplication(): MyUZApplication =
-    (this[AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)
+fun CreationExtras.myUzApplication(): MyUZApplication =
+    (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)

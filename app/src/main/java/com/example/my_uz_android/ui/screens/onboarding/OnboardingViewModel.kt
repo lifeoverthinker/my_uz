@@ -31,16 +31,14 @@ class OnboardingViewModel(
 
     private val TAG = "OnboardingViewModel"
 
-    // Strony: 0=Welcome, 1=Personalization, 2=GroupSelection, 3-5=Info
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
     val totalPages = 6
 
-    // Stan ładowania (dla paska postępu)
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // --- Ekran 2 (Personalizacja) ---
+    // Personalizacja
     private val _selectedMode = MutableStateFlow<OnboardingMode?>(null)
     val selectedMode: StateFlow<OnboardingMode?> = _selectedMode.asStateFlow()
 
@@ -53,7 +51,7 @@ class OnboardingViewModel(
     private val _userSurname = MutableStateFlow("")
     val userSurname: StateFlow<String> = _userSurname.asStateFlow()
 
-    // --- Ekran 3 (Wybór Grupy) ---
+    // Grupa
     private val _groupSearchQuery = MutableStateFlow("")
     val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
 
@@ -66,20 +64,16 @@ class OnboardingViewModel(
     private val _availableSubgroups = MutableStateFlow<List<String>>(emptyList())
     val availableSubgroups: StateFlow<List<String>> = _availableSubgroups.asStateFlow()
 
-    // Lista wszystkich grup pobrana z bazy
     private val _allGroups = MutableStateFlow<List<String>>(emptyList())
-    // Lista przefiltrowana do wyświetlenia w dropdownie
     private val _filteredGroups = MutableStateFlow<List<String>>(emptyList())
     val filteredGroups: StateFlow<List<String>> = _filteredGroups.asStateFlow()
 
     init {
-        // Nasłuchiwanie wpisywania tekstu i filtrowanie
         _groupSearchQuery
             .onEach { query ->
                 if (query.isEmpty()) {
                     _filteredGroups.value = emptyList()
                 } else {
-                    // Filtrowanie lokalne
                     val result = _allGroups.value.filter {
                         it.contains(query, ignoreCase = true)
                     }.take(5)
@@ -95,12 +89,10 @@ class OnboardingViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                Log.d(TAG, "Rozpoczynam pobieranie grup z Supabase...")
                 val groups = universityRepository.getGroupCodes()
-                Log.d(TAG, "Pobrano grup: ${groups.size}")
                 _allGroups.value = groups
             } catch (e: Exception) {
-                Log.e(TAG, "Błąd podczas pobierania grup: ${e.message}", e)
+                Log.e(TAG, "Błąd podczas pobierania grup", e)
                 _allGroups.value = emptyList()
             } finally {
                 _isLoading.value = false
@@ -108,31 +100,61 @@ class OnboardingViewModel(
         }
     }
 
-    // --- Logika Zapisu (Przycisk "Gotowe!") ---
+    // --- ZAPIS DANYCH ---
     fun saveOnboardingData() {
         viewModelScope.launch {
+            _isLoading.value = true
             val isAnonymous = _selectedMode.value == OnboardingMode.ANONYMOUS
+            val groupCode = _selectedGroup.value
 
+            // 1. Pobierz szczegóły grupy (Wydział, Kierunek) z Supabase
+            var faculty: String? = null
+            var fieldOfStudy: String? = null
+            var studyMode: String? = null
+
+            if (groupCode != null) {
+                try {
+                    val details = universityRepository.getGroupDetails(groupCode)
+                    if (details != null) {
+                        studyMode = details.studyMode
+                        details.fieldInfo?.let { info ->
+                            faculty = info.faculty
+                            fieldOfStudy = info.name
+                        }
+                        Log.d(TAG, "Pobrano dane grupy: $faculty, $fieldOfStudy")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Nie udało się pobrać szczegółów grupy", e)
+                }
+            }
+
+            // 2. Zapisz wszystko w lokalnej bazie
+            // WAŻNE: id = 0, aby pasowało do zapytania w SettingsDao
             val settings = SettingsEntity(
-                id = 1,
+                id = 0,
                 isAnonymous = isAnonymous,
                 userName = if (isAnonymous) "Student" else _userName.value,
-                selectedGroupCode = _selectedGroup.value,
+                selectedGroupCode = groupCode,
                 selectedSubgroup = _selectedSubgroups.value.joinToString(","),
+
+                // Nowe dane
+                faculty = faculty,
+                fieldOfStudy = fieldOfStudy,
+                studyMode = studyMode,
+
                 isFirstRun = false,
                 isDarkMode = false,
                 notificationsEnabled = true
             )
 
             settingsRepository.insertSettings(settings)
+            _isLoading.value = false
         }
     }
 
-    // --- Nawigacja ---
     fun onNextClick() {
         if (_currentPage.value < totalPages - 1) {
             _currentPage.update { it + 1 }
-            // Ponowna próba pobrania grup jeśli wchodzimy na ekran wyboru, a lista pusta
             if (_currentPage.value == 2 && _allGroups.value.isEmpty()) {
                 fetchAllGroups()
             }
@@ -145,7 +167,6 @@ class OnboardingViewModel(
         }
     }
 
-    // --- Settery ---
     fun setMode(mode: OnboardingMode) { _selectedMode.value = mode }
     fun setGender(gender: UserGender) { _selectedGender.value = gender }
     fun setUserName(name: String) { _userName.value = name }
@@ -162,15 +183,13 @@ class OnboardingViewModel(
     fun selectGroup(groupCode: String) {
         _selectedGroup.value = groupCode
         _groupSearchQuery.value = groupCode
-        _filteredGroups.value = emptyList() // Ukryj listę po wybraniu
+        _filteredGroups.value = emptyList()
 
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                Log.d(TAG, "Pobieranie podgrup dla: $groupCode")
                 _availableSubgroups.value = universityRepository.getSubgroups(groupCode)
             } catch (e: Exception) {
-                Log.e(TAG, "Błąd pobierania podgrup", e)
                 _availableSubgroups.value = emptyList()
             } finally {
                 _isLoading.value = false
