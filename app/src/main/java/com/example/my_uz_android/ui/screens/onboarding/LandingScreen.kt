@@ -55,7 +55,7 @@ fun LandingScreen(
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
-                .imePadding(), // Kluczowe dla skalowania przy klawiaturze
+                .imePadding(),
             containerColor = MaterialTheme.colorScheme.surface,
             topBar = {
                 Box(
@@ -65,9 +65,14 @@ fun LandingScreen(
                         .statusBarsPadding(),
                     contentAlignment = Alignment.TopEnd
                 ) {
-                    // Przycisk Pomiń widoczny tylko jeśli nie jesteśmy na ostatnim ekranie
                     if (currentPage < 5) {
-                        TextButton(onClick = onFinishOnboarding) {
+                        // ZMIANA: Obsługa kliknięcia Pomiń
+                        TextButton(
+                            onClick = {
+                                viewModel.skipOnboarding() // Zapisz domyślne dane
+                                onFinishOnboarding()      // Przejdź do Home
+                            }
+                        ) {
                             Text("Pomiń", style = MaterialTheme.typography.labelLarge)
                         }
                     }
@@ -77,7 +82,7 @@ fun LandingScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp) // 8-grid (16dp)
+                        .padding(vertical = 16.dp)
                         .navigationBarsPadding(),
                     contentAlignment = Alignment.Center
                 ) {
@@ -85,12 +90,11 @@ fun LandingScreen(
                 }
             }
         ) { innerPadding ->
-            // Główny kontener z paddingami
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 24.dp), // 8-grid (24dp margins)
+                    .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 AnimatedContent(
@@ -128,11 +132,6 @@ fun LandingScreen(
     }
 }
 
-/**
- * Wrapper dla każdego kroku onboardingu zapewniający spójny layout i skalowanie ilustracji.
- * @param illustrationContent Obrazek, który wypełni górną przestrzeń (weight 1f).
- * @param bottomContent Treść (teksty, pola, przyciski), która jest "sztywna" na dole.
- */
 @Composable
 fun ResponsiveOnboardingStep(
     illustrationResId: Int,
@@ -142,30 +141,27 @@ fun ResponsiveOnboardingStep(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 1. Sekcja Ilustracji - Elastyczna (weight 1f)
-        // Dzięki temu obrazek zajmuje całe wolne miejsce i kurczy się, gdy dół rośnie (np. przez klawiaturę)
         Box(
             modifier = Modifier
-                .weight(1f)
                 .fillMaxWidth()
-                .padding(vertical = 16.dp), // Odstęp góra/dół od obrazka
+                .fillMaxHeight(0.55f)
+                .padding(vertical = 16.dp),
             contentAlignment = Alignment.Center
         ) {
             Image(
                 painter = painterResource(id = illustrationResId),
                 contentDescription = null,
-                contentScale = ContentScale.Fit, // Skaluje proporcjonalnie wewnątrz Boxa
+                contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize()
             )
         }
 
-        // 2. Sekcja Treści - Dolna
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp), // Odstęp od stopki
+                .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp) // 8-grid spacing
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             bottomContent()
         }
@@ -181,7 +177,7 @@ fun WelcomeStepContent(viewModel: OnboardingViewModel) {
             subtitle = "Twój cyfrowy asystent na Uniwersytecie",
             description = "Zarządzaj zajęciami, zadaniami i ocenami w jednym miejscu."
         )
-        Spacer(Modifier.height(16.dp)) // 8-grid
+        Spacer(Modifier.height(16.dp))
         PageIndicators(totalPages = viewModel.totalPages, currentPage = 0)
         Spacer(Modifier.height(8.dp))
 
@@ -222,7 +218,6 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
             description = "Wybierz tryb anonimowy lub wprowadź swoje dane"
         )
 
-        // Karty wyboru trybu
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -246,8 +241,6 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
             )
         }
 
-        // Pola zależne od wyboru
-        // Używamy AnimatedVisibility, layout sam się przeliczy
         AnimatedVisibility(visible = selectedMode == OnboardingMode.ANONYMOUS) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 FilterChip(
@@ -313,7 +306,6 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
             description = "Wpisz kod grupy aby wyszukać"
         )
 
-        // Wyszukiwarka
         Column(modifier = Modifier.fillMaxWidth()) {
             ExposedDropdownMenuBox(
                 expanded = expanded && filteredGroups.isNotEmpty(),
@@ -411,7 +403,6 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
             }
         }
 
-        // Wybór podgrup
         AnimatedVisibility(visible = selectedGroup != null && availableSubgroups.isNotEmpty()) {
             Column(
                 modifier = Modifier
@@ -458,8 +449,7 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
     }
 }
 
-// --- EKRANY INFORMACYJNE (3, 4, 5) ---
-
+// --- EKRANY INFORMACYJNE ---
 @Composable
 fun CalendarFeatureStepContent(viewModel: OnboardingViewModel) {
     InfoStepContent(
@@ -495,7 +485,6 @@ fun MapFeatureStepContent(viewModel: OnboardingViewModel, onFinishOnboarding: ()
     )
 }
 
-// Helper dla prostych ekranów informacyjnych
 @Composable
 fun InfoStepContent(
     viewModel: OnboardingViewModel,
@@ -546,8 +535,7 @@ fun InfoStepContent(
     }
 }
 
-// --- WSPÓLNE KOMPONENTY ---
-
+// --- KOMPONENTY POMOCNICZE ---
 @Composable
 fun OnboardingTexts(title: String, subtitle: String, description: String) {
     Column(
@@ -583,7 +571,7 @@ fun PageIndicators(totalPages: Int, currentPage: Int) {
         repeat(totalPages) { index ->
             val isActive = index == currentPage
             val color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-            val width = if (isActive) 24.dp else 8.dp // 8-grid sizing
+            val width = if (isActive) 24.dp else 8.dp
             Box(
                 modifier = Modifier
                     .height(8.dp)

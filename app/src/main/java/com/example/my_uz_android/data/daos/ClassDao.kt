@@ -15,6 +15,9 @@ interface ClassDao {
     @Query("SELECT * FROM classes WHERE dayOfWeek = :day")
     fun getClassesForDay(day: Int): Flow<List<ClassEntity>>
 
+    @Query("SELECT * FROM classes WHERE id = :id")
+    fun getClassById(id: Int): Flow<ClassEntity?>
+
     @Query("DELETE FROM classes")
     suspend fun clearSchedule()
 
