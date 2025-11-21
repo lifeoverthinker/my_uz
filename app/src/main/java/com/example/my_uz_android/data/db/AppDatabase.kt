@@ -6,11 +6,13 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.my_uz_android.data.daos.AbsenceDao
 import com.example.my_uz_android.data.daos.ClassDao
+import com.example.my_uz_android.data.daos.EventDao
 import com.example.my_uz_android.data.daos.GradesDao
 import com.example.my_uz_android.data.daos.SettingsDao
 import com.example.my_uz_android.data.daos.TasksDao
 import com.example.my_uz_android.data.models.AbsenceEntity
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.data.models.GradeEntity
 import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.models.TaskEntity
@@ -21,9 +23,10 @@ import com.example.my_uz_android.data.models.TaskEntity
         TaskEntity::class,
         GradeEntity::class,
         AbsenceEntity::class,
-        SettingsEntity::class
+        SettingsEntity::class,
+        EventEntity::class // Nowa encja
     ],
-    version = 3, // ZMIANA: Wersja 3 (bo dodaliśmy pole gender)
+    version = 4, // ZMIANA: Wersja 4
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gradesDao(): GradesDao
     abstract fun absenceDao(): AbsenceDao
     abstract fun settingsDao(): SettingsDao
+    abstract fun eventDao(): EventDao // Nowe DAO
 
     companion object {
         @Volatile
@@ -41,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "app_database")
-                    .fallbackToDestructiveMigration() // Resetuje bazę przy zmianie wersji
+                    .fallbackToDestructiveMigration()
                     .build()
                     .also { Instance = it }
             }
