@@ -27,7 +27,8 @@ import com.example.my_uz_android.ui.theme.MyUZTheme
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    onClassClick: (Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -39,14 +40,12 @@ fun HomeScreen(
     val cardColorGreen = Color(0xFFDAF5D7)
 
     MyUZTheme {
-        // Box = Flutter Stack
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundColor)
         ) {
-            // --- 1. DATA I PRZYCISKI (Top: 58dp) ---
-            // Odwzorowanie Positioned(top: 58)
+            // --- 1. GÓRNY PASEK (Top: 58dp) ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -55,7 +54,6 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Data
                 Text(
                     text = uiState.currentDate,
                     style = MaterialTheme.typography.titleMedium.copy(
@@ -65,7 +63,6 @@ fun HomeScreen(
                     )
                 )
 
-                // Przyciski (Mapa z lewej, Dzwonek z prawej)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
                         modifier = Modifier
@@ -89,15 +86,14 @@ fun HomeScreen(
                             .background(cardColorPurple, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        IconButton(onClick = { /* Powiadomienia */ }) {
+                        IconButton(onClick = { /* Poczta */ }) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_bell),
-                                contentDescription = "Powiadomienia",
+                                painter = painterResource(id = R.drawable.ic_mail),
+                                contentDescription = "Poczta",
                                 tint = onBackgroundColor,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
-                        // Kropka
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
@@ -110,12 +106,11 @@ fun HomeScreen(
             }
 
             // --- 2. POWITANIE (Top: 106dp) ---
-            // Odwzorowanie Positioned(top: 106, child: Container(padding: 16))
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 106.dp)
-                    .padding(16.dp) // Wewnętrzny padding kontenera
+                    .padding(horizontal = 16.dp)
             ) {
                 Text(
                     text = uiState.greeting,
@@ -126,7 +121,6 @@ fun HomeScreen(
                         lineHeight = 36.sp
                     )
                 )
-                // Brak Spacera, tekst bezpośrednio pod spodem jak w Flutter Column
                 Text(
                     text = uiState.departmentInfo,
                     style = MaterialTheme.typography.bodyMedium.copy(
@@ -138,7 +132,7 @@ fun HomeScreen(
                 )
             }
 
-            // --- 3. BIAŁA KARTA (Top: 198dp) ---
+            // --- 3. BIAŁA KARTA Z TREŚCIĄ (Top: 198dp) ---
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
@@ -147,25 +141,33 @@ fun HomeScreen(
                 color = Color.White
             ) {
                 LazyColumn(
-                    contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp),
-                    verticalArrangement = Arrangement.spacedBy(32.dp)
+                    contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
+                    // Usunięto globalne spacedBy(32.dp), sterujemy odstępami ręcznie
                 ) {
-                    // Zajęcia
+                    // 1. Sekcja: Najbliższe zajęcia
                     item {
                         UpcomingClasses(
                             classes = uiState.upcomingClasses,
-                            emptyMessage = uiState.classesMessage
+                            emptyMessage = uiState.classesMessage,
+                            onClassClick = onClassClick
                         )
                     }
 
-                    // Zadania
+                    // Odstęp 10dp między sekcjami
+                    item { Spacer(modifier = Modifier.height(10.dp)) }
+
+                    // 2. Sekcja: Zadania
                     item {
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                // PADDING KONTENERA SEKCJI: 16 poziomo, 12 pionowo
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            // ODSTĘP MIĘDZY NAGŁÓWKIEM A KARTAMI: 12dp
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            // Nagłówek (bez dodatkowego paddingu poziomego, bo kontener już ma)
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -188,13 +190,12 @@ fun HomeScreen(
                             if (uiState.upcomingTasks.isEmpty()) {
                                 Text(
                                     text = "Brak zadań do wyświetlenia",
-                                    modifier = Modifier.padding(horizontal = 16.dp),
                                     color = Color.Gray,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             } else {
                                 LazyRow(
-                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    // Brak contentPadding, bo kontener ma już padding
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     itemsIndexed(uiState.upcomingTasks) { index, task ->
@@ -212,14 +213,20 @@ fun HomeScreen(
                         }
                     }
 
-                    // Wydarzenia
+                    // Odstęp 10dp między sekcjami
+                    item { Spacer(modifier = Modifier.height(10.dp)) }
+
+                    // 3. Sekcja: Wydarzenia
                     item {
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                // PADDING KONTENERA SEKCJI: 16 poziomo, 12 pionowo
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            // ODSTĘP MIĘDZY NAGŁÓWKIEM A KARTAMI: 12dp
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -240,7 +247,6 @@ fun HomeScreen(
                             }
 
                             LazyRow(
-                                contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(3) { index ->
@@ -250,12 +256,15 @@ fun HomeScreen(
                         }
                     }
 
+                    // Odstęp 10dp przed stopką
+                    item { Spacer(modifier = Modifier.height(10.dp)) }
+
                     // Stopka
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 8.dp, start = 16.dp),
+                                .padding(horizontal = 16.dp), // Wyrównanie do lewej (z paddingiem kontenera)
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Text(

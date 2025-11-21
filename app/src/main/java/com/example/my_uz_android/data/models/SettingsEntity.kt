@@ -9,12 +9,15 @@ data class SettingsEntity(
     val id: Int = 0,
     val userName: String = "Student",
     val isAnonymous: Boolean = false,
+    // Dodane pole płci
+    val gender: String? = null,
+
     val selectedGroupCode: String? = null,
     val selectedSubgroup: String? = null,
-    // Nowe pola
-    val faculty: String? = null,        // Wydział
-    val fieldOfStudy: String? = null,   // Kierunek
-    val studyMode: String? = null,      // Tryb (stacjonarne itp.)
+
+    val faculty: String? = null,
+    val fieldOfStudy: String? = null,
+    val studyMode: String? = null,
 
     val isFirstRun: Boolean = true,
     val isDarkMode: Boolean = false,

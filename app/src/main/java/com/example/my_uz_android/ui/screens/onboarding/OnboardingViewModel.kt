@@ -100,7 +100,7 @@ class OnboardingViewModel(
         }
     }
 
-    // --- ZAPIS DANYCH ---
+    // --- ZAPIS DANYCH Z ONBOARDINGU ---
     fun saveOnboardingData() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -129,25 +129,46 @@ class OnboardingViewModel(
             }
 
             // 2. Zapisz wszystko w lokalnej bazie
-            // WAŻNE: id = 0, aby pasowało do zapytania w SettingsDao
             val settings = SettingsEntity(
-                id = 0,
+                id = 0, // ID=0 dla SettingsDao
                 isAnonymous = isAnonymous,
                 userName = if (isAnonymous) "Student" else _userName.value,
+                gender = _selectedGender.value.name,
                 selectedGroupCode = groupCode,
                 selectedSubgroup = _selectedSubgroups.value.joinToString(","),
-
-                // Nowe dane
                 faculty = faculty,
                 fieldOfStudy = fieldOfStudy,
                 studyMode = studyMode,
-
                 isFirstRun = false,
                 isDarkMode = false,
                 notificationsEnabled = true
             )
 
             settingsRepository.insertSettings(settings)
+            _isLoading.value = false
+        }
+    }
+
+    // --- FUNKCJA POMIJANIA ONBOARDINGU ---
+    fun skipOnboarding() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            // Zapisujemy domyślne dane dla "Gościa"
+            val defaultSettings = SettingsEntity(
+                id = 0,
+                isAnonymous = false, // false, aby wyświetlić imię "Gościu" zamiast "Studencie"
+                userName = "Gościu",
+                gender = null,
+                selectedGroupCode = null,
+                selectedSubgroup = null,
+                faculty = null, // HomeViewModel wyświetli "Uniwersytet Zielonogórski"
+                fieldOfStudy = null,
+                studyMode = null,
+                isFirstRun = false,
+                isDarkMode = false,
+                notificationsEnabled = true
+            )
+            settingsRepository.insertSettings(defaultSettings)
             _isLoading.value = false
         }
     }
