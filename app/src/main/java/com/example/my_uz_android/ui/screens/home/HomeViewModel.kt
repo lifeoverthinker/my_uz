@@ -9,6 +9,7 @@ import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.TasksRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
+import com.example.my_uz_android.ui.screens.onboarding.UserGender
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -48,27 +49,47 @@ class HomeViewModel(
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
 
-        // 1. POWITANIE
+        // 1. POWITANIE Z UWZGLĘDNIENIEM PŁCI
         val userName = settings?.userName ?: "Student"
         val isAnonymous = settings?.isAnonymous == true
+        val genderStr = settings?.gender
 
         val greeting = if (isAnonymous) {
-            "Cześć, Studencie 👋"
+            if (genderStr == UserGender.STUDENTKA.name) "Cześć, Studentko 👋" else "Cześć, Studencie 👋"
         } else {
             "Cześć, $userName 👋"
         }
 
-        // 2. WYDZIAŁ (Bez kodu grupy)
+        // 2. WYDZIAŁ
         val faculty = settings?.faculty
-
         val departmentInfo = if (!faculty.isNullOrBlank()) {
             faculty
         } else {
             "Uniwersytet Zielonogórski"
         }
 
-        // 3. ZAJĘCIA
-        val todaysClasses = classes.filter { classEntity ->
+        // 3. ZAJĘCIA (MOCK DATA JEŚLI PUSTO)
+        // Jeśli baza jest pusta, dodaj fejkowe zajęcia na dzisiaj, żeby pokazać kartę
+        val effectiveClasses = if (classes.isEmpty()) {
+            listOf(
+                ClassEntity(
+                    id = 999, // Fake ID
+                    subjectName = "Testowe Zajęcia (Mock)",
+                    classType = "Wykład",
+                    startTime = "10:00",
+                    endTime = "11:30",
+                    dayOfWeek = today.dayOfWeek.value, // Dzisiaj
+                    groupCode = settings?.selectedGroupCode ?: "GRUPA",
+                    subgroup = null,
+                    room = "Sala 101",
+                    teacherName = "Dr Jan Testowy"
+                )
+            )
+        } else {
+            classes
+        }
+
+        val todaysClasses = effectiveClasses.filter { classEntity ->
             classEntity.dayOfWeek == today.dayOfWeek.value
         }.sortedBy { it.startTime }
 
@@ -97,9 +118,7 @@ class HomeViewModel(
             } else false
         }.sortedBy { it.dueDate }
 
-        // Wybierz listę, ale nazwa sekcji zawsze "Zadania"
         val finalTasks = if (currentWeekTasks.isNotEmpty()) currentWeekTasks else if (nextWeekTasks.isNotEmpty()) nextWeekTasks else emptyList()
-        val tasksMsg = "Zadania"
 
         HomeUiState(
             greeting = greeting,
@@ -108,7 +127,7 @@ class HomeViewModel(
             upcomingTasks = finalTasks,
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },
             classesMessage = classesMsg,
-            tasksMessage = tasksMsg
+            tasksMessage = "Zadania"
         )
     }.stateIn(
         scope = viewModelScope,
