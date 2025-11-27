@@ -2,11 +2,7 @@ package com.example.my_uz_android.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// --- Dodane brakujące kolory ---
-val Pink40 = Color(0xFF7D5260)
-val Purple40 = Color(0xFF6650a4)
-
-// --- Light Theme Colors ---
+// --- Podstawowe (już były) ---
 val md_theme_light_primary = Color(0xFF68548e)
 val md_theme_light_onPrimary = Color(0xFFffffff)
 val md_theme_light_primaryContainer = Color(0xFFebddff)
@@ -36,7 +32,32 @@ val md_theme_light_inverseSurface = Color(0xFF322f35)
 val md_theme_light_inverseOnSurface = Color(0xFFf5eff7)
 val md_theme_light_inversePrimary = Color(0xFFd3bcfd)
 
-// --- Dark Theme Colors ---
+// --- LIGHT: Rozszerzone (Surface, Fixed, Dim) z Figmy ---
+val md_theme_light_surfaceDim = Color(0xFFded8e0)
+val md_theme_light_surfaceBright = Color(0xFFfef7ff)
+val md_theme_light_surfaceContainerLowest = Color(0xFFffffff)
+val md_theme_light_surfaceContainerLow = Color(0xFFf8f1fa)
+val md_theme_light_surfaceContainer = Color(0xFFf2ecf4)
+val md_theme_light_surfaceContainerHigh = Color(0xFFede6ee)
+val md_theme_light_surfaceContainerHighest = Color(0xFFe7e0e8)
+
+val md_theme_light_primaryFixed = Color(0xFFebddff)
+val md_theme_light_onPrimaryFixed = Color(0xFF230f46)
+val md_theme_light_primaryFixedDim = Color(0xFFd3bcfd)
+val md_theme_light_onPrimaryFixedVariant = Color(0xFF4f3d74)
+
+val md_theme_light_secondaryFixed = Color(0xFFe9def8)
+val md_theme_light_onSecondaryFixed = Color(0xFF1f182b)
+val md_theme_light_secondaryFixedDim = Color(0xFFcdc2db)
+val md_theme_light_onSecondaryFixedVariant = Color(0xFF4b4358)
+
+val md_theme_light_tertiaryFixed = Color(0xFFffd9e1)
+val md_theme_light_onTertiaryFixed = Color(0xFF31101b)
+val md_theme_light_tertiaryFixedDim = Color(0xFFf0b7c5)
+val md_theme_light_onTertiaryFixedVariant = Color(0xFF643b46)
+
+
+// --- DARK: Podstawowe (już były) ---
 val md_theme_dark_primary = Color(0xFFd3bcfd)
 val md_theme_dark_onPrimary = Color(0xFF38265c)
 val md_theme_dark_primaryContainer = Color(0xFF4f3d74)
@@ -65,3 +86,40 @@ val md_theme_dark_scrim = Color(0xFF000000)
 val md_theme_dark_inverseSurface = Color(0xFFe7e0e8)
 val md_theme_dark_inverseOnSurface = Color(0xFF322f35)
 val md_theme_dark_inversePrimary = Color(0xFF68548e)
+
+// --- DARK: Rozszerzone (Surface, Fixed, Dim) z Figmy ---
+val md_theme_dark_surfaceDim = Color(0xFF151218)
+val md_theme_dark_surfaceBright = Color(0xFF3b383e)
+val md_theme_dark_surfaceContainerLowest = Color(0xFF0f0d13)
+val md_theme_dark_surfaceContainerLow = Color(0xFF1d1b20)
+val md_theme_dark_surfaceContainer = Color(0xFF211f24)
+val md_theme_dark_surfaceContainerHigh = Color(0xFF2c292f)
+val md_theme_dark_surfaceContainerHighest = Color(0xFF36343a)
+
+val md_theme_dark_primaryFixed = Color(0xFFebddff)
+val md_theme_dark_onPrimaryFixed = Color(0xFF230f46)
+val md_theme_dark_primaryFixedDim = Color(0xFFd3bcfd)
+val md_theme_dark_onPrimaryFixedVariant = Color(0xFF4f3d74)
+
+val md_theme_dark_secondaryFixed = Color(0xFFe9def8)
+val md_theme_dark_onSecondaryFixed = Color(0xFF1f182b)
+val md_theme_dark_secondaryFixedDim = Color(0xFFcdc2db)
+val md_theme_dark_onSecondaryFixedVariant = Color(0xFF4b4358)
+
+val md_theme_dark_tertiaryFixed = Color(0xFFffd9e1)
+val md_theme_dark_onTertiaryFixed = Color(0xFF31101b)
+val md_theme_dark_tertiaryFixedDim = Color(0xFFf0b7c5)
+val md_theme_dark_onTertiaryFixedVariant = Color(0xFF643b46)
+
+// --- Custom Colors (np. dla Ocen, Statusów) ---
+// Light
+val custom_red_light = Color(0xFF904a43)
+val custom_green_light = Color(0xFF3c6839)
+val custom_orange_light = Color(0xFF8e4d32)
+val custom_blue_light = Color(0xFF38608f)
+
+// Dark
+val custom_red_dark = Color(0xFFffb4ab)
+val custom_green_dark = Color(0xFFa2d399)
+val custom_orange_dark = Color(0xFFffb599)
+val custom_blue_dark = Color(0xFFa2c9fe)

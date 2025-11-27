@@ -17,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,8 +32,11 @@ fun UpcomingClasses(
     modifier: Modifier = Modifier,
     onClassClick: (Int) -> Unit
 ) {
-    val purpleColor = Color(0xFFE8DEF8)
-    val pinkColor = Color(0xFFFFD8E4)
+    // Mapowanie kolorów na Theme, aby działał Dark Mode
+    // Wcześniej było E8DEF8 (light purple) -> primaryContainer
+    // Wcześniej było FFD8E4 (light pink) -> tertiaryContainer
+    val purpleColor = MaterialTheme.colorScheme.primaryContainer
+    val pinkColor = MaterialTheme.colorScheme.tertiaryContainer
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -49,7 +51,7 @@ fun UpcomingClasses(
             Icon(
                 painter = painterResource(id = R.drawable.ic_calendar_check),
                 contentDescription = null,
-                tint = Color(0xFF1D192B),
+                tint = MaterialTheme.colorScheme.onSurface, // ZMIANA: Theme color
                 modifier = Modifier.size(20.dp)
             )
             Text(
@@ -57,7 +59,7 @@ fun UpcomingClasses(
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.W500,
-                    color = Color(0xFF1D192B)
+                    color = MaterialTheme.colorScheme.onSurface // ZMIANA: Theme color
                 )
             )
         }
@@ -66,7 +68,7 @@ fun UpcomingClasses(
             Text(
                 text = emptyMessage ?: "Brak zajęć",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, // ZMIANA: Theme color
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         } else {

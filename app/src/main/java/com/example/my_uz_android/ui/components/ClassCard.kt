@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,7 +28,6 @@ import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.theme.InterFontFamily
-import com.example.my_uz_android.ui.theme.Pink40
 
 enum class ClassCardType {
     HOME,
@@ -38,16 +38,19 @@ enum class ClassCardType {
 fun ClassCard(
     classItem: ClassEntity,
     type: ClassCardType = ClassCardType.HOME,
-    backgroundColor: Color = Color(0xFFE8DEF8), // Domyślny fiolet
+    // Domyślny kolor z motywu, ale można nadpisać
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     modifier: Modifier = Modifier
 ) {
-    val titleColor = Color(0xFF1D192B)
-    val detailsColor = Color(0xFF494949)
+    // Używamy kolorów z motywu zamiast sztywnych wartości
+    val titleColor = MaterialTheme.colorScheme.onSurface
+    val detailsColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-    // Kolory z Figmy dla Avatara
-    val statusDotColor = Pink40
-    val avatarBackgroundColor = Color(0xFF6750A4) // Figma hex
-    val avatarTextColor = Color(0xFFFFFBFE)
+    // Kolory avatara
+    val avatarBackgroundColor = MaterialTheme.colorScheme.primary
+    val avatarTextColor = MaterialTheme.colorScheme.onPrimary
+    // Kolor kropki w kalendarzu
+    val statusDotColor = MaterialTheme.colorScheme.tertiary
 
     Row(
         modifier = modifier

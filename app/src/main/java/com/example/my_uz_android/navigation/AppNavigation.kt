@@ -26,12 +26,7 @@ import androidx.navigation.navArgument
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.screens.home.HomeScreen
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsScreen
-import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen // Import ekranu wydarzeń
-
-private val NavBackgroundColor = Color(0xFFFFFFFF)
-private val NavBorderColor = Color(0xFFEDE6F3)
-private val NavActiveColor = Color(0xFF381E72)
-private val NavInactiveColor = Color(0xFF787579)
+import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
@@ -49,16 +44,22 @@ fun AppNavigation() {
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = items.any { it.route == currentRoute }
 
+    // ZMIANA: Kolory z motywu
+    val navBackgroundColor = MaterialTheme.colorScheme.surface
+    val navBorderColor = MaterialTheme.colorScheme.outlineVariant
+    val navActiveColor = MaterialTheme.colorScheme.primary
+    val navInactiveColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(NavBackgroundColor)
+                        .background(navBackgroundColor)
                         .drawBehind {
                             drawLine(
-                                color = NavBorderColor,
+                                color = navBorderColor,
                                 start = Offset(0f, 0f),
                                 end = Offset(size.width, 0f),
                                 strokeWidth = 1.dp.toPx()
@@ -83,14 +84,14 @@ fun AppNavigation() {
                                         painter = painterResource(id = screen.iconResId),
                                         contentDescription = screen.title,
                                         modifier = Modifier.size(24.dp),
-                                        tint = if (selected) NavActiveColor else NavInactiveColor
+                                        tint = if (selected) navActiveColor else navInactiveColor
                                     )
                                 },
                                 label = {
                                     Text(
                                         text = screen.title,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = if (selected) NavActiveColor else NavInactiveColor
+                                        color = if (selected) navActiveColor else navInactiveColor
                                     )
                                 },
                                 selected = selected,
@@ -103,10 +104,10 @@ fun AppNavigation() {
                                 },
                                 colors = NavigationBarItemDefaults.colors(
                                     indicatorColor = Color.Transparent,
-                                    selectedIconColor = NavActiveColor,
-                                    selectedTextColor = NavActiveColor,
-                                    unselectedIconColor = NavInactiveColor,
-                                    unselectedTextColor = NavInactiveColor
+                                    selectedIconColor = navActiveColor,
+                                    selectedTextColor = navActiveColor,
+                                    unselectedIconColor = navInactiveColor,
+                                    unselectedTextColor = navInactiveColor
                                 )
                             )
                         }
@@ -125,7 +126,7 @@ fun AppNavigation() {
                     onClassClick = { classId ->
                         navController.navigate("class_details/$classId")
                     },
-                    onEventClick = { eventId -> // Dodano obsługę kliknięcia w wydarzenie
+                    onEventClick = { eventId ->
                         navController.navigate("event_details/$eventId")
                     }
                 )

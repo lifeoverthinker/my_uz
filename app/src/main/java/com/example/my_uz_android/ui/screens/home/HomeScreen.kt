@@ -3,7 +3,6 @@ package com.example.my_uz_android.ui.screens.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,19 +28,20 @@ import com.example.my_uz_android.ui.theme.MyUZTheme
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onClassClick: (Int) -> Unit,
-    onEventClick: (Int) -> Unit // Dodano parametr
+    onEventClick: (Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    val backgroundColor = Color(0xFFF7F2F9)
-    val onBackgroundColor = Color(0xFF1D192B)
-    val subTextColor = Color(0xFF363535)
-    val cardColorPurple = Color(0xFFE8DEF8)
-    val cardColorPink = Color(0xFFFFD8E4)
-    val cardColorGreen = Color(0xFFDAF5D7)
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val cardColorPurple = MaterialTheme.colorScheme.primaryContainer
+    val cardColorPink = MaterialTheme.colorScheme.tertiaryContainer
+    val cardColorGreen = MaterialTheme.colorScheme.secondaryContainer
 
     MyUZTheme {
-        Box(
+        // ZMIANA: Usunięto statusBarsPadding(), bo Scaffold nadrzędny już to obsługuje
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundColor)
@@ -50,8 +50,8 @@ fun HomeScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 58.dp)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 16.dp, bottom = 4.dp), // Lekki odstęp od krawędzi
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -65,7 +65,6 @@ fun HomeScreen(
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Mapa
                     Box(
                         modifier = Modifier
                             .size(48.dp)
@@ -76,13 +75,12 @@ fun HomeScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_map),
                                 contentDescription = "Mapa",
-                                tint = onBackgroundColor,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
                     }
 
-                    // Mail
                     Box(
                         modifier = Modifier
                             .size(48.dp)
@@ -93,7 +91,7 @@ fun HomeScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_mail),
                                 contentDescription = "Poczta",
-                                tint = onBackgroundColor,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -102,7 +100,7 @@ fun HomeScreen(
                                 .size(8.dp)
                                 .align(Alignment.TopEnd)
                                 .offset(x = (-10).dp, y = 10.dp)
-                                .background(Color(0xFFB3261E), CircleShape)
+                                .background(MaterialTheme.colorScheme.error, CircleShape)
                         )
                     }
                 }
@@ -112,8 +110,7 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 106.dp)
-                    .padding(horizontal = 16.dp)
+                    .padding(16.dp)
             ) {
                 Text(
                     text = uiState.greeting,
@@ -135,18 +132,17 @@ fun HomeScreen(
                 )
             }
 
-            // 3. BIAŁA KARTA
+            // 3. DOLNA KARTA
             Surface(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 198.dp),
+                    .fillMaxWidth()
+                    .weight(1f),
                 shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surfaceContainer
             ) {
                 LazyColumn(
                     contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
                 ) {
-                    // Zajęcia
                     item {
                         UpcomingClasses(
                             classes = uiState.upcomingClasses,
@@ -157,7 +153,6 @@ fun HomeScreen(
 
                     item { Spacer(modifier = Modifier.height(10.dp)) }
 
-                    // Zadania
                     item {
                         Column(
                             modifier = Modifier
@@ -188,11 +183,11 @@ fun HomeScreen(
                             if (uiState.upcomingTasks.isEmpty()) {
                                 Text(
                                     text = "Brak zadań do wyświetlenia",
-                                    color = Color.Gray,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             } else {
-                                LazyRow(
+                                androidx.compose.foundation.lazy.LazyRow(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     itemsIndexed(uiState.upcomingTasks) { index, task ->
@@ -212,7 +207,6 @@ fun HomeScreen(
 
                     item { Spacer(modifier = Modifier.height(10.dp)) }
 
-                    // Wydarzenia
                     item {
                         Column(
                             modifier = Modifier
@@ -240,11 +234,10 @@ fun HomeScreen(
                                 )
                             }
 
-                            LazyRow(
+                            androidx.compose.foundation.lazy.LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(3) { index ->
-                                    // Obsługa kliknięcia - testowe ID 999
                                     EventCardMock(
                                         index = index,
                                         backgroundColor = cardColorGreen,
@@ -255,7 +248,7 @@ fun HomeScreen(
                         }
                     }
 
-                    item { Spacer(modifier = Modifier.height(10.dp)) }
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
 
                     item {
                         Box(
@@ -268,7 +261,7 @@ fun HomeScreen(
                                 text = "MyUZ 2025",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontSize = 14.sp,
-                                    color = Color(0xFF787579),
+                                    color = MaterialTheme.colorScheme.outline,
                                     fontWeight = FontWeight.W500
                                 )
                             )
@@ -286,10 +279,10 @@ fun EventCardMock(index: Int, backgroundColor: Color, onClick: () -> Unit) {
     val descriptions = listOf("Największa impreza roku!", "Znajdź staż marzeń", "Kampus A, Aula C")
 
     Card(
-        onClick = onClick, // Dodano obsługę kliknięcia
+        onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         modifier = Modifier.width(264.dp),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -300,22 +293,22 @@ fun EventCardMock(index: Int, backgroundColor: Color, onClick: () -> Unit) {
                     text = titles[index % titles.size],
                     fontWeight = FontWeight.W500,
                     fontSize = 14.sp,
-                    color = Color(0xFF222222)
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = descriptions[index % descriptions.size],
                     fontSize = 12.sp,
-                    color = Color(0xFF494949)
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                 )
             }
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(Color(0xFF7D5260), CircleShape),
+                    .background(MaterialTheme.colorScheme.primary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text("A", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.W500)
+                Text("A", color = MaterialTheme.colorScheme.onPrimary, fontSize = 16.sp, fontWeight = FontWeight.W500)
             }
         }
     }

@@ -3,18 +3,19 @@ package com.example.my_uz_android.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+// Definicja Light Color Scheme z nowymi rolami (Surface Container, Fixed)
 private val LightColors = lightColorScheme(
     primary = md_theme_light_primary,
     onPrimary = md_theme_light_onPrimary,
@@ -44,8 +45,17 @@ private val LightColors = lightColorScheme(
     inverseSurface = md_theme_light_inverseSurface,
     inverseOnSurface = md_theme_light_inverseOnSurface,
     inversePrimary = md_theme_light_inversePrimary,
+    // Rozszerzone role (Android Material 3 > 1.2.0)
+    surfaceDim = md_theme_light_surfaceDim,
+    surfaceBright = md_theme_light_surfaceBright,
+    surfaceContainerLowest = md_theme_light_surfaceContainerLowest,
+    surfaceContainerLow = md_theme_light_surfaceContainerLow,
+    surfaceContainer = md_theme_light_surfaceContainer,
+    surfaceContainerHigh = md_theme_light_surfaceContainerHigh,
+    surfaceContainerHighest = md_theme_light_surfaceContainerHighest,
 )
 
+// Definicja Dark Color Scheme
 private val DarkColors = darkColorScheme(
     primary = md_theme_dark_primary,
     onPrimary = md_theme_dark_onPrimary,
@@ -75,12 +85,30 @@ private val DarkColors = darkColorScheme(
     inverseSurface = md_theme_dark_inverseSurface,
     inverseOnSurface = md_theme_dark_inverseOnSurface,
     inversePrimary = md_theme_dark_inversePrimary,
+    // Rozszerzone role
+    surfaceDim = md_theme_dark_surfaceDim,
+    surfaceBright = md_theme_dark_surfaceBright,
+    surfaceContainerLowest = md_theme_dark_surfaceContainerLowest,
+    surfaceContainerLow = md_theme_dark_surfaceContainerLow,
+    surfaceContainer = md_theme_dark_surfaceContainer,
+    surfaceContainerHigh = md_theme_dark_surfaceContainerHigh,
+    surfaceContainerHighest = md_theme_dark_surfaceContainerHighest,
 )
+
+// --- Obsługa kolorów Custom (Red, Green, Blue, Orange) ---
+@Immutable
+data class ExtendedColors(
+    val customRed: Color = Color.Unspecified,
+    val customGreen: Color = Color.Unspecified,
+    val customOrange: Color = Color.Unspecified,
+    val customBlue: Color = Color.Unspecified
+)
+
+val LocalExtendedColors = staticCompositionLocalOf { ExtendedColors() }
 
 @Composable
 fun MyUZTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color jest wyłączony, aby używać Twoich kolorów
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -93,6 +121,23 @@ fun MyUZTheme(
         else -> LightColors
     }
 
+    // Wybór zestawu kolorów Custom w zależności od motywu
+    val extendedColors = if (darkTheme) {
+        ExtendedColors(
+            customRed = custom_red_dark,
+            customGreen = custom_green_dark,
+            customOrange = custom_orange_dark,
+            customBlue = custom_blue_dark
+        )
+    } else {
+        ExtendedColors(
+            customRed = custom_red_light,
+            customGreen = custom_green_light,
+            customOrange = custom_orange_light,
+            customBlue = custom_blue_light
+        )
+    }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -102,9 +147,16 @@ fun MyUZTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        content = content
-    )
+    CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            content = content
+        )
+    }
 }
+
+// Helper do łatwego dostępu w kodzie: MaterialTheme.extendedColors.customRed
+val MaterialTheme.extendedColors: ExtendedColors
+    @Composable
+    get() = LocalExtendedColors.current
