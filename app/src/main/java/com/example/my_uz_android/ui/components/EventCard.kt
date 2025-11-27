@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -26,9 +27,10 @@ fun EventCard(
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val cardBackgroundColor = Color(0xFFE8DEF8)
-    val titleColor = Color(0xFF222222)
-    val descriptionColor = Color(0xFF494949)
+    // ZMIANA: Kolory z motywu
+    val cardBackgroundColor = MaterialTheme.colorScheme.secondaryContainer
+    val titleColor = MaterialTheme.colorScheme.onSecondaryContainer
+    val descriptionColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
 
     Column(
         modifier = modifier

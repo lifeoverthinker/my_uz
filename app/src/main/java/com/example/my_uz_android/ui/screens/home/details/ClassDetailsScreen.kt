@@ -4,7 +4,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,10 +34,6 @@ fun ClassDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val classItem = uiState.classItem
 
-    val backgroundColor = Color(0xFFF7F2F9)
-    val onBackgroundColor = Color(0xFF1D192B)
-    val purpleContainer = Color(0xFFE8DEF8)
-
     val offsetY = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
@@ -54,13 +52,12 @@ fun ClassDetailsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor)
+                .background(Color.Black.copy(alpha = 0.32f))
         ) {
             Surface(
                 modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(top = 48.dp)
                     .fillMaxSize()
+                    // ZMIANA: Usunięto padding z góry, aby karta doszła do krawędzi
                     .offset { IntOffset(0, offsetY.value.roundToInt()) }
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
@@ -73,85 +70,113 @@ fun ClassDetailsScreen(
                             }
                         )
                     }
-                    .shadow(
-                        elevation = 8.dp,
-                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                        spotColor = Color(0x26000000)
-                    ),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                color = Color.White
+                    .shadow(elevation = 16.dp, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), // Przywrócono zaokrąglenie
+                color = MaterialTheme.colorScheme.surfaceContainerLow
             ) {
                 if (classItem != null) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                            .systemBarsPadding() // Treść bezpiecznie pod paskiem statusu
                     ) {
-                        // 1. IKONA ZAMKNIĘCIA
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start
+                        // UCHWYT
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            IconButton(
-                                onClick = { dismiss() },
-                                modifier = Modifier.size(48.dp)
-                            ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(32.dp)
+                                    .height(4.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                        RoundedCornerShape(2.dp)
+                                    )
+                            )
+                        }
+
+                        // PASEK GÓRNY
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = { dismiss() }) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_x_close),
                                     contentDescription = "Zamknij",
-                                    tint = onBackgroundColor,
-                                    modifier = Modifier.size(24.dp)
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
+                            }
+
+                            Row {
+                                IconButton(onClick = { /* Edycja */ }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_edit_2),
+                                        contentDescription = "Edytuj",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                IconButton(onClick = { /* Opcje */ }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_dots_vertical),
+                                        contentDescription = "Więcej",
+                                        tint = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                             }
                         }
 
-                        // 2. TYTUŁ I DATA (Wyrównane do lewej z detalami)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.Top
+                        // TREŚĆ
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 24.dp)
+                                .padding(bottom = 32.dp),
+                            verticalArrangement = Arrangement.spacedBy(24.dp)
                         ) {
-                            // Box 48x48 (stała szerokość kolumny ikon)
-                            Box(
-                                modifier = Modifier.size(48.dp),
-                                contentAlignment = Alignment.Center
+                            // NAGŁÓWEK
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.Top
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(20.dp)
-                                        .background(purpleContainer, RoundedCornerShape(4.dp))
+                                        .padding(top = 6.dp)
+                                        .size(18.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.primaryContainer,
+                                            RoundedCornerShape(6.dp)
+                                        )
                                 )
+
+                                Spacer(modifier = Modifier.width(16.dp))
+
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = classItem.subjectName,
+                                        style = MaterialTheme.typography.headlineMedium.copy(
+                                            fontWeight = FontWeight.Normal
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${uiState.dayName}, 8 lip 2025 • ${classItem.startTime} – ${classItem.endTime}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
 
-                            Spacer(modifier = Modifier.width(16.dp)) // Stały odstęp
+                            Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
-                            Column(
-                                modifier = Modifier
-                                    .padding(top = 10.dp) // Optyczne wyrównanie do środka boxa 48dp
-                                    .weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = classItem.subjectName,
-                                    style = MaterialTheme.typography.headlineSmall.copy(
-                                        fontSize = 22.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        color = Color.Black,
-                                        lineHeight = 28.sp
-                                    )
-                                )
-                                Text(
-                                    text = "${uiState.dayName}, 8 lip 2025 • ${classItem.startTime} – ${classItem.endTime}",
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 12.sp,
-                                        color = Color(0xFF494949)
-                                    )
-                                )
-                            }
-                        }
-
-                        // 3. SZCZEGÓŁY (Pionowa lista)
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // SZCZEGÓŁY
                             ClassDetailRow(
                                 iconRes = R.drawable.ic_stand,
                                 text = classItem.classType
@@ -168,7 +193,7 @@ fun ClassDetailsScreen(
                     }
                 } else {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = onBackgroundColor)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -182,31 +207,26 @@ fun ClassDetailRow(iconRes: Int, text: String) {
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
-        // Box 48x48 (stała szerokość kolumny ikon)
+        // ZMIANA: Box 24dp, Ikona 20dp - kompaktowe i wyrównane
         Box(
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(24.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                tint = Color(0xFF494949),
-                modifier = Modifier.size(24.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp)) // Stały odstęp (taki sam jak w tytule)
+        Spacer(modifier = Modifier.width(20.dp))
 
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontSize = 14.sp,
-                color = Color(0xFF1D192B),
-                fontWeight = FontWeight.Normal,
-                lineHeight = 20.sp
-            ),
-            // Optyczne wyrównanie tekstu do środka ikony (48/2 - 20/2 = 14dp od góry)
-            modifier = Modifier.padding(top = 14.dp)
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
         )
     }
 }
