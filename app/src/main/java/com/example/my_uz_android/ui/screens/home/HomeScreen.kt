@@ -23,6 +23,7 @@ import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.screens.home.components.UpcomingClasses
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.theme.extendedColors
 
 @Composable
 fun HomeScreen(
@@ -32,15 +33,17 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val onBackgroundColor = MaterialTheme.colorScheme.onBackground
-    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val cardColorPurple = MaterialTheme.colorScheme.primaryContainer
-    val cardColorPink = MaterialTheme.colorScheme.tertiaryContainer
-    val cardColorGreen = MaterialTheme.colorScheme.secondaryContainer
-
     MyUZTheme {
-        // ZMIANA: Usunięto statusBarsPadding(), bo Scaffold nadrzędny już to obsługuje
+        val backgroundColor = MaterialTheme.extendedColors.homeHeaderBackground
+        val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+        val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+        val cardColorPurple = MaterialTheme.colorScheme.primaryContainer
+        val cardColorPink = MaterialTheme.colorScheme.tertiaryContainer
+        val cardColorGreen = MaterialTheme.colorScheme.secondaryContainer
+
+        // Zmiana: Kolor dolnej karty (biały w Light Mode, ciemny w Dark Mode)
+        val contentCardColor = MaterialTheme.extendedColors.homeContentBackground
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -138,7 +141,7 @@ fun HomeScreen(
                     .fillMaxWidth()
                     .weight(1f),
                 shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer
+                color = contentCardColor
             ) {
                 LazyColumn(
                     contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp)
