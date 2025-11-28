@@ -57,7 +57,6 @@ fun ClassDetailsScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
-                    // ZMIANA: Usunięto padding z góry, aby karta doszła do krawędzi
                     .offset { IntOffset(0, offsetY.value.roundToInt()) }
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
@@ -71,14 +70,14 @@ fun ClassDetailsScreen(
                         )
                     }
                     .shadow(elevation = 16.dp, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), // Przywrócono zaokrąglenie
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerLow
             ) {
                 if (classItem != null) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .systemBarsPadding() // Treść bezpiecznie pod paskiem statusu
+                            .systemBarsPadding()
                     ) {
                         // UCHWYT
                         Box(
@@ -205,22 +204,22 @@ fun ClassDetailsScreen(
 fun ClassDetailRow(iconRes: Int, text: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.CenterVertically // Wyśrodkowanie w pionie dla lepszego wyglądu
     ) {
-        // ZMIANA: Box 24dp, Ikona 20dp - kompaktowe i wyrównane
+        // ZMIANA: Większy kontener (40dp) dla łatwiejszego wyrównania, ikona wymuszona na 24dp
         Box(
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(40.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(24.dp) // Wymuszenie rozmiaru ikony, aby SVG się mieściło
             )
         }
 
-        Spacer(modifier = Modifier.width(20.dp))
+        Spacer(modifier = Modifier.width(16.dp)) // Lekko mniejszy odstęp, bo Box jest większy
 
         Text(
             text = text,

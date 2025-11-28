@@ -27,6 +27,8 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.screens.home.HomeScreen
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsScreen
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
+import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.theme.extendedColors
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
@@ -44,113 +46,116 @@ fun AppNavigation() {
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = items.any { it.route == currentRoute }
 
-    // ZMIANA: Kolory z motywu
-    val navBackgroundColor = MaterialTheme.colorScheme.surface
-    val navBorderColor = MaterialTheme.colorScheme.outlineVariant
-    val navActiveColor = MaterialTheme.colorScheme.primary
-    val navInactiveColor = MaterialTheme.colorScheme.onSurfaceVariant
+    // Owiń w MyUZTheme, aby mieć dostęp do extendedColors, jeśli nie jest to zrobione wyżej w hierarchii
+    MyUZTheme {
+        // ZMIANA: Użycie kolorów z ExtendedColors (zgodnych z Figma/Flutter)
+        val navBackgroundColor = MaterialTheme.extendedColors.navBackground
+        val navBorderColor = MaterialTheme.extendedColors.navBorder
+        val navActiveColor = MaterialTheme.extendedColors.navActive
+        val navInactiveColor = MaterialTheme.extendedColors.navInactive
 
-    Scaffold(
-        bottomBar = {
-            if (showBottomBar) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(navBackgroundColor)
-                        .drawBehind {
-                            drawLine(
-                                color = navBorderColor,
-                                start = Offset(0f, 0f),
-                                end = Offset(size.width, 0f),
-                                strokeWidth = 1.dp.toPx()
-                            )
-                        }
-                        .windowInsetsPadding(WindowInsets.navigationBars)
-                ) {
-                    Row(
+        Scaffold(
+            bottomBar = {
+                if (showBottomBar) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(84.dp)
-                            .padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        val currentDestination = navBackStackEntry?.destination
-                        items.forEach { screen ->
-                            val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-                            NavigationBarItem(
-                                icon = {
-                                    Icon(
-                                        painter = painterResource(id = screen.iconResId),
-                                        contentDescription = screen.title,
-                                        modifier = Modifier.size(24.dp),
-                                        tint = if (selected) navActiveColor else navInactiveColor
-                                    )
-                                },
-                                label = {
-                                    Text(
-                                        text = screen.title,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (selected) navActiveColor else navInactiveColor
-                                    )
-                                },
-                                selected = selected,
-                                onClick = {
-                                    navController.navigate(screen.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = Color.Transparent,
-                                    selectedIconColor = navActiveColor,
-                                    selectedTextColor = navActiveColor,
-                                    unselectedIconColor = navInactiveColor,
-                                    unselectedTextColor = navInactiveColor
+                            .background(navBackgroundColor)
+                            .drawBehind {
+                                drawLine(
+                                    color = navBorderColor,
+                                    start = Offset(0f, 0f),
+                                    end = Offset(size.width, 0f),
+                                    strokeWidth = 1.dp.toPx()
                                 )
-                            )
+                            }
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(84.dp)
+                                .padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            val currentDestination = navBackStackEntry?.destination
+                            items.forEach { screen ->
+                                val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+                                NavigationBarItem(
+                                    icon = {
+                                        Icon(
+                                            painter = painterResource(id = screen.iconResId),
+                                            contentDescription = screen.title,
+                                            modifier = Modifier.size(24.dp),
+                                            tint = if (selected) navActiveColor else navInactiveColor
+                                        )
+                                    },
+                                    label = {
+                                        Text(
+                                            text = screen.title,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (selected) navActiveColor else navInactiveColor
+                                        )
+                                    },
+                                    selected = selected,
+                                    onClick = {
+                                        navController.navigate(screen.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        indicatorColor = Color.Transparent, // Brak "bąbla" tła wokół ikony
+                                        selectedIconColor = navActiveColor,
+                                        selectedTextColor = navActiveColor,
+                                        unselectedIconColor = navInactiveColor,
+                                        unselectedTextColor = navInactiveColor
+                                    )
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Main.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Screen.Main.route) {
-                HomeScreen(
-                    onClassClick = { classId ->
-                        navController.navigate("class_details/$classId")
-                    },
-                    onEventClick = { eventId ->
-                        navController.navigate("event_details/$eventId")
-                    }
-                )
-            }
-            composable(Screen.Calendar.route) { PlaceholderScreen("Kalendarz") }
-            composable(Screen.Index.route) { PlaceholderScreen("Indeks Ocen") }
-            composable(Screen.Account.route) { PlaceholderScreen("Konto Studenta") }
-
-            composable(
-                route = "class_details/{classId}",
-                arguments = listOf(navArgument("classId") { type = NavType.IntType }),
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400)) }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Main.route,
+                modifier = Modifier.padding(innerPadding)
             ) {
-                ClassDetailsScreen(onBackClick = { navController.popBackStack() })
-            }
+                composable(Screen.Main.route) {
+                    HomeScreen(
+                        onClassClick = { classId ->
+                            navController.navigate("class_details/$classId")
+                        },
+                        onEventClick = { eventId ->
+                            navController.navigate("event_details/$eventId")
+                        }
+                    )
+                }
+                composable(Screen.Calendar.route) { PlaceholderScreen("Kalendarz") }
+                composable(Screen.Index.route) { PlaceholderScreen("Indeks Ocen") }
+                composable(Screen.Account.route) { PlaceholderScreen("Konto Studenta") }
 
-            composable(
-                route = "event_details/{eventId}",
-                arguments = listOf(navArgument("eventId") { type = NavType.IntType }),
-                enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400)) },
-                exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400)) }
-            ) {
-                EventDetailsScreen(onBackClick = { navController.popBackStack() })
+                composable(
+                    route = "class_details/{classId}",
+                    arguments = listOf(navArgument("classId") { type = NavType.IntType }),
+                    enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400)) },
+                    exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400)) }
+                ) {
+                    ClassDetailsScreen(onBackClick = { navController.popBackStack() })
+                }
+
+                composable(
+                    route = "event_details/{eventId}",
+                    arguments = listOf(navArgument("eventId") { type = NavType.IntType }),
+                    enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400)) },
+                    exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400)) }
+                ) {
+                    EventDetailsScreen(onBackClick = { navController.popBackStack() })
+                }
             }
         }
     }

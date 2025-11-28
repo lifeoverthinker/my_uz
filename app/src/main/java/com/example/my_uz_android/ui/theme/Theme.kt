@@ -95,13 +95,21 @@ private val DarkColors = darkColorScheme(
     surfaceContainerHighest = md_theme_dark_surfaceContainerHighest,
 )
 
-// --- Obsługa kolorów Custom (Red, Green, Blue, Orange) ---
+// --- Obsługa kolorów Custom (Red, Green, Blue, Orange) + Home + Nav ---
 @Immutable
 data class ExtendedColors(
     val customRed: Color = Color.Unspecified,
     val customGreen: Color = Color.Unspecified,
     val customOrange: Color = Color.Unspecified,
-    val customBlue: Color = Color.Unspecified
+    val customBlue: Color = Color.Unspecified,
+    // Ekran główny
+    val homeHeaderBackground: Color = Color.Unspecified,
+    val homeContentBackground: Color = Color.Unspecified,
+    // Nawigacja
+    val navBackground: Color = Color.Unspecified,
+    val navBorder: Color = Color.Unspecified,
+    val navActive: Color = Color.Unspecified,
+    val navInactive: Color = Color.Unspecified
 )
 
 val LocalExtendedColors = staticCompositionLocalOf { ExtendedColors() }
@@ -127,14 +135,26 @@ fun MyUZTheme(
             customRed = custom_red_dark,
             customGreen = custom_green_dark,
             customOrange = custom_orange_dark,
-            customBlue = custom_blue_dark
+            customBlue = custom_blue_dark,
+            homeHeaderBackground = home_header_dark,
+            homeContentBackground = home_content_dark,
+            navBackground = nav_dark_background,
+            navBorder = nav_dark_border,
+            navActive = nav_dark_active,
+            navInactive = nav_dark_inactive
         )
     } else {
         ExtendedColors(
             customRed = custom_red_light,
             customGreen = custom_green_light,
             customOrange = custom_orange_light,
-            customBlue = custom_blue_light
+            customBlue = custom_blue_light,
+            homeHeaderBackground = home_header_light,
+            homeContentBackground = home_content_light,
+            navBackground = nav_light_background,
+            navBorder = nav_light_border,
+            navActive = nav_light_active,
+            navInactive = nav_light_inactive
         )
     }
 
@@ -156,7 +176,6 @@ fun MyUZTheme(
     }
 }
 
-// Helper do łatwego dostępu w kodzie: MaterialTheme.extendedColors.customRed
 val MaterialTheme.extendedColors: ExtendedColors
     @Composable
     get() = LocalExtendedColors.current

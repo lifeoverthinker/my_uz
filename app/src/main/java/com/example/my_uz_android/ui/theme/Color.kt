@@ -123,3 +123,25 @@ val custom_red_dark = Color(0xFFffb4ab)
 val custom_green_dark = Color(0xFFa2d399)
 val custom_orange_dark = Color(0xFFffb599)
 val custom_blue_dark = Color(0xFFa2c9fe)
+
+// --- Home Screen Specific Colors (From Flutter Design) ---
+// Top background (Header)
+val home_header_light = Color(0xFFF7F2F9) // Z Fluttera
+val home_header_dark = Color(0xFF141218)  // Odpowiednik Dark
+
+// Bottom Card background (Content)
+val home_content_light = Color(0xFFFFFFFF) // Z Fluttera (White)
+val home_content_dark = Color(0xFF1D1B20)  // Odpowiednik Dark
+
+// --- Navigation Bar Colors (From Flutter Design) ---
+// Light
+val nav_light_background = Color(0xFFFFFFFF)
+val nav_light_border = Color(0xFFEDE6F3)
+val nav_light_active = Color(0xFF381E72)
+val nav_light_inactive = Color(0xFF787579)
+
+// Dark (Dopasowane do ciemnego motywu M3)
+val nav_dark_background = Color(0xFF1D1B20) // Surface Container Low
+val nav_dark_border = Color(0xFF49454e)     // Outline Variant
+val nav_dark_active = Color(0xFFd3bcfd)     // Primary (jasny fiolet)
+val nav_dark_inactive = Color(0xFFcac4d0)   // On Surface Variant
