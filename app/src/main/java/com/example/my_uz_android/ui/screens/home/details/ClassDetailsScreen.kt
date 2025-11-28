@@ -1,30 +1,33 @@
 package com.example.my_uz_android.ui.screens.home.details
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.theme.MyUZTheme
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
+import com.example.my_uz_android.ui.theme.InterFontFamily
+import java.time.DayOfWeek
+import java.time.format.TextStyle
+import java.util.Locale
 
 @Composable
 fun ClassDetailsScreen(
@@ -32,200 +35,210 @@ fun ClassDetailsScreen(
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val classItem = uiState.classItem
+    val classEntity = uiState.classItem
 
-    val offsetY = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
+    val iconTint = Color(0xFF444746)
+    val classAccentColor = Color(0xFF6750A4) // Fioletowy akcent
 
-    fun dismiss() {
-        scope.launch {
-            offsetY.animateTo(targetValue = 2000f)
-            onBackClick()
-        }
-    }
-
-    fun reset() {
-        scope.launch { offsetY.animateTo(targetValue = 0f) }
-    }
-
-    MyUZTheme {
-        Box(
+    // PRZYWRÓCONO ZAOKRĄGLENIE
+    Surface(
+        color = Color.White,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.32f))
+                .padding(horizontal = 16.dp)
         ) {
-            Surface(
+            // --- GEST ZAMYKANIA ---
+            Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .offset { IntOffset(0, offsetY.value.roundToInt()) }
+                    .fillMaxWidth()
                     .pointerInput(Unit) {
-                        detectVerticalDragGestures(
-                            onDragEnd = { if (offsetY.value > 150f) dismiss() else reset() },
-                            onDragCancel = { reset() },
-                            onVerticalDrag = { change, dragAmount ->
-                                change.consume()
-                                val newOffset = offsetY.value + dragAmount
-                                scope.launch { offsetY.snapTo(newOffset.coerceAtLeast(0f)) }
-                            }
+                        detectVerticalDragGestures { _, dragAmount ->
+                            if (dragAmount > 10) onBackClick()
+                        }
+                    }
+            ) {
+                // 1. Drag Handle
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color(0xFFE0E0E0))
+                    )
+                }
+
+                // 2. Przycisk X
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    DetailIconBox(onClick = onBackClick) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_x_close),
+                            contentDescription = "Zamknij",
+                            tint = Color.Black,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
-                    .shadow(elevation = 16.dp, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow
-            ) {
-                if (classItem != null) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .systemBarsPadding()
+                }
+            }
+
+            if (classEntity != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    val dayName = try {
+                        DayOfWeek.of(classEntity.dayOfWeek)
+                            .getDisplayName(TextStyle.FULL, Locale("pl"))
+                            .replaceFirstChar { it.titlecase(Locale.getDefault()) }
+                    } catch (e: Exception) { "" }
+
+                    // --- 3. NAGŁÓWEK (Tytuł, Data i FIOLETOWY KWADRAT) ---
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        verticalAlignment = Alignment.Top
                     ) {
-                        // UCHWYT
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        // FIOLETOWY KWADRAT w boksie 48dp
+                        DetailIconBox {
                             Box(
                                 modifier = Modifier
-                                    .width(32.dp)
-                                    .height(4.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                        RoundedCornerShape(2.dp)
-                                    )
+                                    .size(18.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(classAccentColor)
                             )
                         }
 
-                        // PASEK GÓRNY
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = { dismiss() }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_x_close),
-                                    contentDescription = "Zamknij",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            Row {
-                                IconButton(onClick = { /* Edycja */ }) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_edit_2),
-                                        contentDescription = "Edytuj",
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                                IconButton(onClick = { /* Opcje */ }) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_dots_vertical),
-                                        contentDescription = "Więcej",
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        }
-
-                        // TREŚĆ
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 24.dp)
-                                .padding(bottom = 32.dp),
-                            verticalArrangement = Arrangement.spacedBy(24.dp)
-                        ) {
-                            // NAGŁÓWEK
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(top = 6.dp)
-                                        .size(18.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.primaryContainer,
-                                            RoundedCornerShape(6.dp)
-                                        )
-                                )
-
-                                Spacer(modifier = Modifier.width(16.dp))
-
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(
-                                        text = classItem.subjectName,
-                                        style = MaterialTheme.typography.headlineMedium.copy(
-                                            fontWeight = FontWeight.Normal
-                                        ),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "${uiState.dayName}, 8 lip 2025 • ${classItem.startTime} – ${classItem.endTime}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
-
-                            // SZCZEGÓŁY
-                            ClassDetailRow(
-                                iconRes = R.drawable.ic_stand,
-                                text = classItem.classType
+                        Column(modifier = Modifier.padding(start = 8.dp)) {
+                            Text(
+                                text = classEntity.subjectName,
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 28.sp,
+                                lineHeight = 36.sp,
+                                color = Color.Black,
+                                modifier = Modifier.padding(bottom = 4.dp)
                             )
-                            ClassDetailRow(
-                                iconRes = R.drawable.ic_marker_pin,
-                                text = classItem.room ?: "Brak sali"
-                            )
-                            ClassDetailRow(
-                                iconRes = R.drawable.ic_user,
-                                text = classItem.teacherName ?: "Brak danych"
+                            Text(
+                                text = "$dayName, ${classEntity.startTime} – ${classEntity.endTime}",
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp,
+                                color = Color(0xFF444746)
                             )
                         }
                     }
-                } else {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Divider(color = Color(0xFFEEEEEE), modifier = Modifier.padding(start = 56.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- 4. SZCZEGÓŁY ---
+
+                    DetailSection(
+                        label = "TYP ZAJĘĆ",
+                        text = classEntity.classType,
+                        iconRes = R.drawable.ic_info_circle,
+                        iconColor = iconTint
+                    )
+
+                    if (!classEntity.room.isNullOrEmpty()) {
+                        DetailSection(
+                            label = "LOKALIZACJA / SALA",
+                            text = classEntity.room,
+                            iconRes = R.drawable.ic_marker_pin,
+                            iconColor = iconTint
+                        )
                     }
+
+                    if (!classEntity.teacherName.isNullOrEmpty()) {
+                        DetailSection(
+                            label = "PROWADZĄCY",
+                            text = classEntity.teacherName,
+                            iconRes = R.drawable.ic_user,
+                            iconColor = iconTint
+                        )
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
             }
         }
     }
 }
 
+// ZMODYFIKOWANY Box 48x48 - przyjmuje content
 @Composable
-fun ClassDetailRow(iconRes: Int, text: String) {
+private fun DetailIconBox(
+    onClick: (() -> Unit)? = null,
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .clickable(enabled = onClick != null) { onClick?.invoke() },
+        contentAlignment = Alignment.Center,
+        content = content
+    )
+}
+
+// ZMODYFIKOWANA Sekcja - wyrównanie do góry
+@Composable
+private fun DetailSection(
+    label: String,
+    text: String,
+    iconRes: Int,
+    iconColor: Color
+) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically // Wyśrodkowanie w pionie dla lepszego wyglądu
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 24.dp),
+        verticalAlignment = Alignment.Top // WYRÓWNANIE DO GÓRY
     ) {
-        // ZMIANA: Większy kontener (40dp) dla łatwiejszego wyrównania, ikona wymuszona na 24dp
-        Box(
-            modifier = Modifier.size(40.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        // Ikona w kontenerze 48x48
+        DetailIconBox {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp) // Wymuszenie rozmiaru ikony, aby SVG się mieściło
+                tint = iconColor,
+                modifier = Modifier.size(24.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp)) // Lekko mniejszy odstęp, bo Box jest większy
-
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
+        // Tekst (zmniejszony padding górny)
+        Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
+            Text(
+                text = label,
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = Color(0xFF757575),
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+            Text(
+                text = text,
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                color = Color.Black,
+                lineHeight = 22.sp
+            )
+        }
     }
 }
