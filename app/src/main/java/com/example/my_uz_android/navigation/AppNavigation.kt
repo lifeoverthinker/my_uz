@@ -30,6 +30,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.screens.home.HomeScreen
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsScreen
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
+import com.example.my_uz_android.ui.screens.home.details.TaskDetailsScreen
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.ui.theme.extendedColors
 
@@ -133,14 +134,18 @@ fun AppNavigation() {
                         },
                         onEventClick = { eventId ->
                             navController.navigate("event_details/$eventId")
+                        },
+                        onTaskClick = { taskId ->
+                            navController.navigate("task_details/$taskId")
                         }
                     )
                 }
+
                 composable(Screen.Calendar.route) { PlaceholderScreen("Kalendarz") }
                 composable(Screen.Index.route) { PlaceholderScreen("Indeks Ocen") }
+                // PRZYWRÓCONO PLACEHOLDER
                 composable(Screen.Account.route) { PlaceholderScreen("Konto Studenta") }
 
-                // SZCZEGÓŁY ZAJĘĆ - Animacja powiększania
                 composable(
                     route = "class_details/{classId}",
                     arguments = listOf(navArgument("classId") { type = NavType.IntType }),
@@ -152,7 +157,6 @@ fun AppNavigation() {
                     ClassDetailsScreen(onBackClick = { navController.popBackStack() })
                 }
 
-                // SZCZEGÓŁY WYDARZEŃ - Animacja powiększania
                 composable(
                     route = "event_details/{eventId}",
                     arguments = listOf(navArgument("eventId") { type = NavType.IntType }),
@@ -162,6 +166,21 @@ fun AppNavigation() {
                     popExitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) }
                 ) {
                     EventDetailsScreen(onBackClick = { navController.popBackStack() })
+                }
+
+                composable(
+                    route = "task_details/{taskId}",
+                    arguments = listOf(navArgument("taskId") { type = NavType.IntType }),
+                    enterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
+                    exitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) },
+                    popEnterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
+                    popExitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) }
+                ) { backStackEntry ->
+                    val taskId = backStackEntry.arguments?.getInt("taskId") ?: 0
+                    TaskDetailsScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onEditTask = { }
+                    )
                 }
             }
         }
