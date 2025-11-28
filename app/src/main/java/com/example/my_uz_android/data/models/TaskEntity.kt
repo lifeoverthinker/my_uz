@@ -8,8 +8,8 @@ data class TaskEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val title: String,
-    val description: String,
-    val dueDate: String, // Format ISO: "2023-10-27"
+    val description: String? = null,
+    val dueDate: Long,
     val isCompleted: Boolean = false,
-    val subject: String? = null
+    val subjectId: Int? = null // ID powiązanego przedmiotu (np. Matematyka)
 )

@@ -15,7 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -34,13 +33,17 @@ fun EventDetailsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val event = uiState.event
-    val iconTint = Color(0xFF444746)
 
-    // ZMIANA: Kolor akcentu taki sam jak tło EventCard (zielony DAF5D7)
+    // KOLORY Z MOTYWU
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val eventAccentColor = MaterialTheme.extendedColors.eventCardBackground
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant
 
     Surface(
-        color = Color.White,
+        color = surfaceColor,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         modifier = Modifier.fillMaxSize()
     ) {
@@ -53,127 +56,69 @@ fun EventDetailsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .pointerInput(Unit) {
-                        detectVerticalDragGestures { _, dragAmount ->
-                            if (dragAmount > 10) onBackClick()
-                        }
+                        detectVerticalDragGestures { _, dragAmount -> if (dragAmount > 10) onBackClick() }
                     }
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .width(32.dp)
-                            .height(4.dp)
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(Color(0xFFE0E0E0))
-                    )
+                    Box(modifier = Modifier.width(32.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(dividerColor))
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start
                 ) {
                     DetailIconBox(onClick = onBackClick) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_x_close),
-                            contentDescription = "Zamknij",
-                            tint = Color.Black,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
                     }
                 }
             }
 
             if (event != null) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        // ZMIANA: Użycie eventAccentColor (zielony)
+                    Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
                         DetailIconBox {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(eventAccentColor)
-                            )
+                            Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(6.dp)).background(eventAccentColor))
                         }
-
                         Column(modifier = Modifier.padding(start = 8.dp)) {
-                            Text(
-                                text = event.title,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 28.sp,
-                                lineHeight = 36.sp,
-                                color = Color.Black,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            Text(
-                                text = "${event.date}, ${event.timeRange}",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
-                                color = Color(0xFF444746)
-                            )
+                            Text(text = event.title, fontFamily = InterFontFamily, fontWeight = FontWeight.Normal, fontSize = 28.sp, lineHeight = 36.sp, color = textColor, modifier = Modifier.padding(bottom = 4.dp))
+                            Text(text = "${event.date}, ${event.timeRange}", fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = subTextColor)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
-                    Divider(color = Color(0xFFEEEEEE), modifier = Modifier.padding(start = 56.dp))
+                    HorizontalDivider(color = dividerColor, modifier = Modifier.padding(start = 56.dp))
                     Spacer(modifier = Modifier.height(24.dp))
 
                     if (event.location.isNotEmpty()) {
-                        DetailSection(label = "MIEJSCE", text = event.location, iconRes = R.drawable.ic_marker_pin, iconColor = iconTint)
+                        DetailSection(label = "MIEJSCE", text = event.location, iconRes = R.drawable.ic_marker_pin, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
                     }
                     if (event.description.isNotEmpty()) {
-                        DetailSection(label = "OPIS", text = event.description, iconRes = R.drawable.ic_menu_2, iconColor = iconTint)
+                        DetailSection(label = "OPIS", text = event.description, iconRes = R.drawable.ic_menu_2, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
                     }
                 }
             } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
         }
     }
 }
 
 @Composable
-private fun DetailIconBox(
-    onClick: (() -> Unit)? = null,
-    content: @Composable BoxScope.() -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .clickable(enabled = onClick != null) { onClick?.invoke() },
-        contentAlignment = Alignment.Center,
-        content = content
-    )
+private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
+    Box(modifier = Modifier.size(48.dp).clip(CircleShape).clickable(enabled = onClick != null) { onClick?.invoke() }, contentAlignment = Alignment.Center, content = content)
 }
 
 @Composable
-private fun DetailSection(label: String, text: String, iconRes: Int, iconColor: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        DetailIconBox {
-            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
-        }
+private fun DetailSection(label: String, text: String, iconRes: Int, iconColor: androidx.compose.ui.graphics.Color, textColor: androidx.compose.ui.graphics.Color, labelColor: androidx.compose.ui.graphics.Color) {
+    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp), verticalAlignment = Alignment.Top) {
+        DetailIconBox { Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp)) }
         Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
-            Text(text = label, fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color(0xFF757575), letterSpacing = 0.5.sp, modifier = Modifier.padding(bottom = 2.dp))
-            Text(text = text, fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = Color.Black, lineHeight = 22.sp)
+            Text(text = label, fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = labelColor, letterSpacing = 0.5.sp, modifier = Modifier.padding(bottom = 2.dp))
+            Text(text = text, fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = textColor, lineHeight = 22.sp)
         }
     }
 }

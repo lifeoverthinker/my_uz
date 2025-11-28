@@ -9,6 +9,7 @@ import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsViewModel
+import com.example.my_uz_android.ui.screens.home.details.TaskDetailsViewModel
 import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
 
 object AppViewModelProvider {
@@ -33,11 +34,16 @@ object AppViewModelProvider {
                 myUZApplication().container.classRepository
             )
         }
-        // NOWY: EventDetailsViewModel
         initializer {
             EventDetailsViewModel(
                 this.createSavedStateHandle(),
-                myUZApplication().container.eventRepository // Zakładam, że dodasz eventRepository do AppContainer
+                myUZApplication().container.eventRepository
+            )
+        }
+        initializer {
+            TaskDetailsViewModel(
+                this.createSavedStateHandle(),
+                myUZApplication().container.tasksRepository
             )
         }
     }
