@@ -3,13 +3,13 @@ package com.example.my_uz_android.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -44,6 +44,13 @@ private val LightColors = lightColorScheme(
     inverseSurface = md_theme_light_inverseSurface,
     inverseOnSurface = md_theme_light_inverseOnSurface,
     inversePrimary = md_theme_light_inversePrimary,
+    surfaceDim = md_theme_light_surfaceDim,
+    surfaceBright = md_theme_light_surfaceBright,
+    surfaceContainerLowest = md_theme_light_surfaceContainerLowest,
+    surfaceContainerLow = md_theme_light_surfaceContainerLow,
+    surfaceContainer = md_theme_light_surfaceContainer,
+    surfaceContainerHigh = md_theme_light_surfaceContainerHigh,
+    surfaceContainerHighest = md_theme_light_surfaceContainerHighest,
 )
 
 private val DarkColors = darkColorScheme(
@@ -75,12 +82,39 @@ private val DarkColors = darkColorScheme(
     inverseSurface = md_theme_dark_inverseSurface,
     inverseOnSurface = md_theme_dark_inverseOnSurface,
     inversePrimary = md_theme_dark_inversePrimary,
+    surfaceDim = md_theme_dark_surfaceDim,
+    surfaceBright = md_theme_dark_surfaceBright,
+    surfaceContainerLowest = md_theme_dark_surfaceContainerLowest,
+    surfaceContainerLow = md_theme_dark_surfaceContainerLow,
+    surfaceContainer = md_theme_dark_surfaceContainer,
+    surfaceContainerHigh = md_theme_dark_surfaceContainerHigh,
+    surfaceContainerHighest = md_theme_dark_surfaceContainerHighest,
 )
+
+@Immutable
+data class ExtendedColors(
+    val customRed: Color = Color.Unspecified,
+    val customGreen: Color = Color.Unspecified,
+    val customOrange: Color = Color.Unspecified,
+    val customBlue: Color = Color.Unspecified,
+    // Specjalne kolory kart
+    val classCardBackground: Color = Color.Unspecified,
+    val eventCardBackground: Color = Color.Unspecified,
+    // Ekran główny
+    val homeHeaderBackground: Color = Color.Unspecified,
+    val homeContentBackground: Color = Color.Unspecified,
+    // Nawigacja
+    val navBackground: Color = Color.Unspecified,
+    val navBorder: Color = Color.Unspecified,
+    val navActive: Color = Color.Unspecified,
+    val navInactive: Color = Color.Unspecified
+)
+
+val LocalExtendedColors = staticCompositionLocalOf { ExtendedColors() }
 
 @Composable
 fun MyUZTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color jest wyłączony, aby używać Twoich kolorów
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -93,6 +127,38 @@ fun MyUZTheme(
         else -> LightColors
     }
 
+    val extendedColors = if (darkTheme) {
+        ExtendedColors(
+            customRed = custom_red_dark,
+            customGreen = custom_green_dark,
+            customOrange = custom_orange_dark,
+            customBlue = custom_blue_dark,
+            classCardBackground = card_class_dark, // DARK
+            eventCardBackground = card_event_dark, // DARK
+            homeHeaderBackground = home_header_dark,
+            homeContentBackground = home_content_dark,
+            navBackground = nav_dark_background,
+            navBorder = nav_dark_border,
+            navActive = nav_dark_active,
+            navInactive = nav_dark_inactive
+        )
+    } else {
+        ExtendedColors(
+            customRed = custom_red_light,
+            customGreen = custom_green_light,
+            customOrange = custom_orange_light,
+            customBlue = custom_blue_light,
+            classCardBackground = card_class_light, // LIGHT (E8DEF8)
+            eventCardBackground = card_event_light, // LIGHT (DAF5D7)
+            homeHeaderBackground = home_header_light,
+            homeContentBackground = home_content_light,
+            navBackground = nav_light_background,
+            navBorder = nav_light_border,
+            navActive = nav_light_active,
+            navInactive = nav_light_inactive
+        )
+    }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -102,9 +168,15 @@ fun MyUZTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        content = content
-    )
+    CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = AppTypography,
+            content = content
+        )
+    }
 }
+
+val MaterialTheme.extendedColors: ExtendedColors
+    @Composable
+    get() = LocalExtendedColors.current

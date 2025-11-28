@@ -10,14 +10,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
+import com.example.my_uz_android.ui.theme.extendedColors
 
 @Composable
 fun UpcomingClasses(
@@ -33,14 +33,13 @@ fun UpcomingClasses(
     modifier: Modifier = Modifier,
     onClassClick: (Int) -> Unit
 ) {
-    val purpleColor = Color(0xFFE8DEF8)
-    val pinkColor = Color(0xFFFFD8E4)
+    // ZMIANA: Używamy dedykowanego fioletu z Theme (E8DEF8 w Light Mode)
+    val classCardColor = MaterialTheme.extendedColors.classCardBackground
 
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Nagłówek z ikoną kalendarza
         Row(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -49,7 +48,7 @@ fun UpcomingClasses(
             Icon(
                 painter = painterResource(id = R.drawable.ic_calendar_check),
                 contentDescription = null,
-                tint = Color(0xFF1D192B),
+                tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(20.dp)
             )
             Text(
@@ -57,7 +56,7 @@ fun UpcomingClasses(
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.W500,
-                    color = Color(0xFF1D192B)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -66,7 +65,7 @@ fun UpcomingClasses(
             Text(
                 text = emptyMessage ?: "Brak zajęć",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         } else {
@@ -74,11 +73,10 @@ fun UpcomingClasses(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                itemsIndexed(classes) { index, classItem ->
-                    val cardColor = if (index % 2 == 0) purpleColor else pinkColor
+                items(classes) { classItem ->
                     ClassCard(
                         classItem = classItem,
-                        backgroundColor = cardColor,
+                        backgroundColor = classCardColor, // Wszystkie karty teraz w jednolitym fiolecie (lub ciemnym odpowiedniku)
                         modifier = Modifier
                             .width(264.dp)
                             .clickable { onClassClick(classItem.id) }

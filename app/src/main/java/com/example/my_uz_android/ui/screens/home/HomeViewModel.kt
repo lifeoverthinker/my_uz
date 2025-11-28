@@ -13,9 +13,10 @@ import com.example.my_uz_android.ui.screens.onboarding.UserGender
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
@@ -49,7 +50,6 @@ class HomeViewModel(
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
 
-        // 1. POWITANIE Z UWZGLĘDNIENIEM PŁCI
         val userName = settings?.userName ?: "Student"
         val isAnonymous = settings?.isAnonymous == true
         val genderStr = settings?.gender
@@ -60,7 +60,6 @@ class HomeViewModel(
             "Cześć, $userName 👋"
         }
 
-        // 2. WYDZIAŁ
         val faculty = settings?.faculty
         val departmentInfo = if (!faculty.isNullOrBlank()) {
             faculty
@@ -68,17 +67,15 @@ class HomeViewModel(
             "Uniwersytet Zielonogórski"
         }
 
-        // 3. ZAJĘCIA (MOCK DATA JEŚLI PUSTO)
-        // Jeśli baza jest pusta, dodaj fejkowe zajęcia na dzisiaj, żeby pokazać kartę
         val effectiveClasses = if (classes.isEmpty()) {
             listOf(
                 ClassEntity(
-                    id = 999, // Fake ID
-                    subjectName = "Testowe Zajęcia (Mock)",
+                    id = 999,
+                    subjectName = "Przykładowe Zajęcia",
                     classType = "Wykład",
                     startTime = "10:00",
                     endTime = "11:30",
-                    dayOfWeek = today.dayOfWeek.value, // Dzisiaj
+                    dayOfWeek = today.dayOfWeek.value,
                     groupCode = settings?.selectedGroupCode ?: "GRUPA",
                     subgroup = null,
                     room = "Sala 101",
@@ -95,30 +92,10 @@ class HomeViewModel(
 
         val classesMsg = if (todaysClasses.isEmpty()) "Brak zajęć na dzisiaj" else null
 
-        // 4. ZADANIA
-        val startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        val endOfWeek = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
-        val endOfNextWeek = endOfWeek.plusWeeks(1)
-
-        val currentWeekTasks = tasks.filter { task ->
-            val taskDate = try { LocalDate.parse(task.dueDate) } catch (e: Exception) { null }
-            if (taskDate != null) {
-                !task.isCompleted &&
-                        (taskDate.isEqual(startOfWeek) || taskDate.isAfter(startOfWeek)) &&
-                        (taskDate.isEqual(endOfWeek) || taskDate.isBefore(endOfWeek))
-            } else false
-        }.sortedBy { it.dueDate }
-
-        val nextWeekTasks = tasks.filter { task ->
-            val taskDate = try { LocalDate.parse(task.dueDate) } catch (e: Exception) { null }
-            if (taskDate != null) {
-                !task.isCompleted &&
-                        taskDate.isAfter(endOfWeek) &&
-                        (taskDate.isEqual(endOfNextWeek) || taskDate.isBefore(endOfNextWeek))
-            } else false
-        }.sortedBy { it.dueDate }
-
-        val finalTasks = if (currentWeekTasks.isNotEmpty()) currentWeekTasks else if (nextWeekTasks.isNotEmpty()) nextWeekTasks else emptyList()
+        // Sortowanie: Najpierw nieukończone, potem po dacie
+        val finalTasks = tasks
+            .sortedWith(compareBy<TaskEntity> { it.isCompleted }.thenBy { it.dueDate })
+            .take(10)
 
         HomeUiState(
             greeting = greeting,
@@ -127,6 +104,7 @@ class HomeViewModel(
             upcomingTasks = finalTasks,
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },
             classesMessage = classesMsg,
+            // POPRAWKA: Usunięto licznik, tylko tekst "Zadania"
             tasksMessage = "Zadania"
         )
     }.stateIn(
@@ -134,4 +112,27 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = HomeUiState()
     )
+
+    init {
+        viewModelScope.launch {
+            val tasks = tasksRepository.getTasksStream().first()
+            if (tasks.isEmpty()) {
+                tasksRepository.insertTask(
+                    TaskEntity(
+                        title = "Projekt Zaliczeniowy",
+                        description = "Dokończyć implementację ekranu szczegółów w aplikacji mobilnej.",
+                        dueDate = System.currentTimeMillis() + 172800000L,
+                        isCompleted = false,
+                        subjectId = null
+                    )
+                )
+            }
+        }
+    }
+
+    fun toggleTaskCompletion(task: TaskEntity, isCompleted: Boolean) {
+        viewModelScope.launch {
+            tasksRepository.updateTask(task.copy(isCompleted = isCompleted))
+        }
+    }
 }
