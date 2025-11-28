@@ -1,8 +1,11 @@
 package com.example.my_uz_android.navigation
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -46,9 +49,7 @@ fun AppNavigation() {
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = items.any { it.route == currentRoute }
 
-    // Owiń w MyUZTheme, aby mieć dostęp do extendedColors, jeśli nie jest to zrobione wyżej w hierarchii
     MyUZTheme {
-        // ZMIANA: Użycie kolorów z ExtendedColors (zgodnych z Figma/Flutter)
         val navBackgroundColor = MaterialTheme.extendedColors.navBackground
         val navBorderColor = MaterialTheme.extendedColors.navBorder
         val navActiveColor = MaterialTheme.extendedColors.navActive
@@ -107,7 +108,7 @@ fun AppNavigation() {
                                         }
                                     },
                                     colors = NavigationBarItemDefaults.colors(
-                                        indicatorColor = Color.Transparent, // Brak "bąbla" tła wokół ikony
+                                        indicatorColor = Color.Transparent,
                                         selectedIconColor = navActiveColor,
                                         selectedTextColor = navActiveColor,
                                         unselectedIconColor = navInactiveColor,
@@ -139,20 +140,26 @@ fun AppNavigation() {
                 composable(Screen.Index.route) { PlaceholderScreen("Indeks Ocen") }
                 composable(Screen.Account.route) { PlaceholderScreen("Konto Studenta") }
 
+                // SZCZEGÓŁY ZAJĘĆ - Animacja powiększania
                 composable(
                     route = "class_details/{classId}",
                     arguments = listOf(navArgument("classId") { type = NavType.IntType }),
-                    enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400)) },
-                    exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400)) }
+                    enterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
+                    exitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) },
+                    popEnterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
+                    popExitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) }
                 ) {
                     ClassDetailsScreen(onBackClick = { navController.popBackStack() })
                 }
 
+                // SZCZEGÓŁY WYDARZEŃ - Animacja powiększania
                 composable(
                     route = "event_details/{eventId}",
                     arguments = listOf(navArgument("eventId") { type = NavType.IntType }),
-                    enterTransition = { slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Up, tween(400)) },
-                    exitTransition = { slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Down, tween(400)) }
+                    enterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
+                    exitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) },
+                    popEnterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
+                    popExitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) }
                 ) {
                     EventDetailsScreen(onBackClick = { navController.popBackStack() })
                 }
