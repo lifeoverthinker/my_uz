@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Definicja Light Color Scheme z nowymi rolami (Surface Container, Fixed)
 private val LightColors = lightColorScheme(
     primary = md_theme_light_primary,
     onPrimary = md_theme_light_onPrimary,
@@ -45,7 +44,6 @@ private val LightColors = lightColorScheme(
     inverseSurface = md_theme_light_inverseSurface,
     inverseOnSurface = md_theme_light_inverseOnSurface,
     inversePrimary = md_theme_light_inversePrimary,
-    // Rozszerzone role (Android Material 3 > 1.2.0)
     surfaceDim = md_theme_light_surfaceDim,
     surfaceBright = md_theme_light_surfaceBright,
     surfaceContainerLowest = md_theme_light_surfaceContainerLowest,
@@ -55,7 +53,6 @@ private val LightColors = lightColorScheme(
     surfaceContainerHighest = md_theme_light_surfaceContainerHighest,
 )
 
-// Definicja Dark Color Scheme
 private val DarkColors = darkColorScheme(
     primary = md_theme_dark_primary,
     onPrimary = md_theme_dark_onPrimary,
@@ -85,7 +82,6 @@ private val DarkColors = darkColorScheme(
     inverseSurface = md_theme_dark_inverseSurface,
     inverseOnSurface = md_theme_dark_inverseOnSurface,
     inversePrimary = md_theme_dark_inversePrimary,
-    // Rozszerzone role
     surfaceDim = md_theme_dark_surfaceDim,
     surfaceBright = md_theme_dark_surfaceBright,
     surfaceContainerLowest = md_theme_dark_surfaceContainerLowest,
@@ -95,13 +91,15 @@ private val DarkColors = darkColorScheme(
     surfaceContainerHighest = md_theme_dark_surfaceContainerHighest,
 )
 
-// --- Obsługa kolorów Custom (Red, Green, Blue, Orange) + Home + Nav ---
 @Immutable
 data class ExtendedColors(
     val customRed: Color = Color.Unspecified,
     val customGreen: Color = Color.Unspecified,
     val customOrange: Color = Color.Unspecified,
     val customBlue: Color = Color.Unspecified,
+    // Specjalne kolory kart
+    val classCardBackground: Color = Color.Unspecified,
+    val eventCardBackground: Color = Color.Unspecified,
     // Ekran główny
     val homeHeaderBackground: Color = Color.Unspecified,
     val homeContentBackground: Color = Color.Unspecified,
@@ -129,13 +127,14 @@ fun MyUZTheme(
         else -> LightColors
     }
 
-    // Wybór zestawu kolorów Custom w zależności od motywu
     val extendedColors = if (darkTheme) {
         ExtendedColors(
             customRed = custom_red_dark,
             customGreen = custom_green_dark,
             customOrange = custom_orange_dark,
             customBlue = custom_blue_dark,
+            classCardBackground = card_class_dark, // DARK
+            eventCardBackground = card_event_dark, // DARK
             homeHeaderBackground = home_header_dark,
             homeContentBackground = home_content_dark,
             navBackground = nav_dark_background,
@@ -149,6 +148,8 @@ fun MyUZTheme(
             customGreen = custom_green_light,
             customOrange = custom_orange_light,
             customBlue = custom_blue_light,
+            classCardBackground = card_class_light, // LIGHT (E8DEF8)
+            eventCardBackground = card_event_light, // LIGHT (DAF5D7)
             homeHeaderBackground = home_header_light,
             homeContentBackground = home_content_light,
             navBackground = nav_light_background,

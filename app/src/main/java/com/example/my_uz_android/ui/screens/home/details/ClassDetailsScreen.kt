@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.extendedColors
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
@@ -36,11 +37,11 @@ fun ClassDetailsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val classEntity = uiState.classItem
-
     val iconTint = Color(0xFF444746)
-    val classAccentColor = Color(0xFF6750A4) // Fioletowy akcent
 
-    // PRZYWRÓCONO ZAOKRĄGLENIE
+    // ZMIANA: Kolor akcentu taki sam jak tło ClassCard
+    val classAccentColor = MaterialTheme.extendedColors.classCardBackground
+
     Surface(
         color = Color.White,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
@@ -51,7 +52,6 @@ fun ClassDetailsScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // --- GEST ZAMYKANIA ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -61,7 +61,6 @@ fun ClassDetailsScreen(
                         }
                     }
             ) {
-                // 1. Drag Handle
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -76,8 +75,6 @@ fun ClassDetailsScreen(
                             .background(Color(0xFFE0E0E0))
                     )
                 }
-
-                // 2. Przycisk X
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start
@@ -105,12 +102,11 @@ fun ClassDetailsScreen(
                             .replaceFirstChar { it.titlecase(Locale.getDefault()) }
                     } catch (e: Exception) { "" }
 
-                    // --- 3. NAGŁÓWEK (Tytuł, Data i FIOLETOWY KWADRAT) ---
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         verticalAlignment = Alignment.Top
                     ) {
-                        // FIOLETOWY KWADRAT w boksie 48dp
+                        // ZMIANA: Użycie classAccentColor (fiolet)
                         DetailIconBox {
                             Box(
                                 modifier = Modifier
@@ -144,15 +140,12 @@ fun ClassDetailsScreen(
                     Divider(color = Color(0xFFEEEEEE), modifier = Modifier.padding(start = 56.dp))
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // --- 4. SZCZEGÓŁY ---
-
                     DetailSection(
                         label = "TYP ZAJĘĆ",
                         text = classEntity.classType,
                         iconRes = R.drawable.ic_info_circle,
                         iconColor = iconTint
                     )
-
                     if (!classEntity.room.isNullOrEmpty()) {
                         DetailSection(
                             label = "LOKALIZACJA / SALA",
@@ -161,7 +154,6 @@ fun ClassDetailsScreen(
                             iconColor = iconTint
                         )
                     }
-
                     if (!classEntity.teacherName.isNullOrEmpty()) {
                         DetailSection(
                             label = "PROWADZĄCY",
@@ -180,7 +172,6 @@ fun ClassDetailsScreen(
     }
 }
 
-// ZMODYFIKOWANY Box 48x48 - przyjmuje content
 @Composable
 private fun DetailIconBox(
     onClick: (() -> Unit)? = null,
@@ -196,49 +187,18 @@ private fun DetailIconBox(
     )
 }
 
-// ZMODYFIKOWANA Sekcja - wyrównanie do góry
 @Composable
-private fun DetailSection(
-    label: String,
-    text: String,
-    iconRes: Int,
-    iconColor: Color
-) {
+private fun DetailSection(label: String, text: String, iconRes: Int, iconColor: Color) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 24.dp),
-        verticalAlignment = Alignment.Top // WYRÓWNANIE DO GÓRY
+        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        // Ikona w kontenerze 48x48
         DetailIconBox {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp)
-            )
+            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
         }
-
-        // Tekst (zmniejszony padding górny)
         Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
-            Text(
-                text = label,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                color = Color(0xFF757575),
-                letterSpacing = 0.5.sp,
-                modifier = Modifier.padding(bottom = 2.dp)
-            )
-            Text(
-                text = text,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                color = Color.Black,
-                lineHeight = 22.sp
-            )
+            Text(text = label, fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color(0xFF757575), letterSpacing = 0.5.sp, modifier = Modifier.padding(bottom = 2.dp))
+            Text(text = text, fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = Color.Black, lineHeight = 22.sp)
         }
     }
 }

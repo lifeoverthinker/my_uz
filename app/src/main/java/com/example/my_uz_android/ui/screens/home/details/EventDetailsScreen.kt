@@ -25,6 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.extendedColors
 
 @Composable
 fun EventDetailsScreen(
@@ -34,9 +35,10 @@ fun EventDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val event = uiState.event
     val iconTint = Color(0xFF444746)
-    val eventAccentColor = Color(0xFF0F9D58) // Zielony akcent
 
-    // PRZYWRÓCONO ZAOKRĄGLENIE
+    // ZMIANA: Kolor akcentu taki sam jak tło EventCard (zielony DAF5D7)
+    val eventAccentColor = MaterialTheme.extendedColors.eventCardBackground
+
     Surface(
         color = Color.White,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
@@ -47,7 +49,6 @@ fun EventDetailsScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // --- GEST ZAMYKANIA ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -57,7 +58,6 @@ fun EventDetailsScreen(
                         }
                     }
             ) {
-                // Drag Handle
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -72,8 +72,6 @@ fun EventDetailsScreen(
                             .background(Color(0xFFE0E0E0))
                     )
                 }
-
-                // Header (Tylko X)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start
@@ -95,12 +93,11 @@ fun EventDetailsScreen(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // --- NAGŁÓWEK (Tytuł, Data i ZIELONY KWADRAT) ---
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         verticalAlignment = Alignment.Top
                     ) {
-                        // ZIELONY KWADRAT w boksie 48dp
+                        // ZMIANA: Użycie eventAccentColor (zielony)
                         DetailIconBox {
                             Box(
                                 modifier = Modifier
@@ -134,24 +131,11 @@ fun EventDetailsScreen(
                     Divider(color = Color(0xFFEEEEEE), modifier = Modifier.padding(start = 56.dp))
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // --- SZCZEGÓŁY ---
-
                     if (event.location.isNotEmpty()) {
-                        DetailSection(
-                            label = "MIEJSCE",
-                            text = event.location,
-                            iconRes = R.drawable.ic_marker_pin,
-                            iconColor = iconTint
-                        )
+                        DetailSection(label = "MIEJSCE", text = event.location, iconRes = R.drawable.ic_marker_pin, iconColor = iconTint)
                     }
-
                     if (event.description.isNotEmpty()) {
-                        DetailSection(
-                            label = "OPIS",
-                            text = event.description,
-                            iconRes = R.drawable.ic_menu_2,
-                            iconColor = iconTint
-                        )
+                        DetailSection(label = "OPIS", text = event.description, iconRes = R.drawable.ic_menu_2, iconColor = iconTint)
                     }
                 }
             } else {
@@ -163,7 +147,6 @@ fun EventDetailsScreen(
     }
 }
 
-// Prywatne komponenty (ZMODYFIKOWANE)
 @Composable
 private fun DetailIconBox(
     onClick: (() -> Unit)? = null,
@@ -180,46 +163,17 @@ private fun DetailIconBox(
 }
 
 @Composable
-private fun DetailSection(
-    label: String,
-    text: String,
-    iconRes: Int,
-    iconColor: Color
-) {
+private fun DetailSection(label: String, text: String, iconRes: Int, iconColor: Color) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 24.dp),
-        verticalAlignment = Alignment.Top // WYRÓWNANIE DO GÓRY
+        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+        verticalAlignment = Alignment.Top
     ) {
         DetailIconBox {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp)
-            )
+            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp))
         }
-
-        // Zmniejszony padding górny
         Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
-            Text(
-                text = label,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                color = Color(0xFF757575),
-                letterSpacing = 0.5.sp,
-                modifier = Modifier.padding(bottom = 2.dp)
-            )
-            Text(
-                text = text,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                color = Color.Black,
-                lineHeight = 22.sp
-            )
+            Text(text = label, fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color(0xFF757575), letterSpacing = 0.5.sp, modifier = Modifier.padding(bottom = 2.dp))
+            Text(text = text, fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = Color.Black, lineHeight = 22.sp)
         }
     }
 }

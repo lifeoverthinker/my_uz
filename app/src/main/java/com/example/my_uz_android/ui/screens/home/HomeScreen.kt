@@ -12,7 +12,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.EventCard
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.screens.home.components.UpcomingClasses
 import com.example.my_uz_android.ui.theme.MyUZTheme
@@ -39,9 +39,8 @@ fun HomeScreen(
         val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
         val cardColorPurple = MaterialTheme.colorScheme.primaryContainer
         val cardColorPink = MaterialTheme.colorScheme.tertiaryContainer
-        val cardColorGreen = MaterialTheme.colorScheme.secondaryContainer
 
-        // Zmiana: Kolor dolnej karty (biały w Light Mode, ciemny w Dark Mode)
+        // Kolor dolnej karty (biały w Light Mode, ciemny w Dark Mode)
         val contentCardColor = MaterialTheme.extendedColors.homeContentBackground
 
         Column(
@@ -54,7 +53,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .padding(top = 16.dp, bottom = 4.dp), // Lekki odstęp od krawędzi
+                    .padding(top = 16.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -240,11 +239,29 @@ fun HomeScreen(
                             androidx.compose.foundation.lazy.LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(3) { index ->
-                                    EventCardMock(
-                                        index = index,
-                                        backgroundColor = cardColorGreen,
-                                        onClick = { onEventClick(999) }
+                                // Używamy teraz prawdziwego EventCard, który ma zaszyty kolor customGreen
+                                item {
+                                    EventCard(
+                                        title = "Juwenalia 2025",
+                                        description = "Największa impreza roku!",
+                                        onClick = { onEventClick(999) },
+                                        modifier = Modifier.width(264.dp)
+                                    )
+                                }
+                                item {
+                                    EventCard(
+                                        title = "Targi Pracy IT",
+                                        description = "Znajdź staż marzeń",
+                                        onClick = { onEventClick(999) },
+                                        modifier = Modifier.width(264.dp)
+                                    )
+                                }
+                                item {
+                                    EventCard(
+                                        title = "Wystawa Robotów",
+                                        description = "Kampus A, Aula C",
+                                        onClick = { onEventClick(999) },
+                                        modifier = Modifier.width(264.dp)
                                     )
                                 }
                             }
@@ -271,47 +288,6 @@ fun HomeScreen(
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun EventCardMock(index: Int, backgroundColor: Color, onClick: () -> Unit) {
-    val titles = listOf("Juwenalia 2025", "Targi Pracy IT", "Wystawa Robotów")
-    val descriptions = listOf("Największa impreza roku!", "Znajdź staż marzeń", "Kampus A, Aula C")
-
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        modifier = Modifier.width(264.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = titles[index % titles.size],
-                    fontWeight = FontWeight.W500,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = descriptions[index % descriptions.size],
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("A", color = MaterialTheme.colorScheme.onPrimary, fontSize = 16.sp, fontWeight = FontWeight.W500)
             }
         }
     }

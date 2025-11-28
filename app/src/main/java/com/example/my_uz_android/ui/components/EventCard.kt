@@ -2,6 +2,7 @@ package com.example.my_uz_android.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.extendedColors
 
 @Composable
 fun EventCard(
@@ -27,10 +29,16 @@ fun EventCard(
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // ZMIANA: Kolory z motywu
-    val cardBackgroundColor = MaterialTheme.colorScheme.secondaryContainer
-    val titleColor = MaterialTheme.colorScheme.onSecondaryContainer
-    val descriptionColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+    // ZMIANA: Pobranie koloru EventCard zdefiniowanego w Theme (DAF5D7 / Dark Green)
+    val cardBackgroundColor = MaterialTheme.extendedColors.eventCardBackground
+
+    // Tekst musi być ciemny na jasnym zielonym (Light) i jasny na ciemnym zielonym (Dark)
+    // Ponieważ DAF5D7 jest bardzo jasny, w Light Mode używamy ciemnego tekstu.
+    val isDarkTheme = isSystemInDarkTheme()
+    val contentColor = if (isDarkTheme) Color(0xFFE0E0E0) else Color(0xFF1D1B20)
+
+    val titleColor = contentColor
+    val descriptionColor = contentColor.copy(alpha = 0.8f)
 
     Column(
         modifier = modifier
