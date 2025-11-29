@@ -37,22 +37,22 @@ fun TaskDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val task = uiState.task
 
-    // KOLORY Z MOTYWU
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val taskAccentColor = MaterialTheme.extendedColors.classCardBackground
-
-    // ZMIANA: Używamy surfaceContainerLowest dla czystej bieli w Light Mode
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
 
     var showMenu by remember { mutableStateOf(false) }
 
     Surface(
-        color = surfaceColor, // Dynamiczne tło (Białe w Light / Ciemne w Dark)
+        color = surfaceColor,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(top = 8.dp)
     ) {
         Column(
             modifier = Modifier
@@ -96,7 +96,7 @@ fun TaskDetailsScreen(
                                 DropdownMenu(
                                     expanded = showMenu,
                                     onDismissRequest = { showMenu = false },
-                                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh) // Tło menu pozostawiamy lekko wyróżnione
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 ) {
                                     DropdownMenuItem(
                                         text = { Text("Duplikuj", fontFamily = InterFontFamily, color = textColor) },
