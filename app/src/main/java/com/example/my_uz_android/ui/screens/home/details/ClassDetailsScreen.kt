@@ -37,26 +37,28 @@ fun ClassDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val classEntity = uiState.classItem
 
-    // KOLORY Z MOTYWU
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val classAccentColor = MaterialTheme.extendedColors.classCardBackground
-
-    // ZMIANA: Używamy surfaceContainerLowest dla czystej bieli w Light Mode i odpowiedniej czerni w Dark Mode
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
 
+    // Karta szczegółów
     Surface(
         color = surfaceColor,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding() // Odsłania pasek stanu (efekt karty)
+            .padding(top = 8.dp) // Lekki odstęp od góry
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
+            // Belka do przeciągania
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

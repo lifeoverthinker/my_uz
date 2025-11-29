@@ -34,20 +34,20 @@ fun EventDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val event = uiState.event
 
-    // KOLORY Z MOTYWU
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val eventAccentColor = MaterialTheme.extendedColors.eventCardBackground
-
-    // ZMIANA: Używamy surfaceContainerLowest dla czystej bieli w Light Mode
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
 
     Surface(
         color = surfaceColor,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(top = 8.dp)
     ) {
         Column(
             modifier = Modifier

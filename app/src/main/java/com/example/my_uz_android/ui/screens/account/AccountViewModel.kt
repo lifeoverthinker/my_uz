@@ -13,7 +13,6 @@ class AccountViewModel(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    // Pobieramy ustawienia. Jeśli baza jest pusta, wartość będzie null.
     val settings: StateFlow<SettingsEntity?> = settingsRepository.getSettingsStream()
         .stateIn(
             scope = viewModelScope,
@@ -22,28 +21,31 @@ class AccountViewModel(
         )
 
     fun toggleDarkMode(isEnabled: Boolean) {
+        updateSettings { it.copy(isDarkMode = isEnabled) }
+    }
+
+    fun updateGroup(groupCode: String) {
+        updateSettings { it.copy(selectedGroupCode = groupCode) }
+    }
+
+    fun toggleSubgroup(subgroup: String) {
+        updateSettings { it.copy(selectedSubgroup = subgroup) }
+    }
+
+    private fun updateSettings(transform: (SettingsEntity) -> SettingsEntity) {
         viewModelScope.launch {
             val currentSettings = settings.value
-
             if (currentSettings != null) {
-                // Sytuacja standardowa: aktualizujemy istniejące ustawienia
-                settingsRepository.insertSettings(currentSettings.copy(isDarkMode = isEnabled))
+                settingsRepository.insertSettings(transform(currentSettings))
             } else {
-                // NAPRAWA: Jeśli ustawień nie ma (np. pominięto onboarding), tworzymy nowe domyślne
-                val newSettings = SettingsEntity(
+                val default = SettingsEntity(
                     userName = "Student",
                     isAnonymous = false,
-                    isDarkMode = isEnabled, // Ustawiamy wartość z przełącznika
+                    isDarkMode = false,
                     isFirstRun = false,
-                    notificationsEnabled = true,
-                    gender = null,
-                    selectedGroupCode = null,
-                    selectedSubgroup = null,
-                    faculty = null,
-                    fieldOfStudy = null,
-                    studyMode = null
+                    notificationsEnabled = true
                 )
-                settingsRepository.insertSettings(newSettings)
+                settingsRepository.insertSettings(transform(default))
             }
         }
     }

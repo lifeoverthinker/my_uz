@@ -27,6 +27,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.my_uz_android.R
+import com.example.my_uz_android.ui.screens.account.AccountScreen
+import com.example.my_uz_android.ui.screens.calendar.TasksScreen
 import com.example.my_uz_android.ui.screens.home.HomeScreen
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsScreen
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
@@ -122,29 +124,43 @@ fun AppNavigation() {
                 }
             }
         ) { innerPadding ->
+            // POPRAWKA: Aplikujemy padding TYLKO od dołu.
+            // Góra jest obsługiwana przez poszczególne ekrany (statusBarsPadding),
+            // co pozwala na rysowanie tła pod paskiem stanu.
             NavHost(
                 navController = navController,
                 startDestination = Screen.Main.route,
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
             ) {
                 composable(Screen.Main.route) {
                     HomeScreen(
-                        onClassClick = { classId ->
-                            navController.navigate("class_details/$classId")
-                        },
-                        onEventClick = { eventId ->
-                            navController.navigate("event_details/$eventId")
-                        },
-                        onTaskClick = { taskId ->
-                            navController.navigate("task_details/$taskId")
-                        }
+                        onClassClick = { classId -> navController.navigate("class_details/$classId") },
+                        onEventClick = { eventId -> navController.navigate("event_details/$eventId") },
+                        onTaskClick = { taskId -> navController.navigate("task_details/$taskId") },
+                        onAccountClick = { navController.navigate(Screen.Account.route) },
+                        onCalendarClick = { navController.navigate(Screen.Calendar.route) }
                     )
                 }
 
-                composable(Screen.Calendar.route) { PlaceholderScreen("Kalendarz") }
+                composable(Screen.Calendar.route) {
+                    TasksScreen(
+                        onBackClick = { },
+                        onTaskClick = { taskId -> navController.navigate("task_details/$taskId") }
+                    )
+                }
+
                 composable(Screen.Index.route) { PlaceholderScreen("Indeks Ocen") }
-                // PRZYWRÓCONO PLACEHOLDER
-                composable(Screen.Account.route) { PlaceholderScreen("Konto Studenta") }
+
+                composable(Screen.Account.route) {
+                    AccountScreen(
+                        onBackClick = { },
+                        onLogoutClick = {
+                            navController.navigate("landing") {
+                                popUpTo(Screen.Main.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
 
                 composable(
                     route = "class_details/{classId}",
@@ -176,7 +192,6 @@ fun AppNavigation() {
                     popEnterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
                     popExitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) }
                 ) { backStackEntry ->
-                    val taskId = backStackEntry.arguments?.getInt("taskId") ?: 0
                     TaskDetailsScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onEditTask = { }

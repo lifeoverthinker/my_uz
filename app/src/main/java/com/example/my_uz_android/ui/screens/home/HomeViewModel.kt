@@ -3,6 +3,7 @@ package com.example.my_uz_android.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
@@ -16,10 +17,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 data class HomeUiState(
@@ -27,6 +26,9 @@ data class HomeUiState(
     val departmentInfo: String = "",
     val upcomingClasses: List<ClassEntity> = emptyList(),
     val upcomingTasks: List<TaskEntity> = emptyList(),
+    // Nowe pola, których brakowało:
+    val upcomingEvents: List<EventEntity> = emptyList(),
+    val isLoading: Boolean = false,
     val currentDate: String = "",
     val tasksMessage: String? = null,
     val classesMessage: String? = null
@@ -92,20 +94,38 @@ class HomeViewModel(
 
         val classesMsg = if (todaysClasses.isEmpty()) "Brak zajęć na dzisiaj" else null
 
-        // Sortowanie: Najpierw nieukończone, potem po dacie
         val finalTasks = tasks
             .sortedWith(compareBy<TaskEntity> { it.isCompleted }.thenBy { it.dueDate })
             .take(10)
+
+        // Przykładowe wydarzenia (dopóki nie podepniesz EventRepository)
+        val mockEvents = listOf(
+            EventEntity(
+                title = "Juwenalia 2025",
+                description = "Największa impreza roku!",
+                date = "2025-05-20",
+                location = "Kampus A",
+                timeRange = "18:00 - 02:00"
+            ),
+            EventEntity(
+                title = "Targi Pracy",
+                description = "Oferty staży IT",
+                date = "2025-06-01",
+                location = "Aula C",
+                timeRange = "10:00 - 15:00"
+            )
+        )
 
         HomeUiState(
             greeting = greeting,
             departmentInfo = departmentInfo,
             upcomingClasses = todaysClasses,
             upcomingTasks = finalTasks,
+            upcomingEvents = mockEvents, // Dodano tutaj
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },
             classesMessage = classesMsg,
-            // POPRAWKA: Usunięto licznik, tylko tekst "Zadania"
-            tasksMessage = "Zadania"
+            tasksMessage = "Zadania",
+            isLoading = false // Dodano tutaj
         )
     }.stateIn(
         scope = viewModelScope,
@@ -120,19 +140,13 @@ class HomeViewModel(
                 tasksRepository.insertTask(
                     TaskEntity(
                         title = "Projekt Zaliczeniowy",
-                        description = "Dokończyć implementację ekranu szczegółów w aplikacji mobilnej.",
+                        description = "Dokończyć implementację aplikacji.",
                         dueDate = System.currentTimeMillis() + 172800000L,
                         isCompleted = false,
                         subjectId = null
                     )
                 )
             }
-        }
-    }
-
-    fun toggleTaskCompletion(task: TaskEntity, isCompleted: Boolean) {
-        viewModelScope.launch {
-            tasksRepository.updateTask(task.copy(isCompleted = isCompleted))
         }
     }
 }

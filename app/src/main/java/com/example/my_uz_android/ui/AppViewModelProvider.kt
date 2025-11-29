@@ -6,6 +6,8 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.my_uz_android.MyUZApplication
+import com.example.my_uz_android.ui.screens.account.AccountViewModel
+import com.example.my_uz_android.ui.screens.calendar.TasksViewModel
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsViewModel
@@ -44,6 +46,16 @@ object AppViewModelProvider {
             TaskDetailsViewModel(
                 this.createSavedStateHandle(),
                 myUZApplication().container.tasksRepository
+            )
+        }
+        initializer {
+            TasksViewModel(
+                myUZApplication().container.tasksRepository
+            )
+        }
+        initializer {
+            AccountViewModel(
+                myUZApplication().container.settingsRepository
             )
         }
     }
