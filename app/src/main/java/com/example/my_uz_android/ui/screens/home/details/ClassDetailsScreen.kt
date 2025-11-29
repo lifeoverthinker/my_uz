@@ -42,7 +42,9 @@ fun ClassDetailsScreen(
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val classAccentColor = MaterialTheme.extendedColors.classCardBackground
-    val surfaceColor = MaterialTheme.colorScheme.surface
+
+    // ZMIANA: Używamy surfaceContainerLowest dla czystej bieli w Light Mode i odpowiedniej czerni w Dark Mode
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
 
     Surface(

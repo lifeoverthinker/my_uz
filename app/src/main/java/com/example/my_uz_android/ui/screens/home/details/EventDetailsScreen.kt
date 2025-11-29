@@ -39,7 +39,9 @@ fun EventDetailsScreen(
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val eventAccentColor = MaterialTheme.extendedColors.eventCardBackground
-    val surfaceColor = MaterialTheme.colorScheme.surface
+
+    // ZMIANA: Używamy surfaceContainerLowest dla czystej bieli w Light Mode
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
 
     Surface(
