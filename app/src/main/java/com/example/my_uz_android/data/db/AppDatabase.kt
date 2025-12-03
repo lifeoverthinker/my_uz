@@ -24,9 +24,9 @@ import com.example.my_uz_android.data.models.TaskEntity
         GradeEntity::class,
         AbsenceEntity::class,
         SettingsEntity::class,
-        EventEntity::class // Nowa encja
+        EventEntity::class
     ],
-    version = 4, // ZMIANA: Wersja 4
+    version = 5, // ZMIANA: Podbicie wersji z 4 na 5 naprawi crash
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,7 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun gradesDao(): GradesDao
     abstract fun absenceDao(): AbsenceDao
     abstract fun settingsDao(): SettingsDao
-    abstract fun eventDao(): EventDao // Nowe DAO
+    abstract fun eventDao(): EventDao
 
     companion object {
         @Volatile
@@ -45,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "app_database")
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration() // To pozwoli na przebudowę bazy przy zmianie wersji
                     .build()
                     .also { Instance = it }
             }

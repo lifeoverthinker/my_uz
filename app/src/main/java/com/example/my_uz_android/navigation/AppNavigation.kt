@@ -28,6 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.screens.account.AccountScreen
+import com.example.my_uz_android.ui.screens.calendar.TaskAddEditScreen
 import com.example.my_uz_android.ui.screens.calendar.TasksScreen
 import com.example.my_uz_android.ui.screens.home.HomeScreen
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsScreen
@@ -124,14 +125,12 @@ fun AppNavigation() {
                 }
             }
         ) { innerPadding ->
-            // POPRAWKA: Aplikujemy padding TYLKO od dołu.
-            // Góra jest obsługiwana przez poszczególne ekrany (statusBarsPadding),
-            // co pozwala na rysowanie tła pod paskiem stanu.
             NavHost(
                 navController = navController,
                 startDestination = Screen.Main.route,
                 modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
             ) {
+                // --- Ekrany główne ---
                 composable(Screen.Main.route) {
                     HomeScreen(
                         onClassClick = { classId -> navController.navigate("class_details/$classId") },
@@ -142,10 +141,11 @@ fun AppNavigation() {
                     )
                 }
 
+                // --- TERMINARZ (Lista Zadań) ---
                 composable(Screen.Calendar.route) {
                     TasksScreen(
-                        onBackClick = { },
-                        onTaskClick = { taskId -> navController.navigate("task_details/$taskId") }
+                        onAddTaskClick = { navController.navigate("add_task") },
+                        onTaskClick = { task -> navController.navigate("task_details/${task.id}") }
                     )
                 }
 
@@ -162,39 +162,35 @@ fun AppNavigation() {
                     )
                 }
 
-                composable(
-                    route = "class_details/{classId}",
-                    arguments = listOf(navArgument("classId") { type = NavType.IntType }),
-                    enterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
-                    exitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) },
-                    popEnterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
-                    popExitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) }
-                ) {
+                // --- Szczegóły ---
+                composable("class_details/{classId}", arguments = listOf(navArgument("classId") { type = NavType.IntType })) {
                     ClassDetailsScreen(onBackClick = { navController.popBackStack() })
                 }
 
-                composable(
-                    route = "event_details/{eventId}",
-                    arguments = listOf(navArgument("eventId") { type = NavType.IntType }),
-                    enterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
-                    exitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) },
-                    popEnterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
-                    popExitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) }
-                ) {
+                composable("event_details/{eventId}", arguments = listOf(navArgument("eventId") { type = NavType.IntType })) {
                     EventDetailsScreen(onBackClick = { navController.popBackStack() })
                 }
 
-                composable(
-                    route = "task_details/{taskId}",
-                    arguments = listOf(navArgument("taskId") { type = NavType.IntType }),
-                    enterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
-                    exitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) },
-                    popEnterTransition = { scaleIn(initialScale = 0.95f, animationSpec = tween(300)) + fadeIn(tween(300)) },
-                    popExitTransition = { scaleOut(targetScale = 0.95f, animationSpec = tween(300)) + fadeOut(tween(300)) }
-                ) { backStackEntry ->
+                composable("task_details/{taskId}", arguments = listOf(navArgument("taskId") { type = NavType.IntType })) {
                     TaskDetailsScreen(
                         onNavigateBack = { navController.popBackStack() },
-                        onEditTask = { }
+                        onEditTask = { taskId -> navController.navigate("edit_task/$taskId") }
+                    )
+                }
+
+                // --- NOWE: Dodawanie i Edycja Zadania ---
+                composable("add_task") {
+                    TaskAddEditScreen(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable(
+                    route = "edit_task/{taskId}",
+                    arguments = listOf(navArgument("taskId") { type = NavType.IntType })
+                ) {
+                    TaskAddEditScreen(
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
             }

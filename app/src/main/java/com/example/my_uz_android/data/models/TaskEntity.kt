@@ -9,7 +9,10 @@ data class TaskEntity(
     val id: Int = 0,
     val title: String,
     val description: String? = null,
-    val dueDate: Long,
+    val dueDate: Long, // Data zadania
+    val dueTime: String? = null, // Godzina (np. "14:30") lub null (całodniowe)
     val isCompleted: Boolean = false,
-    val subjectId: Int? = null // ID powiązanego przedmiotu (np. Matematyka)
+    val subjectId: Int? = null,
+    val subjectName: String = "", // Nazwa przedmiotu (dla łatwiejszego wyświetlania)
+    val classType: String = "" // Rodzaj zajęć (np. Wykład, Laboratorium)
 )
