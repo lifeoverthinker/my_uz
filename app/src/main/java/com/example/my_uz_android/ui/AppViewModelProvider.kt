@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.ui.screens.account.AccountViewModel
+import com.example.my_uz_android.ui.screens.calendar.TaskAddEditViewModel
 import com.example.my_uz_android.ui.screens.calendar.TasksViewModel
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
@@ -48,9 +49,18 @@ object AppViewModelProvider {
                 myUZApplication().container.tasksRepository
             )
         }
+        // ViewModel Listy Zadań
         initializer {
             TasksViewModel(
                 myUZApplication().container.tasksRepository
+            )
+        }
+        // NOWY ViewModel Dodawania/Edycji
+        initializer {
+            TaskAddEditViewModel(
+                this.createSavedStateHandle(),
+                myUZApplication().container.tasksRepository,
+                myUZApplication().container.classRepository
             )
         }
         initializer {

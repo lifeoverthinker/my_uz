@@ -59,62 +59,54 @@ fun TaskDetailsScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            Column(
+            // USUNIĘTO pasek uchwytu
+
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(vertical = 12.dp)
                     .pointerInput(Unit) {
                         detectVerticalDragGestures { _, dragAmount -> if (dragAmount > 10) onNavigateBack() }
-                    }
+                    },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(modifier = Modifier.width(32.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(dividerColor))
+                DetailIconBox(onClick = onNavigateBack) {
+                    Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    DetailIconBox(onClick = onNavigateBack) {
-                        Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
-                    }
+                if (task != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        DetailIconBox(onClick = { onEditTask(task.id) }) {
+                            Icon(painter = painterResource(id = R.drawable.ic_edit), contentDescription = "Edytuj", tint = textColor, modifier = Modifier.size(24.dp))
+                        }
 
-                    if (task != null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            DetailIconBox(onClick = { onEditTask(task.id) }) {
-                                Icon(painter = painterResource(id = R.drawable.ic_edit), contentDescription = "Edytuj", tint = textColor, modifier = Modifier.size(24.dp))
+                        Box {
+                            DetailIconBox(onClick = { showMenu = true }) {
+                                Icon(painter = painterResource(id = R.drawable.ic_dots_vertical), contentDescription = "Opcje", tint = textColor, modifier = Modifier.size(24.dp))
                             }
 
-                            Box {
-                                DetailIconBox(onClick = { showMenu = true }) {
-                                    Icon(painter = painterResource(id = R.drawable.ic_dots_vertical), contentDescription = "Opcje", tint = textColor, modifier = Modifier.size(24.dp))
-                                }
-
-                                DropdownMenu(
-                                    expanded = showMenu,
-                                    onDismissRequest = { showMenu = false },
-                                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("Duplikuj", fontFamily = InterFontFamily, color = textColor) },
-                                        onClick = {
-                                            viewModel.duplicateTask(task)
-                                            showMenu = false
-                                            onNavigateBack()
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Usuń", fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
-                                        onClick = {
-                                            viewModel.deleteTask()
-                                            showMenu = false
-                                            onNavigateBack()
-                                        }
-                                    )
-                                }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Duplikuj", fontFamily = InterFontFamily, color = textColor) },
+                                    onClick = {
+                                        viewModel.duplicateTask(task)
+                                        showMenu = false
+                                        onNavigateBack()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Usuń", fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        viewModel.deleteTask()
+                                        showMenu = false
+                                        onNavigateBack()
+                                    }
+                                )
                             }
                         }
                     }
@@ -134,7 +126,9 @@ fun TaskDetailsScreen(
 
                             val dateString = if (task.dueDate > 0) {
                                 try {
-                                    Instant.ofEpochMilli(task.dueDate).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", Locale("pl")))
+                                    val date = Instant.ofEpochMilli(task.dueDate).atZone(ZoneId.systemDefault())
+                                    val timeStr = task.dueTime?.let { ", $it" } ?: ""
+                                    date.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", Locale("pl"))) + timeStr
                                 } catch (e: Exception) { "Brak terminu" }
                             } else "Brak terminu"
 
@@ -146,9 +140,18 @@ fun TaskDetailsScreen(
                     HorizontalDivider(color = dividerColor, modifier = Modifier.padding(start = 56.dp))
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    if (task.subjectName.isNotEmpty()) {
+                        DetailSection(label = "PRZEDMIOT", text = task.subjectName, iconRes = R.drawable.ic_book_open, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                    }
+
+                    if (task.classType.isNotEmpty()) {
+                        DetailSection(label = "RODZAJ ZAJĘĆ", text = task.classType, iconRes = R.drawable.ic_graduation_hat, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                    }
+
                     if (!task.description.isNullOrEmpty()) {
                         DetailSection(label = "OPIS", text = task.description, iconRes = R.drawable.ic_menu_2, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
                     }
+
                     DetailSection(label = "STATUS", text = if (task.isCompleted) "Zakończone" else "W toku", iconRes = if (task.isCompleted) R.drawable.ic_check_circle_broken else R.drawable.ic_info_circle, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
                 }
 

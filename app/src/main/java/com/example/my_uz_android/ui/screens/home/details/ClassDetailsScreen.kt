@@ -31,91 +31,105 @@ import java.util.Locale
 
 @Composable
 fun ClassDetailsScreen(
-    viewModel: ClassDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: ClassDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    // POPRAWKA: W ViewModelu pole nazywa się 'classItem', nie 'classEntity'
     val classEntity = uiState.classItem
 
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-    val classAccentColor = MaterialTheme.extendedColors.classCardBackground
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    val accentColor = MaterialTheme.extendedColors.classCardBackground
 
-    // Karta szczegółów
     Surface(
         color = surfaceColor,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding() // Odsłania pasek stanu (efekt karty)
-            .padding(top = 8.dp) // Lekki odstęp od góry
+            .statusBarsPadding()
+            .padding(top = 8.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // Belka do przeciągania
-            Column(
+            // USUNIĘTO: Pasek "uchwyt"
+
+            // Header z X
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(vertical = 12.dp)
                     .pointerInput(Unit) {
-                        detectVerticalDragGestures { _, dragAmount -> if (dragAmount > 10) onBackClick() }
-                    }
+                        detectVerticalDragGestures { _, dragAmount ->
+                            if (dragAmount > 10) onBackClick()
+                        }
+                    },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(modifier = Modifier.width(32.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(dividerColor))
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    DetailIconBox(onClick = onBackClick) {
-                        Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
-                    }
+                DetailIconBox(onClick = onBackClick) {
+                    Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
                 }
             }
 
             if (classEntity != null) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                ) {
-                    val dayName = try {
-                        DayOfWeek.of(classEntity.dayOfWeek)
-                            .getDisplayName(TextStyle.FULL, Locale("pl"))
-                            .replaceFirstChar { it.titlecase(Locale.getDefault()) }
-                    } catch (e: Exception) { "" }
+                val dayName = try {
+                    DayOfWeek.of(classEntity.dayOfWeek)
+                        .getDisplayName(TextStyle.FULL, Locale("pl"))
+                        .replaceFirstChar { it.titlecase(Locale.getDefault()) }
+                } catch (e: Exception) { "" }
 
-                    Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
-                        DetailIconBox {
-                            Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(6.dp)).background(classAccentColor))
-                        }
-                        Column(modifier = Modifier.padding(start = 8.dp)) {
-                            Text(text = classEntity.subjectName, fontFamily = InterFontFamily, fontWeight = FontWeight.Normal, fontSize = 28.sp, lineHeight = 36.sp, color = textColor, modifier = Modifier.padding(bottom = 4.dp))
-                            Text(text = "$dayName, ${classEntity.startTime} – ${classEntity.endTime}", fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = subTextColor)
-                        }
+                // Title Section
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
+                    DetailIconBox {
+                        Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(6.dp)).background(accentColor))
                     }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    HorizontalDivider(color = dividerColor, modifier = Modifier.padding(start = 56.dp))
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    DetailSection(label = "TYP ZAJĘĆ", text = classEntity.classType, iconRes = R.drawable.ic_info_circle, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
-                    if (!classEntity.room.isNullOrEmpty()) {
-                        DetailSection(label = "LOKALIZACJA / SALA", text = classEntity.room, iconRes = R.drawable.ic_marker_pin, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
-                    }
-                    if (!classEntity.teacherName.isNullOrEmpty()) {
-                        DetailSection(label = "PROWADZĄCY", text = classEntity.teacherName, iconRes = R.drawable.ic_user, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                    Column(modifier = Modifier.padding(start = 12.dp)) {
+                        Text(
+                            text = classEntity.subjectName,
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 28.sp,
+                            lineHeight = 36.sp,
+                            color = textColor,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Text(
+                            text = "$dayName, ${classEntity.startTime} – ${classEntity.endTime}",
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp,
+                            color = subTextColor
+                        )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 56.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Details - POPRAWIONE NAZWY PÓL
+                // Używamy classEntity.room (ok), classEntity.teacherName (zamiast lecturer), classEntity.classType (zamiast type)
+
+                DetailSection(label = "TYP", text = classEntity.classType, iconRes = R.drawable.ic_info_circle, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+
+                if (!classEntity.room.isNullOrEmpty()) {
+                    DetailSection(label = "SALA", text = classEntity.room, iconRes = R.drawable.ic_map, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                }
+
+                if (!classEntity.teacherName.isNullOrEmpty()) {
+                    DetailSection(label = "PROWADZĄCY", text = classEntity.teacherName, iconRes = R.drawable.ic_user, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                }
+
             } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
         }
     }

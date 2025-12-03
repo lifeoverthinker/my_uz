@@ -4,10 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -25,21 +23,22 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun EventDetailsScreen(
-    viewModel: EventDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: EventDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val event = uiState.event
 
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-    val eventAccentColor = MaterialTheme.extendedColors.eventCardBackground
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    val accentColor = MaterialTheme.extendedColors.eventCardBackground
 
     Surface(
         color = surfaceColor,
@@ -54,56 +53,69 @@ fun EventDetailsScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            Column(
+            // USUNIĘTO PASEK UCHWYTU
+
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(vertical = 12.dp)
                     .pointerInput(Unit) {
-                        detectVerticalDragGestures { _, dragAmount -> if (dragAmount > 10) onBackClick() }
-                    }
+                        detectVerticalDragGestures { _, dragAmount ->
+                            if (dragAmount > 10) onBackClick()
+                        }
+                    },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(modifier = Modifier.width(32.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(dividerColor))
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    DetailIconBox(onClick = onBackClick) {
-                        Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
-                    }
+                DetailIconBox(onClick = onBackClick) {
+                    Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
                 }
             }
 
             if (event != null) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                ) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
-                        DetailIconBox {
-                            Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(6.dp)).background(eventAccentColor))
-                        }
-                        Column(modifier = Modifier.padding(start = 8.dp)) {
-                            Text(text = event.title, fontFamily = InterFontFamily, fontWeight = FontWeight.Normal, fontSize = 28.sp, lineHeight = 36.sp, color = textColor, modifier = Modifier.padding(bottom = 4.dp))
-                            Text(text = "${event.date}, ${event.timeRange}", fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = subTextColor)
-                        }
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
+                    DetailIconBox {
+                        Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(6.dp)).background(accentColor))
                     }
+                    Column(modifier = Modifier.padding(start = 12.dp)) {
+                        Text(
+                            text = event.title,
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 28.sp,
+                            lineHeight = 36.sp,
+                            color = textColor,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        val dateText = try {
+                            val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("pl"))
+                            event.date.format(formatter)
+                        } catch (e: Exception) { event.date.toString() }
 
-                    Spacer(modifier = Modifier.height(24.dp))
-                    HorizontalDivider(color = dividerColor, modifier = Modifier.padding(start = 56.dp))
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    if (event.location.isNotEmpty()) {
-                        DetailSection(label = "MIEJSCE", text = event.location, iconRes = R.drawable.ic_marker_pin, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
-                    }
-                    if (event.description.isNotEmpty()) {
-                        DetailSection(label = "OPIS", text = event.description, iconRes = R.drawable.ic_menu_2, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                        Text(
+                            text = dateText,
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 16.sp,
+                            color = subTextColor
+                        )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 56.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if (event.description.isNotEmpty()) {
+                    DetailSection(label = "OPIS", text = event.description, iconRes = R.drawable.ic_menu_2, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                } else {
+                    DetailSection(label = "OPIS", text = "Brak opisu", iconRes = R.drawable.ic_menu_2, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                }
+
             } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
         }
     }
