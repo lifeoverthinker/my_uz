@@ -19,33 +19,29 @@ fun TaskDatePicker(
 ) {
     val datePickerState = rememberDatePickerState()
 
+    // Kolor tła (Biały w light / Ciemny w dark)
+    val surfaceColor = MaterialTheme.colorScheme.surface
+
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
                 onDateSelected(datePickerState.selectedDateMillis)
                 onDismiss()
-            }) {
-                Text("OK")
-            }
+            }) { Text("OK") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Anuluj")
-            }
+            TextButton(onClick = onDismiss) { Text("Anuluj") }
         },
-        // Zmiana tła na Surface (białe w Light Mode) zamiast domyślnego SurfaceContainerHigh
         colors = DatePickerDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = surfaceColor, // Tło dialogu
         ),
-        // Usunięcie domyślnego cienia tonalnego, aby tło było czysto białe (lub zgodne z surface)
-        tonalElevation = 0.dp
+        tonalElevation = 0.dp // Brak fioletowej poświaty
     ) {
         DatePicker(
             state = datePickerState,
-            // Dostosowanie kolorów wewnętrznych elementów, aby pasowały do tła surface
             colors = DatePickerDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = surfaceColor, // Tło pickera
                 titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 headlineContentColor = MaterialTheme.colorScheme.onSurface,
                 weekdayContentColor = MaterialTheme.colorScheme.onSurface,

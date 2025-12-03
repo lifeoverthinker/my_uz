@@ -3,13 +3,7 @@ package com.example.my_uz_android.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,6 +14,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,18 +30,11 @@ fun TaskCard(
     onTaskClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Logika wizualna statusu (wyszarzenie)
     val cardAlpha = if (task.isCompleted) 0.5f else 1f
-
-    // Kolor tła (zachowujemy fioletowy z theme)
     val backgroundColor = MaterialTheme.extendedColors.classCardBackground
-
-    // Style spójne z EventCard
     val shape = RoundedCornerShape(8.dp)
     val isDarkTheme = isSystemInDarkTheme()
     val contentColor = if (isDarkTheme) Color(0xFFE0E0E0) else Color(0xFF1D1B20)
-
-    // Logika przekreślenia
     val titleDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
 
     Column(
@@ -56,10 +44,10 @@ fun TaskCard(
             .clip(shape)
             .background(backgroundColor)
             .clickable { onTaskClick() }
-            .padding(12.dp), // Padding jak w EventCard
-        verticalArrangement = Arrangement.spacedBy(8.dp) // Spacing jak w EventCard
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Górny wiersz: Tytuł + Godzina
+        // Tytuł + Godzina
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -68,7 +56,7 @@ fun TaskCard(
                 text = task.title,
                 style = TextStyle(
                     fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Medium, // Jak w EventCard
+                    fontWeight = FontWeight.Medium,
                     fontSize = 14.sp,
                     lineHeight = 20.sp,
                     letterSpacing = 0.1.sp,
@@ -94,12 +82,11 @@ fun TaskCard(
             }
         }
 
-        // Dolny wiersz: Przedmiot / Typ / Opis (połączone stylem Description z EventCard)
+        // Szczegóły (Przedmiot • Typ)
         val detailsParts = listOfNotNull(
             task.subjectName.takeIf { it.isNotEmpty() },
             task.classType.takeIf { it.isNotEmpty() }
         )
-
         val detailsText = detailsParts.joinToString(" • ")
 
         if (detailsText.isNotEmpty()) {
@@ -111,28 +98,28 @@ fun TaskCard(
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
                     letterSpacing = 0.4.sp,
-                    color = contentColor.copy(alpha = 0.8f) // Lekko jaśniejszy
+                    color = contentColor.copy(alpha = 0.8f)
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
 
-        // Ewentualny opis w nowej linii, jeśli jest ważny
-        if (!task.description.isNullOrEmpty()) {
-            Text(
-                text = task.description,
-                style = TextStyle(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    letterSpacing = 0.4.sp,
-                    color = contentColor.copy(alpha = 0.6f)
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        // Opis (Zawsze widoczny)
+        val hasDescription = !task.description.isNullOrEmpty()
+        Text(
+            text = if (hasDescription) task.description!! else "Brak opisu",
+            style = TextStyle(
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Normal,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                letterSpacing = 0.4.sp,
+                color = contentColor.copy(alpha = if (hasDescription) 0.6f else 0.4f), // Jaśniejszy dla placeholder
+                fontStyle = if (hasDescription) FontStyle.Normal else FontStyle.Italic // Kursywa dla placeholder
+            ),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

@@ -27,8 +27,10 @@ data class TaskAddEditUiState(
     val selectedSubject: String = "",
     val selectedType: String = "",
     val description: String = "",
-    val availableSubjects: List<String> = emptyList(), // Lista unikalnych przedmiotów z planu
+    val availableSubjects: List<String> = emptyList(),
     val availableTypes: List<String> = listOf("Wykład", "Laboratorium", "Ćwiczenia", "Projekt", "Seminarium", "Inne"),
+    // Szybkie tytuły do wyboru (Chips)
+    val quickTitles: List<String> = listOf("Zadanie domowe", "Kolokwium", "Wejściówka", "Egzamin", "Projekt", "Prezentacja", "Referat"),
     val isLoading: Boolean = false,
     val isTaskSaved: Boolean = false,
     val isSubjectModalVisible: Boolean = false
@@ -45,7 +47,6 @@ class TaskAddEditViewModel(
     private val _uiState = MutableStateFlow(TaskAddEditUiState())
     val uiState: StateFlow<TaskAddEditUiState> = _uiState.asStateFlow()
 
-    // Pobieramy przedmioty z bazy (z planu zajęć) jako podpowiedzi
     val subjectsStream: StateFlow<List<String>> = classRepository.getAllClassesStream()
         .combine(_uiState) { classes, _ ->
             classes.map { it.subjectName }.distinct().sorted()
@@ -57,7 +58,6 @@ class TaskAddEditViewModel(
         )
 
     init {
-        // Jeśli edytujemy zadanie, pobierz jego dane
         if (taskId != null) {
             viewModelScope.launch {
                 val task = tasksRepository.getTask(taskId)
@@ -80,7 +80,6 @@ class TaskAddEditViewModel(
             }
         }
 
-        // Aktualizacja listy dostępnych przedmiotów w UI State
         viewModelScope.launch {
             subjectsStream.collect { subjects ->
                 _uiState.update { it.copy(availableSubjects = subjects) }
@@ -106,7 +105,7 @@ class TaskAddEditViewModel(
             val dueTimeString = if (!state.isAllDay) state.time.toString() else null
 
             val task = TaskEntity(
-                id = taskId ?: 0, // 0 dla nowego zadania (auto-generowanie)
+                id = taskId ?: 0,
                 title = state.title,
                 description = state.description,
                 dueDate = dueDateMillis,
