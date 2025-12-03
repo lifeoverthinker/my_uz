@@ -19,21 +19,25 @@ fun AccountScreen(
     viewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val settings by viewModel.settings.collectAsState()
+    val availableGroups by viewModel.availableGroups.collectAsState()
+    val availableSubgroups by viewModel.availableSubgroups.collectAsState()
 
-    val availableGroups = listOf("32INF-SP", "31INF-SM", "12MED-NP")
     var groupExpanded by remember { mutableStateOf(false) }
+
+    // Obliczanie wybranych podgrup do wyświetlenia
+    val selectedSubgroupsList = remember(settings?.selectedSubgroup) {
+        settings?.selectedSubgroup?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+    }
 
     Scaffold(
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding() // Najpierw padding systemowy
-                    .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 16.dp), // Potem odstęp
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Konto studenta", style = MaterialTheme.typography.headlineMedium)
-            }
+            CenterAlignedTopAppBar(
+                title = { Text("Ustawienia", style = MaterialTheme.typography.titleLarge) },
+                navigationIcon = {
+                    // Opcjonalnie: Przycisk wstecz jeśli potrzebny w tym miejscu
+                    // IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, null) }
+                }
+            )
         }
     ) { paddingValues ->
         Column(
@@ -44,18 +48,21 @@ fun AccountScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // Sekcja Wyglądu
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
                         Text("Tryb Ciemny", style = MaterialTheme.typography.titleMedium)
-                        Text("Zmień motyw aplikacji", style = MaterialTheme.typography.bodySmall)
+                        Text("Dostosuj wygląd aplikacji", style = MaterialTheme.typography.bodyMedium)
                     }
                     Switch(
                         checked = settings?.isDarkMode == true,
@@ -64,17 +71,21 @@ fun AccountScreen(
                 }
             }
 
-            Text("Ustawienia Planu", style = MaterialTheme.typography.titleLarge)
+            HorizontalDivider()
 
+            Text("Konfiguracja Planu", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+
+            // Wybór Grupy (Dynamiczny)
             ExposedDropdownMenuBox(
                 expanded = groupExpanded,
                 onExpandedChange = { groupExpanded = it }
             ) {
                 OutlinedTextField(
-                    value = settings?.selectedGroupCode ?: "Wybierz grupę",
+                    value = settings?.selectedGroupCode ?: "",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Twoja grupa") },
+                    label = { Text("Grupa Dziekańska") },
+                    placeholder = { Text("Wybierz grupę") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = groupExpanded) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable)
                 )
@@ -82,27 +93,45 @@ fun AccountScreen(
                     expanded = groupExpanded,
                     onDismissRequest = { groupExpanded = false }
                 ) {
-                    availableGroups.forEach { group ->
-                        DropdownMenuItem(
-                            text = { Text(group) },
-                            onClick = {
-                                viewModel.updateGroup(group)
-                                groupExpanded = false
-                            }
-                        )
+                    if (availableGroups.isEmpty()) {
+                        DropdownMenuItem(text = { Text("Ładowanie...") }, onClick = { })
+                    } else {
+                        availableGroups.forEach { group ->
+                            DropdownMenuItem(
+                                text = { Text(group) },
+                                onClick = {
+                                    viewModel.updateGroup(group)
+                                    groupExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
 
-            Column {
-                Text("Podgrupy", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("L1", "L2", "L3").forEach { sub ->
-                        FilterChip(
-                            selected = settings?.selectedSubgroup == sub,
-                            onClick = { viewModel.toggleSubgroup(sub) },
-                            label = { Text(sub) }
-                        )
+            // Wybór Podgrup (Dynamiczny)
+            if (availableSubgroups.isNotEmpty() || selectedSubgroupsList.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Podgrupy (np. laboratoria):", style = MaterialTheme.typography.labelLarge)
+
+                    // Używamy FlowRow (dostępne w nowszym Compose) lub prostego Row z scrollowaniem
+                    // Tutaj prosta wersja Row z zawijaniem (FlowRow wymaga eksperymentalnego API w starszych wersjach)
+                    @OptIn(ExperimentalLayoutApi::class)
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Jeśli dopiero pobraliśmy podgrupy, pokazujemy je.
+                        // Jeśli nie, pokazujemy chociaż te zapisane (jako fallback)
+                        val displayList = if(availableSubgroups.isNotEmpty()) availableSubgroups else selectedSubgroupsList
+
+                        displayList.forEach { sub ->
+                            FilterChip(
+                                selected = selectedSubgroupsList.contains(sub),
+                                onClick = { viewModel.toggleSubgroup(sub) },
+                                label = { Text(sub) }
+                            )
+                        }
                     }
                 }
             }
@@ -114,7 +143,7 @@ fun AccountScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("Wyloguj się")
+                Text("Zresetuj dane i wyloguj")
             }
         }
     }

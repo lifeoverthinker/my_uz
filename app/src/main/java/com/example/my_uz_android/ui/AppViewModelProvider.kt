@@ -65,7 +65,9 @@ object AppViewModelProvider {
         }
         initializer {
             AccountViewModel(
-                myUZApplication().container.settingsRepository
+                myUZApplication().container.settingsRepository,
+                myUZApplication().container.universityRepository, // Dodano
+                myUZApplication().container.classRepository       // Dodano
             )
         }
     }
