@@ -13,9 +13,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color // ✅ Naprawiono brakujący import
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -25,6 +28,7 @@ import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.screens.calendar.TaskDetailsViewModel
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -70,7 +74,11 @@ fun TaskDetailsContent(
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-    val taskAccentColor = MaterialTheme.extendedColors.classCardBackground
+
+    // Obsługa kolorów Dark Mode dla statusu
+    val taskAccentColor = if (task?.isCompleted == true) Color.Gray else MaterialTheme.extendedColors.classCardBackground
+
+    // Używamy surfaceContainerLowest: Biały w Light Mode, Ciemny w Dark Mode
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
 
     var showMenu by remember { mutableStateOf(false) }
@@ -99,7 +107,7 @@ fun TaskDetailsContent(
                 DetailIconBox(onClick = onNavigateBack) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = "Zamknij",
+                        contentDescription = stringResource(R.string.btn_close),
                         tint = textColor,
                         modifier = Modifier.size(24.dp)
                     )
@@ -110,7 +118,7 @@ fun TaskDetailsContent(
                         DetailIconBox(onClick = { onEditTask(task.id) }) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_edit),
-                                contentDescription = "Edytuj",
+                                contentDescription = stringResource(R.string.btn_edit),
                                 tint = textColor,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -120,7 +128,7 @@ fun TaskDetailsContent(
                             DetailIconBox(onClick = { showMenu = true }) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_dots_vertical),
-                                    contentDescription = "Opcje",
+                                    contentDescription = stringResource(R.string.options_menu),
                                     tint = textColor,
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -132,11 +140,11 @@ fun TaskDetailsContent(
                                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Duplikuj", fontFamily = InterFontFamily, color = textColor) },
+                                    text = { Text(stringResource(R.string.btn_duplicate), fontFamily = InterFontFamily, color = textColor) },
                                     onClick = { onDuplicateTask(task); showMenu = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Usuń", fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(stringResource(R.string.btn_delete), fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
                                     onClick = { onDeleteTask(); showMenu = false }
                                 )
                             }
@@ -178,7 +186,8 @@ fun TaskDetailsContent(
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 28.sp,
                                 lineHeight = 36.sp,
-                                color = textColor,
+                                color = if (task.isCompleted) textColor.copy(alpha = 0.6f) else textColor,
+                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
                                 modifier = Modifier.padding(bottom = 4.dp)
                             )
 
@@ -188,9 +197,9 @@ fun TaskDetailsContent(
                                     val timeStr = task.dueTime?.let { ", $it" } ?: ""
                                     date.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", Locale("pl"))) + timeStr
                                 } catch (e: Exception) {
-                                    "Brak terminu"
+                                    stringResource(R.string.task_no_date)
                                 }
-                            } else "Brak terminu"
+                            } else stringResource(R.string.task_no_date)
 
                             Text(
                                 text = dateString,
@@ -204,10 +213,9 @@ fun TaskDetailsContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Sekcje szczegółów (BEZ DIVIDERA)
                     if (task.subjectName.isNotEmpty()) {
                         DetailSection(
-                            label = "PRZEDMIOT",
+                            label = stringResource(R.string.label_subject),
                             text = task.subjectName,
                             iconRes = R.drawable.ic_book_open,
                             iconColor = iconTint,
@@ -218,8 +226,8 @@ fun TaskDetailsContent(
 
                     if (task.classType.isNotEmpty()) {
                         DetailSection(
-                            label = "RODZAJ ZAJĘĆ",
-                            text = task.classType,
+                            label = stringResource(R.string.label_type),
+                            text = ClassTypeUtils.getFullName(task.classType),
                             iconRes = R.drawable.ic_graduation_hat,
                             iconColor = iconTint,
                             textColor = textColor,
@@ -229,7 +237,7 @@ fun TaskDetailsContent(
 
                     if (!task.description.isNullOrEmpty()) {
                         DetailSection(
-                            label = "OPIS",
+                            label = stringResource(R.string.label_description),
                             text = task.description,
                             iconRes = R.drawable.ic_menu_2,
                             iconColor = iconTint,
@@ -239,8 +247,8 @@ fun TaskDetailsContent(
                     }
 
                     DetailSection(
-                        label = "STATUS",
-                        text = if (task.isCompleted) "Zakończone" else "W toku",
+                        label = stringResource(R.string.label_status),
+                        text = stringResource(if (task.isCompleted) R.string.task_status_completed else R.string.task_status_in_progress),
                         iconRes = if (task.isCompleted) R.drawable.ic_check_circle_broken else R.drawable.ic_info_circle,
                         iconColor = iconTint,
                         textColor = textColor,
@@ -263,7 +271,7 @@ fun TaskDetailsContent(
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
                     Text(
-                        text = if (task.isCompleted) "Oznacz jako nieukończone" else "Oznacz jako ukończone",
+                        text = stringResource(if (task.isCompleted) R.string.task_mark_incomplete else R.string.task_mark_complete),
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp
@@ -275,7 +283,7 @@ fun TaskDetailsContent(
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nie znaleziono zadania", color = textColor)
+                    Text(stringResource(R.string.task_not_found), color = textColor)
                 }
             }
         }
@@ -299,9 +307,9 @@ private fun DetailSection(
     label: String,
     text: String,
     iconRes: Int,
-    iconColor: androidx.compose.ui.graphics.Color,
-    textColor: androidx.compose.ui.graphics.Color,
-    labelColor: androidx.compose.ui.graphics.Color
+    iconColor: Color,
+    textColor: Color,
+    labelColor: Color
 ) {
     Row(
         modifier = Modifier

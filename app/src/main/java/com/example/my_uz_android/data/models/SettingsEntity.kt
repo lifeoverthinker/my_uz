@@ -8,7 +8,7 @@ data class SettingsEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val isAnonymous: Boolean = false,
     val userName: String = "Student",
-    val gender: String? = null, // Przechowujemy jako String: "STUDENT" lub "STUDENTKA"
+    val gender: String? = null, // "STUDENT" lub "STUDENTKA"
     val selectedGroupCode: String? = null,
     val selectedSubgroup: String? = null,
     val faculty: String? = null,
@@ -17,4 +17,10 @@ data class SettingsEntity(
     val isFirstRun: Boolean = true,
     val isDarkMode: Boolean = false,
     val notificationsEnabled: Boolean = true
-)
+) {
+    // ✅ Clean Code: Stałe zamiast "magic strings"
+    companion object {
+        const val GENDER_MALE = "STUDENT"
+        const val GENDER_FEMALE = "STUDENTKA"
+    }
+}

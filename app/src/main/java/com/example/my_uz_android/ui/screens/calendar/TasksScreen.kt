@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,15 +44,14 @@ fun TasksScreen(
 ) {
     val tasks by viewModel.uiState.collectAsState()
 
-    // Grupowanie po miesiącach (jak Google Calendar)
+    // Grupowanie po DNIACH (Sticky Headers)
     val groupedTasks = remember(tasks) {
         tasks
             .sortedBy { it.dueDate }
             .groupBy {
-                val date = Instant.ofEpochMilli(it.dueDate)
+                Instant.ofEpochMilli(it.dueDate)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
-                date.withDayOfMonth(1) // Grupuj po pierwszym dniu miesiąca
             }
     }
 
@@ -64,7 +64,7 @@ fun TasksScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = "Terminarz",
+                        text = stringResource(R.string.tasks_screen_title),
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -91,7 +91,6 @@ fun TasksScreen(
         }
     ) { innerPadding ->
         if (tasks.isEmpty()) {
-            // Empty state
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -105,11 +104,9 @@ fun TasksScreen(
                         modifier = Modifier.size(64.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
-
                     Spacer(modifier = Modifier.height(16.dp))
-
                     Text(
-                        text = "Brak zadań",
+                        text = stringResource(R.string.tasks_empty_title),
                         fontFamily = InterFontFamily,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodyLarge
@@ -117,7 +114,6 @@ fun TasksScreen(
                 }
             }
         } else {
-            // Lista zadań z sticky headers (miesiące)
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -125,33 +121,23 @@ fun TasksScreen(
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                groupedTasks.forEach { (monthDate, tasksInMonth) ->
-                    // Sticky header dla miesiąca
+                groupedTasks.forEach { (date, tasksForDay) ->
                     stickyHeader {
-                        MonthHeader(
-                            date = monthDate,
-                            backgroundColor = backgroundColor
-                        )
+                        DayHeaderSticky(date = date, backgroundColor = backgroundColor)
                     }
 
-                    // Zadania w tym miesiącu
                     items(
-                        items = tasksInMonth,
+                        items = tasksForDay,
                         key = { it.id }
                     ) { task ->
-                        val date = Instant.ofEpochMilli(task.dueDate)
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate()
-
-                        TaskRowItem(
-                            date = date,
+                        TaskCard(
                             task = task,
-                            onClick = { onTaskClick(task) }
+                            onTaskClick = { onTaskClick(task) },
+                            showDayMarker = false // Nie pokazujemy daty na karcie, bo jest w nagłówku
                         )
                     }
                 }
 
-                // Bottom spacer dla FAB
                 item {
                     Spacer(modifier = Modifier.height(80.dp))
                 }
@@ -160,97 +146,36 @@ fun TasksScreen(
     }
 }
 
-// ========== MONTH HEADER (STICKY) ==========
 @Composable
-fun MonthHeader(
+fun DayHeaderSticky(
     date: LocalDate,
     backgroundColor: Color
 ) {
-    val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale("pl"))
+    val isToday = date == LocalDate.now()
+    val isTomorrow = date == LocalDate.now().plusDays(1)
+
+    val formatter = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("pl")) }
+
+    val text = when {
+        isToday -> stringResource(R.string.tasks_today)
+        isTomorrow -> stringResource(R.string.tasks_tomorrow)
+        else -> date.format(formatter).replaceFirstChar { it.uppercase() }
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(backgroundColor)
-            .padding(vertical = 12.dp)
+            .padding(vertical = 8.dp)
     ) {
         Text(
-            text = date.format(formatter).replaceFirstChar { it.uppercase() },
+            text = text,
             style = MaterialTheme.typography.titleMedium.copy(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.primary
+                color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
-        )
-    }
-}
-
-// ========== TASK ROW (Data lewa + Card prawa) ==========
-@Composable
-fun TaskRowItem(
-    date: LocalDate,
-    task: TaskEntity,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // LEWA STRONA: Data (dzień tygodnia + numer dnia)
-        Column(
-            modifier = Modifier
-                .width(50.dp)
-                .padding(top = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Dzień tygodnia (np. "PN")
-            Text(
-                text = date.format(DateTimeFormatter.ofPattern("EEE", Locale("pl"))).uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = InterFontFamily,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            )
-
-            // Numer dnia (np. "5")
-            Text(
-                text = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        }
-
-        // PRAWA STRONA: Task Card
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(12.dp))
-                .clickable { onClick() }
-        ) {
-            TaskCard(
-                task = task,
-                onTaskClick = onClick
-            )
-        }
-    }
-}
-
-// ========== COMPOSE PREVIEW ==========
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
-@Composable
-fun TasksScreenPreview() {
-    com.example.my_uz_android.ui.theme.MyUZTheme {
-        TasksScreen(
-            onAddTaskClick = {},
-            onTaskClick = {}
         )
     }
 }
