@@ -4,10 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -35,8 +33,7 @@ fun ClassDetailsScreen(
     viewModel: ClassDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    // POPRAWKA: W ViewModelu pole nazywa się 'classItem', nie 'classEntity'
-    val classEntity = uiState.classItem
+    val classEntity = uiState.classEntity
 
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val textColor = MaterialTheme.colorScheme.onSurface
@@ -50,16 +47,13 @@ fun ClassDetailsScreen(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(top = 8.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // USUNIĘTO: Pasek "uchwyt"
-
-            // Header z X
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -73,7 +67,12 @@ fun ClassDetailsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DetailIconBox(onClick = onBackClick) {
-                    Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_x_close),
+                        contentDescription = "Zamknij",
+                        tint = textColor,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 
@@ -82,14 +81,29 @@ fun ClassDetailsScreen(
                     DayOfWeek.of(classEntity.dayOfWeek)
                         .getDisplayName(TextStyle.FULL, Locale("pl"))
                         .replaceFirstChar { it.titlecase(Locale.getDefault()) }
-                } catch (e: Exception) { "" }
+                } catch (e: Exception) {
+                    ""
+                }
 
-                // Title Section
-                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
+                // Tytuł
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
                     DetailIconBox {
-                        Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(6.dp)).background(accentColor))
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(accentColor)
+                        )
                     }
-                    Column(modifier = Modifier.padding(start = 12.dp)) {
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column {
                         Text(
                             text = classEntity.subjectName,
                             fontFamily = InterFontFamily,
@@ -99,6 +113,7 @@ fun ClassDetailsScreen(
                             color = textColor,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
+
                         Text(
                             text = "$dayName, ${classEntity.startTime} – ${classEntity.endTime}",
                             fontFamily = InterFontFamily,
@@ -110,22 +125,38 @@ fun ClassDetailsScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 56.dp))
-                Spacer(modifier = Modifier.height(24.dp))
 
-                // Details - POPRAWIONE NAZWY PÓL
-                // Używamy classEntity.room (ok), classEntity.teacherName (zamiast lecturer), classEntity.classType (zamiast type)
-
-                DetailSection(label = "TYP", text = classEntity.classType, iconRes = R.drawable.ic_info_circle, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                // Details (BEZ DIVIDERA)
+                DetailSection(
+                    label = "TYP",
+                    text = classEntity.classType,
+                    iconRes = R.drawable.ic_info_circle,
+                    iconColor = iconTint,
+                    textColor = textColor,
+                    labelColor = subTextColor
+                )
 
                 if (!classEntity.room.isNullOrEmpty()) {
-                    DetailSection(label = "SALA", text = classEntity.room, iconRes = R.drawable.ic_map, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                    DetailSection(
+                        label = "SALA",
+                        text = classEntity.room,
+                        iconRes = R.drawable.ic_map,
+                        iconColor = iconTint,
+                        textColor = textColor,
+                        labelColor = subTextColor
+                    )
                 }
 
                 if (!classEntity.teacherName.isNullOrEmpty()) {
-                    DetailSection(label = "PROWADZĄCY", text = classEntity.teacherName, iconRes = R.drawable.ic_user, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                    DetailSection(
+                        label = "PROWADZĄCY",
+                        text = classEntity.teacherName,
+                        iconRes = R.drawable.ic_user,
+                        iconColor = iconTint,
+                        textColor = textColor,
+                        labelColor = subTextColor
+                    )
                 }
-
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -137,16 +168,61 @@ fun ClassDetailsScreen(
 
 @Composable
 private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
-    Box(modifier = Modifier.size(48.dp).clip(CircleShape).clickable(enabled = onClick != null) { onClick?.invoke() }, contentAlignment = Alignment.Center, content = content)
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .clickable(enabled = onClick != null) { onClick?.invoke() },
+        contentAlignment = Alignment.Center,
+        content = content
+    )
 }
 
 @Composable
-private fun DetailSection(label: String, text: String, iconRes: Int, iconColor: androidx.compose.ui.graphics.Color, textColor: androidx.compose.ui.graphics.Color, labelColor: androidx.compose.ui.graphics.Color) {
-    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp), verticalAlignment = Alignment.Top) {
-        DetailIconBox { Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp)) }
-        Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
-            Text(text = label, fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = labelColor, letterSpacing = 0.5.sp, modifier = Modifier.padding(bottom = 2.dp))
-            Text(text = text, fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = textColor, lineHeight = 22.sp)
+private fun DetailSection(
+    label: String,
+    text: String,
+    iconRes: Int,
+    iconColor: androidx.compose.ui.graphics.Color,
+    textColor: androidx.compose.ui.graphics.Color,
+    labelColor: androidx.compose.ui.graphics.Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 24.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        DetailIconBox {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.padding(top = 4.dp)) {
+            Text(
+                text = label,
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = labelColor,
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+
+            Text(
+                text = text,
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                color = textColor,
+                lineHeight = 22.sp
+            )
         }
     }
 }

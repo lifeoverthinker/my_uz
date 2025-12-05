@@ -103,6 +103,10 @@ data class ExtendedColors(
     // Ekran główny
     val homeHeaderBackground: Color = Color.Unspecified,
     val homeContentBackground: Color = Color.Unspecified,
+    val homeTopBackground: Color = Color.Unspecified,
+    // ✅ NOWE: Przyciski i ikony
+    val buttonBackground: Color = Color.Unspecified,
+    val iconText: Color = Color.Unspecified,
     // Nawigacja
     val navBackground: Color = Color.Unspecified,
     val navBorder: Color = Color.Unspecified,
@@ -133,10 +137,13 @@ fun MyUZTheme(
             customGreen = custom_green_dark,
             customOrange = custom_orange_dark,
             customBlue = custom_blue_dark,
-            classCardBackground = card_class_dark, // DARK
-            eventCardBackground = card_event_dark, // DARK
+            classCardBackground = card_class_dark,
+            eventCardBackground = card_event_dark,
             homeHeaderBackground = home_header_dark,
             homeContentBackground = home_content_dark,
+            homeTopBackground = home_top_background_dark,
+            buttonBackground = button_background_dark,
+            iconText = icon_text_dark,
             navBackground = nav_dark_background,
             navBorder = nav_dark_border,
             navActive = nav_dark_active,
@@ -148,10 +155,13 @@ fun MyUZTheme(
             customGreen = custom_green_light,
             customOrange = custom_orange_light,
             customBlue = custom_blue_light,
-            classCardBackground = card_class_light, // LIGHT (E8DEF8)
-            eventCardBackground = card_event_light, // LIGHT (DAF5D7)
+            classCardBackground = card_class_light,
+            eventCardBackground = card_event_light,
             homeHeaderBackground = home_header_light,
             homeContentBackground = home_content_light,
+            homeTopBackground = home_top_background_light,
+            buttonBackground = button_background_light,
+            iconText = icon_text_light,
             navBackground = nav_light_background,
             navBorder = nav_light_border,
             navActive = nav_light_active,

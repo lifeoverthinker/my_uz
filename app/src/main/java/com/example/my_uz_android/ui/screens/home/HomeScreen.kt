@@ -15,12 +15,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.EventEntity
+import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.EventCard
 import com.example.my_uz_android.ui.components.TaskCard
@@ -40,28 +45,29 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     MyUZTheme {
-        val backgroundColor = MaterialTheme.colorScheme.background
-        val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+        // ✅ Top section color
+        val topSectionBackground = MaterialTheme.extendedColors.homeTopBackground
+        val iconTextColor = MaterialTheme.extendedColors.iconText
+        val buttonBgColor = MaterialTheme.extendedColors.buttonBackground
         val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-        val cardColorPurple = MaterialTheme.colorScheme.primaryContainer
-        val contentCardColor = MaterialTheme.extendedColors.homeContentBackground
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // --- 1. GÓRNY PASEK I POWITANIE ---
+            // ========== 1. GÓRNA SEKCJA ==========
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                // Usunięto padding dolny rodzica, teraz kontroluje go wewnętrzna kolumna
+                    .background(topSectionBackground)
             ) {
+                // Data + przyciski
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding() // Padding systemowy
-                        .padding(top = 8.dp) // Odstęp od góry (pod status barem)
+                        .statusBarsPadding()
+                        .padding(top = 8.dp)
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -70,41 +76,46 @@ fun HomeScreen(
                         text = uiState.currentDate,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.W500,
-                            color = onBackgroundColor,
-                            fontSize = 14.sp
+                            color = iconTextColor,
+                            fontSize = 14.sp,
+                            lineHeight = 16.sp
                         )
                     )
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Mapa
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .background(cardColorPurple, CircleShape),
+                                .background(buttonBgColor, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             IconButton(onClick = { /* Mapa */ }) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_map),
                                     contentDescription = "Mapa",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    tint = iconTextColor,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
 
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(cardColorPurple, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            IconButton(onClick = { /* Poczta */ }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_mail),
-                                    contentDescription = "Poczta",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                        // Poczta z badge
+                        Box {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(buttonBgColor, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                IconButton(onClick = { /* Poczta */ }) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_mail),
+                                        contentDescription = "Poczta",
+                                        tint = iconTextColor,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                             Box(
                                 modifier = Modifier
@@ -117,18 +128,18 @@ fun HomeScreen(
                     }
                 }
 
-                // Sekcja Powitania i Wydziału
+                // Powitanie
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp) // ZMIANA: Padding 16dp z każdej strony (góra, dół, lewo, prawo)
+                        .padding(16.dp)
                 ) {
                     Text(
                         text = uiState.greeting,
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontSize = 28.sp,
                             fontWeight = FontWeight.W600,
-                            color = onBackgroundColor,
+                            color = iconTextColor,
                             lineHeight = 36.sp
                         )
                     )
@@ -144,29 +155,30 @@ fun HomeScreen(
                 }
             }
 
-            // --- 2. DOLNA KARTA (Z LAZY COLUMN) ---
+            // ========== 2. DOLNA SEKCJA (BIAŁA) ==========
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-                color = contentCardColor
+                color = Color.White // ✅ BIAŁA dolna sekcja
             ) {
                 LazyColumn(
                     contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // a) Najbliższe zajęcia
+                    // Najbliższe zajęcia
                     item {
                         UpcomingClasses(
                             classes = uiState.upcomingClasses,
                             emptyMessage = uiState.classesMessage,
+                            dayLabel = uiState.classesDayLabel,
                             onClassClick = onClassClick
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // b) Sekcja Zadań
+                    // Zadania
                     item {
                         Column(
                             modifier = Modifier
@@ -181,7 +193,7 @@ fun HomeScreen(
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_book_open),
                                     contentDescription = null,
-                                    tint = onBackgroundColor,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
@@ -189,7 +201,7 @@ fun HomeScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.W500,
-                                        color = onBackgroundColor
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 )
                             }
@@ -217,7 +229,7 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // c) Sekcja Wydarzeń
+                    // Wydarzenia
                     item {
                         Column(
                             modifier = Modifier
@@ -232,7 +244,7 @@ fun HomeScreen(
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_marker_pin),
                                     contentDescription = null,
-                                    tint = onBackgroundColor,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
@@ -240,7 +252,7 @@ fun HomeScreen(
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.W500,
-                                        color = onBackgroundColor
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 )
                             }
@@ -267,7 +279,7 @@ fun HomeScreen(
                         }
                     }
 
-                    // d) Stopka
+                    // Stopka
                     item {
                         Box(
                             modifier = Modifier
@@ -288,6 +300,37 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+// ========== COMPOSE PREVIEW ==========
+@Preview(name = "Home Screen - Light", showBackground = true)
+@Composable
+private fun PreviewHomeScreenLight() {
+    MyUZTheme(darkTheme = false) {
+        HomeScreenPreviewContent()
+    }
+}
+
+@Preview(name = "Home Screen - Dark", showBackground = true)
+@Composable
+private fun PreviewHomeScreenDark() {
+    MyUZTheme(darkTheme = true) {
+        HomeScreenPreviewContent()
+    }
+}
+
+@Composable
+private fun HomeScreenPreviewContent() {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            // Preview content
+            Text("Preview Content", modifier = Modifier.padding(16.dp))
         }
     }
 }

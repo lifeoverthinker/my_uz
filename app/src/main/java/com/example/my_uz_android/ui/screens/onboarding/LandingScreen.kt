@@ -20,12 +20,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
@@ -51,6 +48,7 @@ fun LandingScreen(
 ) {
     val currentPage by viewModel.currentPage.collectAsState()
     val totalPages = viewModel.totalPages
+    val isLoading by viewModel.isLoading.collectAsState() // Dodano obserwację ładowania
 
     val imeInsets = WindowInsets.ime
     val density = LocalDensity.current
@@ -130,18 +128,29 @@ fun LandingScreen(
                                     ) {
                                         FilledTonalButton(
                                             onClick = { viewModel.onBackClick() },
-                                            modifier = Modifier.weight(1f).height(48.dp)
+                                            modifier = Modifier.weight(1f).height(48.dp),
+                                            enabled = !isLoading
                                         ) {
                                             Text("Wstecz")
                                         }
                                         Button(
                                             onClick = {
-                                                viewModel.saveOnboardingData()
-                                                onFinishOnboarding()
+                                                // POPRAWKA: Czekamy na zakończenie zapisu
+                                                viewModel.saveOnboardingData {
+                                                    onFinishOnboarding()
+                                                }
                                             },
-                                            modifier = Modifier.weight(1f).height(48.dp)
+                                            modifier = Modifier.weight(1f).height(48.dp),
+                                            enabled = !isLoading
                                         ) {
-                                            Text("Gotowe!")
+                                            if (isLoading) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(24.dp),
+                                                    color = MaterialTheme.colorScheme.onPrimary
+                                                )
+                                            } else {
+                                                Text("Gotowe!")
+                                            }
                                         }
                                     }
                                 }
@@ -382,7 +391,6 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
                     },
                     placeholder = { Text("Szukaj grupy...") },
                     label = { Text("Kod grupy") },
-                    // POPRAWKA: Dodano Modifier.size(24.dp) do ikon
                     leadingIcon = {
                         Icon(
                             painterResource(R.drawable.ic_search),

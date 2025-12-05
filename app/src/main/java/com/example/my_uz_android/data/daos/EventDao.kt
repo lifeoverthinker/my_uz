@@ -1,20 +1,26 @@
 package com.example.my_uz_android.data.daos
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.example.my_uz_android.data.models.EventEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface EventDao {
-    @Query("SELECT * FROM events ORDER BY id DESC")
+    @Query("SELECT * FROM events ORDER BY date DESC")
     fun getAllEvents(): Flow<List<EventEntity>>
 
     @Query("SELECT * FROM events WHERE id = :id")
     fun getEventById(id: Int): Flow<EventEntity?>
 
+    @Query("SELECT * FROM events WHERE id = :id")  // DODANE
+    suspend fun getEventByIdSuspend(id: Int): EventEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertEvents(events: List<EventEntity>)
+    suspend fun insert(event: EventEntity)
+
+    @Update
+    suspend fun update(event: EventEntity)
+
+    @Delete
+    suspend fun delete(event: EventEntity)
 }

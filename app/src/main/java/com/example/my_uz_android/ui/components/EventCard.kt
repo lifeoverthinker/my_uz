@@ -2,7 +2,6 @@ package com.example.my_uz_android.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +12,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,16 +23,15 @@ import com.example.my_uz_android.ui.theme.extendedColors
 
 @Composable
 fun EventCard(
-    event: EventEntity, // ZMIANA: Przyjmujemy obiekt entity
+    event: EventEntity,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val cardBackgroundColor = MaterialTheme.extendedColors.eventCardBackground
-    val isDarkTheme = isSystemInDarkTheme()
-    val contentColor = if (isDarkTheme) Color(0xFFE0E0E0) else Color(0xFF1D1B20)
 
-    val titleColor = contentColor
-    val descriptionColor = contentColor.copy(alpha = 0.8f)
+    // Używamy kolorów z motywu zamiast sztywnych wartości (jak w ClassCard)
+    val titleColor = MaterialTheme.colorScheme.onSurface
+    val detailsColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(
         modifier = modifier
@@ -67,7 +64,7 @@ fun EventCard(
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
                 letterSpacing = 0.4.sp,
-                color = descriptionColor
+                color = detailsColor
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
