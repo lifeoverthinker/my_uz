@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +35,7 @@ import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.DatePicker
 import com.example.my_uz_android.ui.components.TimePicker
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -51,7 +53,6 @@ fun TaskAddEditScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Load task if editing
     LaunchedEffect(taskId) {
         if (taskId != null && taskId != -1) {
             viewModel.loadTask(taskId)
@@ -60,16 +61,19 @@ fun TaskAddEditScreen(
 
     TaskAddEditContent(
         uiState = uiState,
-        taskId = taskId,
         onNavigateBack = onNavigateBack,
         onSaveTask = {
             viewModel.saveTask()
-            Toast.makeText(context, "Zadanie zapisane", Toast.LENGTH_SHORT).show()
-            onNavigateBack()
+            if (uiState.title.isNotBlank()) {
+                Toast.makeText(context, context.getString(R.string.task_saved), Toast.LENGTH_SHORT).show()
+                onNavigateBack()
+            } else {
+                Toast.makeText(context, context.getString(R.string.task_validation_error), Toast.LENGTH_SHORT).show()
+            }
         },
         onDeleteTask = {
             viewModel.deleteTask()
-            Toast.makeText(context, "Zadanie usunięte", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.task_deleted), Toast.LENGTH_SHORT).show()
             onNavigateBack()
         },
         onTitleChange = viewModel::updateTitle,
@@ -90,10 +94,9 @@ fun TaskAddEditScreen(
 @Composable
 fun TaskAddEditContent(
     uiState: TaskAddEditUiState,
-    taskId: Int?,
     onNavigateBack: () -> Unit,
     onSaveTask: () -> Unit,
-    onDeleteTask: () -> Unit,
+    onDeleteTask: () -> Unit, // Nieużywane w UI, ale potrzebne do logiki
     onTitleChange: (String) -> Unit,
     onSubjectChange: (String?) -> Unit,
     onClassTypeChange: (String?) -> Unit,
@@ -106,31 +109,29 @@ fun TaskAddEditContent(
     onDescriptionChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ✅ BIAŁA bottom section
-    val surfaceColor = Color.White
+    // ✅ Kolory dostosowane do Dark Mode
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
 
-    // Quick titles
     val quickTitles = listOf("Zadanie domowe", "Kolokwium", "Wejściówka", "Egzamin", "Projekt", "Prezentacja")
 
-    // Modal states
     var showSubjectModal by remember { mutableStateOf(false) }
     var showTypeModal by remember { mutableStateOf(false) }
     var showDatePickerStart by remember { mutableStateOf(false) }
     var showDatePickerEnd by remember { mutableStateOf(false) }
     var showTimePickerStart by remember { mutableStateOf(false) }
     var showTimePickerEnd by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
 
-    // Default values
     val startDate = uiState.startDate ?: LocalDate.now()
     val endDate = uiState.endDate ?: startDate
     val startTime = uiState.startTime ?: LocalTime.of(8, 0)
     val endTime = uiState.endTime ?: LocalTime.of(10, 0)
+
+    val isTypeSelectionEnabled = !uiState.classSubject.isNullOrEmpty()
 
     Surface(
         color = surfaceColor,
@@ -140,7 +141,7 @@ fun TaskAddEditContent(
             .statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // ========== HEADER ==========
+            // HEADER
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -148,7 +149,6 @@ fun TaskAddEditContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Close button
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -158,52 +158,24 @@ fun TaskAddEditContent(
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = "Zamknij",
+                        contentDescription = stringResource(R.string.btn_close),
                         tint = textColor,
-                        modifier = Modifier.size(24.dp) // ✅ 24dp jak w Details
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // ✅ Menu z opcją DELETE (zamiast przycisku na górze)
-                    if (taskId != null && taskId != -1) {
-                        Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_dots_vertical),
-                                    contentDescription = "Opcje",
-                                    tint = textColor,
-                                    modifier = Modifier.size(24.dp) // ✅ 24dp
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Usuń", fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
-                                    onClick = { onDeleteTask(); showMenu = false }
-                                )
-                            }
-                        }
-                    }
-
-                    // Save button
-                    Button(
-                        onClick = onSaveTask,
-                        enabled = uiState.title.isNotBlank(),
-                        shape = CircleShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = primaryColor,
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 24.dp),
-                        modifier = Modifier.height(48.dp)
-                    ) {
-                        Text("Zapisz", fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
-                    }
+                Button(
+                    onClick = onSaveTask,
+                    enabled = uiState.title.isNotBlank(),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primaryColor,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = PaddingValues(horizontal = 24.dp),
+                    modifier = Modifier.height(48.dp)
+                ) {
+                    Text(stringResource(R.string.btn_save), fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -213,7 +185,7 @@ fun TaskAddEditContent(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
-                // ========== 1. TYTUŁ ==========
+                // TYTUŁ
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -238,7 +210,7 @@ fun TaskAddEditContent(
                             decorationBox = { innerTextField ->
                                 if (uiState.title.isEmpty()) {
                                     Text(
-                                        text = "Dodaj tytuł",
+                                        text = stringResource(R.string.task_title_placeholder),
                                         style = TextStyle(
                                             fontFamily = InterFontFamily,
                                             fontSize = 28.sp,
@@ -257,7 +229,7 @@ fun TaskAddEditContent(
                 HorizontalDivider(color = dividerColor.copy(alpha = 0.5f))
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ========== QUICK CHIPS ==========
+                // QUICK CHIPS
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 76.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -282,7 +254,7 @@ fun TaskAddEditContent(
                                         fontFamily = InterFontFamily,
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 13.sp,
-                                        color = if (isSelected) Color.White else textColor
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor
                                     )
                                 )
                             }
@@ -293,21 +265,19 @@ fun TaskAddEditContent(
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(color = dividerColor)
 
-                // ========== 2. CAŁY DZIEŃ + DATA/CZAS ==========
+                // CAŁY DZIEŃ + DATA/CZAS (STYL GOOGLE CALENDAR)
                 CommonRow(iconRes = R.drawable.ic_clock, iconTint = iconTint) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        // Switch "Cały dzień"
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Cały dzień",
+                                text = stringResource(R.string.task_all_day),
                                 style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
                                 color = textColor
                             )
-
                             Switch(
                                 checked = uiState.isAllDay,
                                 onCheckedChange = onIsAllDayChange,
@@ -321,85 +291,34 @@ fun TaskAddEditContent(
                             )
                         }
 
-                        // Divider tylko gdy NIE cały dzień
-                        if (!uiState.isAllDay) {
-                            HorizontalDivider(color = dividerColor.copy(alpha = 0.5f))
-                        }
+                        // ✅ BRAK DIVIDERA - czysty układ
 
-                        // LOGIKA JAK W GOOGLE CALENDAR
-                        if (uiState.isAllDay) {
-                            // Tryb "Cały dzień" - DWA RZĘDY DAT
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                // Data początku
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { showDatePickerStart = true }
-                                        .padding(vertical = 12.dp)
-                                ) {
-                                    Text(
-                                        text = formatDateLong(startDate),
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                                        color = textColor
-                                    )
-                                }
+                        // ✅ RZĘDY: Data początkowa (wiersz 1), Data końcowa (wiersz 2)
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // Wiersz 1: Początek
+                            SimpleDateTimeRow(
+                                date = startDate,
+                                time = if (uiState.isAllDay) null else startTime,
+                                onDateClick = { showDatePickerStart = true },
+                                onTimeClick = { showTimePickerStart = true },
+                                textColor = textColor
+                            )
 
-                                // Data końca
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { showDatePickerEnd = true }
-                                        .padding(vertical = 12.dp)
-                                ) {
-                                    Text(
-                                        text = formatDateLong(endDate),
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                                        color = textColor
-                                    )
-                                }
-                            }
-                        } else {
-                            // Tryb zwykły - Data (lewa) + Czas (prawa) - JEDEN RZĄD
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                // DATA (lewa)
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { showDatePickerStart = true }
-                                        .padding(vertical = 12.dp)
-                                ) {
-                                    Text(
-                                        text = formatDateLong(startDate),
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                                        color = textColor
-                                    )
-                                }
-
-                                // CZAS (prawa)
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { showTimePickerStart = true }
-                                        .padding(vertical = 12.dp),
-                                    contentAlignment = Alignment.CenterEnd
-                                ) {
-                                    Text(
-                                        text = formatTime(startTime),
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                                        color = textColor
-                                    )
-                                }
-                            }
+                            // Wiersz 2: Koniec
+                            SimpleDateTimeRow(
+                                date = endDate,
+                                time = if (uiState.isAllDay) null else endTime,
+                                onDateClick = { showDatePickerEnd = true },
+                                onTimeClick = { showTimePickerEnd = true },
+                                textColor = textColor
+                            )
                         }
                     }
                 }
 
                 HorizontalDivider(color = dividerColor)
 
-                // ========== 3. PRZEDMIOT ==========
+                // PRZEDMIOT
                 CommonRow(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
                     Row(
                         modifier = Modifier
@@ -410,52 +329,55 @@ fun TaskAddEditContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = uiState.classSubject ?: "Przedmiot (opcjonalnie)",
+                            text = uiState.classSubject ?: stringResource(R.string.task_subject_label),
                             style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
                             color = if (uiState.classSubject == null) subTextColor else textColor
                         )
-
                         Icon(
                             painter = painterResource(R.drawable.ic_chevron_down),
                             contentDescription = null,
                             tint = subTextColor,
-                            modifier = Modifier.size(24.dp) // ✅ 24dp
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
 
                 HorizontalDivider(color = dividerColor)
 
-                // ========== 4. RODZAJ ==========
-                CommonRow(iconRes = R.drawable.ic_graduation_hat, iconTint = iconTint) {
+                // RODZAJ
+                CommonRow(
+                    iconRes = R.drawable.ic_graduation_hat,
+                    iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(alpha = 0.4f)
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                if (uiState.classSubject != null) showTypeModal = true
-                            }
+                            .clickable(enabled = isTypeSelectionEnabled) { showTypeModal = true }
                             .padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) }
+                            ?: stringResource(R.string.task_type_label)
                         Text(
-                            text = uiState.classType ?: "Rodzaj (opcjonalnie)",
+                            text = typeText,
                             style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                            color = if (uiState.classType == null) subTextColor else textColor
+                            color = if (!isTypeSelectionEnabled) subTextColor.copy(alpha = 0.4f)
+                            else if (uiState.classType == null) subTextColor
+                            else textColor
                         )
-
                         Icon(
                             painter = painterResource(R.drawable.ic_chevron_down),
                             contentDescription = null,
-                            tint = subTextColor,
-                            modifier = Modifier.size(24.dp) // ✅ 24dp
+                            tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(alpha = 0.4f),
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
 
                 HorizontalDivider(color = dividerColor)
 
-                // ========== 5. OPIS ==========
+                // OPIS
                 CommonRow(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
                     Box(modifier = Modifier.padding(vertical = 12.dp)) {
                         BasicTextField(
@@ -470,7 +392,7 @@ fun TaskAddEditContent(
                             decorationBox = { innerTextField ->
                                 if (uiState.description.isEmpty()) {
                                     Text(
-                                        "Dodaj opis",
+                                        stringResource(R.string.task_description_placeholder),
                                         style = MaterialTheme.typography.bodyLarge.copy(
                                             fontFamily = InterFontFamily,
                                             color = subTextColor
@@ -489,8 +411,7 @@ fun TaskAddEditContent(
             }
         }
 
-        // ========== DIALOGI ==========
-        // Date Picker - Start
+        // --- Dialogi ---
         if (showDatePickerStart) {
             DatePicker(
                 date = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
@@ -501,8 +422,6 @@ fun TaskAddEditContent(
                 onDismiss = { showDatePickerStart = false }
             )
         }
-
-        // Date Picker - End
         if (showDatePickerEnd) {
             DatePicker(
                 date = endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
@@ -513,8 +432,6 @@ fun TaskAddEditContent(
                 onDismiss = { showDatePickerEnd = false }
             )
         }
-
-        // Time Picker - Start
         if (showTimePickerStart) {
             TimePicker(
                 time = formatTime(startTime),
@@ -525,8 +442,6 @@ fun TaskAddEditContent(
                 onDismiss = { showTimePickerStart = false }
             )
         }
-
-        // Time Picker - End
         if (showTimePickerEnd) {
             TimePicker(
                 time = formatTime(endTime),
@@ -538,144 +453,79 @@ fun TaskAddEditContent(
             )
         }
 
-        // Subject Modal
+        // Modale - używają MaterialTheme.colorScheme.surface dla poprawnego tła
         if (showSubjectModal) {
             Dialog(onDismissRequest = { showSubjectModal = false }) {
                 Surface(
                     shape = RoundedCornerShape(28.dp),
                     color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 32.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
-                    LazyColumn(modifier = Modifier.padding(vertical = 24.dp)) {
+                    LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
                         item {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .selectable(
-                                        selected = uiState.classSubject == null,
-                                        onClick = {
-                                            onSubjectChange(null)
-                                            onClassTypeChange(null)
-                                            showSubjectModal = false
-                                        },
-                                        role = Role.RadioButton
-                                    )
+                                    .clickable { onSubjectChange(null); onClassTypeChange(null); showSubjectModal = false }
                                     .padding(horizontal = 24.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                RadioButton(
-                                    selected = uiState.classSubject == null,
-                                    onClick = null
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = "Brak",
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                                    color = textColor
-                                )
+                                RadioButton(selected = uiState.classSubject == null, onClick = null)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(stringResource(R.string.none), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
                             }
                         }
                         items(uiState.availableSubjects) { (subject, _) ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .selectable(
-                                        selected = uiState.classSubject == subject,
-                                        onClick = {
-                                            onSubjectChange(subject)
-                                            onClassTypeChange(null)
-                                            showSubjectModal = false
-                                        },
-                                        role = Role.RadioButton
-                                    )
+                                    .clickable { onSubjectChange(subject); onClassTypeChange(null); showSubjectModal = false }
                                     .padding(horizontal = 24.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                RadioButton(
-                                    selected = uiState.classSubject == subject,
-                                    onClick = null
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = subject,
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                                    color = textColor
-                                )
+                                RadioButton(selected = uiState.classSubject == subject, onClick = null)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(subject, style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
                             }
                         }
                     }
                 }
             }
         }
-
-        // Type Modal
         if (showTypeModal) {
             val selectedSubject = uiState.availableSubjects.find { it.first == uiState.classSubject }
             val availableTypes = selectedSubject?.second ?: emptyList()
-
             Dialog(onDismissRequest = { showTypeModal = false }) {
                 Surface(
                     shape = RoundedCornerShape(28.dp),
                     color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 32.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
-                    LazyColumn(modifier = Modifier.padding(vertical = 24.dp)) {
+                    LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
                         item {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .selectable(
-                                        selected = uiState.classType == null,
-                                        onClick = {
-                                            onClassTypeChange(null)
-                                            showTypeModal = false
-                                        },
-                                        role = Role.RadioButton
-                                    )
+                                    .clickable { onClassTypeChange(null); showTypeModal = false }
                                     .padding(horizontal = 24.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                RadioButton(
-                                    selected = uiState.classType == null,
-                                    onClick = null
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = "Brak",
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                                    color = textColor
-                                )
+                                RadioButton(selected = uiState.classType == null, onClick = null)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(stringResource(R.string.none), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
                             }
                         }
                         items(availableTypes) { type ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .selectable(
-                                        selected = uiState.classType == type,
-                                        onClick = {
-                                            onClassTypeChange(type)
-                                            showTypeModal = false
-                                        },
-                                        role = Role.RadioButton
-                                    )
+                                    .clickable { onClassTypeChange(type); showTypeModal = false }
                                     .padding(horizontal = 24.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                RadioButton(
-                                    selected = uiState.classType == type,
-                                    onClick = null
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = type,
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                                    color = textColor
-                                )
+                                RadioButton(selected = uiState.classType == type, onClick = null)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(ClassTypeUtils.getFullName(type), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
                             }
                         }
                     }
@@ -685,7 +535,52 @@ fun TaskAddEditContent(
     }
 }
 
-// ========== HELPER COMPONENTS ==========
+// ✅ KOMPONENT STYLIZOWANY NA GOOGLE CALENDAR (Bez etykiet)
+@Composable
+private fun SimpleDateTimeRow(
+    date: LocalDate,
+    time: LocalTime? = null,
+    onDateClick: () -> Unit,
+    onTimeClick: (() -> Unit)? = null,
+    textColor: Color
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Data
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onDateClick() }
+                .padding(vertical = 12.dp)
+        ) {
+            Text(
+                text = formatDateLong(date),
+                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                color = textColor
+            )
+        }
+
+        // Czas (jeśli istnieje)
+        if (time != null && onTimeClick != null) {
+            Box(
+                modifier = Modifier
+                    .weight(0.6f)
+                    .clickable { onTimeClick() }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    text = formatTime(time),
+                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                    color = textColor
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun CommonRow(
     iconRes: Int,
@@ -698,28 +593,16 @@ fun CommonRow(
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Box(
-            modifier = Modifier.size(48.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(24.dp) // ✅ 24dp jak w Details
-            )
+        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconTint, modifier = Modifier.size(24.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.TopStart
-        ) {
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopStart) {
             content()
         }
     }
 }
 
-// ========== HELPER FUNCTIONS ==========
 private fun formatDateLong(date: LocalDate): String {
     return try {
         val formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale("pl"))
@@ -731,16 +614,4 @@ private fun formatDateLong(date: LocalDate): String {
 
 private fun formatTime(time: LocalTime): String {
     return String.format("%02d:%02d", time.hour, time.minute)
-}
-
-// ========== COMPOSE PREVIEW ==========
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
-@Composable
-fun TaskAddEditScreenPreview() {
-    com.example.my_uz_android.ui.theme.MyUZTheme {
-        TaskAddEditScreen(
-            taskId = null,
-            onNavigateBack = { }
-        )
-    }
 }

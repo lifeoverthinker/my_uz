@@ -16,13 +16,15 @@ class AccountViewModel(
     private val classRepository: ClassRepository
 ) : ViewModel() {
 
-    // UI State
     private val _uiState = MutableStateFlow(AccountUiState())
     val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
 
-    // Flows dla AccountScreen
-    val settings: StateFlow<SettingsEntity?> = settingsRepository.getSettingsStream()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    private val _settings = MutableStateFlow<SettingsEntity?>(null)
+    val settings: StateFlow<SettingsEntity?> = _settings.asStateFlow()
+
+    // ✅ Flaga: true oznacza, że próba odczytu się zakończyła (niezależnie czy znaleziono dane)
+    private val _isSettingsLoaded = MutableStateFlow(false)
+    val isSettingsLoaded: StateFlow<Boolean> = _isSettingsLoaded.asStateFlow()
 
     private val _groupSearchQuery = MutableStateFlow("")
     val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
@@ -48,28 +50,32 @@ class AccountViewModel(
     private var allGroupCodes: List<String> = emptyList()
 
     init {
-        Log.d("AccountViewModel", "🟢 ViewModel CREATED")
+        loadSettings()
+        loadGroupCodes()
+    }
 
-        // Obserwuj ustawienia z bazy
+    private fun loadSettings() {
         viewModelScope.launch {
-            settingsRepository.getSettingsStream().collect { settings ->
-                if (settings != null) {
+            settingsRepository.getSettingsStream().collect { retrievedSettings ->
+                _settings.value = retrievedSettings
+
+                if (retrievedSettings != null) {
                     _uiState.update { currentState ->
                         currentState.copy(
-                            // POPRAWKA: Użycie selectedGroupCode i selectedSubgroup
-                            selectedGroupCode = settings.selectedGroupCode ?: "",
-                            selectedSubgroup = settings.selectedSubgroup ?: "",
-                            isDarkMode = settings.isDarkMode
+                            // ✅ Fix: Bezpieczne rozpakowanie nulla
+                            selectedGroupCode = retrievedSettings.selectedGroupCode ?: "",
+                            selectedSubgroup = retrievedSettings.selectedSubgroup ?: "",
+                            isDarkMode = retrievedSettings.isDarkMode
                         )
                     }
-                    _draftSelectedGroup.value = settings.selectedGroupCode
-                    _draftSubgroups.value = settings.selectedSubgroup?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+                    _draftSelectedGroup.value = retrievedSettings.selectedGroupCode
+                    _draftSubgroups.value = retrievedSettings.selectedSubgroup?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
                 }
+
+                // ✅ Ważne: Odznaczamy flagę ładowania nawet jak settings == null (nowy user)
+                _isSettingsLoaded.value = true
             }
         }
-
-        // Pobierz listę grup
-        loadGroupCodes()
     }
 
     private fun loadGroupCodes() {
@@ -77,7 +83,6 @@ class AccountViewModel(
             try {
                 _isLoading.value = true
                 allGroupCodes = universityRepository.getGroupCodes()
-                Log.d("AccountViewModel", "Loaded ${allGroupCodes.size} group codes")
             } catch (e: Exception) {
                 Log.e("AccountViewModel", "Error loading group codes", e)
             } finally {
@@ -88,7 +93,6 @@ class AccountViewModel(
 
     fun onSearchQueryChange(query: String) {
         _groupSearchQuery.value = query
-
         if (query.isBlank()) {
             _filteredGroups.value = emptyList()
         } else {
@@ -99,12 +103,9 @@ class AccountViewModel(
     }
 
     fun selectGroup(groupCode: String) {
-        Log.d("AccountViewModel", "🔵 Select group: $groupCode")
         _draftSelectedGroup.value = groupCode
         _groupSearchQuery.value = groupCode
         _filteredGroups.value = emptyList()
-
-        // Pobierz podgrupy dla wybranej grupy
         loadSubgroupsForGroup(groupCode)
     }
 
@@ -114,9 +115,7 @@ class AccountViewModel(
                 _isLoading.value = true
                 val subgroups = universityRepository.getSubgroups(groupCode)
                 _availableSubgroups.value = subgroups
-                Log.d("AccountViewModel", "Loaded subgroups for $groupCode: $subgroups")
             } catch (e: Exception) {
-                Log.e("AccountViewModel", "Error loading subgroups", e)
                 _availableSubgroups.value = emptyList()
             } finally {
                 _isLoading.value = false
@@ -132,35 +131,27 @@ class AccountViewModel(
             current.add(subgroup)
         }
         _draftSubgroups.value = current
-        Log.d("AccountViewModel", "Toggled subgroup $subgroup, current: $current")
     }
 
     fun saveChanges() {
-        Log.d("AccountViewModel", "🔴 SAVE CHANGES CALLED")
         val groupCode = _draftSelectedGroup.value ?: return
         val subgroups = _draftSubgroups.value
 
         viewModelScope.launch {
             try {
                 _isLoading.value = true
+                val currentSettings = _settings.value ?: SettingsEntity()
 
-                // Zapisz ustawienia
-                val settings = SettingsEntity(
-                    id = 1,
-                    // POPRAWKA: Użycie nazw z SettingsEntity
+                val newSettings = currentSettings.copy(
                     selectedGroupCode = groupCode,
                     selectedSubgroup = subgroups.joinToString(","),
                     isDarkMode = _uiState.value.isDarkMode
                 )
-                settingsRepository.insertSettings(settings)
 
-                // Pobierz i zapisz plan zajęć
+                settingsRepository.insertSettings(newSettings)
                 refreshSchedule(groupCode, subgroups)
-
                 _saveMessage.value = "✅ Zapisano! Plan został zaktualizowany."
-                Log.d("AccountViewModel", "✅ Settings saved successfully")
             } catch (e: Exception) {
-                Log.e("AccountViewModel", "❌ Error saving settings", e)
                 _saveMessage.value = "❌ Błąd zapisu: ${e.message}"
             } finally {
                 _isLoading.value = false
@@ -169,15 +160,9 @@ class AccountViewModel(
     }
 
     private suspend fun refreshSchedule(groupCode: String, subgroups: List<String>) {
-        try {
-            val schedule = universityRepository.getSchedule(groupCode, subgroups)
-            classRepository.deleteAllClasses()
-            classRepository.insertClasses(schedule)
-            Log.d("AccountViewModel", "✅ Schedule refreshed: ${schedule.size} classes")
-        } catch (e: Exception) {
-            Log.e("AccountViewModel", "❌ Error refreshing schedule", e)
-            throw e
-        }
+        val schedule = universityRepository.getSchedule(groupCode, subgroups)
+        classRepository.deleteAllClasses()
+        classRepository.insertClasses(schedule)
     }
 
     fun clearSaveMessage() {
@@ -187,13 +172,9 @@ class AccountViewModel(
     fun toggleDarkMode(enabled: Boolean) {
         viewModelScope.launch {
             _uiState.update { it.copy(isDarkMode = enabled) }
-
-            // Zapisz do bazy
             val current = settings.value
             if (current != null) {
-                settingsRepository.insertSettings(
-                    current.copy(isDarkMode = enabled)
-                )
+                settingsRepository.insertSettings(current.copy(isDarkMode = enabled))
             }
         }
     }
