@@ -1,28 +1,32 @@
 package com.example.my_uz_android.data.daos
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.*
 import com.example.my_uz_android.data.models.TaskEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TasksDao {
-    @Query("SELECT * FROM tasks")
+    @Query("SELECT * FROM tasks ORDER BY dueDate DESC")
     fun getAllTasks(): Flow<List<TaskEntity>>
 
     @Query("SELECT * FROM tasks WHERE id = :id")
-    suspend fun getTask(id: Int): TaskEntity?
+    fun getTaskById(id: Int): Flow<TaskEntity?>
+
+    @Query("SELECT * FROM tasks WHERE id = :id")  // DODANE
+    suspend fun getTaskByIdSuspend(id: Int): TaskEntity?
+
+    @Query("SELECT * FROM tasks WHERE isCompleted = 0 ORDER BY dueDate ASC")
+    fun getIncompleteTasks(): Flow<List<TaskEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(task: TaskEntity)
 
+    @Update
+    suspend fun update(task: TaskEntity)
+
     @Delete
     suspend fun delete(task: TaskEntity)
 
-    @Update
-    suspend fun update(task: TaskEntity)
+    @Query("DELETE FROM tasks")
+    suspend fun deleteAll()
 }

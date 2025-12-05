@@ -5,21 +5,22 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "settings")
 data class SettingsEntity(
-    @PrimaryKey
-    val id: Int = 0,
-    val userName: String = "Student",
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val isAnonymous: Boolean = false,
-    // Dodane pole płci
-    val gender: String? = null,
-
+    val userName: String = "Student",
+    val gender: String? = null, // "STUDENT" lub "STUDENTKA"
     val selectedGroupCode: String? = null,
     val selectedSubgroup: String? = null,
-
     val faculty: String? = null,
     val fieldOfStudy: String? = null,
     val studyMode: String? = null,
-
     val isFirstRun: Boolean = true,
     val isDarkMode: Boolean = false,
     val notificationsEnabled: Boolean = true
-)
+) {
+    // ✅ Clean Code: Stałe zamiast "magic strings"
+    companion object {
+        const val GENDER_MALE = "STUDENT"
+        const val GENDER_FEMALE = "STUDENTKA"
+    }
+}

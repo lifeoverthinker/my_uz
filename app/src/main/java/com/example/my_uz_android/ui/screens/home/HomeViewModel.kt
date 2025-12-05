@@ -3,6 +3,7 @@ package com.example.my_uz_android.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
@@ -16,10 +17,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 data class HomeUiState(
@@ -27,9 +26,12 @@ data class HomeUiState(
     val departmentInfo: String = "",
     val upcomingClasses: List<ClassEntity> = emptyList(),
     val upcomingTasks: List<TaskEntity> = emptyList(),
+    val upcomingEvents: List<EventEntity> = emptyList(),
+    val isLoading: Boolean = false,
     val currentDate: String = "",
     val tasksMessage: String? = null,
-    val classesMessage: String? = null
+    val classesMessage: String? = null,
+    val classesDayLabel: String? = null // NOWE: "Dzisiaj" lub "Jutro"
 )
 
 class HomeViewModel(
@@ -49,6 +51,7 @@ class HomeViewModel(
 
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
+        val tomorrow = today.plusDays(1)
 
         val userName = settings?.userName ?: "Student"
         val isAnonymous = settings?.isAnonymous == true
@@ -86,26 +89,55 @@ class HomeViewModel(
             classes
         }
 
+        // ZMIANA: Najpierw sprawdzamy dzisiejsze zajęcia
         val todaysClasses = effectiveClasses.filter { classEntity ->
             classEntity.dayOfWeek == today.dayOfWeek.value
         }.sortedBy { it.startTime }
 
-        val classesMsg = if (todaysClasses.isEmpty()) "Brak zajęć na dzisiaj" else null
+        // ZMIANA: Jeśli nie ma dzisiaj, sprawdzamy jutrzejsze
+        val tomorrowsClasses = effectiveClasses.filter { classEntity ->
+            classEntity.dayOfWeek == tomorrow.dayOfWeek.value
+        }.sortedBy { it.startTime }
 
-        // Sortowanie: Najpierw nieukończone, potem po dacie
+        // ZMIANA: Wybieramy które zajęcia pokazać i ustalamy label
+        val (displayedClasses, dayLabel, emptyMessage) = when {
+            todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
+            tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
+            else -> Triple(emptyList(), null, "Brak zajęć na dzisiaj")
+        }
+
         val finalTasks = tasks
             .sortedWith(compareBy<TaskEntity> { it.isCompleted }.thenBy { it.dueDate })
             .take(10)
 
+        val mockEvents = listOf(
+            EventEntity(
+                title = "Juwenalia 2025",
+                description = "Największa impreza roku!",
+                date = "2025-05-20",
+                location = "Kampus A",
+                timeRange = "18:00 - 02:00"
+            ),
+            EventEntity(
+                title = "Targi Pracy",
+                description = "Oferty staży IT",
+                date = "2025-06-01",
+                location = "Aula C",
+                timeRange = "10:00 - 15:00"
+            )
+        )
+
         HomeUiState(
             greeting = greeting,
             departmentInfo = departmentInfo,
-            upcomingClasses = todaysClasses,
+            upcomingClasses = displayedClasses,
             upcomingTasks = finalTasks,
+            upcomingEvents = mockEvents,
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },
-            classesMessage = classesMsg,
-            // POPRAWKA: Usunięto licznik, tylko tekst "Zadania"
-            tasksMessage = "Zadania"
+            classesMessage = emptyMessage,
+            classesDayLabel = dayLabel, // NOWE: Label "Dzisiaj" lub "Jutro"
+            tasksMessage = "Zadania",
+            isLoading = false
         )
     }.stateIn(
         scope = viewModelScope,
@@ -120,19 +152,13 @@ class HomeViewModel(
                 tasksRepository.insertTask(
                     TaskEntity(
                         title = "Projekt Zaliczeniowy",
-                        description = "Dokończyć implementację ekranu szczegółów w aplikacji mobilnej.",
+                        description = "Dokończyć implementację aplikacji.",
                         dueDate = System.currentTimeMillis() + 172800000L,
                         isCompleted = false,
                         subjectId = null
                     )
                 )
             }
-        }
-    }
-
-    fun toggleTaskCompletion(task: TaskEntity, isCompleted: Boolean) {
-        viewModelScope.launch {
-            tasksRepository.updateTask(task.copy(isCompleted = isCompleted))
         }
     }
 }

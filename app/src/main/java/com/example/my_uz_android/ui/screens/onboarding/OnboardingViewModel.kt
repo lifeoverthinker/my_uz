@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.SettingsEntity
+import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +27,8 @@ enum class UserGender {
 
 class OnboardingViewModel(
     private val settingsRepository: SettingsRepository,
-    private val universityRepository: UniversityRepository
+    private val universityRepository: UniversityRepository,
+    private val classRepository: ClassRepository // POPRAWKA: Dodano brakujące repozytorium (naprawia crash)
 ) : ViewModel() {
 
     private val TAG = "OnboardingViewModel"
@@ -101,13 +103,13 @@ class OnboardingViewModel(
     }
 
     // --- ZAPIS DANYCH Z ONBOARDINGU ---
-    fun saveOnboardingData() {
+    fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
             val isAnonymous = _selectedMode.value == OnboardingMode.ANONYMOUS
             val groupCode = _selectedGroup.value
 
-            // 1. Pobierz szczegóły grupy (Wydział, Kierunek) z Supabase
+            // 1. Pobierz szczegóły grupy
             var faculty: String? = null
             var fieldOfStudy: String? = null
             var studyMode: String? = null
@@ -121,16 +123,24 @@ class OnboardingViewModel(
                             faculty = info.faculty
                             fieldOfStudy = info.name
                         }
-                        Log.d(TAG, "Pobrano dane grupy: $faculty, $fieldOfStudy")
                     }
+
+                    // POPRAWKA: Nowa logika - Pobieranie i zapisywanie planu zajęć
+                    val subgroups = _selectedSubgroups.value.toList()
+                    val schedule = universityRepository.getSchedule(groupCode, subgroups)
+
+                    classRepository.deleteAllClasses()
+                    classRepository.insertClasses(schedule)
+                    Log.d(TAG, "✅ Zapisano ${schedule.size} zajęć")
+
                 } catch (e: Exception) {
-                    Log.e(TAG, "Nie udało się pobrać szczegółów grupy", e)
+                    Log.e(TAG, "❌ Błąd pobierania danych/planu", e)
                 }
             }
 
-            // 2. Zapisz wszystko w lokalnej bazie
+            // 2. Zapisz ustawienia
             val settings = SettingsEntity(
-                id = 0, // ID=0 dla SettingsDao
+                id = 0,
                 isAnonymous = isAnonymous,
                 userName = if (isAnonymous) "Student" else _userName.value,
                 gender = _selectedGender.value.name,
@@ -146,22 +156,23 @@ class OnboardingViewModel(
 
             settingsRepository.insertSettings(settings)
             _isLoading.value = false
+
+            // Wywołaj callback nawigacji dopiero po zakończeniu zapisu
+            onSuccess()
         }
     }
 
-    // --- FUNKCJA POMIJANIA ONBOARDINGU ---
     fun skipOnboarding() {
         viewModelScope.launch {
             _isLoading.value = true
-            // Zapisujemy domyślne dane dla "Gościa"
             val defaultSettings = SettingsEntity(
                 id = 0,
-                isAnonymous = false, // false, aby wyświetlić imię "Gościu" zamiast "Studencie"
+                isAnonymous = false,
                 userName = "Gościu",
                 gender = null,
                 selectedGroupCode = null,
                 selectedSubgroup = null,
-                faculty = null, // HomeViewModel wyświetli "Uniwersytet Zielonogórski"
+                faculty = null,
                 fieldOfStudy = null,
                 studyMode = null,
                 isFirstRun = false,
