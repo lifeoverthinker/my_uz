@@ -1,3 +1,41 @@
 <resources>
-    <string name="app_name">my_uz_android</string>
+    <string name="app_name">MyUZ Android</string>
+
+    <string name="btn_save">Zapisz</string>
+    <string name="btn_cancel">Anuluj</string>
+    <string name="btn_close">Zamknij</string>
+    <string name="btn_back">Wstecz</string>
+    <string name="btn_next">Dalej</string>
+    <string name="btn_delete">Usuń</string>
+    <string name="btn_duplicate">Duplikuj</string>
+    <string name="btn_edit">Edytuj</string>
+    <string name="options_menu">Opcje</string>
+
+    <string name="task_title_placeholder">Dodaj tytuł</string>
+    <string name="task_description_placeholder">Dodaj opis</string>
+    <string name="task_all_day">Cały dzień</string>
+    <string name="task_start_date">Początek</string>
+    <string name="task_end_date">Koniec</string>
+    <string name="task_subject_label">Przedmiot (opcjonalnie)</string>
+    <string name="task_type_label">Rodzaj (opcjonalnie)</string>
+    <string name="task_saved">Zadanie zapisane</string>
+    <string name="task_deleted">Zadanie usunięte</string>
+    <string name="task_validation_error">Podaj tytuł</string>
+    <string name="task_details_title">Szczegóły Zadania</string>
+    <string name="task_status_completed">Zakończone</string>
+    <string name="task_status_in_progress">W toku</string>
+    <string name="task_mark_incomplete">Oznacz jako nieukończone</string>
+    <string name="task_mark_complete">Oznacz jako ukończone</string>
+    <string name="task_no_date">Brak terminu</string>
+    <string name="task_not_found">Nie znaleziono zadania</string>
+    <string name="label_subject">PRZEDMIOT</string>
+    <string name="label_type">RODZAJ ZAJĘĆ</string>
+    <string name="label_description">OPIS</string>
+    <string name="label_status">STATUS</string>
+    <string name="none">Brak</string>
+
+    <string name="tasks_screen_title">Terminarz</string>
+    <string name="tasks_empty_title">Brak zadań</string>
+    <string name="tasks_today">Dziś</string>
+    <string name="tasks_tomorrow">Jutro</string>
 </resources>

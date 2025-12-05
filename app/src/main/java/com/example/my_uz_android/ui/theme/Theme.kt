@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+// Pobieranie kolorów z Color.kt
 private val LightColors = lightColorScheme(
     primary = md_theme_light_primary,
     onPrimary = md_theme_light_onPrimary,
@@ -97,17 +98,18 @@ data class ExtendedColors(
     val customGreen: Color = Color.Unspecified,
     val customOrange: Color = Color.Unspecified,
     val customBlue: Color = Color.Unspecified,
-    // Specjalne kolory kart
     val classCardBackground: Color = Color.Unspecified,
     val eventCardBackground: Color = Color.Unspecified,
-    // Ekran główny
     val homeHeaderBackground: Color = Color.Unspecified,
     val homeContentBackground: Color = Color.Unspecified,
-    // Nawigacja
+    val homeTopBackground: Color = Color.Unspecified,
+    val buttonBackground: Color = Color.Unspecified,
+    val iconText: Color = Color.Unspecified,
     val navBackground: Color = Color.Unspecified,
     val navBorder: Color = Color.Unspecified,
     val navActive: Color = Color.Unspecified,
-    val navInactive: Color = Color.Unspecified
+    val navInactive: Color = Color.Unspecified,
+    val grayInactive: Color = Color.Unspecified
 )
 
 val LocalExtendedColors = staticCompositionLocalOf { ExtendedColors() }
@@ -118,29 +120,24 @@ fun MyUZTheme(
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColors
-        else -> LightColors
-    }
-
     val extendedColors = if (darkTheme) {
         ExtendedColors(
             customRed = custom_red_dark,
             customGreen = custom_green_dark,
             customOrange = custom_orange_dark,
             customBlue = custom_blue_dark,
-            classCardBackground = card_class_dark, // DARK
-            eventCardBackground = card_event_dark, // DARK
+            classCardBackground = card_class_dark,
+            eventCardBackground = card_event_dark,
             homeHeaderBackground = home_header_dark,
             homeContentBackground = home_content_dark,
+            homeTopBackground = home_top_background_dark,
+            buttonBackground = button_background_dark,
+            iconText = icon_text_dark,
             navBackground = nav_dark_background,
             navBorder = nav_dark_border,
             navActive = nav_dark_active,
-            navInactive = nav_dark_inactive
+            navInactive = nav_dark_inactive,
+            grayInactive = Color(0xFF9E9E9E)
         )
     } else {
         ExtendedColors(
@@ -148,15 +145,28 @@ fun MyUZTheme(
             customGreen = custom_green_light,
             customOrange = custom_orange_light,
             customBlue = custom_blue_light,
-            classCardBackground = card_class_light, // LIGHT (E8DEF8)
-            eventCardBackground = card_event_light, // LIGHT (DAF5D7)
+            classCardBackground = card_class_light,
+            eventCardBackground = card_event_light,
             homeHeaderBackground = home_header_light,
             homeContentBackground = home_content_light,
+            homeTopBackground = home_top_background_light,
+            buttonBackground = button_background_light,
+            iconText = icon_text_light,
             navBackground = nav_light_background,
             navBorder = nav_light_border,
             navActive = nav_light_active,
-            navInactive = nav_light_inactive
+            navInactive = nav_light_inactive,
+            grayInactive = Color(0xFFBDBDBD)
         )
+    }
+
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        darkTheme -> DarkColors
+        else -> LightColors
     }
 
     val view = LocalView.current

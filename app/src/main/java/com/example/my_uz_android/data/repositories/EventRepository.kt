@@ -5,6 +5,16 @@ import com.example.my_uz_android.data.models.EventEntity
 import kotlinx.coroutines.flow.Flow
 
 class EventRepository(private val eventDao: EventDao) {
-    fun getEventById(id: Int): Flow<EventEntity?> = eventDao.getEventById(id)
-    suspend fun insertEvents(events: List<EventEntity>) = eventDao.insertEvents(events)
+
+    fun getAllEvents(): Flow<List<EventEntity>> = eventDao.getAllEvents()
+
+    fun getEventByIdStream(id: Int): Flow<EventEntity?> = eventDao.getEventById(id)
+
+    suspend fun getEventById(id: Int): EventEntity? = eventDao.getEventByIdSuspend(id)  // DODANE
+
+    suspend fun insertEvent(event: EventEntity) = eventDao.insert(event)
+
+    suspend fun updateEvent(event: EventEntity) = eventDao.update(event)
+
+    suspend fun deleteEvent(event: EventEntity) = eventDao.delete(event)
 }

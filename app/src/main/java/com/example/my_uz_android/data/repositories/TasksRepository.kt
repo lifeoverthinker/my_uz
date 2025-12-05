@@ -6,14 +6,21 @@ import kotlinx.coroutines.flow.Flow
 
 class TasksRepository(private val tasksDao: TasksDao) {
 
-    // Strumień wszystkich zadań (naprawia błąd Unresolved reference)
-    fun getTasksStream(): Flow<List<TaskEntity>> = tasksDao.getAllTasks()
+    fun getAllTasks(): Flow<List<TaskEntity>> = tasksDao.getAllTasks()
+
+    fun getTasksStream(): Flow<List<TaskEntity>> = tasksDao.getAllTasks()  // DODANE
+
+    fun getTaskByIdStream(id: Int): Flow<TaskEntity?> = tasksDao.getTaskById(id)
+
+    suspend fun getTask(id: Int): TaskEntity? = tasksDao.getTaskByIdSuspend(id)  // DODANE
+
+    suspend fun getTaskById(id: Int): TaskEntity? = tasksDao.getTaskByIdSuspend(id)
 
     suspend fun insertTask(task: TaskEntity) = tasksDao.insert(task)
 
-    suspend fun deleteTask(task: TaskEntity) = tasksDao.delete(task)
-
     suspend fun updateTask(task: TaskEntity) = tasksDao.update(task)
 
-    suspend fun getTask(id: Int): TaskEntity? = tasksDao.getTask(id)
+    suspend fun deleteTask(task: TaskEntity) = tasksDao.delete(task)
+
+    suspend fun deleteAllTasks() = tasksDao.deleteAll()
 }

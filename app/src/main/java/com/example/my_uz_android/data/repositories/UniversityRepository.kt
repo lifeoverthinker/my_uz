@@ -1,18 +1,33 @@
 package com.example.my_uz_android.data.repositories
 
+import android.util.Log
+import com.example.my_uz_android.data.models.ClassEntity
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
-// --- KONTRAKT ---
 interface UniversityRepository {
     suspend fun getGroupCodes(): List<String>
     suspend fun getSubgroups(groupCode: String): List<String>
+    suspend fun getSchedule(groupCode: String, subgroups: List<String>): List<ClassEntity>
     suspend fun getGroupDetails(groupCode: String): GroupDetailsDto?
 }
 
-// --- MODELE DANYCH (DTO) ---
+// --- DTO ---
+@Serializable
+data class ClassScheduleDto(
+    @SerialName("id") val id: String,
+    @SerialName("przedmiot") val subjectName: String,
+    @SerialName("rz") val classType: String,
+    @SerialName("od") val startDateTime: String,
+    @SerialName("do_") val endDateTime: String,
+    @SerialName("miejsce") val room: String?,
+    @SerialName("podgrupa") val subgroup: String?,
+    @SerialName("nauczyciel") val teacher: String?
+)
 
 @Serializable
 data class GroupCodeDto(@SerialName("kod_grupy") val code: String)
@@ -20,65 +35,166 @@ data class GroupCodeDto(@SerialName("kod_grupy") val code: String)
 @Serializable
 data class SubgroupDto(@SerialName("podgrupa") val subgroup: String)
 
-// Struktura do pobrania szczegółów grupy (z relacją do kierunków)
 @Serializable
 data class GroupDetailsDto(
-    @SerialName("kod_grupy") val groupCode: String,
-    @SerialName("tryb_studiow") val studyMode: String,
-    // Relacja z tabelą kierunki
-    @SerialName("kierunki") val fieldInfo: FieldOfStudyDto? = null
+    @SerialName("tryb_studiow") val studyMode: String?,
+    @SerialName("kierunki") val fieldInfo: FieldOfStudyDto?
 )
 
 @Serializable
 data class FieldOfStudyDto(
-    @SerialName("nazwa") val name: String,
-    @SerialName("wydzial") val faculty: String
+    @SerialName("wydzial") val faculty: String?,
+    @SerialName("nazwa") val name: String?
 )
 
-// --- IMPLEMENTACJA ---
+// --- Implementacja ---
 class SupabaseUniversityRepository(private val supabase: Postgrest) : UniversityRepository {
 
     override suspend fun getGroupCodes(): List<String> {
-        return supabase.from("grupy")
-            .select(columns = Columns.list("kod_grupy"))
-            .decodeList<GroupCodeDto>()
-            .map { it.code }
-            .distinct()
-            .sorted()
+        return try {
+            supabase.from("grupy")
+                .select(columns = Columns.list("kod_grupy"))
+                .decodeList<GroupCodeDto>()
+                .map { it.code }
+                .distinct()
+                .sorted()
+        } catch (e: Exception) {
+            Log.e("UniversityRepo", "Błąd pobierania kodów grup", e)
+            emptyList()
+        }
     }
 
     override suspend fun getSubgroups(groupCode: String): List<String> {
-        return supabase.from("zajecia_grupy")
-            .select(columns = Columns.list("podgrupa", "grupy!inner(kod_grupy)")) {
-                filter {
-                    eq("grupy.kod_grupy", groupCode)
-                    neq("podgrupa", "")
-                    neq("podgrupa", "null")
-                }
-            }
-            .decodeList<SubgroupDto>()
-            .map { it.subgroup }
-            .distinct()
-            .sorted()
-    }
-
-    // NOWA METODA: Pobiera szczegóły grupy + kierunek + wydział
-    override suspend fun getGroupDetails(groupCode: String): GroupDetailsDto? {
         return try {
-            // Select: wybierz kod_grupy, tryb_studiow oraz złączoną tabelę kierunki (nazwa, wydzial)
-            // Zakładamy, że w Supabase relacja nazywa się 'kierunki' (zgodnie z nazwą tabeli)
-            val result = supabase.from("grupy")
-                .select(columns = Columns.list("kod_grupy", "tryb_studiow", "kierunki(nazwa, wydzial)")) {
+            val grupaIdResult = supabase.from("grupy")
+                .select(columns = Columns.list("id")) {
+                    filter { eq("kod_grupy", groupCode) }
+                }
+                .decodeSingleOrNull<Map<String, String>>()
+
+            val grupaId = grupaIdResult?.get("id") ?: return emptyList()
+
+            val result = supabase.from("zajecia_grupy")
+                .select(columns = Columns.list("podgrupa")) {
                     filter {
-                        eq("kod_grupy", groupCode)
+                        eq("grupa_id", grupaId)
+                        neq("podgrupa", "")
                     }
                 }
-                .decodeSingleOrNull<GroupDetailsDto>()
+                .decodeList<SubgroupDto>()
+                .map { it.subgroup }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .sorted()
 
+            Log.d("UniversityRepo", "Pobrano podgrupy dla $groupCode: $result")
             result
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("UniversityRepo", "Błąd pobierania podgrup", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun getGroupDetails(groupCode: String): GroupDetailsDto? {
+        return try {
+            supabase.from("grupy")
+                .select(columns = Columns.raw("tryb_studiow, kierunki(wydzial, nazwa)")) {
+                    filter { eq("kod_grupy", groupCode) }
+                }
+                .decodeSingleOrNull<GroupDetailsDto>()
+        } catch (e: Exception) {
+            Log.e("UniversityRepo", "Błąd pobierania szczegółów grupy: $groupCode", e)
             null
+        }
+    }
+
+    override suspend fun getSchedule(
+        groupCode: String,
+        subgroups: List<String>
+    ): List<ClassEntity> {
+        return try {
+            Log.d("UniversityRepo", "🔍 Pobieram zajęcia dla $groupCode, podgrupy: $subgroups")
+
+            // 1. Pobierz ID grupy
+            val grupaIdResult = supabase.from("grupy")
+                .select(columns = Columns.list("id")) {
+                    filter { eq("kod_grupy", groupCode) }
+                }
+                .decodeSingleOrNull<Map<String, String>>()
+
+            val grupaId = grupaIdResult?.get("id")
+                ?: throw Exception("Nie znaleziono grupy: $groupCode")
+
+            // 2. POPRAWIONE: Pobierz zajęcia z filtrowaniem podgrup w SQL
+            val scheduleDto = if (subgroups.isEmpty()) {
+                // Jeśli nie wybrano podgrup - pokaż WSZYSTKIE (łącznie z ogólnymi)
+                supabase.from("zajecia_grupy")
+                    .select(
+                        columns = Columns.list(
+                            "id", "przedmiot", "rz", "od", "do_",
+                            "miejsce", "podgrupa", "nauczyciel"
+                        )
+                    ) {
+                        filter {
+                            eq("grupa_id", grupaId)
+                            neq("rz", "E") // Bez egzaminów
+                        }
+                    }
+                    .decodeList<ClassScheduleDto>()
+            } else {
+                // Jeśli wybrano podgrupy - filtruj w SQL
+                supabase.from("zajecia_grupy")
+                    .select(
+                        columns = Columns.list(
+                            "id", "przedmiot", "rz", "od", "do_",
+                            "miejsce", "podgrupa", "nauczyciel"
+                        )
+                    ) {
+                        filter {
+                            eq("grupa_id", grupaId)
+                            neq("rz", "E")
+                            or {
+                                // Ogólne zajęcia (bez podgrupy) LUB wybrane podgrupy
+                                eq("podgrupa", "")
+                                isIn("podgrupa", subgroups) // ✅ POPRAWIONE: `in` → isIn
+                            }
+                        }
+                    }
+                    .decodeList<ClassScheduleDto>()
+            }
+
+            Log.d("UniversityRepo", "📦 Pobrano ${scheduleDto.size} zajęć")
+
+            // 3. Mapowanie do ClassEntity
+            val entities = scheduleDto
+                .mapNotNull { dto ->
+                    try {
+                        val startDT = LocalDateTime.parse(dto.startDateTime.replace(" ", "T"))
+                        val endDT = LocalDateTime.parse(dto.endDateTime.replace(" ", "T"))
+
+                        ClassEntity(
+                            supabaseId = dto.id,
+                            subjectName = dto.subjectName,
+                            classType = dto.classType,
+                            startTime = startDT.format(DateTimeFormatter.ofPattern("HH:mm")),
+                            endTime = endDT.format(DateTimeFormatter.ofPattern("HH:mm")),
+                            dayOfWeek = startDT.dayOfWeek.value,
+                            groupCode = groupCode,
+                            subgroup = dto.subgroup,
+                            teacherName = dto.teacher,
+                            room = dto.room
+                        )
+                    } catch (e: Exception) {
+                        Log.e("UniversityRepo", "Błąd parsowania rekordu id=${dto.id}", e)
+                        null
+                    }
+                }
+                .sortedWith(compareBy({ it.dayOfWeek }, { it.startTime }))
+
+            entities
+        } catch (e: Exception) {
+            Log.e("UniversityRepo", "❌ Błąd pobierania planu", e)
+            emptyList()
         }
     }
 }
