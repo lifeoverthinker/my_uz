@@ -12,8 +12,8 @@ class TasksViewModel(
     private val tasksRepository: TasksRepository
 ) : ViewModel() {
 
-    // Poprawione wywołanie metody z repozytorium: getTasksStream()
-    val uiState: StateFlow<List<TaskEntity>> = tasksRepository.getTasksStream()
+    val uiState: StateFlow<List<TaskEntity>> = tasksRepository
+        .getTasksStream()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

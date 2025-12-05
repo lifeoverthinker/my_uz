@@ -1,47 +1,49 @@
 package com.example.my_uz_android.ui.components
 
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.my_uz_android.ui.theme.InterFontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskDatePicker(
-    onDateSelected: (Long?) -> Unit,
-    onDismiss: () -> Unit
+fun DatePicker(
+    date: Long,
+    onDateSelected: (Long) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val datePickerState = rememberDatePickerState()
-
-    // Kolor tła (Biały w light / Ciemny w dark)
-    val surfaceColor = MaterialTheme.colorScheme.surface
+    val dateState = rememberDatePickerState(initialSelectedDateMillis = date)
 
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = {
-                onDateSelected(datePickerState.selectedDateMillis)
-                onDismiss()
-            }) { Text("OK") }
+            TextButton(
+                onClick = {
+                    dateState.selectedDateMillis?.let { onDateSelected(it) }
+                }
+            ) {
+                Text("OK", fontFamily = InterFontFamily)
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Anuluj") }
+            TextButton(onClick = onDismiss) {
+                Text("Anuluj", fontFamily = InterFontFamily)
+            }
         },
+        shape = RoundedCornerShape(28.dp),
         colors = DatePickerDefaults.colors(
-            containerColor = surfaceColor, // Tło dialogu
+            containerColor = MaterialTheme.colorScheme.surface // Białe tło z theme
         ),
         tonalElevation = 0.dp // Brak fioletowej poświaty
     ) {
-        DatePicker(
-            state = datePickerState,
+        androidx.compose.material3.DatePicker(
+            state = dateState,
+            showModeToggle = false,
             colors = DatePickerDefaults.colors(
-                containerColor = surfaceColor, // Tło pickera
+                containerColor = MaterialTheme.colorScheme.surface,
                 titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 headlineContentColor = MaterialTheme.colorScheme.onSurface,
                 weekdayContentColor = MaterialTheme.colorScheme.onSurface,

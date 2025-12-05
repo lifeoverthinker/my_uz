@@ -23,8 +23,6 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun EventDetailsScreen(
@@ -32,7 +30,7 @@ fun EventDetailsScreen(
     viewModel: EventDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val event = uiState.event
+    val event = uiState.eventEntity
 
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val textColor = MaterialTheme.colorScheme.onSurface
@@ -46,15 +44,13 @@ fun EventDetailsScreen(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(top = 8.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // USUNIĘTO PASEK UCHWYTU
-
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -68,16 +64,35 @@ fun EventDetailsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DetailIconBox(onClick = onBackClick) {
-                    Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_x_close),
+                        contentDescription = "Zamknij",
+                        tint = textColor,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 
             if (event != null) {
-                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Top) {
+                // Tytuł
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
                     DetailIconBox {
-                        Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(6.dp)).background(accentColor))
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(accentColor)
+                        )
                     }
-                    Column(modifier = Modifier.padding(start = 12.dp)) {
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column {
                         Text(
                             text = event.title,
                             fontFamily = InterFontFamily,
@@ -87,13 +102,9 @@ fun EventDetailsScreen(
                             color = textColor,
                             modifier = Modifier.padding(bottom = 4.dp)
                         )
-                        val dateText = try {
-                            val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("pl"))
-                            event.date.format(formatter)
-                        } catch (e: Exception) { event.date.toString() }
 
                         Text(
-                            text = dateText,
+                            text = event.date,
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.Medium,
                             fontSize = 16.sp,
@@ -103,15 +114,27 @@ fun EventDetailsScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 56.dp))
-                Spacer(modifier = Modifier.height(24.dp))
 
+                // Details (BEZ DIVIDERA)
                 if (event.description.isNotEmpty()) {
-                    DetailSection(label = "OPIS", text = event.description, iconRes = R.drawable.ic_menu_2, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                    DetailSection(
+                        label = "OPIS",
+                        text = event.description,
+                        iconRes = R.drawable.ic_menu_2,
+                        iconColor = iconTint,
+                        textColor = textColor,
+                        labelColor = subTextColor
+                    )
                 } else {
-                    DetailSection(label = "OPIS", text = "Brak opisu", iconRes = R.drawable.ic_menu_2, iconColor = iconTint, textColor = textColor, labelColor = subTextColor)
+                    DetailSection(
+                        label = "OPIS",
+                        text = "Brak opisu",
+                        iconRes = R.drawable.ic_menu_2,
+                        iconColor = iconTint,
+                        textColor = textColor,
+                        labelColor = subTextColor
+                    )
                 }
-
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -123,16 +146,61 @@ fun EventDetailsScreen(
 
 @Composable
 private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
-    Box(modifier = Modifier.size(48.dp).clip(CircleShape).clickable(enabled = onClick != null) { onClick?.invoke() }, contentAlignment = Alignment.Center, content = content)
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .clickable(enabled = onClick != null) { onClick?.invoke() },
+        contentAlignment = Alignment.Center,
+        content = content
+    )
 }
 
 @Composable
-private fun DetailSection(label: String, text: String, iconRes: Int, iconColor: androidx.compose.ui.graphics.Color, textColor: androidx.compose.ui.graphics.Color, labelColor: androidx.compose.ui.graphics.Color) {
-    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp), verticalAlignment = Alignment.Top) {
-        DetailIconBox { Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconColor, modifier = Modifier.size(24.dp)) }
-        Column(modifier = Modifier.padding(start = 8.dp, top = 4.dp)) {
-            Text(text = label, fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = labelColor, letterSpacing = 0.5.sp, modifier = Modifier.padding(bottom = 2.dp))
-            Text(text = text, fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp, color = textColor, lineHeight = 22.sp)
+private fun DetailSection(
+    label: String,
+    text: String,
+    iconRes: Int,
+    iconColor: androidx.compose.ui.graphics.Color,
+    textColor: androidx.compose.ui.graphics.Color,
+    labelColor: androidx.compose.ui.graphics.Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 24.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        DetailIconBox {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.padding(top = 4.dp)) {
+            Text(
+                text = label,
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                color = labelColor,
+                letterSpacing = 0.5.sp,
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+
+            Text(
+                text = text,
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                color = textColor,
+                lineHeight = 22.sp
+            )
         }
     }
 }

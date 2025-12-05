@@ -26,12 +26,12 @@ data class HomeUiState(
     val departmentInfo: String = "",
     val upcomingClasses: List<ClassEntity> = emptyList(),
     val upcomingTasks: List<TaskEntity> = emptyList(),
-    // Nowe pola, których brakowało:
     val upcomingEvents: List<EventEntity> = emptyList(),
     val isLoading: Boolean = false,
     val currentDate: String = "",
     val tasksMessage: String? = null,
-    val classesMessage: String? = null
+    val classesMessage: String? = null,
+    val classesDayLabel: String? = null // NOWE: "Dzisiaj" lub "Jutro"
 )
 
 class HomeViewModel(
@@ -51,6 +51,7 @@ class HomeViewModel(
 
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
+        val tomorrow = today.plusDays(1)
 
         val userName = settings?.userName ?: "Student"
         val isAnonymous = settings?.isAnonymous == true
@@ -88,17 +89,27 @@ class HomeViewModel(
             classes
         }
 
+        // ZMIANA: Najpierw sprawdzamy dzisiejsze zajęcia
         val todaysClasses = effectiveClasses.filter { classEntity ->
             classEntity.dayOfWeek == today.dayOfWeek.value
         }.sortedBy { it.startTime }
 
-        val classesMsg = if (todaysClasses.isEmpty()) "Brak zajęć na dzisiaj" else null
+        // ZMIANA: Jeśli nie ma dzisiaj, sprawdzamy jutrzejsze
+        val tomorrowsClasses = effectiveClasses.filter { classEntity ->
+            classEntity.dayOfWeek == tomorrow.dayOfWeek.value
+        }.sortedBy { it.startTime }
+
+        // ZMIANA: Wybieramy które zajęcia pokazać i ustalamy label
+        val (displayedClasses, dayLabel, emptyMessage) = when {
+            todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
+            tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
+            else -> Triple(emptyList(), null, "Brak zajęć na dzisiaj")
+        }
 
         val finalTasks = tasks
             .sortedWith(compareBy<TaskEntity> { it.isCompleted }.thenBy { it.dueDate })
             .take(10)
 
-        // Przykładowe wydarzenia (dopóki nie podepniesz EventRepository)
         val mockEvents = listOf(
             EventEntity(
                 title = "Juwenalia 2025",
@@ -119,13 +130,14 @@ class HomeViewModel(
         HomeUiState(
             greeting = greeting,
             departmentInfo = departmentInfo,
-            upcomingClasses = todaysClasses,
+            upcomingClasses = displayedClasses,
             upcomingTasks = finalTasks,
-            upcomingEvents = mockEvents, // Dodano tutaj
+            upcomingEvents = mockEvents,
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },
-            classesMessage = classesMsg,
+            classesMessage = emptyMessage,
+            classesDayLabel = dayLabel, // NOWE: Label "Dzisiaj" lub "Jutro"
             tasksMessage = "Zadania",
-            isLoading = false // Dodano tutaj
+            isLoading = false
         )
     }.stateIn(
         scope = viewModelScope,

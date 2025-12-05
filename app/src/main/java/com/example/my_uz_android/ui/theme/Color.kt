@@ -40,22 +40,18 @@ val md_theme_light_surfaceContainerLow = Color(0xFFf8f1fa)
 val md_theme_light_surfaceContainer = Color(0xFFf2ecf4)
 val md_theme_light_surfaceContainerHigh = Color(0xFFede6ee)
 val md_theme_light_surfaceContainerHighest = Color(0xFFe7e0e8)
-
 val md_theme_light_primaryFixed = Color(0xFFebddff)
 val md_theme_light_onPrimaryFixed = Color(0xFF230f46)
 val md_theme_light_primaryFixedDim = Color(0xFFd3bcfd)
 val md_theme_light_onPrimaryFixedVariant = Color(0xFF4f3d74)
-
 val md_theme_light_secondaryFixed = Color(0xFFe9def8)
 val md_theme_light_onSecondaryFixed = Color(0xFF1f182b)
 val md_theme_light_secondaryFixedDim = Color(0xFFcdc2db)
 val md_theme_light_onSecondaryFixedVariant = Color(0xFF4b4358)
-
 val md_theme_light_tertiaryFixed = Color(0xFFffd9e1)
 val md_theme_light_onTertiaryFixed = Color(0xFF31101b)
 val md_theme_light_tertiaryFixedDim = Color(0xFFf0b7c5)
 val md_theme_light_onTertiaryFixedVariant = Color(0xFF643b46)
-
 
 // --- DARK: Podstawowe ---
 val md_theme_dark_primary = Color(0xFFd3bcfd)
@@ -95,32 +91,27 @@ val md_theme_dark_surfaceContainerLow = Color(0xFF1d1b20)
 val md_theme_dark_surfaceContainer = Color(0xFF211f24)
 val md_theme_dark_surfaceContainerHigh = Color(0xFF2c292f)
 val md_theme_dark_surfaceContainerHighest = Color(0xFF36343a)
-
 val md_theme_dark_primaryFixed = Color(0xFFebddff)
 val md_theme_dark_onPrimaryFixed = Color(0xFF230f46)
 val md_theme_dark_primaryFixedDim = Color(0xFFd3bcfd)
 val md_theme_dark_onPrimaryFixedVariant = Color(0xFF4f3d74)
-
 val md_theme_dark_secondaryFixed = Color(0xFFe9def8)
 val md_theme_dark_onSecondaryFixed = Color(0xFF1f182b)
 val md_theme_dark_secondaryFixedDim = Color(0xFFcdc2db)
 val md_theme_dark_onSecondaryFixedVariant = Color(0xFF4b4358)
-
 val md_theme_dark_tertiaryFixed = Color(0xFFffd9e1)
 val md_theme_dark_onTertiaryFixed = Color(0xFF31101b)
 val md_theme_dark_tertiaryFixedDim = Color(0xFFf0b7c5)
 val md_theme_dark_onTertiaryFixedVariant = Color(0xFF643b46)
 
-// --- NOWE KOLORY KART (Zgodne z Twoim żądaniem) ---
-// CLASS CARD
-val card_class_light = Color(0xFFE8DEF8) // Dokładnie ten fiolet, o który prosiłeś
-val card_class_dark = Color(0xFF4B4358)  // Odpowiednik ciemny (Secondary Container)
+// --- NOWE KOLORY KART ---
+val card_class_light = Color(0xFFE8DEF8)
+val card_class_dark = Color(0xFF4B4358)
 
-// EVENT CARD
-val card_event_light = Color(0xFFDAF5D7) // Dokładnie ten jasnozielony, o który prosiłeś
-val card_event_dark = Color(0xFF2D4F31)  // Ciemny zielony kontener dla trybu Dark
+val card_event_light = Color(0xFFDAF5D7)
+val card_event_dark = Color(0xFF2D4F31)
 
-// Custom colors (pomocnicze)
+// Custom colors
 val custom_red_light = Color(0xFF904a43)
 val custom_green_light = Color(0xFF3c6839)
 val custom_orange_light = Color(0xFF8e4d32)
@@ -137,6 +128,10 @@ val home_header_dark = Color(0xFF141218)
 val home_content_light = Color(0xFFFFFFFF)
 val home_content_dark = Color(0xFF1D1B20)
 
+// ✅ Top section - F7F2F9!
+val home_top_background_light = Color(0xFFF7F2F9)
+val home_top_background_dark = Color(0xFF1D1B20)
+
 // Navigation
 val nav_light_background = Color(0xFFFFFFFF)
 val nav_light_border = Color(0xFFEDE6F3)
@@ -147,3 +142,9 @@ val nav_dark_background = Color(0xFF1D1B20)
 val nav_dark_border = Color(0xFF49454e)
 val nav_dark_active = Color(0xFFd3bcfd)
 val nav_dark_inactive = Color(0xFFcac4d0)
+
+val button_background_light = Color(0xFFE8DEF8)
+val button_background_dark = Color(0xFF4B4358)
+
+val icon_text_light = Color(0xFF000000)
+val icon_text_dark = Color(0xFFE7E0E8)
