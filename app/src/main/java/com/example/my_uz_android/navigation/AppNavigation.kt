@@ -31,6 +31,7 @@ import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
 import com.example.my_uz_android.ui.screens.home.details.TaskDetailsScreen
 import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.ui.screens.index.IndexScreen
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
@@ -161,7 +162,10 @@ fun AppNavigation(
                 )
             }
 
-            composable(Screen.Index.route) { PlaceholderScreen("Indeks Ocen") }
+            // --- INDEKS ---
+            composable(Screen.Index.route) {
+                IndexScreen()
+            }
 
             composable(Screen.Account.route) {
                 AccountScreen(
