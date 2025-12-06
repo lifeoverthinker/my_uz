@@ -19,10 +19,13 @@ val md_theme_light_error = Color(0xFFba1a1a)
 val md_theme_light_onError = Color(0xFFffffff)
 val md_theme_light_errorContainer = Color(0xFFffdad6)
 val md_theme_light_onErrorContainer = Color(0xFF93000a)
-val md_theme_light_background = Color(0xFFfef7ff)
+
+// ZMIANA: Czysta biel dla tła w Light Mode
+val md_theme_light_background = Color(0xFFFFFFFF)
 val md_theme_light_onBackground = Color(0xFF1d1b20)
-val md_theme_light_surface = Color(0xFFfef7ff)
+val md_theme_light_surface = Color(0xFFFFFFFF)
 val md_theme_light_onSurface = Color(0xFF1d1b20)
+
 val md_theme_light_surfaceVariant = Color(0xFFe7e0eb)
 val md_theme_light_onSurfaceVariant = Color(0xFF49454e)
 val md_theme_light_outline = Color(0xFF7a757f)
@@ -34,12 +37,15 @@ val md_theme_light_inversePrimary = Color(0xFFd3bcfd)
 
 // --- LIGHT: Rozszerzone ---
 val md_theme_light_surfaceDim = Color(0xFFded8e0)
-val md_theme_light_surfaceBright = Color(0xFFfef7ff)
+// ZMIANA: Czysta biel
+val md_theme_light_surfaceBright = Color(0xFFFFFFFF)
 val md_theme_light_surfaceContainerLowest = Color(0xFFffffff)
 val md_theme_light_surfaceContainerLow = Color(0xFFf8f1fa)
+// Możesz też ustawić kontenery na białe, jeśli wolisz brak odcienia fioletu
 val md_theme_light_surfaceContainer = Color(0xFFf2ecf4)
 val md_theme_light_surfaceContainerHigh = Color(0xFFede6ee)
 val md_theme_light_surfaceContainerHighest = Color(0xFFe7e0e8)
+
 val md_theme_light_primaryFixed = Color(0xFFebddff)
 val md_theme_light_onPrimaryFixed = Color(0xFF230f46)
 val md_theme_light_primaryFixedDim = Color(0xFFd3bcfd)
@@ -70,10 +76,13 @@ val md_theme_dark_error = Color(0xFFffb4ab)
 val md_theme_dark_onError = Color(0xFF690005)
 val md_theme_dark_errorContainer = Color(0xFF93000a)
 val md_theme_dark_onErrorContainer = Color(0xFFffdad6)
-val md_theme_dark_background = Color(0xFF151218)
+
+// ZMIANA: Neutralne ciemne tła (bez fioletu)
+val md_theme_dark_background = Color(0xFF121212)
 val md_theme_dark_onBackground = Color(0xFFe7e0e8)
-val md_theme_dark_surface = Color(0xFF151218)
+val md_theme_dark_surface = Color(0xFF121212)
 val md_theme_dark_onSurface = Color(0xFFe7e0e8)
+
 val md_theme_dark_surfaceVariant = Color(0xFF49454e)
 val md_theme_dark_onSurfaceVariant = Color(0xFFcbc4cf)
 val md_theme_dark_outline = Color(0xFF948f99)
@@ -83,14 +92,17 @@ val md_theme_dark_inverseSurface = Color(0xFFe7e0e8)
 val md_theme_dark_inverseOnSurface = Color(0xFF322f35)
 val md_theme_dark_inversePrimary = Color(0xFF68548e)
 
-// --- DARK: Rozszerzone ---
-val md_theme_dark_surfaceDim = Color(0xFF151218)
+// --- DARK: Rozszerzone (Poprawione modale) ---
+val md_theme_dark_surfaceDim = Color(0xFF121212)
 val md_theme_dark_surfaceBright = Color(0xFF3b383e)
-val md_theme_dark_surfaceContainerLowest = Color(0xFF0f0d13)
-val md_theme_dark_surfaceContainerLow = Color(0xFF1d1b20)
-val md_theme_dark_surfaceContainer = Color(0xFF211f24)
-val md_theme_dark_surfaceContainerHigh = Color(0xFF2c292f)
-val md_theme_dark_surfaceContainerHighest = Color(0xFF36343a)
+
+// ZMIANA: Neutralne szarości dla kontenerów (Dialogi, Pickery, BottomSheets)
+val md_theme_dark_surfaceContainerLowest = Color(0xFF0F0F0F)
+val md_theme_dark_surfaceContainerLow = Color(0xFF1D1D1D)
+val md_theme_dark_surfaceContainer = Color(0xFF212121)
+val md_theme_dark_surfaceContainerHigh = Color(0xFF2B2B2B) // Kluczowe dla DatePicker/Dialog
+val md_theme_dark_surfaceContainerHighest = Color(0xFF363636)
+
 val md_theme_dark_primaryFixed = Color(0xFFebddff)
 val md_theme_dark_onPrimaryFixed = Color(0xFF230f46)
 val md_theme_dark_primaryFixedDim = Color(0xFFd3bcfd)
@@ -123,14 +135,18 @@ val custom_orange_dark = Color(0xFFffb599)
 val custom_blue_dark = Color(0xFFa2c9fe)
 
 // Home Screen Colors
-val home_header_light = Color(0xFFF7F2F9)
-val home_header_dark = Color(0xFF141218)
-val home_content_light = Color(0xFFFFFFFF)
-val home_content_dark = Color(0xFF1D1B20)
 
-// ✅ Top section - F7F2F9!
+// LIGHT: Twój customowy fiolet F7F2F9
 val home_top_background_light = Color(0xFFF7F2F9)
-val home_top_background_dark = Color(0xFF1D1B20)
+
+// DARK: Czysta czerń dla górnej sekcji, żeby dolna (szara) była widoczna
+val home_top_background_dark = Color(0xFF000000)
+
+val home_header_light = Color(0xFFF7F2F9) // Też dopasuj, żeby nagłówek nie odcinał się od tła
+val home_header_dark = Color(0xFF000000)
+
+val home_content_light = Color(0xFFFFFFFF)
+val home_content_dark = Color(0xFF121212)
 
 // Navigation
 val nav_light_background = Color(0xFFFFFFFF)

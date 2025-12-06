@@ -1,13 +1,12 @@
 package com.example.my_uz_android.ui.screens.calendar
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,10 +28,13 @@ import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.MyUZTheme
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -44,14 +47,14 @@ fun TasksScreen(
 ) {
     val tasks by viewModel.uiState.collectAsState()
 
-    // Grupowanie po DNIACH (Sticky Headers)
-    val groupedTasks = remember(tasks) {
+    val groupedByMonth = remember(tasks) {
         tasks
             .sortedBy { it.dueDate }
             .groupBy {
                 Instant.ofEpochMilli(it.dueDate)
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
+                    .let { date -> YearMonth.from(date) }
             }
     }
 
@@ -98,13 +101,12 @@ fun TasksScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_calendar),
+                    Image(
+                        painter = painterResource(id = R.drawable.time_rafiki),
                         contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        modifier = Modifier.size(220.dp)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                     Text(
                         text = stringResource(R.string.tasks_empty_title),
                         fontFamily = InterFontFamily,
@@ -118,22 +120,26 @@ fun TasksScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                groupedTasks.forEach { (date, tasksForDay) ->
+                groupedByMonth.forEach { (yearMonth, tasksInMonth) ->
                     stickyHeader {
-                        DayHeaderSticky(date = date, backgroundColor = backgroundColor)
+                        MonthHeaderSticky(yearMonth = yearMonth, backgroundColor = backgroundColor)
+                    }
+
+                    val tasksByDay = tasksInMonth.groupBy {
+                        Instant.ofEpochMilli(it.dueDate)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
                     }
 
                     items(
-                        items = tasksForDay,
-                        key = { it.id }
-                    ) { task ->
-                        TaskCard(
-                            task = task,
-                            onTaskClick = { onTaskClick(task) },
-                            showDayMarker = false // Nie pokazujemy daty na karcie, bo jest w nagłówku
+                        items = tasksByDay.toList(),
+                        key = { (date, _) -> date.toEpochDay() }
+                    ) { (date, dailyTasks) ->
+                        DayScheduleRow(
+                            date = date,
+                            tasks = dailyTasks,
+                            onTaskClick = onTaskClick
                         )
                     }
                 }
@@ -147,35 +153,141 @@ fun TasksScreen(
 }
 
 @Composable
-fun DayHeaderSticky(
-    date: LocalDate,
+fun MonthHeaderSticky(
+    yearMonth: YearMonth,
     backgroundColor: Color
 ) {
-    val isToday = date == LocalDate.now()
-    val isTomorrow = date == LocalDate.now().plusDays(1)
-
-    val formatter = remember { DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("pl")) }
-
-    val text = when {
-        isToday -> stringResource(R.string.tasks_today)
-        isTomorrow -> stringResource(R.string.tasks_tomorrow)
-        else -> date.format(formatter).replaceFirstChar { it.uppercase() }
+    val formatter = remember { DateTimeFormatter.ofPattern("MMMM yyyy", Locale("pl")) }
+    val title = yearMonth.format(formatter).replaceFirstChar {
+        if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString()
     }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(backgroundColor)
-            .padding(vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         Text(
-            text = text,
+            text = title,
             style = MaterialTheme.typography.titleMedium.copy(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface
             )
         )
+    }
+}
+
+@Composable
+fun DayScheduleRow(
+    date: LocalDate,
+    tasks: List<TaskEntity>,
+    onTaskClick: (TaskEntity) -> Unit
+) {
+    val isToday = date == LocalDate.now()
+
+    val dayOfWeekShort = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl"))
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
+        .replace(".", "")
+
+    val dayOfMonth = date.dayOfMonth.toString()
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Column(
+            modifier = Modifier
+                .width(50.dp)
+                .padding(top = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = dayOfWeekShort,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isToday) MaterialTheme.colorScheme.primary
+                        else Color.Transparent
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = dayOfMonth,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isToday) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            tasks.forEach { task ->
+                TaskCard(
+                    task = task,
+                    onTaskClick = { onTaskClick(task) },
+                    showDayMarker = true
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Tasks Screen - Light", showBackground = true)
+@Composable
+private fun PreviewTasksScreenLight() {
+    MyUZTheme(darkTheme = false) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+            Column {
+                MonthHeaderSticky(YearMonth.now(), MaterialTheme.colorScheme.surfaceContainerLowest)
+                Text(
+                    "Tu pojawią się Twoje zadania",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Tasks Screen - Dark", showBackground = true)
+@Composable
+private fun PreviewTasksScreenDark() {
+    MyUZTheme(darkTheme = true) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest) {
+            Column {
+                MonthHeaderSticky(YearMonth.now(), MaterialTheme.colorScheme.surfaceContainerLowest)
+                Text(
+                    "Tu pojawią się Twoje zadania",
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
