@@ -45,7 +45,7 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     MyUZTheme {
-        // ✅ Top section color
+        // ✅ Pobieramy kolory z motywu (zdefiniowane w Color.kt / Theme.kt)
         val topSectionBackground = MaterialTheme.extendedColors.homeTopBackground
         val iconTextColor = MaterialTheme.extendedColors.iconText
         val buttonBgColor = MaterialTheme.extendedColors.buttonBackground
@@ -54,7 +54,9 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                // ZMIANA: Tło całego ekranu takie samo jak góra (F7F2F9 lub Black)
+                // Dzięki temu zaokrąglenia dolnej karty będą widoczne!
+                .background(topSectionBackground)
         ) {
             // ========== 1. GÓRNA SEKCJA ==========
             Column(
@@ -155,13 +157,15 @@ fun HomeScreen(
                 }
             }
 
-            // ========== 2. DOLNA SEKCJA (BIAŁA) ==========
+            // ========== 2. DOLNA SEKCJA ==========
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-                color = Color.White // ✅ BIAŁA dolna sekcja
+                // ZMIANA: Używamy surface (Biały w Light, Ciemnoszary w Dark)
+                // Kontrastuje z tłem (topSectionBackground), więc rogi są widoczne
+                color = MaterialTheme.colorScheme.surface
             ) {
                 LazyColumn(
                     contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp),

@@ -133,7 +133,6 @@ fun TasksScreen(
                         TaskCard(
                             task = task,
                             onTaskClick = { onTaskClick(task) },
-                            showDayMarker = false // Nie pokazujemy daty na karcie, bo jest w nagłówku
                         )
                     }
                 }
