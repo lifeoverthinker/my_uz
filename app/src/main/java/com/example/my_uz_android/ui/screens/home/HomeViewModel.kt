@@ -17,8 +17,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
 data class HomeUiState(
@@ -31,7 +34,7 @@ data class HomeUiState(
     val currentDate: String = "",
     val tasksMessage: String? = null,
     val classesMessage: String? = null,
-    val classesDayLabel: String? = null // NOWE: "Dzisiaj" lub "Jutro"
+    val classesDayLabel: String? = null // "Dzisiaj" lub "Jutro"
 )
 
 class HomeViewModel(
@@ -53,6 +56,7 @@ class HomeViewModel(
         val today = now.toLocalDate()
         val tomorrow = today.plusDays(1)
 
+        // ========== PERSONALIZACJA ==========
         val userName = settings?.userName ?: "Student"
         val isAnonymous = settings?.isAnonymous == true
         val genderStr = settings?.gender
@@ -70,6 +74,9 @@ class HomeViewModel(
             "Uniwersytet Zielonogórski"
         }
 
+        // ========== ZAJĘCIA: DZISIAJ vs JUTRO ==========
+
+        // Zajęcia z bazy danych lub przykładowe (jeśli puste)
         val effectiveClasses = if (classes.isEmpty()) {
             listOf(
                 ClassEntity(
@@ -78,7 +85,7 @@ class HomeViewModel(
                     classType = "Wykład",
                     startTime = "10:00",
                     endTime = "11:30",
-                    dayOfWeek = today.dayOfWeek.value,
+                    dayOfWeek = today.dayOfWeek.value, // ISO 8601: 1=PON, 7=NIEDZ
                     groupCode = settings?.selectedGroupCode ?: "GRUPA",
                     subgroup = null,
                     room = "Sala 101",
@@ -89,27 +96,29 @@ class HomeViewModel(
             classes
         }
 
-        // ZMIANA: Najpierw sprawdzamy dzisiejsze zajęcia
-        val todaysClasses = effectiveClasses.filter { classEntity ->
-            classEntity.dayOfWeek == today.dayOfWeek.value
-        }.sortedBy { it.startTime }
+        // ✅ KROK 1: Filtruj zajęcia na DZISIAJ (dayOfWeek == today.dayOfWeek.value)
+        val todaysClasses = effectiveClasses
+            .filter { it.dayOfWeek == today.dayOfWeek.value }
+            .sortedBy { it.startTime }
 
-        // ZMIANA: Jeśli nie ma dzisiaj, sprawdzamy jutrzejsze
-        val tomorrowsClasses = effectiveClasses.filter { classEntity ->
-            classEntity.dayOfWeek == tomorrow.dayOfWeek.value
-        }.sortedBy { it.startTime }
+        // ✅ KROK 2: Filtruj zajęcia na JUTRO (dayOfWeek == tomorrow.dayOfWeek.value)
+        val tomorrowsClasses = effectiveClasses
+            .filter { it.dayOfWeek == tomorrow.dayOfWeek.value }
+            .sortedBy { it.startTime }
 
-        // ZMIANA: Wybieramy które zajęcia pokazać i ustalamy label
+        // ✅ KROK 3: Wybierz które zajęcia pokazać + ustal label
         val (displayedClasses, dayLabel, emptyMessage) = when {
             todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
             tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
             else -> Triple(emptyList(), null, "Brak zajęć na dzisiaj")
         }
 
+        // ========== ZADANIA ==========
         val finalTasks = tasks
             .sortedWith(compareBy<TaskEntity> { it.isCompleted }.thenBy { it.dueDate })
             .take(10)
 
+        // ========== WYDARZENIA (mock) ==========
         val mockEvents = listOf(
             EventEntity(
                 title = "Juwenalia 2025",
@@ -127,6 +136,7 @@ class HomeViewModel(
             )
         )
 
+        // ========== ZWRÓĆ UI STATE ==========
         HomeUiState(
             greeting = greeting,
             departmentInfo = departmentInfo,
@@ -135,16 +145,18 @@ class HomeViewModel(
             upcomingEvents = mockEvents,
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },
             classesMessage = emptyMessage,
-            classesDayLabel = dayLabel, // NOWE: Label "Dzisiaj" lub "Jutro"
+            classesDayLabel = dayLabel, // "Dzisiaj" lub "Jutro"
             tasksMessage = "Zadania",
             isLoading = false
         )
+
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = HomeUiState()
     )
 
+    // ========== MOCK DATA (pierwsze uruchomienie) ==========
     init {
         viewModelScope.launch {
             val tasks = tasksRepository.getTasksStream().first()
@@ -153,7 +165,7 @@ class HomeViewModel(
                     TaskEntity(
                         title = "Projekt Zaliczeniowy",
                         description = "Dokończyć implementację aplikacji.",
-                        dueDate = System.currentTimeMillis() + 172800000L,
+                        dueDate = System.currentTimeMillis() + 172800000L, // +2 dni
                         isCompleted = false,
                         subjectId = null
                     )

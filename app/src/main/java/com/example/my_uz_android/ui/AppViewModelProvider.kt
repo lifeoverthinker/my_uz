@@ -14,6 +14,9 @@ import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsViewModel
 import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
+import com.example.my_uz_android.ui.screens.index.AddEditGradeViewModel
+import com.example.my_uz_android.ui.screens.index.GradeDetailsViewModel
+import com.example.my_uz_android.ui.screens.index.GradesViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
@@ -56,10 +59,9 @@ object AppViewModelProvider {
             TaskAddEditViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
                 tasksRepository = myUzApp().container.tasksRepository,
-                classRepository = myUzApp().container.classRepository // ✅ Dodano
+                classRepository = myUzApp().container.classRepository
             )
         }
-
 
         // ClassDetailsViewModel
         initializer {
@@ -83,6 +85,29 @@ object AppViewModelProvider {
                 settingsRepository = myUzApp().container.settingsRepository,
                 universityRepository = myUzApp().container.universityRepository,
                 classRepository = myUzApp().container.classRepository
+            )
+        }
+
+        // ✅ DODANE: GradesViewModel
+        initializer {
+            GradesViewModel(
+                gradesRepository = myUzApp().container.gradesRepository
+            )
+        }
+
+        // ✅ DODANE: AddEditGradeViewModel
+        initializer {
+            AddEditGradeViewModel(
+                savedStateHandle = this.createSavedStateHandle(),
+                gradesRepository = myUzApp().container.gradesRepository
+            )
+        }
+
+        // ✅ DODANE: GradeDetailsViewModel
+        initializer {
+            GradeDetailsViewModel(
+                savedStateHandle = this.createSavedStateHandle(),
+                gradesRepository = myUzApp().container.gradesRepository
             )
         }
     }
