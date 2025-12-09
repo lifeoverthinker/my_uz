@@ -95,11 +95,12 @@ object AppViewModelProvider {
             )
         }
 
-        // ✅ DODANE: AddEditGradeViewModel
+        // ✅ POPRAWIONE: AddEditGradeViewModel (dodany classRepository)
         initializer {
             AddEditGradeViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
-                gradesRepository = myUzApp().container.gradesRepository
+                gradesRepository = myUzApp().container.gradesRepository,
+                classRepository = myUzApp().container.classRepository  // ← DODANE
             )
         }
 
@@ -111,11 +112,11 @@ object AppViewModelProvider {
             )
         }
     }
-}
 
-/**
- * Extension function to queries for [Application] object and returns an instance of
- * [MyUZApplication].
- */
-fun CreationExtras.myUzApp(): MyUZApplication =
-    (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)
+    /**
+     * Extension function to queries for [Application] object and returns an instance of
+     * [MyUZApplication].
+     */
+    fun CreationExtras.myUzApp(): MyUZApplication =
+        (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)
+}
