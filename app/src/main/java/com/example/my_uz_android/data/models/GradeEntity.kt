@@ -8,6 +8,7 @@ data class GradeEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val subjectName: String,
+    val classType: String = "",  // ← DODANE (Wykład, Ćwiczenia, etc.)
     val grade: Double,
     val weight: Int = 1,
     val description: String?,
