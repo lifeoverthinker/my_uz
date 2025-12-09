@@ -80,7 +80,7 @@ class HomeViewModel(
                     startTime = "10:00",
                     endTime = "11:30",
                     dayOfWeek = today.dayOfWeek.value,
-                    date = today.toString(), // ← DODAJ TO
+                    date = today.toString(),
                     groupCode = settings?.selectedGroupCode ?: "GRUPA",
                     subgroup = null,
                     room = "Sala 101",
@@ -91,15 +91,24 @@ class HomeViewModel(
             classes
         }
 
-
+        // ✅ KROK 1: Filtruj dzisiejsze i jutrzejsze zajęcia
         val todayString = today.toString() // "2025-12-09"
+        val tomorrowString = today.plusDays(1).toString() // "2025-12-10"
+
         val todaysClasses = effectiveClasses
-            .filter { it.date == todayString } // ← ZMIANA
+            .filter { it.date == todayString }
             .sortedBy { it.startTime }
 
-        // Ustal label i komunikat
-        val dayLabel = if (todaysClasses.isNotEmpty()) "Dzisiaj" else null
-        val emptyMessage = if (todaysClasses.isEmpty()) "Brak zajęć na dzisiaj" else null
+        val tomorrowsClasses = effectiveClasses
+            .filter { it.date == tomorrowString }
+            .sortedBy { it.startTime }
+
+        // ✅ KROK 2: Wybierz które pokazać + ustal label
+        val (displayedClasses, dayLabel, emptyMessage) = when {
+            todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
+            tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
+            else -> Triple(emptyList(), null, "Brak zajęć")
+        }
 
         // ========== ZADANIA ==========
         val finalTasks = tasks
@@ -128,7 +137,7 @@ class HomeViewModel(
         HomeUiState(
             greeting = greeting,
             departmentInfo = departmentInfo,
-            upcomingClasses = todaysClasses, // ← ZMIANA: tylko dzisiejsze
+            upcomingClasses = displayedClasses, // ← ZMIANA
             upcomingTasks = finalTasks,
             upcomingEvents = mockEvents,
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },

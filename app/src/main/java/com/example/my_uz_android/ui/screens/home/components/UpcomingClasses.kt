@@ -31,15 +31,15 @@ fun UpcomingClasses(
     val classCardColor = MaterialTheme.extendedColors.classCardBackground
     val now = java.time.LocalTime.now()
 
-    // ✅ Filtrujemy tylko przyszłe zajęcia (po godzinie)
+    // ✅ POKAZUJ TRWAJĄCE + PRZYSZŁE (ukryj dopiero po zakończeniu)
     val currentClasses = classes.filter { clazz ->
         try {
-            val startParts = clazz.startTime.split(":")
-            if (startParts.size == 2) {
-                val startHour = startParts[0].toIntOrNull() ?: 0
-                val startMinute = startParts[1].toIntOrNull() ?: 0
-                val startTime = java.time.LocalTime.of(startHour, startMinute)
-                startTime.isAfter(now) || startTime == now
+            val endParts = clazz.endTime.split(":")
+            if (endParts.size == 2) {
+                val endHour = endParts[0].toIntOrNull() ?: 0
+                val endMinute = endParts[1].toIntOrNull() ?: 0
+                val endTime = java.time.LocalTime.of(endHour, endMinute)
+                endTime.isAfter(now) // Ukryj dopiero jak się skończą
             } else {
                 true
             }
@@ -47,6 +47,7 @@ fun UpcomingClasses(
             true
         }
     }
+
 
     Column(
         modifier = modifier
