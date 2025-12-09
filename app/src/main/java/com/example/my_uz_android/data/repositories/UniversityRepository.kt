@@ -179,11 +179,13 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
                             startTime = startDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                             endTime = endDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                             dayOfWeek = startDT.dayOfWeek.value,
+                            date = startDT.toLocalDate().toString(), // ← DODANE: "2025-12-09"
                             groupCode = groupCode,
                             subgroup = dto.subgroup,
                             teacherName = dto.teacher,
                             room = dto.room
                         )
+
                     } catch (e: Exception) {
                         Log.e("UniversityRepo", "Błąd parsowania rekordu id=${dto.id}", e)
                         null

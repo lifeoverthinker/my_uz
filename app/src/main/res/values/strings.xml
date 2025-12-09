@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MyUZ Android</string>
+    <string name="app_name">MyUZ</string>
 
     <string name="btn_save">Zapisz</string>
     <string name="btn_cancel">Anuluj</string>

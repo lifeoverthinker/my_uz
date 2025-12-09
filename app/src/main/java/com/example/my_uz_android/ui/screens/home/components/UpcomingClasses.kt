@@ -31,7 +31,7 @@ fun UpcomingClasses(
     val classCardColor = MaterialTheme.extendedColors.classCardBackground
     val now = java.time.LocalTime.now()
 
-    // ✅ UKRYWA MINIONE ZAJĘCIA - filtruje tylko przyszłe zajęcia
+    // ✅ Filtrujemy tylko przyszłe zajęcia (po godzinie)
     val currentClasses = classes.filter { clazz ->
         try {
             val startParts = clazz.startTime.split(":")
@@ -39,12 +39,12 @@ fun UpcomingClasses(
                 val startHour = startParts[0].toIntOrNull() ?: 0
                 val startMinute = startParts[1].toIntOrNull() ?: 0
                 val startTime = java.time.LocalTime.of(startHour, startMinute)
-                startTime.isAfter(now) || startTime == now // Pokazuj bieżące i przyszłe
+                startTime.isAfter(now) || startTime == now
             } else {
-                true // Bezpiecznik dla niepoprawnego formatu
+                true
             }
         } catch (e: Exception) {
-            true // Bezpiecznik
+            true
         }
     }
 
@@ -54,13 +54,12 @@ fun UpcomingClasses(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Nagłówek z labelem po prawej stronie
+        // Nagłówek
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Lewa strona: Ikona + Tytuł
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -81,7 +80,6 @@ fun UpcomingClasses(
                 )
             }
 
-            // Prawa strona: Label "Dzisiaj"/"Jutro"
             if (dayLabel != null) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
@@ -124,9 +122,7 @@ fun UpcomingClasses(
     }
 }
 
-// ============================================
-// PREVIEW
-// ============================================
+// ========== PREVIEWS (bez zmian) ==========
 
 @Preview(name = "Upcoming Classes - Dzisiaj", showBackground = true)
 @Composable
@@ -142,6 +138,7 @@ private fun PreviewUpcomingClassesToday() {
                         startTime = "10:00",
                         endTime = "11:30",
                         dayOfWeek = 1,
+                        date = "2025-12-09", // ← DODAJ
                         groupCode = "INF4A",
                         subgroup = "L1",
                         room = "A-2/112",
@@ -154,6 +151,7 @@ private fun PreviewUpcomingClassesToday() {
                         startTime = "12:00",
                         endTime = "13:30",
                         dayOfWeek = 1,
+                        date = "2025-12-09", // ← DODAJ
                         groupCode = "INF4A",
                         subgroup = null,
                         room = "C-1/201",
@@ -182,6 +180,7 @@ private fun PreviewUpcomingClassesTomorrow() {
                         startTime = "08:00",
                         endTime = "09:30",
                         dayOfWeek = 2,
+                        date = "2025-12-10", // ← DODAJ (jutro)
                         groupCode = "INF4A",
                         subgroup = "C2",
                         room = "B-1/305",
@@ -190,21 +189,6 @@ private fun PreviewUpcomingClassesTomorrow() {
                 ),
                 emptyMessage = null,
                 dayLabel = "Jutro",
-                onClassClick = {}
-            )
-        }
-    }
-}
-
-@Preview(name = "Upcoming Classes - Brak zajęć", showBackground = true)
-@Composable
-private fun PreviewUpcomingClassesEmpty() {
-    MyUZTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            UpcomingClasses(
-                classes = emptyList(),
-                emptyMessage = "Brak zajęć na dzisiaj",
-                dayLabel = null,
                 onClassClick = {}
             )
         }
@@ -225,6 +209,7 @@ private fun PreviewUpcomingClassesDark() {
                         startTime = "10:00",
                         endTime = "11:30",
                         dayOfWeek = 1,
+                        date = "2025-12-09", // ← DODAJ
                         groupCode = "INF4A",
                         subgroup = "L1",
                         room = "A-2/112",
