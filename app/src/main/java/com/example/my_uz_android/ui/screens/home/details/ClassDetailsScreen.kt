@@ -26,6 +26,7 @@ import com.example.my_uz_android.ui.theme.extendedColors
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
+import com.example.my_uz_android.util.ClassTypeUtils
 
 @Composable
 fun ClassDetailsScreen(
@@ -129,7 +130,7 @@ fun ClassDetailsScreen(
                 // Details (BEZ DIVIDERA)
                 DetailSection(
                     label = "TYP",
-                    text = classEntity.classType,
+                    text = ClassTypeUtils.getFullName(classEntity.classType),
                     iconRes = R.drawable.ic_info_circle,
                     iconColor = iconTint,
                     textColor = textColor,
@@ -157,9 +158,20 @@ fun ClassDetailsScreen(
                         labelColor = subTextColor
                     )
                 }
-            } else {
+            } else if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
+                }
+            } else {
+                // ✅ DODANE: Obsługa błędu
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Nie znaleziono zajęć", style = MaterialTheme.typography.bodyLarge)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBackClick) {
+                            Text("Powrót")
+                        }
+                    }
                 }
             }
         }

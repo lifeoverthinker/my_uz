@@ -17,11 +17,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
 import java.util.Locale
 
 data class HomeUiState(
@@ -34,7 +31,7 @@ data class HomeUiState(
     val currentDate: String = "",
     val tasksMessage: String? = null,
     val classesMessage: String? = null,
-    val classesDayLabel: String? = null // "Dzisiaj" lub "Jutro"
+    val classesDayLabel: String? = null
 )
 
 class HomeViewModel(
@@ -54,7 +51,6 @@ class HomeViewModel(
 
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
-        val tomorrow = today.plusDays(1)
 
         // ========== PERSONALIZACJA ==========
         val userName = settings?.userName ?: "Student"
@@ -74,9 +70,7 @@ class HomeViewModel(
             "Uniwersytet Zielonogórski"
         }
 
-        // ========== ZAJĘCIA: DZISIAJ vs JUTRO ==========
-
-        // Zajęcia z bazy danych lub przykładowe (jeśli puste)
+        // ========== ZAJĘCIA ==========
         val effectiveClasses = if (classes.isEmpty()) {
             listOf(
                 ClassEntity(
@@ -85,7 +79,8 @@ class HomeViewModel(
                     classType = "Wykład",
                     startTime = "10:00",
                     endTime = "11:30",
-                    dayOfWeek = today.dayOfWeek.value, // ISO 8601: 1=PON, 7=NIEDZ
+                    dayOfWeek = today.dayOfWeek.value,
+                    date = today.toString(), // ← DODAJ TO
                     groupCode = settings?.selectedGroupCode ?: "GRUPA",
                     subgroup = null,
                     room = "Sala 101",
@@ -96,22 +91,15 @@ class HomeViewModel(
             classes
         }
 
-        // ✅ KROK 1: Filtruj zajęcia na DZISIAJ (dayOfWeek == today.dayOfWeek.value)
+
+        val todayString = today.toString() // "2025-12-09"
         val todaysClasses = effectiveClasses
-            .filter { it.dayOfWeek == today.dayOfWeek.value }
+            .filter { it.date == todayString } // ← ZMIANA
             .sortedBy { it.startTime }
 
-        // ✅ KROK 2: Filtruj zajęcia na JUTRO (dayOfWeek == tomorrow.dayOfWeek.value)
-        val tomorrowsClasses = effectiveClasses
-            .filter { it.dayOfWeek == tomorrow.dayOfWeek.value }
-            .sortedBy { it.startTime }
-
-        // ✅ KROK 3: Wybierz które zajęcia pokazać + ustal label
-        val (displayedClasses, dayLabel, emptyMessage) = when {
-            todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
-            tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
-            else -> Triple(emptyList(), null, "Brak zajęć na dzisiaj")
-        }
+        // Ustal label i komunikat
+        val dayLabel = if (todaysClasses.isNotEmpty()) "Dzisiaj" else null
+        val emptyMessage = if (todaysClasses.isEmpty()) "Brak zajęć na dzisiaj" else null
 
         // ========== ZADANIA ==========
         val finalTasks = tasks
@@ -140,12 +128,12 @@ class HomeViewModel(
         HomeUiState(
             greeting = greeting,
             departmentInfo = departmentInfo,
-            upcomingClasses = displayedClasses,
+            upcomingClasses = todaysClasses, // ← ZMIANA: tylko dzisiejsze
             upcomingTasks = finalTasks,
             upcomingEvents = mockEvents,
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },
             classesMessage = emptyMessage,
-            classesDayLabel = dayLabel, // "Dzisiaj" lub "Jutro"
+            classesDayLabel = dayLabel,
             tasksMessage = "Zadania",
             isLoading = false
         )
@@ -156,7 +144,6 @@ class HomeViewModel(
         initialValue = HomeUiState()
     )
 
-    // ========== MOCK DATA (pierwsze uruchomienie) ==========
     init {
         viewModelScope.launch {
             val tasks = tasksRepository.getTasksStream().first()
@@ -165,7 +152,7 @@ class HomeViewModel(
                     TaskEntity(
                         title = "Projekt Zaliczeniowy",
                         description = "Dokończyć implementację aplikacji.",
-                        dueDate = System.currentTimeMillis() + 172800000L, // +2 dni
+                        dueDate = System.currentTimeMillis() + 172800000L,
                         isCompleted = false,
                         subjectId = null
                     )
