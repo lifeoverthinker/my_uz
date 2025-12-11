@@ -10,7 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -31,6 +30,11 @@ import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
 import com.example.my_uz_android.ui.screens.home.details.TaskDetailsScreen
 import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 import com.example.my_uz_android.ui.theme.extendedColors
+// Importujemy poprawne ekrany
+import com.example.my_uz_android.ui.screens.index.GradesScreen
+import com.example.my_uz_android.ui.screens.index.SubjectGradesScreen
+import com.example.my_uz_android.ui.screens.index.AddEditGradeScreen
+import com.example.my_uz_android.ui.screens.index.GradeDetailsScreen
 import com.example.my_uz_android.ui.screens.index.IndexScreen
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
@@ -48,8 +52,6 @@ fun AppNavigation(
     val items = listOf(Screen.Main, Screen.Calendar, Screen.Index, Screen.Account)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
-    // Pokaż dolny pasek tylko na głównych ekranach
     val showBottomBar = items.any { it.route == currentRoute }
 
     val navBackgroundColor = MaterialTheme.extendedColors.navBackground
@@ -114,7 +116,7 @@ fun AppNavigation(
                                     }
                                 },
                                 colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = Color.Transparent,
+                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
                                     selectedIconColor = navActiveColor,
                                     selectedTextColor = navActiveColor,
                                     unselectedIconColor = navInactiveColor,
@@ -132,7 +134,6 @@ fun AppNavigation(
             startDestination = startDestination,
             modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         ) {
-            // --- ONBOARDING ---
             composable("landing") {
                 LandingScreen(
                     onFinishOnboarding = {
@@ -143,18 +144,19 @@ fun AppNavigation(
                 )
             }
 
-            // --- Ekrany główne ---
             composable(Screen.Main.route) {
                 HomeScreen(
                     onClassClick = { classId -> navController.navigate("class_details/$classId") },
                     onEventClick = { eventId -> navController.navigate("event_details/$eventId") },
                     onTaskClick = { taskId -> navController.navigate("task_details/$taskId") },
                     onAccountClick = { navController.navigate(Screen.Account.route) },
-                    onCalendarClick = { navController.navigate(Screen.Calendar.route) }
+                    onCalendarClick = { navController.navigate(Screen.Calendar.route) },
+                    onAddGradeClick = { navController.navigate("add_grade") },
+                    onAddAbsenceClick = { navController.navigate("add_absence") },
+                    onAddTaskClick = { navController.navigate("add_task") }
                 )
             }
 
-            // --- TERMINARZ (Lista Zadań) ---
             composable(Screen.Calendar.route) {
                 TasksScreen(
                     onAddTaskClick = { navController.navigate("add_task") },
@@ -162,9 +164,26 @@ fun AppNavigation(
                 )
             }
 
-            // --- INDEKS ---
             composable(Screen.Index.route) {
-                IndexScreen()
+                IndexScreen(
+                    onGradeDetailsClick = { gradeId ->
+                        navController.navigate("grade_details/$gradeId")
+                    },
+                    onNavigateToClassTypeGrades = { subjectName, classType ->
+                        navController.navigate("class_type_grades/$subjectName/$classType")
+                    },
+                    // ✅ LOGIKA: Obsługa parametrów
+                    onAddGradeClick = { subject, classType ->
+                        if (subject != null && classType != null) {
+                            // Skrót z karty przedmiotu -> uzupełniamy dane
+                            navController.navigate("add_grade?subject=$subject&classType=$classType")
+                        } else {
+                            // Główny FAB -> pusty formularz
+                            navController.navigate("add_grade")
+                        }
+                    },
+                    onAddAbsenceClick = { navController.navigate("add_absence") }
+                )
             }
 
             composable(Screen.Account.route) {
@@ -172,13 +191,12 @@ fun AppNavigation(
                     onBackClick = { },
                     onLogoutClick = {
                         navController.navigate("landing") {
-                            popUpTo(Screen.Main.route) { inclusive = true }
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 )
             }
 
-            // --- Szczegóły ---
             composable(
                 "class_details/{classId}",
                 arguments = listOf(navArgument("classId") { type = NavType.IntType })
@@ -203,7 +221,6 @@ fun AppNavigation(
                 )
             }
 
-            // --- Dodawanie i Edycja Zadania ---
             composable("add_task") {
                 TaskAddEditScreen(
                     taskId = null,
@@ -221,6 +238,76 @@ fun AppNavigation(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+
+            // POPRAWKA: Obsługa argumentów (subject, classType) dla ekranu dodawania oceny
+            composable(
+                route = "add_grade?subject={subject}&classType={classType}",
+                arguments = listOf(
+                    navArgument("subject") { nullable = true },
+                    navArgument("classType") { nullable = true }
+                )
+            ) { backStackEntry ->
+                val subject = backStackEntry.arguments?.getString("subject")
+                val classType = backStackEntry.arguments?.getString("classType")
+
+                AddEditGradeScreen(
+                    gradeId = null,
+                    prefilledSubject = subject,
+                    prefilledClassType = classType,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("add_absence") {
+                PlaceholderScreen("Dodaj nieobecność - w przygotowaniu")
+            }
+
+            composable(
+                route = "grade_details/{gradeId}",
+                arguments = listOf(navArgument("gradeId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val gradeId = backStackEntry.arguments?.getInt("gradeId")
+                GradeDetailsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onEdit = { navController.navigate("edit_grade/$gradeId") }
+                )
+            }
+
+            composable(
+                route = "edit_grade/{gradeId}",
+                arguments = listOf(navArgument("gradeId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val gradeId = backStackEntry.arguments?.getInt("gradeId")
+                AddEditGradeScreen(
+                    gradeId = gradeId,
+                    prefilledSubject = null,
+                    prefilledClassType = null,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "class_type_grades/{subjectName}/{classType}",
+                arguments = listOf(
+                    navArgument("subjectName") { type = NavType.StringType },
+                    navArgument("classType") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
+                val classType = backStackEntry.arguments?.getString("classType") ?: ""
+
+                SubjectGradesScreen(
+                    subjectName = subjectName,
+                    classType = classType,
+                    onNavigateBack = { navController.popBackStack() },
+                    onGradeClick = { gradeId ->
+                        navController.navigate("grade_details/$gradeId")
+                    },
+                    onAddGradeClick = {
+                        navController.navigate("add_grade?subject=$subjectName&classType=$classType")
+                    }
+                )
+            }
         }
     }
 }
@@ -231,7 +318,7 @@ fun PlaceholderScreen(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.onBackground
         )
     }
 }

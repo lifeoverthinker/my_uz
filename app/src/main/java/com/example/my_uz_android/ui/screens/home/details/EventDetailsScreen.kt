@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -73,71 +75,98 @@ fun EventDetailsScreen(
                 }
             }
 
-            if (event != null) {
-                // Tytuł
-                Row(
+            if (uiState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (event != null) {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    verticalAlignment = Alignment.Top
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    DetailIconBox {
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(accentColor)
+                    // Tytuł
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        DetailIconBox {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(accentColor)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = event.title,
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 28.sp,
+                                lineHeight = 36.sp,
+                                color = textColor,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+
+                            // DATA + GODZINA W JEDNEJ LINII (jak w ClassDetails)
+                            val dateTimeText = if (event.timeRange.isNotEmpty()) {
+                                "${event.date}, ${event.timeRange}"
+                            } else {
+                                event.date
+                            }
+
+                            Text(
+                                text = dateTimeText,
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp,
+                                color = subTextColor
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Lokalizacja
+                    if (event.location.isNotEmpty()) {
+                        DetailSection(
+                            label = "LOKALIZACJA",
+                            text = event.location,
+                            iconRes = R.drawable.ic_marker_pin,
+                            iconColor = iconTint,
+                            textColor = textColor,
+                            labelColor = subTextColor
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                            text = event.title,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 28.sp,
-                            lineHeight = 36.sp,
-                            color = textColor,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-
-                        Text(
-                            text = event.date,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 16.sp,
-                            color = subTextColor
+                    // Opis
+                    if (event.description.isNotEmpty()) {
+                        DetailSection(
+                            label = "OPIS",
+                            text = event.description,
+                            iconRes = R.drawable.ic_menu_2,
+                            iconColor = iconTint,
+                            textColor = textColor,
+                            labelColor = subTextColor
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Details (BEZ DIVIDERA)
-                if (event.description.isNotEmpty()) {
-                    DetailSection(
-                        label = "OPIS",
-                        text = event.description,
-                        iconRes = R.drawable.ic_menu_2,
-                        iconColor = iconTint,
-                        textColor = textColor,
-                        labelColor = subTextColor
-                    )
-                } else {
-                    DetailSection(
-                        label = "OPIS",
-                        text = "Brak opisu",
-                        iconRes = R.drawable.ic_menu_2,
-                        iconColor = iconTint,
-                        textColor = textColor,
-                        labelColor = subTextColor
-                    )
+                    Spacer(modifier = Modifier.height(100.dp))
                 }
             } else {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    Text(
+                        text = "Nie znaleziono wydarzenia",
+                        fontFamily = InterFontFamily,
+                        color = subTextColor
+                    )
                 }
             }
         }

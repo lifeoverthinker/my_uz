@@ -1,6 +1,7 @@
 package com.example.my_uz_android.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,18 +39,14 @@ enum class ClassCardType {
 fun ClassCard(
     classItem: ClassEntity,
     type: ClassCardType = ClassCardType.HOME,
-    // Domyślny kolor z motywu, ale można nadpisać
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    onClick: () -> Unit = {}, // ✅ DODANO
     modifier: Modifier = Modifier
 ) {
-    // Używamy kolorów z motywu zamiast sztywnych wartości
     val titleColor = MaterialTheme.colorScheme.onSurface
     val detailsColor = MaterialTheme.colorScheme.onSurfaceVariant
-
-    // Kolory avatara
     val avatarBackgroundColor = MaterialTheme.colorScheme.primary
     val avatarTextColor = MaterialTheme.colorScheme.onPrimary
-    // Kolor kropki w kalendarzu
     val statusDotColor = MaterialTheme.colorScheme.tertiary
 
     Row(
@@ -57,6 +54,7 @@ fun ClassCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
+            .clickable { onClick() } // ✅ Obsługa kliknięcia
             .padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.Top
@@ -65,7 +63,6 @@ fun ClassCard(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Nazwa przedmiotu
             Text(
                 text = classItem.subjectName,
                 style = TextStyle(
@@ -84,7 +81,6 @@ fun ClassCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Godzina
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -108,7 +104,6 @@ fun ClassCard(
                     )
                 }
 
-                // Sala
                 Text(
                     text = classItem.room ?: "",
                     style = TextStyle(

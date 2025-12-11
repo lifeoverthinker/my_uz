@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
+import com.example.my_uz_android.util.NetworkResult // ✅ Import
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,18 +27,28 @@ class SettingsViewModel(
 
     init {
         viewModelScope.launch {
-            // 1. Pobierz listę grup
-            val groups = universityRepository.getGroupCodes()
+            // 1. Pobierz listę grup - ✅ NAPRAWA
+            val groupsResult = universityRepository.getGroupCodes()
+            val groups = if (groupsResult is NetworkResult.Success) {
+                groupsResult.data ?: emptyList()
+            } else {
+                emptyList()
+            }
             _uiState.value = _uiState.value.copy(availableGroups = groups)
 
             // 2. Obserwuj ustawienia
             settingsRepository.getSettingsStream().collect { settings ->
                 _uiState.value = _uiState.value.copy(settings = settings)
 
-                // ✅ NAPRAWA: Bezpieczne pobieranie wartości (obsługa nulla)
                 val groupCode = settings?.selectedGroupCode ?: ""
                 if (groupCode.isNotBlank()) {
-                    val subgroups = universityRepository.getSubgroups(groupCode)
+                    // ✅ NAPRAWA: Pobieranie podgrup
+                    val subResult = universityRepository.getSubgroups(groupCode)
+                    val subgroups = if (subResult is NetworkResult.Success) {
+                        subResult.data ?: emptyList()
+                    } else {
+                        emptyList()
+                    }
                     _uiState.value = _uiState.value.copy(availableSubgroups = subgroups)
                 }
             }
@@ -60,9 +71,6 @@ class SettingsViewModel(
         updateSettings(current.copy(selectedSubgroup = subgroup))
     }
 
-    // ✅ NAPRAWA DARK MODE:
-    // Upewniamy się, że jeśli settings jest null, tworzymy nowy z ID=1.
-    // Dzięki temu Room nadpisze istniejący wiersz, zamiast tworzyć nowy.
     fun toggleDarkMode() {
         val current = _uiState.value.settings ?: SettingsEntity(id = 1)
         updateSettings(current.copy(isDarkMode = !current.isDarkMode))

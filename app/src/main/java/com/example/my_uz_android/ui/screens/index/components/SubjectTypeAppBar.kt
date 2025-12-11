@@ -11,13 +11,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -32,11 +33,10 @@ fun SubjectTypeAppBar(
     subjectName: String,
     className: String,
     onBackClick: () -> Unit,
-    onFilterClick: () -> Unit, // ✅ Nowa akcja
-    onSortClick: () -> Unit,   // ✅ Nowa akcja
     modifier: Modifier = Modifier,
 ) {
-    val iconTint = Color(0xFF1D1B20)
+    val iconTint = MaterialTheme.colorScheme.onSurface // Dark Mode friendly
+    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(
         modifier = modifier
@@ -45,15 +45,16 @@ fun SubjectTypeAppBar(
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Przycisk Wstecz (ic_chevron_left)
+        // Przycisk Wstecz
         Box(
             modifier = Modifier
                 .size(48.dp)
+                .clip(CircleShape)
                 .clickable { onBackClick() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.ic_chevron_left), // Ikona MyUZ
+                painter = painterResource(id = R.drawable.ic_chevron_left),
                 contentDescription = "Wróć",
                 tint = iconTint,
                 modifier = Modifier.size(24.dp)
@@ -71,9 +72,9 @@ fun SubjectTypeAppBar(
                 text = subjectName,
                 style = TextStyle(
                     color = iconTint,
-                    fontSize = 22.sp,
+                    fontSize = 20.sp,
                     fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.W400,
+                    fontWeight = FontWeight.Medium,
                     lineHeight = 28.sp
                 ),
                 maxLines = 1,
@@ -82,49 +83,14 @@ fun SubjectTypeAppBar(
             Text(
                 text = className,
                 style = TextStyle(
-                    color = Color(0xFF49454F),
+                    color = subTextColor,
                     fontSize = 12.sp,
                     fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.W400,
+                    fontWeight = FontWeight.Normal,
                     lineHeight = 16.sp,
                     letterSpacing = 0.40.sp
                 )
             )
-        }
-
-        // Akcje (Filter i Sort/Opcje)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(0.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.height(48.dp)
-        ) {
-            // Przycisk Filtrowania
-            Box(modifier = Modifier
-                .size(48.dp)
-                .clickable { onFilterClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_filter_funnel),
-                    contentDescription = "Filtruj",
-                    tint = iconTint,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            // Przycisk Sortowania / Opcji
-            Box(modifier = Modifier
-                .size(48.dp)
-                .clickable { onSortClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_menu_2),
-                    contentDescription = "Sortuj/Opcje",
-                    tint = iconTint,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
         }
     }
 }
