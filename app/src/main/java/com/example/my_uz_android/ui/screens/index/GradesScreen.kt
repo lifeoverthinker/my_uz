@@ -23,8 +23,6 @@ fun GradesScreen(
     viewModel: GradesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
-    // Stan rozwinięcia kart (klucz: nazwa przedmiotu)
     val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
 
     if (uiState.isLoading) {
@@ -41,7 +39,7 @@ fun GradesScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 100.dp) // Miejsce na FAB
+            contentPadding = PaddingValues(bottom = 100.dp)
         ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -55,7 +53,6 @@ fun GradesScreen(
             items(uiState.subjects) { subject ->
                 val isExpanded = expandedStates[subject.name] ?: false
 
-                // ✅ NAPRAWA BŁĘDU: Mapowanie ClassTypeState (ViewModel) na SubjectTypeState (UI Component)
                 val mappedClassTypes = subject.types.map { type ->
                     SubjectTypeState(
                         typeName = type.name,
@@ -68,7 +65,7 @@ fun GradesScreen(
                     subjectName = subject.name,
                     subjectCode = subject.code,
                     overallAverage = if (subject.average > 0) subject.average else null,
-                    classTypes = mappedClassTypes, // Przekazujemy zmapowaną listę
+                    classTypes = mappedClassTypes,
                     isExpanded = isExpanded,
                     onExpandClick = { expandedStates[subject.name] = !isExpanded },
                     onAddGradeClick = { typeName ->

@@ -78,13 +78,7 @@ fun GradeDetailsContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .clickable { onNavigateBack() },
-                    contentAlignment = Alignment.Center
-                ) {
+                DetailIconBox(onClick = onNavigateBack) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_x_close),
                         contentDescription = "Zamknij",
@@ -95,14 +89,7 @@ fun GradeDetailsContent(
 
                 if (grade != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Ikona ołówka (Edycja)
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .clickable { onEditGrade(grade.id) },
-                            contentAlignment = Alignment.Center
-                        ) {
+                        DetailIconBox(onClick = { onEditGrade(grade.id) }) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_edit),
                                 contentDescription = "Edytuj",
@@ -111,15 +98,8 @@ fun GradeDetailsContent(
                             )
                         }
 
-                        // Ikona 3 kropki (Menu)
                         Box {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .clickable { showMenu = true },
-                                contentAlignment = Alignment.Center
-                            ) {
+                            DetailIconBox(onClick = { showMenu = true }) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_dots_vertical),
                                     contentDescription = "Opcje",
@@ -134,23 +114,11 @@ fun GradeDetailsContent(
                                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                             ) {
                                 DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            "Duplikuj (Wkrótce)",
-                                            fontFamily = InterFontFamily,
-                                            color = textColor
-                                        )
-                                    },
+                                    text = { Text("Duplikuj (Wkrótce)", fontFamily = InterFontFamily, color = textColor) },
                                     onClick = { showMenu = false }
                                 )
                                 DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            "Usuń",
-                                            fontFamily = InterFontFamily,
-                                            color = MaterialTheme.colorScheme.error
-                                        )
-                                    },
+                                    text = { Text("Usuń", fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         showMenu = false
                                         showDeleteDialog = true
@@ -169,7 +137,7 @@ fun GradeDetailsContent(
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // TYTUŁ i DATA (na górze)
+                    // TYTUŁ i DATA
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -177,12 +145,7 @@ fun GradeDetailsContent(
                             .padding(top = 8.dp),
                         verticalAlignment = Alignment.Top
                     ) {
-                        // Znacznik koloru
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp) // Kontener dla wyrównania
-                                .wrapContentSize(Alignment.Center)
-                        ) {
+                        DetailIconBox {
                             Box(
                                 modifier = Modifier
                                     .size(18.dp)
@@ -216,9 +179,7 @@ fun GradeDetailsContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // SEKCJ: SZCZEGÓŁY (Brak dividera, same sekcje)
-
-                    // PRZEDMIOT
+                    // SZCZEGÓŁY
                     DetailSectionGrade(
                         label = "PRZEDMIOT",
                         text = grade.subjectName,
@@ -228,7 +189,6 @@ fun GradeDetailsContent(
                         labelColor = subTextColor
                     )
 
-                    // RODZAJ ZAJĘĆ
                     if (grade.classType.isNotEmpty()) {
                         DetailSectionGrade(
                             label = "RODZAJ ZAJĘĆ",
@@ -240,7 +200,6 @@ fun GradeDetailsContent(
                         )
                     }
 
-                    // OCENA
                     val gradeText = when {
                         grade.grade == -1.0 -> "Aktywność +"
                         grade.grade % 1.0 == 0.0 -> grade.grade.toInt().toString()
@@ -256,7 +215,6 @@ fun GradeDetailsContent(
                         labelColor = subTextColor
                     )
 
-                    // WAGA
                     DetailSectionGrade(
                         label = "WAGA",
                         text = grade.weight.toString(),
@@ -266,7 +224,7 @@ fun GradeDetailsContent(
                         labelColor = subTextColor
                     )
 
-                    // ✅ NOWE: OPIS (Jeśli istnieje)
+                    // ✅ OPIS (Komentarz) - wyświetlamy jeśli nie jest pusty
                     if (!grade.comment.isNullOrEmpty()) {
                         DetailSectionGrade(
                             label = "OPIS",
@@ -309,6 +267,18 @@ fun GradeDetailsContent(
 }
 
 @Composable
+private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .clickable(enabled = onClick != null) { onClick?.invoke() },
+        contentAlignment = Alignment.Center,
+        content = content
+    )
+}
+
+@Composable
 private fun DetailSectionGrade(
     label: String,
     text: String,
@@ -324,10 +294,7 @@ private fun DetailSectionGrade(
             .padding(bottom = 24.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Box(
-            modifier = Modifier.size(48.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        DetailIconBox {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,

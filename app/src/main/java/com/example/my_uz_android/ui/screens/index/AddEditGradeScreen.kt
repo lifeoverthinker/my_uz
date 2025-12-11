@@ -52,10 +52,14 @@ fun AddEditGradeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    LaunchedEffect(prefilledSubject, prefilledClassType) {
-        if (gradeId == null) {
-            prefilledSubject?.let { viewModel.updateSubjectName(it) }
-            prefilledClassType?.let { viewModel.updateClassType(it) }
+    // ✅ POPRAWKA: Obsługa ładowania danych przy edycji
+    LaunchedEffect(gradeId, prefilledSubject, prefilledClassType) {
+        if (gradeId != null && gradeId != 0) {
+            viewModel.loadGrade(gradeId)
+        } else {
+            // Tylko dla nowej oceny wypełniamy "prefilled"
+            if (prefilledSubject != null) viewModel.updateSubjectName(prefilledSubject)
+            if (prefilledClassType != null) viewModel.updateClassType(prefilledClassType)
         }
     }
 
@@ -64,7 +68,7 @@ fun AddEditGradeScreen(
         onNavigateBack = onNavigateBack,
         onSaveGrade = {
             viewModel.saveGrade {
-                Toast.makeText(context, "Ocena zapisana", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Zapisano zmiany", Toast.LENGTH_SHORT).show()
                 onNavigateBack()
             }
         },
@@ -75,7 +79,7 @@ fun AddEditGradeScreen(
         onCustomGradeChange = viewModel::updateCustomGradeValue,
         onWeightChange = viewModel::updateWeight,
         onDescriptionChange = viewModel::updateDescription,
-        onCommentChange = viewModel::updateComment, // ✅
+        onCommentChange = viewModel::updateComment,
         onDateChange = viewModel::updateDate,
         modifier = modifier
     )
@@ -94,7 +98,7 @@ fun AddEditGradeContent(
     onCustomGradeChange: (String) -> Unit,
     onWeightChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
-    onCommentChange: (String) -> Unit, // ✅
+    onCommentChange: (String) -> Unit,
     onDateChange: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -304,7 +308,7 @@ fun AddEditGradeContent(
 
                 HorizontalDivider(color = dividerColor)
 
-                // 7. OPIS (DODATKOWY KOMENTARZ) - ✅ TERAZ DZIAŁA!
+                // 7. DODATKOWY OPIS
                 CommonRowGrade(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
                     Box(modifier = Modifier.padding(vertical = 12.dp)) {
                         BasicTextField(
@@ -338,7 +342,7 @@ fun AddEditGradeContent(
             }
         }
 
-        // --- Dialogi (Bez zmian) ---
+        // --- Dialogi ---
         if (showDatePicker) {
             DatePicker(
                 date = uiState.date,
@@ -350,8 +354,7 @@ fun AddEditGradeContent(
             )
         }
 
-        // --- Modale (Przedmiot, Typ, Ocena) ---
-        // ... (Tu jest kod modali, który już masz poprawny)
+        // --- Modale (Bez zmian) ---
         if (showSubjectModal) {
             Dialog(onDismissRequest = { showSubjectModal = false }) {
                 Surface(
