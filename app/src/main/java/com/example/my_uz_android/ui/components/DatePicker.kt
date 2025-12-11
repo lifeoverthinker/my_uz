@@ -6,6 +6,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -15,7 +18,15 @@ fun DatePicker(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dateState = rememberDatePickerState(initialSelectedDateMillis = date)
+    // Konwersja czasu lokalnego na UTC Midnight dla poprawnego wyświetlania w DatePicker
+    val initialUtcTime = remember(date) {
+        val localDate = Instant.ofEpochMilli(date)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+        localDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    }
+
+    val dateState = rememberDatePickerState(initialSelectedDateMillis = initialUtcTime)
 
     DatePickerDialog(
         onDismissRequest = onDismiss,
@@ -35,16 +46,15 @@ fun DatePicker(
         },
         shape = RoundedCornerShape(28.dp),
         colors = DatePickerDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface // Białe tło z theme
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        tonalElevation = 0.dp // Brak fioletowej poświaty
+        tonalElevation = 0.dp
     ) {
         androidx.compose.material3.DatePicker(
             state = dateState,
-            showModeToggle = false,
             colors = DatePickerDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                // Usunięto headerHeadlineContentColor, który powodował błąd
+                titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant, // Używamy titleContentColor zamiast headerHeadline
                 headlineContentColor = MaterialTheme.colorScheme.onSurface,
                 weekdayContentColor = MaterialTheme.colorScheme.onSurface,
                 subheadContentColor = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -6,13 +6,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface EventDao {
+
     @Query("SELECT * FROM events ORDER BY date DESC")
     fun getAllEvents(): Flow<List<EventEntity>>
 
     @Query("SELECT * FROM events WHERE id = :id")
     fun getEventById(id: Int): Flow<EventEntity?>
 
-    @Query("SELECT * FROM events WHERE id = :id")  // DODANE
+    @Query("SELECT * FROM events WHERE id = :id")
     suspend fun getEventByIdSuspend(id: Int): EventEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

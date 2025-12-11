@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -96,7 +97,7 @@ fun TaskAddEditContent(
     uiState: TaskAddEditUiState,
     onNavigateBack: () -> Unit,
     onSaveTask: () -> Unit,
-    onDeleteTask: () -> Unit, // Nieużywane w UI, ale potrzebne do logiki
+    onDeleteTask: () -> Unit,
     onTitleChange: (String) -> Unit,
     onSubjectChange: (String?) -> Unit,
     onClassTypeChange: (String?) -> Unit,
@@ -226,7 +227,7 @@ fun TaskAddEditContent(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = dividerColor.copy(alpha = 0.5f))
+                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // QUICK CHIPS
@@ -263,9 +264,9 @@ fun TaskAddEditContent(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider(color = dividerColor)
+                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
 
-                // CAŁY DZIEŃ + DATA/CZAS (STYL GOOGLE CALENDAR)
+                // CAŁY DZIEŃ + DATA/CZAS
                 CommonRow(iconRes = R.drawable.ic_clock, iconTint = iconTint) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(
@@ -278,6 +279,7 @@ fun TaskAddEditContent(
                                 style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
                                 color = textColor
                             )
+
                             Switch(
                                 checked = uiState.isAllDay,
                                 onCheckedChange = onIsAllDayChange,
@@ -291,11 +293,7 @@ fun TaskAddEditContent(
                             )
                         }
 
-                        // ✅ BRAK DIVIDERA - czysty układ
-
-                        // ✅ RZĘDY: Data początkowa (wiersz 1), Data końcowa (wiersz 2)
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            // Wiersz 1: Początek
                             SimpleDateTimeRow(
                                 date = startDate,
                                 time = if (uiState.isAllDay) null else startTime,
@@ -304,7 +302,6 @@ fun TaskAddEditContent(
                                 textColor = textColor
                             )
 
-                            // Wiersz 2: Koniec
                             SimpleDateTimeRow(
                                 date = endDate,
                                 time = if (uiState.isAllDay) null else endTime,
@@ -316,7 +313,7 @@ fun TaskAddEditContent(
                     }
                 }
 
-                HorizontalDivider(color = dividerColor)
+                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
 
                 // PRZEDMIOT
                 CommonRow(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
@@ -333,6 +330,7 @@ fun TaskAddEditContent(
                             style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
                             color = if (uiState.classSubject == null) subTextColor else textColor
                         )
+
                         Icon(
                             painter = painterResource(R.drawable.ic_chevron_down),
                             contentDescription = null,
@@ -342,7 +340,7 @@ fun TaskAddEditContent(
                     }
                 }
 
-                HorizontalDivider(color = dividerColor)
+                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
 
                 // RODZAJ
                 CommonRow(
@@ -359,6 +357,7 @@ fun TaskAddEditContent(
                     ) {
                         val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) }
                             ?: stringResource(R.string.task_type_label)
+
                         Text(
                             text = typeText,
                             style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
@@ -366,6 +365,7 @@ fun TaskAddEditContent(
                             else if (uiState.classType == null) subTextColor
                             else textColor
                         )
+
                         Icon(
                             painter = painterResource(R.drawable.ic_chevron_down),
                             contentDescription = null,
@@ -375,7 +375,7 @@ fun TaskAddEditContent(
                     }
                 }
 
-                HorizontalDivider(color = dividerColor)
+                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
 
                 // OPIS
                 CommonRow(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
@@ -406,7 +406,7 @@ fun TaskAddEditContent(
                     }
                 }
 
-                HorizontalDivider(color = dividerColor)
+                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
@@ -422,6 +422,7 @@ fun TaskAddEditContent(
                 onDismiss = { showDatePickerStart = false }
             )
         }
+
         if (showDatePickerEnd) {
             DatePicker(
                 date = endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
@@ -432,6 +433,7 @@ fun TaskAddEditContent(
                 onDismiss = { showDatePickerEnd = false }
             )
         }
+
         if (showTimePickerStart) {
             TimePicker(
                 time = formatTime(startTime),
@@ -442,6 +444,7 @@ fun TaskAddEditContent(
                 onDismiss = { showTimePickerStart = false }
             )
         }
+
         if (showTimePickerEnd) {
             TimePicker(
                 time = formatTime(endTime),
@@ -453,7 +456,7 @@ fun TaskAddEditContent(
             )
         }
 
-        // Modale - używają MaterialTheme.colorScheme.surface dla poprawnego tła
+        // Modale
         if (showSubjectModal) {
             Dialog(onDismissRequest = { showSubjectModal = false }) {
                 Surface(
@@ -475,6 +478,7 @@ fun TaskAddEditContent(
                                 Text(stringResource(R.string.none), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
                             }
                         }
+
                         items(uiState.availableSubjects) { (subject, _) ->
                             Row(
                                 modifier = Modifier
@@ -492,9 +496,11 @@ fun TaskAddEditContent(
                 }
             }
         }
+
         if (showTypeModal) {
             val selectedSubject = uiState.availableSubjects.find { it.first == uiState.classSubject }
             val availableTypes = selectedSubject?.second ?: emptyList()
+
             Dialog(onDismissRequest = { showTypeModal = false }) {
                 Surface(
                     shape = RoundedCornerShape(28.dp),
@@ -515,6 +521,7 @@ fun TaskAddEditContent(
                                 Text(stringResource(R.string.none), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
                             }
                         }
+
                         items(availableTypes) { type ->
                             Row(
                                 modifier = Modifier
@@ -535,7 +542,6 @@ fun TaskAddEditContent(
     }
 }
 
-// ✅ KOMPONENT STYLIZOWANY NA GOOGLE CALENDAR (Bez etykiet)
 @Composable
 private fun SimpleDateTimeRow(
     date: LocalDate,
@@ -548,7 +554,6 @@ private fun SimpleDateTimeRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Data
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -562,7 +567,6 @@ private fun SimpleDateTimeRow(
             )
         }
 
-        // Czas (jeśli istnieje)
         if (time != null && onTimeClick != null) {
             Box(
                 modifier = Modifier
@@ -614,4 +618,29 @@ private fun formatDateLong(date: LocalDate): String {
 
 private fun formatTime(time: LocalTime): String {
     return String.format("%02d:%02d", time.hour, time.minute)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun TaskAddEditScreenPreview() {
+    TaskAddEditContent(
+        uiState = TaskAddEditUiState(
+            title = "Zadanie domowe",
+            classSubject = "Matematyka",
+            isAllDay = false
+        ),
+        onNavigateBack = {},
+        onSaveTask = {},
+        onDeleteTask = {},
+        onTitleChange = {},
+        onSubjectChange = {},
+        onClassTypeChange = {},
+        onPriorityChange = {},
+        onIsAllDayChange = {},
+        onStartDateChange = {},
+        onEndDateChange = {},
+        onStartTimeChange = {},
+        onEndTimeChange = {},
+        onDescriptionChange = {}
+    )
 }

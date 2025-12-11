@@ -10,13 +10,13 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
 
 interface AppContainer {
-    val universityRepository: UniversityRepository
+    val settingsRepository: SettingsRepository
     val classRepository: ClassRepository
     val tasksRepository: TasksRepository
     val gradesRepository: GradesRepository
-    val absenceRepository: AbsenceRepository
     val eventRepository: EventRepository
-    val settingsRepository: SettingsRepository
+    val absenceRepository: AbsenceRepository
+    val universityRepository: UniversityRepository
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -62,7 +62,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val eventRepository: EventRepository by lazy {
-        EventRepository(database.eventDao())
+        EventRepository(database.eventDao())  // ✅ UPROSZCZONA WERSJA
     }
 
     override val settingsRepository: SettingsRepository by lazy {
