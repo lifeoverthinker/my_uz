@@ -16,12 +16,27 @@ class ClassDetailsViewModel(
     private val classId: Int = checkNotNull(savedStateHandle["classId"])
 
     val uiState: StateFlow<ClassDetailsUiState> =
-        classRepository.getClassByIdStream(classId)  // POPRAWKA: używamy Flow zamiast suspend
+        classRepository.getClassByIdStream(classId)
             .map { classEntity ->
-                ClassDetailsUiState(
-                    classEntity = classEntity,
-                    isLoading = false
-                )
+                if (classEntity != null) {
+                    ClassDetailsUiState(
+                        classEntity = classEntity,
+                        isLoading = false
+                    )
+                } else {
+                    // ✅ NAPRAWA: Obsługa null (gdy nie ma danych)
+                    ClassDetailsUiState(
+                        classEntity = null,
+                        isLoading = false,
+                        error = "Nie znaleziono zajęć"
+                    )
+                }
+            }
+            .catch { e ->
+                emit(ClassDetailsUiState(
+                    isLoading = false,
+                    error = "Błąd: ${e.message}"
+                ))
             }
             .stateIn(
                 scope = viewModelScope,
@@ -40,5 +55,6 @@ class ClassDetailsViewModel(
 
 data class ClassDetailsUiState(
     val classEntity: ClassEntity? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val error: String? = null
 )

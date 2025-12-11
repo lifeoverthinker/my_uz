@@ -7,14 +7,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.data.models.TaskEntity
@@ -28,34 +27,32 @@ import java.time.ZoneId
 fun TaskCard(
     task: TaskEntity,
     onTaskClick: () -> Unit = {},
+    onCheckClick: () -> Unit = {}, // ✅ DODANO
     modifier: Modifier = Modifier,
     showDayMarker: Boolean = true
 ) {
-    // ✅ Logika ukończonego zadania
     val isCompleted = task.isCompleted
-
-    // Kolory podstawowe (Dostosowane do Light/Dark)
     val baseBackgroundColor = MaterialTheme.extendedColors.classCardBackground
     val baseTitleColor = MaterialTheme.colorScheme.onSurface
     val baseDateColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
 
-    // Kolory finalne (zależne od statusu)
-    val cardBackgroundColor = if (isCompleted) MaterialTheme.extendedColors.grayInactive.copy(alpha = 0.3f) else baseBackgroundColor
+    val cardBackgroundColor = if (isCompleted)
+        MaterialTheme.extendedColors.grayInactive.copy(alpha = 0.3f)
+    else baseBackgroundColor
+
     val titleColor = if (isCompleted) baseTitleColor.copy(alpha = 0.5f) else baseTitleColor
     val dateColor = if (isCompleted) baseDateColor.copy(alpha = 0.5f) else baseDateColor
-
     val textDecoration = if (isCompleted) TextDecoration.LineThrough else null
 
     Column(
         modifier = modifier
-            .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(cardBackgroundColor)
             .clickable { onTaskClick() }
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // 1. TYTUŁ
+        // LINIA 1: TYTUŁ
         Text(
             text = task.title,
             style = TextStyle(
@@ -71,10 +68,19 @@ fun TaskCard(
             overflow = TextOverflow.Ellipsis
         )
 
-        // 2. DATA (Opcjonalnie)
+        // LINIA 2: DATA + PRZEDMIOT
         if (showDayMarker) {
+            val dateText = formatTaskDateShort(task.dueDate)
+            val subjectText = task.subjectName?.takeIf { it.isNotBlank() }
+
+            val fullText = if (subjectText != null) {
+                "$dateText • $subjectText"
+            } else {
+                dateText
+            }
+
             Text(
-                text = formatTaskDate(task.dueDate),
+                text = fullText,
                 style = TextStyle(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Normal,
@@ -83,19 +89,30 @@ fun TaskCard(
                     letterSpacing = 0.4.sp,
                     color = dateColor
                 ),
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
 
-private fun formatTaskDate(dueDate: Long): String {
+private fun formatTaskDateShort(dueDate: Long): String {
     return try {
         val date = Instant.ofEpochMilli(dueDate)
             .atZone(ZoneId.systemDefault())
             .toLocalDate()
-        val dayAbbr = getDayAbbr(date.dayOfWeek.value)
-        "${dayAbbr} ${date.dayOfMonth}.${date.monthValue}"
+
+        val today = LocalDate.now()
+        val tomorrow = today.plusDays(1)
+
+        when {
+            date == today -> "Dziś"
+            date == tomorrow -> "Jutro"
+            else -> {
+                val dayAbbr = getDayAbbr(date.dayOfWeek.value)
+                "${dayAbbr}, ${date.dayOfMonth} ${getMonthShort(date.monthValue)}"
+            }
+        }
     } catch (e: Exception) {
         ""
     }
@@ -105,5 +122,14 @@ private fun getDayAbbr(dayOfWeek: Int): String {
     return when (dayOfWeek) {
         1 -> "Pn"; 2 -> "Wt"; 3 -> "Śr"; 4 -> "Czw";
         5 -> "Pt"; 6 -> "Sob"; 7 -> "Ndz"; else -> "??"
+    }
+}
+
+private fun getMonthShort(month: Int): String {
+    return when (month) {
+        1 -> "sty"; 2 -> "lut"; 3 -> "mar"; 4 -> "kwi"
+        5 -> "maj"; 6 -> "cze"; 7 -> "lip"; 8 -> "sie"
+        9 -> "wrz"; 10 -> "paź"; 11 -> "lis"; 12 -> "gru"
+        else -> ""
     }
 }

@@ -14,7 +14,7 @@ import com.example.my_uz_android.data.models.*
         EventEntity::class,
         SettingsEntity::class
     ],
-    version = 5, // ✅ WERSJA 5: Wymusza reset bazy i naprawia crashe
+    version = 10, // ✅ ZMIANA: Wersja 10 (dodano pole comment do GradeEntity)
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

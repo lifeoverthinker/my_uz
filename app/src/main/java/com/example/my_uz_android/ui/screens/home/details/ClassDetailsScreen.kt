@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,6 +27,7 @@ import com.example.my_uz_android.ui.theme.extendedColors
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
+import com.example.my_uz_android.util.ClassTypeUtils
 
 @Composable
 fun ClassDetailsScreen(
@@ -35,6 +37,7 @@ fun ClassDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val classEntity = uiState.classEntity
 
+    // ✅ Kolory z Theme (dla Dark Mode)
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -85,7 +88,7 @@ fun ClassDetailsScreen(
                     ""
                 }
 
-                // Tytuł
+                // Tytuł i Data (zgodnie z Twoim wzorem)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -129,7 +132,7 @@ fun ClassDetailsScreen(
                 // Details (BEZ DIVIDERA)
                 DetailSection(
                     label = "TYP",
-                    text = classEntity.classType,
+                    text = ClassTypeUtils.getFullName(classEntity.classType),
                     iconRes = R.drawable.ic_info_circle,
                     iconColor = iconTint,
                     textColor = textColor,
@@ -140,7 +143,7 @@ fun ClassDetailsScreen(
                     DetailSection(
                         label = "SALA",
                         text = classEntity.room,
-                        iconRes = R.drawable.ic_map,
+                        iconRes = R.drawable.ic_map, // lub ic_marker_pin jeśli wolisz
                         iconColor = iconTint,
                         textColor = textColor,
                         labelColor = subTextColor
@@ -157,9 +160,24 @@ fun ClassDetailsScreen(
                         labelColor = subTextColor
                     )
                 }
-            } else {
+            } else if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
+                }
+            } else {
+                // Obsługa błędu
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Nie znaleziono zajęć",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = subTextColor
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBackClick) {
+                            Text("Powrót")
+                        }
+                    }
                 }
             }
         }
@@ -183,9 +201,9 @@ private fun DetailSection(
     label: String,
     text: String,
     iconRes: Int,
-    iconColor: androidx.compose.ui.graphics.Color,
-    textColor: androidx.compose.ui.graphics.Color,
-    labelColor: androidx.compose.ui.graphics.Color
+    iconColor: Color,
+    textColor: Color,
+    labelColor: Color
 ) {
     Row(
         modifier = Modifier

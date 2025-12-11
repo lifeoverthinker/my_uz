@@ -1,4 +1,4 @@
-package com.example.my_uz_android.ui.screens.home.details
+package com.example.my_uz_android.ui.screens.index
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,75 +13,54 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color // ✅ Naprawiono brakujący import
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
-import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.screens.calendar.TaskDetailsViewModel
 import com.example.my_uz_android.ui.theme.InterFontFamily
-import com.example.my_uz_android.ui.theme.extendedColors
 import com.example.my_uz_android.util.ClassTypeUtils
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import java.text.SimpleDateFormat
+import java.util.*
 
 @Composable
-fun TaskDetailsScreen(
+fun GradeDetailsScreen(
     onNavigateBack: () -> Unit,
-    onEditTask: (Int) -> Unit,
-    viewModel: TaskDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    onEdit: (Int) -> Unit,
+    viewModel: GradeDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    TaskDetailsContent(
-        task = uiState.taskEntity,
-        isLoading = uiState.isLoading,
+    GradeDetailsContent(
+        grade = uiState.grade,
+        isLoading = uiState.grade == null,
         onNavigateBack = onNavigateBack,
-        onEditTask = onEditTask,
-        onDeleteTask = {
-            viewModel.deleteTask()
-            onNavigateBack()
-        },
-        onDuplicateTask = { task ->
-            viewModel.duplicateTask(task)
-            onNavigateBack()
-        },
-        onToggleCompletion = { task ->
-            viewModel.toggleTaskCompletion(task)
+        onEditGrade = onEdit,
+        onDeleteGrade = {
+            viewModel.deleteGrade(onSuccess = onNavigateBack)
         }
     )
 }
 
 @Composable
-fun TaskDetailsContent(
-    task: TaskEntity?,
+fun GradeDetailsContent(
+    grade: com.example.my_uz_android.data.models.GradeEntity?,
     isLoading: Boolean,
     onNavigateBack: () -> Unit,
-    onEditTask: (Int) -> Unit,
-    onDeleteTask: () -> Unit,
-    onDuplicateTask: (TaskEntity) -> Unit,
-    onToggleCompletion: (TaskEntity) -> Unit
+    onEditGrade: (Int) -> Unit,
+    onDeleteGrade: () -> Unit
 ) {
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-
-    // Obsługa kolorów Dark Mode dla statusu
-    val taskAccentColor = if (task?.isCompleted == true) Color.Gray else MaterialTheme.extendedColors.classCardBackground
-
-    // Używamy surfaceContainerLowest: Biały w Light Mode, Ciemny w Dark Mode
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
 
     var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Surface(
         color = surfaceColor,
@@ -91,34 +70,29 @@ fun TaskDetailsContent(
             .statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header
+            // HEADER
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .pointerInput(Unit) {
-                        detectVerticalDragGestures { _, dragAmount ->
-                            if (dragAmount > 10) onNavigateBack()
-                        }
-                    },
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DetailIconBox(onClick = onNavigateBack) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = stringResource(R.string.btn_close),
+                        contentDescription = "Zamknij",
                         tint = textColor,
                         modifier = Modifier.size(24.dp)
                     )
                 }
 
-                if (task != null) {
+                if (grade != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DetailIconBox(onClick = { onEditTask(task.id) }) {
+                        DetailIconBox(onClick = { onEditGrade(grade.id) }) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_edit),
-                                contentDescription = stringResource(R.string.btn_edit),
+                                contentDescription = "Edytuj",
                                 tint = textColor,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -128,7 +102,7 @@ fun TaskDetailsContent(
                             DetailIconBox(onClick = { showMenu = true }) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_dots_vertical),
-                                    contentDescription = stringResource(R.string.options_menu),
+                                    contentDescription = "Opcje",
                                     tint = textColor,
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -140,12 +114,15 @@ fun TaskDetailsContent(
                                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.btn_duplicate), fontFamily = InterFontFamily, color = textColor) },
-                                    onClick = { onDuplicateTask(task); showMenu = false }
+                                    text = { Text("Duplikuj (Wkrótce)", fontFamily = InterFontFamily, color = textColor) },
+                                    onClick = { showMenu = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.btn_delete), fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
-                                    onClick = { onDeleteTask(); showMenu = false }
+                                    text = { Text("Usuń", fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        showMenu = false
+                                        showDeleteDialog = true
+                                    }
                                 )
                             }
                         }
@@ -153,14 +130,14 @@ fun TaskDetailsContent(
                 }
             }
 
-            if (task != null) {
+            if (grade != null) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // Tytuł
+                    // TYTUŁ i DATA
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -173,7 +150,7 @@ fun TaskDetailsContent(
                                 modifier = Modifier
                                     .size(18.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(taskAccentColor)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
                             )
                         }
 
@@ -181,28 +158,17 @@ fun TaskDetailsContent(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = task.title,
+                                text = grade.description ?: "Ocena",
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 28.sp,
                                 lineHeight = 36.sp,
-                                color = if (task.isCompleted) textColor.copy(alpha = 0.6f) else textColor,
-                                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
+                                color = textColor,
                                 modifier = Modifier.padding(bottom = 4.dp)
                             )
 
-                            val dateString = if (task.dueDate > 0) {
-                                try {
-                                    val date = Instant.ofEpochMilli(task.dueDate).atZone(ZoneId.systemDefault())
-                                    val timeStr = task.dueTime?.let { ", $it" } ?: ""
-                                    date.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy", Locale("pl"))) + timeStr
-                                } catch (e: Exception) {
-                                    stringResource(R.string.task_no_date)
-                                }
-                            } else stringResource(R.string.task_no_date)
-
                             Text(
-                                text = dateString,
+                                text = formatDate(grade.date),
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Medium,
                                 fontSize = 16.sp,
@@ -213,22 +179,20 @@ fun TaskDetailsContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    if (!task.subjectName.isNullOrEmpty()) {  // ← ZMIENIONE
-                        DetailSection(
-                            label = stringResource(R.string.label_subject),
-                            text = task.subjectName ?: "",  // ← DODANE ?: ""
-                            iconRes = R.drawable.ic_book_open,
-                            iconColor = iconTint,
-                            textColor = textColor,
-                            labelColor = subTextColor
-                        )
-                    }
+                    // SZCZEGÓŁY
+                    DetailSectionGrade(
+                        label = "PRZEDMIOT",
+                        text = grade.subjectName,
+                        iconRes = R.drawable.ic_book_open,
+                        iconColor = iconTint,
+                        textColor = textColor,
+                        labelColor = subTextColor
+                    )
 
-
-                    if (!task.classType.isNullOrEmpty()) {  // ← ZMIENIONE
-                        DetailSection(
-                            label = stringResource(R.string.label_type),
-                            text = ClassTypeUtils.getFullName(task.classType ?: ""),  // ← DODANE ?: ""
+                    if (grade.classType.isNotEmpty()) {
+                        DetailSectionGrade(
+                            label = "RODZAJ ZAJĘĆ",
+                            text = ClassTypeUtils.getFullName(grade.classType),
                             iconRes = R.drawable.ic_graduation_hat,
                             iconColor = iconTint,
                             textColor = textColor,
@@ -236,58 +200,68 @@ fun TaskDetailsContent(
                         )
                     }
 
+                    val gradeText = when {
+                        grade.grade == -1.0 -> "Aktywność +"
+                        grade.grade % 1.0 == 0.0 -> grade.grade.toInt().toString()
+                        else -> grade.grade.toString()
+                    }
 
-                    if (!task.description.isNullOrEmpty()) {
-                        DetailSection(
-                            label = stringResource(R.string.label_description),
-                            text = task.description,
+                    DetailSectionGrade(
+                        label = "OCENA",
+                        text = gradeText,
+                        iconRes = R.drawable.ic_trophy,
+                        iconColor = iconTint,
+                        textColor = textColor,
+                        labelColor = subTextColor
+                    )
+
+                    DetailSectionGrade(
+                        label = "WAGA",
+                        text = grade.weight.toString(),
+                        iconRes = R.drawable.ic_scales,
+                        iconColor = iconTint,
+                        textColor = textColor,
+                        labelColor = subTextColor
+                    )
+
+                    // ✅ OPIS (Komentarz) - wyświetlamy jeśli nie jest pusty
+                    if (!grade.comment.isNullOrEmpty()) {
+                        DetailSectionGrade(
+                            label = "OPIS",
+                            text = grade.comment,
                             iconRes = R.drawable.ic_menu_2,
                             iconColor = iconTint,
                             textColor = textColor,
                             labelColor = subTextColor
                         )
                     }
-
-                    DetailSection(
-                        label = stringResource(R.string.label_status),
-                        text = stringResource(if (task.isCompleted) R.string.task_status_completed else R.string.task_status_in_progress),
-                        iconRes = if (task.isCompleted) R.drawable.ic_check_circle_broken else R.drawable.ic_info_circle,
-                        iconColor = iconTint,
-                        textColor = textColor,
-                        labelColor = subTextColor
-                    )
-                }
-
-                // Przycisk akcji
-                Button(
-                    onClick = { onToggleCompletion(task) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 24.dp)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (task.isCompleted) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
-                        contentColor = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(0.dp)
-                ) {
-                    Text(
-                        text = stringResource(if (task.isCompleted) R.string.task_mark_incomplete else R.string.task_mark_complete),
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
                 }
             } else if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.task_not_found), color = textColor)
-                }
             }
+        }
+
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Usuń ocenę", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold) },
+                text = { Text("Czy na pewno chcesz usunąć tę ocenę?", fontFamily = InterFontFamily) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onDeleteGrade()
+                        showDeleteDialog = false
+                    }) {
+                        Text("Usuń", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Anuluj")
+                    }
+                }
+            )
         }
     }
 }
@@ -305,7 +279,7 @@ private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable Bo
 }
 
 @Composable
-private fun DetailSection(
+private fun DetailSectionGrade(
     label: String,
     text: String,
     iconRes: Int,
@@ -352,4 +326,9 @@ private fun DetailSection(
             )
         }
     }
+}
+
+private fun formatDate(timestamp: Long): String {
+    val sdf = SimpleDateFormat("EEEE, d MMM yyyy", Locale("pl"))
+    return sdf.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
 }

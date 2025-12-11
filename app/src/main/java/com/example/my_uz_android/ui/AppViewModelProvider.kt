@@ -13,84 +13,109 @@ import com.example.my_uz_android.ui.screens.calendar.TasksViewModel
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsViewModel
+import com.example.my_uz_android.ui.screens.index.AddEditGradeViewModel
+import com.example.my_uz_android.ui.screens.index.GradeDetailsViewModel
+import com.example.my_uz_android.ui.screens.index.GradesViewModel
 import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
-        // OnboardingViewModel
-        initializer {
-            OnboardingViewModel(
-                settingsRepository = myUzApp().container.settingsRepository,
-                universityRepository = myUzApp().container.universityRepository,
-                classRepository = myUzApp().container.classRepository
-            )
-        }
-
-        // HomeViewModel
+        // Home
         initializer {
             HomeViewModel(
-                settingsRepository = myUzApp().container.settingsRepository,
-                classRepository = myUzApp().container.classRepository,
-                tasksRepository = myUzApp().container.tasksRepository,
-                universityRepository = myUzApp().container.universityRepository
+                settingsRepository = myUZApplication().container.settingsRepository,
+                classRepository = myUZApplication().container.classRepository,
+                tasksRepository = myUZApplication().container.tasksRepository,
+                universityRepository = myUZApplication().container.universityRepository
             )
         }
 
-        // TasksViewModel
-        initializer {
-            TasksViewModel(
-                tasksRepository = myUzApp().container.tasksRepository
-            )
-        }
-
-        // TaskDetailsViewModel
-        initializer {
-            TaskDetailsViewModel(
-                savedStateHandle = this.createSavedStateHandle(),
-                tasksRepository = myUzApp().container.tasksRepository
-            )
-        }
-
-        // TaskAddEditViewModel
-        initializer {
-            TaskAddEditViewModel(
-                savedStateHandle = this.createSavedStateHandle(),
-                tasksRepository = myUzApp().container.tasksRepository,
-                classRepository = myUzApp().container.classRepository // ✅ Dodano
-            )
-        }
-
-
-        // ClassDetailsViewModel
+        // Class Details
         initializer {
             ClassDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
-                classRepository = myUzApp().container.classRepository
+                classRepository = myUZApplication().container.classRepository
             )
         }
 
-        // EventDetailsViewModel
+        // Event Details
         initializer {
             EventDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
-                eventRepository = myUzApp().container.eventRepository
+                eventRepository = myUZApplication().container.eventRepository
             )
         }
 
-        // AccountViewModel
+        // Task Details
+        initializer {
+            TaskDetailsViewModel(
+                savedStateHandle = this.createSavedStateHandle(),
+                tasksRepository = myUZApplication().container.tasksRepository
+            )
+        }
+
+        // Tasks (Calendar)
+        initializer {
+            TasksViewModel(
+                tasksRepository = myUZApplication().container.tasksRepository,
+                settingsRepository = myUZApplication().container.settingsRepository
+            )
+        }
+
+        // Task Add/Edit
+        initializer {
+            TaskAddEditViewModel(
+                savedStateHandle = this.createSavedStateHandle(),
+                tasksRepository = myUZApplication().container.tasksRepository,
+                classRepository = myUZApplication().container.classRepository
+            )
+        }
+
+        // Grades
+        initializer {
+            GradesViewModel(
+                gradesRepository = myUZApplication().container.gradesRepository,
+                classRepository = myUZApplication().container.classRepository,
+                settingsRepository = myUZApplication().container.settingsRepository
+            )
+        }
+
+        // Grade Details
+        initializer {
+            GradeDetailsViewModel(
+                savedStateHandle = this.createSavedStateHandle(),
+                gradesRepository = myUZApplication().container.gradesRepository
+            )
+        }
+
+        // Add/Edit Grade
+        initializer {
+            AddEditGradeViewModel(
+                gradesRepository = myUZApplication().container.gradesRepository,
+                classRepository = myUZApplication().container.classRepository,
+                settingsRepository = myUZApplication().container.settingsRepository
+            )
+        }
+
+        // Account
         initializer {
             AccountViewModel(
-                settingsRepository = myUzApp().container.settingsRepository,
-                universityRepository = myUzApp().container.universityRepository,
-                classRepository = myUzApp().container.classRepository
+                settingsRepository = myUZApplication().container.settingsRepository,
+                universityRepository = myUZApplication().container.universityRepository,
+                classRepository = myUZApplication().container.classRepository
+            )
+        }
+
+        // Onboarding
+        initializer {
+            OnboardingViewModel(
+                settingsRepository = myUZApplication().container.settingsRepository,
+                universityRepository = myUZApplication().container.universityRepository,
+                classRepository = myUZApplication().container.classRepository
             )
         }
     }
 }
 
-/**
- * Extension function to queries for [Application] object and returns an instance of
- * [MyUZApplication].
- */
-fun CreationExtras.myUzApp(): MyUZApplication =
+fun CreationExtras.myUZApplication(): MyUZApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)
