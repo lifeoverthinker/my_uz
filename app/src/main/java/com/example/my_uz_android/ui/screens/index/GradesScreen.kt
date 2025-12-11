@@ -44,7 +44,7 @@ fun GradesScreen(
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 AverageCard(
-                    label = "Średnia ogólna",
+                    label = "Średnia z bieżącego semestru",
                     average = if (uiState.average > 0) uiState.average else null
                 )
                 Spacer(modifier = Modifier.height(16.dp))
