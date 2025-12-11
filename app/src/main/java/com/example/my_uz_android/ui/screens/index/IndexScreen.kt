@@ -7,7 +7,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.FabOption
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.index.components.IndexTabs
@@ -17,12 +19,14 @@ import com.example.my_uz_android.ui.theme.InterFontFamily
 fun IndexScreen(
     onGradeDetailsClick: (Int) -> Unit,
     onNavigateToClassTypeGrades: (String, String) -> Unit,
-    // ✅ ZMIANA: Parametry dla dodawania oceny
     onAddGradeClick: (String?, String?) -> Unit,
-    onAddAbsenceClick: () -> Unit
+    // onAddAbsenceClick: () -> Unit // USUNIĘTE: Teraz IndexScreen zarządza stanem dla Absences
 ) {
     var selectedTab by remember { mutableStateOf(0) }
     var isFabExpanded by remember { mutableStateOf(false) }
+
+    // Stan dla modala dodawania nieobecności
+    var showAbsenceSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -30,7 +34,8 @@ fun IndexScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .padding(top = 24.dp)
+                    // Zmniejszono padding, aby treść była wyżej
+                    .padding(top = 16.dp, bottom = 8.dp)
             ) {
                 Text(
                     text = "Indeks",
@@ -39,7 +44,7 @@ fun IndexScreen(
                     fontSize = 32.sp,
                     lineHeight = 40.sp,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 8.dp) // Mniejszy odstęp od tekstu do Tabów
                 )
 
                 IndexTabs(
@@ -49,8 +54,6 @@ fun IndexScreen(
             }
         },
         floatingActionButton = {
-            // Opcje FAB (Główny przycisk na dole)
-            // Tu wywołujemy onAddGradeClick(null, null), bo to dodawanie "ogólne"
             val fabOptions = when (selectedTab) {
                 0 -> listOf(
                     FabOption(
@@ -68,7 +71,7 @@ fun IndexScreen(
                         iconRes = R.drawable.ic_calendar_minus,
                         onClick = {
                             isFabExpanded = false
-                            onAddAbsenceClick()
+                            showAbsenceSheet = true // Otwieramy sheet w AbsencesScreen
                         }
                     )
                 )
@@ -98,25 +101,18 @@ fun IndexScreen(
                 0 -> GradesScreen(
                     onGradeDetailsClick = onGradeDetailsClick,
                     onNavigateToClassTypeGrades = onNavigateToClassTypeGrades,
-                    // ✅ Przekazujemy callback dalej
                     onAddGradeClick = onAddGradeClick
                 )
-                1 -> AbsencesScreen()
+                1 -> {
+                    // Pobieramy ViewModel tutaj (lub wstrzykujesz go przez nawigację)
+                    val absencesViewModel: AbsencesViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    AbsencesScreen(
+                        viewModel = absencesViewModel,
+                        showAddSheet = showAbsenceSheet,
+                        onDismissSheet = { showAbsenceSheet = false }
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun AbsencesScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = androidx.compose.ui.Alignment.Center
-    ) {
-        Text(
-            text = "Nieobecności - w przygotowaniu",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

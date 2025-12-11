@@ -54,7 +54,7 @@ fun ExpandableSubjectCard(
     classTypes: List<SubjectTypeState>,
     isExpanded: Boolean,
     onExpandClick: () -> Unit,
-    onAddGradeClick: (String) -> Unit, // Przekazujemy nazwę typu (np. "Wykład")
+    onAddGradeClick: (String) -> Unit,
     onTypeClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -63,7 +63,6 @@ fun ExpandableSubjectCard(
         label = "arrowRotation"
     )
 
-    // Kolory z motywu
     val cardBackgroundColor = MaterialTheme.colorScheme.surfaceContainer
     val contentColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -164,7 +163,6 @@ fun ExpandableSubjectCard(
                     )
 
                     classTypes.forEachIndexed { index, typeState ->
-                        // Przekazujemy typ zajęć (np. "Wykład") do onAddGradeClick
                         ClassTypeRow(
                             typeState = typeState.copy(
                                 typeName = ClassTypeUtils.getFullName(typeState.typeName)
@@ -276,14 +274,14 @@ fun ClassTypeRow(
             }
         }
 
-        // Przycisk "Dodaj ocenę" - wiersz poniżej
+        // Przycisk "Dodaj ocenę" - WYRÓWNANY DO PRAWEJ
         Surface(
             onClick = onAddGradeClick,
             shape = RoundedCornerShape(8.dp),
             border = BorderStroke(1.dp, primaryColor),
-            // W Dark Mode tło przezroczyste lub surface, w Light Mode białe/surface
             color = Color.Transparent,
             modifier = Modifier
+                .align(Alignment.End) // ✅ Kluczowa zmiana
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
         ) {
