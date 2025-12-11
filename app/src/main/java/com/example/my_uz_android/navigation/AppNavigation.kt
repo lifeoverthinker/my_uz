@@ -30,12 +30,11 @@ import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
 import com.example.my_uz_android.ui.screens.home.details.TaskDetailsScreen
 import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 import com.example.my_uz_android.ui.theme.extendedColors
-// Importujemy poprawne ekrany
-import com.example.my_uz_android.ui.screens.index.GradesScreen
-import com.example.my_uz_android.ui.screens.index.SubjectGradesScreen
+// Importujemy ekrany indeksu
 import com.example.my_uz_android.ui.screens.index.AddEditGradeScreen
 import com.example.my_uz_android.ui.screens.index.GradeDetailsScreen
 import com.example.my_uz_android.ui.screens.index.IndexScreen
+import com.example.my_uz_android.ui.screens.index.SubjectGradesScreen
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
@@ -152,7 +151,9 @@ fun AppNavigation(
                     onAccountClick = { navController.navigate(Screen.Account.route) },
                     onCalendarClick = { navController.navigate(Screen.Calendar.route) },
                     onAddGradeClick = { navController.navigate("add_grade") },
-                    onAddAbsenceClick = { navController.navigate("add_absence") },
+                    // Uwaga: HomeScreen ma przycisk "Dodaj nieobecność", ale logika przeniosła się do Indexu.
+                    // Możesz tu przekierować do Indexu lub otworzyć ten sam ekran placeholder
+                    onAddAbsenceClick = { navController.navigate(Screen.Index.route) },
                     onAddTaskClick = { navController.navigate("add_task") }
                 )
             }
@@ -172,17 +173,14 @@ fun AppNavigation(
                     onNavigateToClassTypeGrades = { subjectName, classType ->
                         navController.navigate("class_type_grades/$subjectName/$classType")
                     },
-                    // ✅ LOGIKA: Obsługa parametrów
                     onAddGradeClick = { subject, classType ->
                         if (subject != null && classType != null) {
-                            // Skrót z karty przedmiotu -> uzupełniamy dane
                             navController.navigate("add_grade?subject=$subject&classType=$classType")
                         } else {
-                            // Główny FAB -> pusty formularz
                             navController.navigate("add_grade")
                         }
-                    },
-                    onAddAbsenceClick = { navController.navigate("add_absence") }
+                    }
+                    // ✅ USUNIĘTE: onAddAbsenceClick (IndexScreen obsługuje to wewnętrznie)
                 )
             }
 
@@ -197,6 +195,7 @@ fun AppNavigation(
                 )
             }
 
+            // --- DETALE I INNE EKRANY ---
             composable(
                 "class_details/{classId}",
                 arguments = listOf(navArgument("classId") { type = NavType.IntType })
@@ -239,7 +238,6 @@ fun AppNavigation(
                 )
             }
 
-            // POPRAWKA: Obsługa argumentów (subject, classType) dla ekranu dodawania oceny
             composable(
                 route = "add_grade?subject={subject}&classType={classType}",
                 arguments = listOf(
@@ -258,8 +256,10 @@ fun AppNavigation(
                 )
             }
 
+            // Opcjonalnie: Zachowujemy ten route jeśli np. HomeScreen chciałby tu nawigować,
+            // ale IndexScreen robi to lepiej (Bottom Sheet).
             composable("add_absence") {
-                PlaceholderScreen("Dodaj nieobecność - w przygotowaniu")
+                PlaceholderScreen("Użyj zakładki 'Indeks' aby dodać nieobecność.")
             }
 
             composable(
@@ -318,7 +318,8 @@ fun PlaceholderScreen(text: String) {
         Text(
             text = text,
             style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
     }
 }
