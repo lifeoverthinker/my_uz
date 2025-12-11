@@ -3,86 +3,139 @@ package com.example.my_uz_android.ui.screens.index
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.GradeEntity
+import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.GradesRepository
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
+import com.example.my_uz_android.data.repositories.SettingsRepository
+import com.example.my_uz_android.ui.screens.index.components.GradeItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
+// Usunięto import runBlocking - to było źródło ryzyka
 
-enum class SubjectType {
-    ALL,
-    LECTURE,
-    LAB,
-    CLASS,
-    PROJECT,
-    EXAM
-}
+data class ClassTypeState(
+    val name: String,
+    val average: Double,
+    val grades: List<GradeItem>
+)
+
+data class SubjectState(
+    val code: String,
+    val name: String,
+    val average: Double,
+    val types: List<ClassTypeState>
+)
 
 data class GradesUiState(
-    val grades: List<GradeEntity> = emptyList(),
-    val selectedType: SubjectType = SubjectType.ALL,
-    val averageGrade: Double = 0.0
+    val subjects: List<SubjectState> = emptyList(),
+    val average: Double = 0.0,
+    val isLoading: Boolean = false,
+    val allGrades: List<GradeEntity> = emptyList()
 )
 
 class GradesViewModel(
-    private val gradesRepository: GradesRepository
+    private val gradesRepository: GradesRepository,
+    private val classRepository: ClassRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
-
-    private val _selectedType = MutableStateFlow(SubjectType.ALL)
 
     val uiState: StateFlow<GradesUiState> = combine(
         gradesRepository.getAllGradesStream(),
-        _selectedType
-    ) { grades: List<GradeEntity>, selectedType: SubjectType ->
+        classRepository.getAllClassesStream()
+    ) { grades, classes ->
+        // Obliczenia wykonywane są teraz na Dispatchers.Default (dzięki flowOn poniżej)
 
-        val filteredGrades = when (selectedType) {
-            SubjectType.ALL -> grades
-            else -> grades // TODO: Filtruj po typie zajęć gdy będzie pole classType
+        // Pobierz wszystkie unikalne przedmioty z planu zajęć
+        val subjectsFromSchedule = classes
+            .groupBy { it.subjectName }
+            .map { (subjectName, subjectClasses) ->
+                val classTypes = subjectClasses
+                    .map { it.classType }
+                    .distinct()
+                    .sorted()
+                subjectName to classTypes
+            }
+            .sortedBy { it.first }
+
+        val subjects = subjectsFromSchedule.map { (subjectName, classTypes) ->
+            val subjectGrades = grades.filter { it.subjectName == subjectName }
+
+            val types = classTypes.map { typeName ->
+                val typeGrades = subjectGrades.filter { it.classType == typeName }
+                val gradeItems = typeGrades.map { grade ->
+                    GradeItem(
+                        id = grade.id,
+                        value = if (grade.grade == -1.0) "+" else {
+                            if (grade.grade % 1.0 == 0.0) grade.grade.toInt().toString() else grade.grade.toString()
+                        }
+                    )
+                }
+
+                val numericGrades = typeGrades.mapNotNull {
+                    if (it.grade == -1.0) null else it.grade
+                }
+
+                val typeAverage = if (numericGrades.isNotEmpty()) {
+                    numericGrades.average()
+                } else {
+                    0.0
+                }
+
+                ClassTypeState(
+                    name = typeName,
+                    average = typeAverage,
+                    grades = gradeItems
+                )
+            }
+
+            val numericSubjectGrades = subjectGrades.mapNotNull {
+                if (it.grade == -1.0) null else it.grade
+            }
+
+            val subjectAverage = if (numericSubjectGrades.isNotEmpty()) {
+                numericSubjectGrades.average()
+            } else {
+                0.0
+            }
+
+            SubjectState(
+                code = subjectName.take(3).uppercase(),
+                name = subjectName,
+                average = subjectAverage,
+                types = types
+            )
         }
 
-        val average = if (filteredGrades.isNotEmpty()) {
-            val totalWeighted = filteredGrades.sumOf { it.grade * it.weight }
-            val totalWeight = filteredGrades.sumOf { it.weight }
-            if (totalWeight > 0) totalWeighted / totalWeight else 0.0
+        val numericAllGrades = grades.mapNotNull {
+            if (it.grade == -1.0) null else it.grade
+        }
+
+        val overallAverage = if (numericAllGrades.isNotEmpty()) {
+            numericAllGrades.average()
         } else {
             0.0
         }
 
         GradesUiState(
-            grades = filteredGrades,
-            selectedType = selectedType,
-            averageGrade = average
+            subjects = subjects,
+            average = overallAverage,
+            isLoading = false,
+            allGrades = grades
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = GradesUiState()
-    )
-
-    fun selectType(type: SubjectType) {
-        _selectedType.value = type
     }
+        .flowOn(Dispatchers.Default) // ZMIANA: Przeniesienie obliczeń na wątek tła
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = GradesUiState(isLoading = true)
+        )
 
-    fun addSampleGrades() {
-        viewModelScope.launch {
-            val sampleGrades = listOf(
-                GradeEntity(
-                    subjectName = "Programowanie Mobilne",
-                    grade = 5.0,
-                    weight = 3,
-                    description = "Projekt końcowy",
-                    date = System.currentTimeMillis(),
-                    semester = 1
-                ),
-                GradeEntity(
-                    subjectName = "Bazy Danych",
-                    grade = 4.5,
-                    weight = 2,
-                    description = "Kolokwium 1",
-                    date = System.currentTimeMillis() - 86400000L,
-                    semester = 1
-                )
-            )
-
-            sampleGrades.forEach { gradesRepository.insertGrade(it) }
-        }
+    // ZMIANA: suspend zamiast runBlocking
+    suspend fun isPlanSelected(): Boolean {
+        val settings = settingsRepository.getSettingsStream().first()
+        return !settings?.selectedGroupCode.isNullOrBlank()
     }
 }

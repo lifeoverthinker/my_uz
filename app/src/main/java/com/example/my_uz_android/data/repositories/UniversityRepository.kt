@@ -2,6 +2,7 @@ package com.example.my_uz_android.data.repositories
 
 import android.util.Log
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.util.NetworkResult
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.SerialName
@@ -10,10 +11,10 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 interface UniversityRepository {
-    suspend fun getGroupCodes(): List<String>
-    suspend fun getSubgroups(groupCode: String): List<String>
-    suspend fun getSchedule(groupCode: String, subgroups: List<String>): List<ClassEntity>
-    suspend fun getGroupDetails(groupCode: String): GroupDetailsDto?
+    suspend fun getGroupCodes(): NetworkResult<List<String>>
+    suspend fun getSubgroups(groupCode: String): NetworkResult<List<String>>
+    suspend fun getSchedule(groupCode: String, subgroups: List<String>): NetworkResult<List<ClassEntity>>
+    suspend fun getGroupDetails(groupCode: String): NetworkResult<GroupDetailsDto>
 }
 
 // --- DTO ---
@@ -50,21 +51,23 @@ data class FieldOfStudyDto(
 // --- Implementacja ---
 class SupabaseUniversityRepository(private val supabase: Postgrest) : UniversityRepository {
 
-    override suspend fun getGroupCodes(): List<String> {
+    override suspend fun getGroupCodes(): NetworkResult<List<String>> {
         return try {
-            supabase.from("grupy")
+            val codes = supabase.from("grupy")
                 .select(columns = Columns.list("kod_grupy"))
                 .decodeList<GroupCodeDto>()
                 .map { it.code }
                 .distinct()
                 .sorted()
+
+            NetworkResult.Success(codes)
         } catch (e: Exception) {
             Log.e("UniversityRepo", "Błąd pobierania kodów grup", e)
-            emptyList()
+            NetworkResult.Error("Nie udało się pobrać listy grup. Sprawdź połączenie.")
         }
     }
 
-    override suspend fun getSubgroups(groupCode: String): List<String> {
+    override suspend fun getSubgroups(groupCode: String): NetworkResult<List<String>> {
         return try {
             val grupaIdResult = supabase.from("grupy")
                 .select(columns = Columns.list("id")) {
@@ -72,7 +75,8 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
                 }
                 .decodeSingleOrNull<Map<String, String>>()
 
-            val grupaId = grupaIdResult?.get("id") ?: return emptyList()
+            val grupaId = grupaIdResult?.get("id")
+                ?: return NetworkResult.Error("Nie znaleziono grupy o kodzie: $groupCode")
 
             val result = supabase.from("zajecia_grupy")
                 .select(columns = Columns.list("podgrupa")) {
@@ -88,30 +92,36 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
                 .sorted()
 
             Log.d("UniversityRepo", "Pobrano podgrupy dla $groupCode: $result")
-            result
+            NetworkResult.Success(result)
         } catch (e: Exception) {
             Log.e("UniversityRepo", "Błąd pobierania podgrup", e)
-            emptyList()
+            NetworkResult.Error("Błąd pobierania podgrup.")
         }
     }
 
-    override suspend fun getGroupDetails(groupCode: String): GroupDetailsDto? {
+    override suspend fun getGroupDetails(groupCode: String): NetworkResult<GroupDetailsDto> {
         return try {
-            supabase.from("grupy")
+            val details = supabase.from("grupy")
                 .select(columns = Columns.raw("tryb_studiow, kierunki(wydzial, nazwa)")) {
                     filter { eq("kod_grupy", groupCode) }
                 }
                 .decodeSingleOrNull<GroupDetailsDto>()
+
+            if (details != null) {
+                NetworkResult.Success(details)
+            } else {
+                NetworkResult.Error("Nie znaleziono szczegółów dla grupy $groupCode")
+            }
         } catch (e: Exception) {
             Log.e("UniversityRepo", "Błąd pobierania szczegółów grupy: $groupCode", e)
-            null
+            NetworkResult.Error("Błąd sieci podczas pobierania danych grupy.")
         }
     }
 
     override suspend fun getSchedule(
         groupCode: String,
         subgroups: List<String>
-    ): List<ClassEntity> {
+    ): NetworkResult<List<ClassEntity>> {
         return try {
             Log.d("UniversityRepo", "🔍 Pobieram zajęcia dla $groupCode, podgrupy: $subgroups")
 
@@ -123,9 +133,9 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
                 .decodeSingleOrNull<Map<String, String>>()
 
             val grupaId = grupaIdResult?.get("id")
-                ?: throw Exception("Nie znaleziono grupy: $groupCode")
+                ?: return NetworkResult.Error("Nie znaleziono grupy w bazie.")
 
-            // 2. POPRAWIONE: Pobierz zajęcia z filtrowaniem podgrup w SQL
+            // 2. Pobierz zajęcia z filtrowaniem podgrup w SQL
             val scheduleDto = if (subgroups.isEmpty()) {
                 // Jeśli nie wybrano podgrup - pokaż WSZYSTKIE (łącznie z ogólnymi)
                 supabase.from("zajecia_grupy")
@@ -156,7 +166,7 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
                             or {
                                 // Ogólne zajęcia (bez podgrupy) LUB wybrane podgrupy
                                 eq("podgrupa", "")
-                                isIn("podgrupa", subgroups) // ✅ POPRAWIONE: `in` → isIn
+                                isIn("podgrupa", subgroups)
                             }
                         }
                     }
@@ -179,7 +189,7 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
                             startTime = startDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                             endTime = endDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                             dayOfWeek = startDT.dayOfWeek.value,
-                            date = startDT.toLocalDate().toString(), // ← DODANE: "2025-12-09"
+                            date = startDT.toLocalDate().toString(),
                             groupCode = groupCode,
                             subgroup = dto.subgroup,
                             teacherName = dto.teacher,
@@ -193,10 +203,11 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
                 }
                 .sortedWith(compareBy({ it.dayOfWeek }, { it.startTime }))
 
-            entities
+            NetworkResult.Success(entities)
+
         } catch (e: Exception) {
             Log.e("UniversityRepo", "❌ Błąd pobierania planu", e)
-            emptyList()
+            NetworkResult.Error("Wystąpił błąd podczas pobierania planu zajęć.")
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.example.my_uz_android.ui.screens.home.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -29,25 +28,6 @@ fun UpcomingClasses(
     onClassClick: (Int) -> Unit
 ) {
     val classCardColor = MaterialTheme.extendedColors.classCardBackground
-    val now = java.time.LocalTime.now()
-
-    // ✅ POKAZUJ TRWAJĄCE + PRZYSZŁE (ukryj dopiero po zakończeniu)
-    val currentClasses = classes.filter { clazz ->
-        try {
-            val endParts = clazz.endTime.split(":")
-            if (endParts.size == 2) {
-                val endHour = endParts[0].toIntOrNull() ?: 0
-                val endMinute = endParts[1].toIntOrNull() ?: 0
-                val endTime = java.time.LocalTime.of(endHour, endMinute)
-                endTime.isAfter(now) // Ukryj dopiero jak się skończą
-            } else {
-                true
-            }
-        } catch (e: Exception) {
-            true
-        }
-    }
-
 
     Column(
         modifier = modifier
@@ -71,6 +51,7 @@ fun UpcomingClasses(
                     tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(20.dp)
                 )
+
                 Text(
                     text = "Najbliższe zajęcia",
                     style = MaterialTheme.typography.titleMedium.copy(
@@ -99,7 +80,7 @@ fun UpcomingClasses(
             }
         }
 
-        if (currentClasses.isEmpty()) {
+        if (classes.isEmpty()) {
             Text(
                 text = emptyMessage ?: "Brak zajęć",
                 style = MaterialTheme.typography.bodyMedium,
@@ -109,21 +90,19 @@ fun UpcomingClasses(
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(currentClasses) { classItem ->
+                items(classes) { classItem ->
                     ClassCard(
                         classItem = classItem,
                         backgroundColor = classCardColor,
-                        modifier = Modifier
-                            .width(264.dp)
-                            .clickable { onClassClick(classItem.id) }
+                        // ✅ POPRAWKA: Przekazujemy onClick do parametru, a nie do modifiera
+                        onClick = { onClassClick(classItem.id) },
+                        modifier = Modifier.width(264.dp)
                     )
                 }
             }
         }
     }
 }
-
-// ========== PREVIEWS (bez zmian) ==========
 
 @Preview(name = "Upcoming Classes - Dzisiaj", showBackground = true)
 @Composable
@@ -139,78 +118,7 @@ private fun PreviewUpcomingClassesToday() {
                         startTime = "10:00",
                         endTime = "11:30",
                         dayOfWeek = 1,
-                        date = "2025-12-09", // ← DODAJ
-                        groupCode = "INF4A",
-                        subgroup = "L1",
-                        room = "A-2/112",
-                        teacherName = "Dr Kowalski"
-                    ),
-                    ClassEntity(
-                        id = 2,
-                        subjectName = "Bazy Danych",
-                        classType = "Wykład",
-                        startTime = "12:00",
-                        endTime = "13:30",
-                        dayOfWeek = 1,
-                        date = "2025-12-09", // ← DODAJ
-                        groupCode = "INF4A",
-                        subgroup = null,
-                        room = "C-1/201",
-                        teacherName = "Prof. Nowak"
-                    )
-                ),
-                emptyMessage = null,
-                dayLabel = "Dzisiaj",
-                onClassClick = {}
-            )
-        }
-    }
-}
-
-@Preview(name = "Upcoming Classes - Jutro", showBackground = true)
-@Composable
-private fun PreviewUpcomingClassesTomorrow() {
-    MyUZTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            UpcomingClasses(
-                classes = listOf(
-                    ClassEntity(
-                        id = 3,
-                        subjectName = "Sieci Komputerowe",
-                        classType = "Ćwiczenia",
-                        startTime = "08:00",
-                        endTime = "09:30",
-                        dayOfWeek = 2,
-                        date = "2025-12-10", // ← DODAJ (jutro)
-                        groupCode = "INF4A",
-                        subgroup = "C2",
-                        room = "B-1/305",
-                        teacherName = "Dr Lewandowski"
-                    )
-                ),
-                emptyMessage = null,
-                dayLabel = "Jutro",
-                onClassClick = {}
-            )
-        }
-    }
-}
-
-@Preview(name = "Upcoming Classes - Dark Mode", showBackground = true)
-@Composable
-private fun PreviewUpcomingClassesDark() {
-    MyUZTheme(darkTheme = true) {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            UpcomingClasses(
-                classes = listOf(
-                    ClassEntity(
-                        id = 1,
-                        subjectName = "Programowanie Mobilne",
-                        classType = "Laboratorium",
-                        startTime = "10:00",
-                        endTime = "11:30",
-                        dayOfWeek = 1,
-                        date = "2025-12-09", // ← DODAJ
+                        date = "2025-12-09",
                         groupCode = "INF4A",
                         subgroup = "L1",
                         room = "A-2/112",

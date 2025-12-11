@@ -213,10 +213,10 @@ fun TaskDetailsContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    if (task.subjectName.isNotEmpty()) {
+                    if (!task.subjectName.isNullOrEmpty()) {  // ← ZMIENIONE
                         DetailSection(
                             label = stringResource(R.string.label_subject),
-                            text = task.subjectName,
+                            text = task.subjectName ?: "",  // ← DODANE ?: ""
                             iconRes = R.drawable.ic_book_open,
                             iconColor = iconTint,
                             textColor = textColor,
@@ -224,16 +224,18 @@ fun TaskDetailsContent(
                         )
                     }
 
-                    if (task.classType.isNotEmpty()) {
+
+                    if (!task.classType.isNullOrEmpty()) {  // ← ZMIENIONE
                         DetailSection(
                             label = stringResource(R.string.label_type),
-                            text = ClassTypeUtils.getFullName(task.classType),
+                            text = ClassTypeUtils.getFullName(task.classType ?: ""),  // ← DODANE ?: ""
                             iconRes = R.drawable.ic_graduation_hat,
                             iconColor = iconTint,
                             textColor = textColor,
                             labelColor = subTextColor
                         )
                     }
+
 
                     if (!task.description.isNullOrEmpty()) {
                         DetailSection(

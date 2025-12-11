@@ -1,86 +1,66 @@
 package com.example.my_uz_android.ui.screens.index.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.ui.theme.InterFontFamily
 
-// Uproszczony model do starego wariantu (używany w ExpandableSubjectCard z Folderu komponentów)
 data class GradeItem(
     val id: Int,
-    val value: Double? // null => "+", w naszej implementacji plus to 6.0, więc tu null raczej nie będzie używane
+    val value: String
 )
 
 @Composable
-fun GradeBubble(grade: GradeItem) {
-    if (grade.value == null) return // Zabezpieczenie przed null
-
+fun GradeBubble(
+    grade: GradeItem,
+    onGradeClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Box(
-        modifier = Modifier
-            .background(
-                color = Color(0xFFE9DEF8),
-                shape = RoundedCornerShape(8.dp)
-            )
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFFE9DEF8))
+            .clickable { onGradeClick() }
             .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = if (grade.value != null) {
-                String.format("%.1f", grade.value).removeSuffix(".0")
-            } else {
-                "+"
-            },
-            style = TextStyle(
-                color = Color(0xFF4B4358),
-                fontSize = 12.sp,
+            text = grade.value,
+            style = MaterialTheme.typography.bodySmall.copy(
                 fontFamily = InterFontFamily,
-                fontWeight = FontWeight.W400,
+                fontWeight = FontWeight.Normal,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
                 letterSpacing = 0.4.sp,
-                lineHeight = 16.sp
+                color = Color(0xFF4B4358)
             )
         )
     }
 }
 
-// NOWY wariant do wyświetlania wartości liczbowej z wagą i rozmiarami
+@Preview
 @Composable
-fun GradeBubbleValue(
-    grade: Float,
-    isWeightImportant: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val bg = if (isWeightImportant) MaterialTheme.colorScheme.primaryContainer else Color(0xFFE9DEF8)
-    val fg = if (isWeightImportant) MaterialTheme.colorScheme.onPrimaryContainer else Color(0xFF4B4358)
-
-    Box(
-        modifier = modifier
-            .background(bg, shape = CircleShape)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = String.format("%.1f", grade).removeSuffix(".0"),
-            style = TextStyle(
-                color = fg,
-                fontSize = 12.sp,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.W500,
-                letterSpacing = 0.1.sp,
-                lineHeight = 16.sp
-            )
+fun GradeBubblePreview() {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        GradeBubble(
+            grade = GradeItem(id = 1, value = "4"),
+            onGradeClick = {}
+        )
+        GradeBubble(
+            grade = GradeItem(id = 2, value = "4.5"),
+            onGradeClick = {}
         )
     }
 }

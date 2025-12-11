@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,15 +31,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
-
-// UWAGA: Usunięto definicję data class GradeItem, ponieważ znajduje się ona już w pliku GradeBubble.kt
-// Dzięki temu, że oba pliki są w tym samym pakiecie, ten plik automatycznie "widzi" tamtą klasę.
 
 data class SubjectTypeState(
     val typeName: String,
@@ -54,7 +54,7 @@ fun ExpandableSubjectCard(
     classTypes: List<SubjectTypeState>,
     isExpanded: Boolean,
     onExpandClick: () -> Unit,
-    onAddGradeClick: (String) -> Unit,
+    onAddGradeClick: (String) -> Unit, // Przekazujemy nazwę typu (np. "Wykład")
     onTypeClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -63,16 +63,22 @@ fun ExpandableSubjectCard(
         label = "arrowRotation"
     )
 
+    // Kolory z motywu
+    val cardBackgroundColor = MaterialTheme.colorScheme.surfaceContainer
+    val contentColor = MaterialTheme.colorScheme.onSurface
+    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .shadow(elevation = 2.dp, shape = RoundedCornerShape(8.dp), clip = false)
             .clickable { onExpandClick() },
-        color = Color(0xFFF8F1FA),
+        color = cardBackgroundColor,
         shape = RoundedCornerShape(8.dp)
     ) {
         Column {
-            // --- HEADER ---
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -80,22 +86,22 @@ fun ExpandableSubjectCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = subjectName,
-                        style = TextStyle(
-                            color = Color(0xFF1D1B20),
-                            fontSize = 16.sp,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.W500,
-                            letterSpacing = 0.15.sp,
-                            lineHeight = 24.sp
-                        )
-                    )
-                }
+                Text(
+                    text = subjectName,
+                    style = TextStyle(
+                        color = contentColor,
+                        fontSize = 16.sp,
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.W500,
+                        letterSpacing = 0.15.sp,
+                        lineHeight = 24.sp
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 16.dp),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
 
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -103,131 +109,84 @@ fun ExpandableSubjectCard(
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.width(50.dp)
                     ) {
-                        Box(modifier = Modifier.width(45.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = overallAverage?.let { String.format("%.1f", it) } ?: "-",
-                                style = TextStyle(
-                                    color = Color(0xFF1D1B20),
-                                    fontSize = 22.sp,
-                                    fontFamily = InterFontFamily,
-                                    fontWeight = FontWeight.W400,
-                                    lineHeight = 28.sp
-                                ),
-                                textAlign = TextAlign.Center
-                            )
-                        }
+                        Text(
+                            text = overallAverage?.let { String.format("%.1f", it) } ?: "-",
+                            style = TextStyle(
+                                color = contentColor,
+                                fontSize = 22.sp,
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.W400,
+                                lineHeight = 28.sp
+                            ),
+                            textAlign = TextAlign.Center
+                        )
 
-                        Box(modifier = Modifier.width(45.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "średnia",
-                                style = TextStyle(
-                                    color = Color(0xFF1D1B20),
-                                    fontSize = 12.sp,
-                                    fontFamily = InterFontFamily,
-                                    fontWeight = FontWeight.W400,
-                                    letterSpacing = 0.4.sp,
-                                    lineHeight = 16.sp
-                                )
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .rotate(arrowRotation),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = "Rozwiń",
-                            tint = Color(0xFF1D1B20)
+                        Text(
+                            text = "średnia",
+                            style = TextStyle(
+                                color = subTextColor,
+                                fontSize = 12.sp,
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.W400,
+                                letterSpacing = 0.4.sp,
+                                lineHeight = 16.sp
+                            ),
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
                         )
                     }
+
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (isExpanded) "Zwiń" else "Rozwiń",
+                        tint = contentColor,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .rotate(arrowRotation)
+                    )
                 }
             }
 
-            // --- LISTA TYPÓW ZAJĘĆ ---
+            // Lista typów zajęć
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
                 Column {
-                    HorizontalDivider(color = Color(0xFFCAC4D0), thickness = 1.dp, modifier = Modifier.fillMaxWidth())
+                    HorizontalDivider(
+                        color = dividerColor,
+                        thickness = 1.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     classTypes.forEachIndexed { index, typeState ->
+                        // Przekazujemy typ zajęć (np. "Wykład") do onAddGradeClick
                         ClassTypeRow(
-                            typeState = typeState.copy(typeName = ClassTypeUtils.getFullName(typeState.typeName)),
+                            typeState = typeState.copy(
+                                typeName = ClassTypeUtils.getFullName(typeState.typeName)
+                            ),
                             onTypeClick = { onTypeClick(typeState.typeName) },
                             onAddGradeClick = { onAddGradeClick(typeState.typeName) }
                         )
 
                         if (index < classTypes.lastIndex) {
                             HorizontalDivider(
-                                color = Color(0xFFCAC4D0),
+                                color = dividerColor,
                                 thickness = 1.dp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
+                                modifier = Modifier.fillMaxWidth()
                             )
                         }
                     }
+
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun ExpandableSubjectCardPreview() {
-    val classTypes = listOf(
-        SubjectTypeState(
-            typeName = "WYK",
-            average = 4.5,
-            grades = listOf(
-                GradeItem(id = 1, value = 4.0),
-                GradeItem(id = 2, value = 5.0)
-            )
-        ),
-        SubjectTypeState(
-            typeName = "CW",
-            average = 3.5,
-            grades = listOf(
-                GradeItem(id = 3, value = 3.0),
-                GradeItem(id = 4, value = 4.0)
-            )
-        )
-    )
-    ExpandableSubjectCard(
-        subjectName = "Inżynieria Oprogramowania",
-        subjectCode = "IO-101",
-        overallAverage = 4.0,
-        classTypes = classTypes,
-        isExpanded = true,
-        onExpandClick = {},
-        onAddGradeClick = {},
-        onTypeClick = {}
-    )
-}
-
-@Preview
-@Composable
-fun ClassTypeRowPreview() {
-    val typeState = SubjectTypeState(
-        typeName = "Wykład",
-        average = 4.7,
-        grades = listOf(
-            GradeItem(id = 1, value = 5.0),
-            GradeItem(id = 2, value = 4.5),
-            GradeItem(id = 3, value = 4.0)
-        )
-    )
-    ClassTypeRow(typeState = typeState, onTypeClick = {}, onAddGradeClick = {})
 }
 
 @Composable
@@ -236,15 +195,17 @@ fun ClassTypeRow(
     onTypeClick: () -> Unit,
     onAddGradeClick: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onTypeClick() }
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Klikalny wiersz z nazwą typu, ocenami i średnią
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onTypeClick() }
+                .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -255,7 +216,7 @@ fun ClassTypeRow(
                 Text(
                     text = typeState.typeName,
                     style = TextStyle(
-                        color = Color(0xFF1D1B20),
+                        color = textColor,
                         fontSize = 14.sp,
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.W500,
@@ -268,7 +229,7 @@ fun ClassTypeRow(
                     Text(
                         text = "Brak ocen",
                         style = TextStyle(
-                            color = Color(0xFF1D1B20),
+                            color = subTextColor,
                             fontSize = 12.sp,
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.W400,
@@ -282,8 +243,10 @@ fun ClassTypeRow(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         items(typeState.grades) { grade ->
-                            // GradeBubble pochodzi z GradeBubble.kt i przyjmuje GradeItem
-                            GradeBubble(grade = grade)
+                            GradeBubble(
+                                grade = grade,
+                                onGradeClick = { }
+                            )
                         }
                     }
                 }
@@ -296,11 +259,11 @@ fun ClassTypeRow(
                 Text(
                     text = typeState.average?.let { String.format("%.1f", it) } ?: "-",
                     style = TextStyle(
-                        color = Color(0xFF1D1B20),
-                        fontSize = 18.sp,
+                        color = textColor,
+                        fontSize = 22.sp,
                         fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.W500,
-                        lineHeight = 24.sp
+                        fontWeight = FontWeight.W400,
+                        lineHeight = 28.sp
                     )
                 )
 
@@ -308,40 +271,84 @@ fun ClassTypeRow(
                     painter = painterResource(id = R.drawable.ic_chevron_right),
                     contentDescription = "Przejdź do szczegółów",
                     modifier = Modifier.size(24.dp),
-                    tint = Color(0xFF1D1B20)
+                    tint = subTextColor
                 )
             }
         }
 
+        // Przycisk "Dodaj ocenę" - wiersz poniżej
         Surface(
-            onClick = { onAddGradeClick() },
+            onClick = onAddGradeClick,
             shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, Color(0xFF4F3D74)),
-            color = Color.White
+            border = BorderStroke(1.dp, primaryColor),
+            // W Dark Mode tło przezroczyste lub surface, w Light Mode białe/surface
+            color = Color.Transparent,
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = null,
-                    tint = Color(0xFF4F3D74),
+                    tint = primaryColor,
                     modifier = Modifier.size(16.dp)
                 )
+
                 Text(
                     text = "Dodaj ocenę",
                     style = TextStyle(
-                        color = Color(0xFF4F3D74),
+                        color = primaryColor,
                         fontSize = 12.sp,
                         fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.W400,
+                        fontWeight = FontWeight.W500,
                         letterSpacing = 0.4.sp,
                         lineHeight = 16.sp
                     )
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ExpandableSubjectCardPreview() {
+    MyUZTheme {
+        val classTypes = listOf(
+            SubjectTypeState(
+                typeName = "WYK",
+                average = 4.5,
+                grades = listOf(
+                    GradeItem(id = 1, value = "4.0"),
+                    GradeItem(id = 2, value = "5.0"),
+                    GradeItem(id = 3, value = "+")
+                )
+            ),
+            SubjectTypeState(
+                typeName = "CW",
+                average = 3.5,
+                grades = listOf(
+                    GradeItem(id = 4, value = "3.0"),
+                    GradeItem(id = 5, value = "+"),
+                    GradeItem(id = 6, value = "4.0")
+                )
+            )
+        )
+
+        ExpandableSubjectCard(
+            subjectName = "Inżynieria Oprogramowania",
+            subjectCode = "IO-101",
+            overallAverage = 4.0,
+            classTypes = classTypes,
+            isExpanded = true,
+            onExpandClick = {},
+            onAddGradeClick = {},
+            onTypeClick = {}
+        )
     }
 }

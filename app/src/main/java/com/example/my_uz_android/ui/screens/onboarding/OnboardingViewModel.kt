@@ -7,6 +7,7 @@ import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
+import com.example.my_uz_android.util.NetworkResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +29,7 @@ enum class UserGender {
 class OnboardingViewModel(
     private val settingsRepository: SettingsRepository,
     private val universityRepository: UniversityRepository,
-    private val classRepository: ClassRepository // POPRAWKA: Dodano brakujące repozytorium (naprawia crash)
+    private val classRepository: ClassRepository
 ) : ViewModel() {
 
     private val TAG = "OnboardingViewModel"
@@ -39,6 +40,10 @@ class OnboardingViewModel(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    // NOWE: Obsługa błędów w UI
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     // Personalizacja
     private val _selectedMode = MutableStateFlow<OnboardingMode?>(null)
@@ -87,18 +92,27 @@ class OnboardingViewModel(
         fetchAllGroups()
     }
 
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
     private fun fetchAllGroups() {
         viewModelScope.launch {
             _isLoading.value = true
-            try {
-                val groups = universityRepository.getGroupCodes()
-                _allGroups.value = groups
-            } catch (e: Exception) {
-                Log.e(TAG, "Błąd podczas pobierania grup", e)
-                _allGroups.value = emptyList()
-            } finally {
-                _isLoading.value = false
+            _errorMessage.value = null
+
+            when (val result = universityRepository.getGroupCodes()) {
+                is NetworkResult.Success -> {
+                    _allGroups.value = result.data ?: emptyList()
+                }
+                is NetworkResult.Error -> {
+                    _errorMessage.value = result.message ?: "Błąd pobierania grup"
+                    _allGroups.value = emptyList()
+                }
+                is NetworkResult.Loading -> { /* opcjonalnie */ }
             }
+
+            _isLoading.value = false
         }
     }
 
@@ -106,39 +120,62 @@ class OnboardingViewModel(
     fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
+            _errorMessage.value = null
+
             val isAnonymous = _selectedMode.value == OnboardingMode.ANONYMOUS
             val groupCode = _selectedGroup.value
 
-            // 1. Pobierz szczegóły grupy
+            // 1. Pobierz szczegóły grupy i plan (jeśli wybrano grupę)
             var faculty: String? = null
             var fieldOfStudy: String? = null
             var studyMode: String? = null
+            var downloadSuccess = true
 
             if (groupCode != null) {
-                try {
-                    val details = universityRepository.getGroupDetails(groupCode)
-                    if (details != null) {
-                        studyMode = details.studyMode
-                        details.fieldInfo?.let { info ->
-                            faculty = info.faculty
-                            fieldOfStudy = info.name
+                // A. Szczegóły grupy
+                when (val detailsResult = universityRepository.getGroupDetails(groupCode)) {
+                    is NetworkResult.Success -> {
+                        val details = detailsResult.data
+                        if (details != null) {
+                            studyMode = details.studyMode
+                            details.fieldInfo?.let { info ->
+                                faculty = info.faculty
+                                fieldOfStudy = info.name
+                            }
                         }
                     }
+                    is NetworkResult.Error -> {
+                        // Nie przerywamy, ale logujemy (opcjonalnie można pokazać błąd)
+                        Log.e(TAG, "Błąd szczegółów: ${detailsResult.message}")
+                    }
+                    else -> {}
+                }
 
-                    // POPRAWKA: Nowa logika - Pobieranie i zapisywanie planu zajęć
-                    val subgroups = _selectedSubgroups.value.toList()
-                    val schedule = universityRepository.getSchedule(groupCode, subgroups)
-
-                    classRepository.deleteAllClasses()
-                    classRepository.insertClasses(schedule)
-                    Log.d(TAG, "✅ Zapisano ${schedule.size} zajęć")
-
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ Błąd pobierania danych/planu", e)
+                // B. Pobierz Plan Zajęć
+                val subgroups = _selectedSubgroups.value.toList()
+                when (val scheduleResult = universityRepository.getSchedule(groupCode, subgroups)) {
+                    is NetworkResult.Success -> {
+                        val schedule = scheduleResult.data ?: emptyList()
+                        classRepository.deleteAllClasses()
+                        classRepository.insertClasses(schedule)
+                        Log.d(TAG, "✅ Zapisano ${schedule.size} zajęć")
+                    }
+                    is NetworkResult.Error -> {
+                        // Tutaj błąd jest krytyczny - użytkownik chce plan, a go nie dostał
+                        _errorMessage.value = "Nie udało się pobrać planu: ${scheduleResult.message}"
+                        downloadSuccess = false
+                    }
+                    else -> {}
                 }
             }
 
-            // 2. Zapisz ustawienia
+            // Jeśli pobieranie się nie powiodło (krytyczny błąd sieci przy pobieraniu planu), przerywamy
+            if (!downloadSuccess) {
+                _isLoading.value = false
+                return@launch
+            }
+
+            // 2. Zapisz ustawienia (tylko jeśli wszystko OK)
             val settings = SettingsEntity(
                 id = 0,
                 isAnonymous = isAnonymous,
@@ -157,7 +194,7 @@ class OnboardingViewModel(
             settingsRepository.insertSettings(settings)
             _isLoading.value = false
 
-            // Wywołaj callback nawigacji dopiero po zakończeniu zapisu
+            // Wywołaj callback nawigacji
             onSuccess()
         }
     }
@@ -219,13 +256,20 @@ class OnboardingViewModel(
 
         viewModelScope.launch {
             _isLoading.value = true
-            try {
-                _availableSubgroups.value = universityRepository.getSubgroups(groupCode)
-            } catch (e: Exception) {
-                _availableSubgroups.value = emptyList()
-            } finally {
-                _isLoading.value = false
+            _errorMessage.value = null
+
+            when (val result = universityRepository.getSubgroups(groupCode)) {
+                is NetworkResult.Success -> {
+                    _availableSubgroups.value = result.data ?: emptyList()
+                }
+                is NetworkResult.Error -> {
+                    _errorMessage.value = result.message
+                    _availableSubgroups.value = emptyList()
+                }
+                else -> {}
             }
+
+            _isLoading.value = false
             _selectedSubgroups.value = emptySet()
         }
     }

@@ -31,7 +31,8 @@ data class HomeUiState(
     val currentDate: String = "",
     val tasksMessage: String? = null,
     val classesMessage: String? = null,
-    val classesDayLabel: String? = null
+    val classesDayLabel: String? = null,
+    val isPlanSelected: Boolean = false
 )
 
 class HomeViewModel(
@@ -46,13 +47,13 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = combine(
         settingsRepository.getSettingsStream(),
         classRepository.getAllClassesStream(),
-        tasksRepository.getTasksStream()
+        tasksRepository.getAllTasks()
     ) { settings: SettingsEntity?, classes: List<ClassEntity>, tasks: List<TaskEntity> ->
 
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
 
-        // ========== PERSONALIZACJA ==========
+        // PERSONALIZACJA
         val userName = settings?.userName ?: "Student"
         val isAnonymous = settings?.isAnonymous == true
         val genderStr = settings?.gender
@@ -70,81 +71,68 @@ class HomeViewModel(
             "Uniwersytet Zielonogórski"
         }
 
-        // ========== ZAJĘCIA ==========
-        val effectiveClasses = if (classes.isEmpty()) {
-            listOf(
-                ClassEntity(
-                    id = 999,
-                    subjectName = "Przykładowe Zajęcia",
-                    classType = "Wykład",
-                    startTime = "10:00",
-                    endTime = "11:30",
-                    dayOfWeek = today.dayOfWeek.value,
-                    date = today.toString(),
-                    groupCode = settings?.selectedGroupCode ?: "GRUPA",
-                    subgroup = null,
-                    room = "Sala 101",
-                    teacherName = "Dr Jan Testowy"
-                )
-            )
+        // SPRAWDZENIE CZY PLAN WYBRANY
+        val isPlanSelected = !settings?.selectedGroupCode.isNullOrBlank() && classes.isNotEmpty()
+
+        // ZAJĘCIA - tylko jeśli plan wybrany
+        val todayString = today.toString()
+        val tomorrowString = today.plusDays(1).toString()
+
+        val (displayedClasses, dayLabel, emptyMessage) = if (isPlanSelected) {
+            val todaysClasses = classes
+                .filter { it.date == todayString }
+                .sortedBy { it.startTime }
+
+            val tomorrowsClasses = classes
+                .filter { it.date == tomorrowString }
+                .sortedBy { it.startTime }
+
+            when {
+                todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
+                tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
+                else -> Triple(emptyList(), null, "Brak zajęć w najbliższych dniach")
+            }
         } else {
-            classes
+            Triple(emptyList(), null, "Wybierz plan zajęć w ustawieniach")
         }
 
-        // ✅ KROK 1: Filtruj dzisiejsze i jutrzejsze zajęcia
-        val todayString = today.toString() // "2025-12-09"
-        val tomorrowString = today.plusDays(1).toString() // "2025-12-10"
-
-        val todaysClasses = effectiveClasses
-            .filter { it.date == todayString }
-            .sortedBy { it.startTime }
-
-        val tomorrowsClasses = effectiveClasses
-            .filter { it.date == tomorrowString }
-            .sortedBy { it.startTime }
-
-        // ✅ KROK 2: Wybierz które pokazać + ustal label
-        val (displayedClasses, dayLabel, emptyMessage) = when {
-            todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
-            tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
-            else -> Triple(emptyList(), null, "Brak zajęć")
-        }
-
-        // ========== ZADANIA ==========
+        // ZADANIA - zawsze wyświetlamy (mogą być dodane ręcznie)
         val finalTasks = tasks
             .sortedWith(compareBy<TaskEntity> { it.isCompleted }.thenBy { it.dueDate })
             .take(10)
 
-        // ========== WYDARZENIA (mock) ==========
+        // WYDARZENIA - mock data
         val mockEvents = listOf(
             EventEntity(
+                id = 1,
                 title = "Juwenalia 2025",
                 description = "Największa impreza roku!",
-                date = "2025-05-20",
+                date = "Piątek, 20 maja 2025",
                 location = "Kampus A",
                 timeRange = "18:00 - 02:00"
             ),
             EventEntity(
-                title = "Targi Pracy",
-                description = "Oferty staży IT",
-                date = "2025-06-01",
+                id = 2,
+                title = "Targi Pracy IT",
+                description = "Oferty staży i pracy",
+                date = "Niedziela, 1 czerwca 2025",
                 location = "Aula C",
                 timeRange = "10:00 - 15:00"
             )
         )
 
-        // ========== ZWRÓĆ UI STATE ==========
         HomeUiState(
             greeting = greeting,
             departmentInfo = departmentInfo,
-            upcomingClasses = displayedClasses, // ← ZMIANA
+            upcomingClasses = displayedClasses,
             upcomingTasks = finalTasks,
             upcomingEvents = mockEvents,
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },
             classesMessage = emptyMessage,
             classesDayLabel = dayLabel,
-            tasksMessage = "Zadania",
-            isLoading = false
+            tasksMessage = if (finalTasks.isEmpty()) "Brak zadań" else "Zadania",
+            isLoading = false,
+            isPlanSelected = isPlanSelected
         )
 
     }.stateIn(
@@ -152,21 +140,4 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = HomeUiState()
     )
-
-    init {
-        viewModelScope.launch {
-            val tasks = tasksRepository.getTasksStream().first()
-            if (tasks.isEmpty()) {
-                tasksRepository.insertTask(
-                    TaskEntity(
-                        title = "Projekt Zaliczeniowy",
-                        description = "Dokończyć implementację aplikacji.",
-                        dueDate = System.currentTimeMillis() + 172800000L,
-                        isCompleted = false,
-                        subjectId = null
-                    )
-                )
-            }
-        }
-    }
 }
