@@ -13,6 +13,7 @@ import com.example.my_uz_android.ui.screens.calendar.TasksViewModel
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsViewModel
+import com.example.my_uz_android.ui.screens.index.AbsencesViewModel // ✅ DODANY IMPORT
 import com.example.my_uz_android.ui.screens.index.AddEditGradeViewModel
 import com.example.my_uz_android.ui.screens.index.GradeDetailsViewModel
 import com.example.my_uz_android.ui.screens.index.GradesViewModel
@@ -94,6 +95,14 @@ object AppViewModelProvider {
                 gradesRepository = myUZApplication().container.gradesRepository,
                 classRepository = myUZApplication().container.classRepository,
                 settingsRepository = myUZApplication().container.settingsRepository
+            )
+        }
+
+        // ✅ NOWOŚĆ: Absences (Nieobecności)
+        initializer {
+            AbsencesViewModel(
+                absenceRepository = myUZApplication().container.absenceRepository,
+                classRepository = myUZApplication().container.classRepository
             )
         }
 

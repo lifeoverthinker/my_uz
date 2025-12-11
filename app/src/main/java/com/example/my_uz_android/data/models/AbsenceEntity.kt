@@ -10,5 +10,6 @@ data class AbsenceEntity(
     val subjectName: String,
     val date: Long,
     val classType: String?,
-    val isExcused: Boolean = false
+    val isExcused: Boolean = false,
+    val description: String? = null // ✅ NOWE POLE
 )
