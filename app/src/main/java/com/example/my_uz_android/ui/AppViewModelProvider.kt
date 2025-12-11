@@ -93,7 +93,7 @@ object AppViewModelProvider {
             AddEditGradeViewModel(
                 gradesRepository = myUZApplication().container.gradesRepository,
                 classRepository = myUZApplication().container.classRepository,
-                settingsRepository = myUZApplication().container.settingsRepository // ✅ DODANE
+                settingsRepository = myUZApplication().container.settingsRepository
             )
         }
 

@@ -23,7 +23,7 @@ data class AddEditGradeUiState(
     val customGradeValue: String = "",
     val weight: String = "1",
     val description: String = "", // Tytuł
-    val comment: String = "",     // ✅ NOWE: Opis
+    val comment: String = "",     // Opis
     val date: Long = System.currentTimeMillis(),
     val availableSubjects: List<Pair<String, List<String>>> = emptyList()
 )
@@ -38,10 +38,36 @@ class AddEditGradeViewModel(
     val uiState: StateFlow<AddEditGradeUiState> = _uiState.asStateFlow()
 
     private var currentSemesterFromSettings: Int = 1
+    private var loadedGradeId: Int? = null
 
     init {
         loadAvailableSubjects()
         loadCurrentSemester()
+    }
+
+    fun loadGrade(gradeId: Int) {
+        if (loadedGradeId == gradeId) return
+        loadedGradeId = gradeId
+
+        viewModelScope.launch {
+            val grade = gradesRepository.getGradeByIdStream(gradeId).first()
+            if (grade != null) {
+                val type = if (grade.grade == -1.0) GradeType.ACTIVITY else GradeType.STANDARD
+
+                _uiState.update {
+                    it.copy(
+                        subjectName = grade.subjectName,
+                        classType = grade.classType,
+                        gradeType = type,
+                        gradeValue = if (type == GradeType.STANDARD) grade.grade else null,
+                        weight = grade.weight.toString(),
+                        description = grade.description ?: "",
+                        comment = grade.comment ?: "",
+                        date = grade.date
+                    )
+                }
+            }
+        }
     }
 
     private fun loadCurrentSemester() {
@@ -94,7 +120,6 @@ class AddEditGradeViewModel(
         _uiState.update { it.copy(description = description) }
     }
 
-    // ✅ NOWE: Aktualizacja komentarza/opisu
     fun updateComment(comment: String) {
         _uiState.update { it.copy(comment = comment) }
     }
@@ -116,19 +141,25 @@ class AddEditGradeViewModel(
             }
 
             val weightInt = state.weight.toIntOrNull() ?: 1
+            val idToSave = loadedGradeId ?: 0
 
             val entity = GradeEntity(
+                id = idToSave,
                 subjectName = state.subjectName,
                 classType = state.classType ?: "",
                 grade = finalGrade,
                 weight = weightInt,
-                description = state.description.ifBlank { "Ocena" }, // Tytuł
-                comment = state.comment.ifBlank { null },            // ✅ Zapis opisu
+                description = state.description.ifBlank { "Ocena" },
+                comment = state.comment.ifBlank { null },
                 date = state.date,
                 semester = currentSemesterFromSettings
             )
 
-            gradesRepository.insertGrade(entity)
+            if (idToSave != 0) {
+                gradesRepository.updateGrade(entity)
+            } else {
+                gradesRepository.insertGrade(entity)
+            }
             onSuccess()
         }
     }

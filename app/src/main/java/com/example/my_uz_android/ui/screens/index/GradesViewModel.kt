@@ -14,8 +14,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
-// Usunięto import runBlocking - to było źródło ryzyka
 
+// --- Modele Stanu ---
 data class ClassTypeState(
     val name: String,
     val average: Double,
@@ -36,6 +36,7 @@ data class GradesUiState(
     val allGrades: List<GradeEntity> = emptyList()
 )
 
+// --- ViewModel ---
 class GradesViewModel(
     private val gradesRepository: GradesRepository,
     private val classRepository: ClassRepository,
@@ -46,9 +47,7 @@ class GradesViewModel(
         gradesRepository.getAllGradesStream(),
         classRepository.getAllClassesStream()
     ) { grades, classes ->
-        // Obliczenia wykonywane są teraz na Dispatchers.Default (dzięki flowOn poniżej)
-
-        // Pobierz wszystkie unikalne przedmioty z planu zajęć
+        // 1. Grupujemy przedmioty z planu zajęć
         val subjectsFromSchedule = classes
             .groupBy { it.subjectName }
             .map { (subjectName, subjectClasses) ->
@@ -60,11 +59,15 @@ class GradesViewModel(
             }
             .sortedBy { it.first }
 
+        // 2. Mapujemy na SubjectState
         val subjects = subjectsFromSchedule.map { (subjectName, classTypes) ->
             val subjectGrades = grades.filter { it.subjectName == subjectName }
 
+            // Typy zajęć (Wykład, Ćwiczenia)
             val types = classTypes.map { typeName ->
                 val typeGrades = subjectGrades.filter { it.classType == typeName }
+
+                // Mapujemy oceny na GradeItem (do wyświetlenia w bąbelkach)
                 val gradeItems = typeGrades.map { grade ->
                     GradeItem(
                         id = grade.id,
@@ -74,6 +77,7 @@ class GradesViewModel(
                     )
                 }
 
+                // Liczymy średnią dla typu zajęć (pomijamy "+")
                 val numericGrades = typeGrades.mapNotNull {
                     if (it.grade == -1.0) null else it.grade
                 }
@@ -91,12 +95,12 @@ class GradesViewModel(
                 )
             }
 
-            val numericSubjectGrades = subjectGrades.mapNotNull {
-                if (it.grade == -1.0) null else it.grade
-            }
-
+            // Średnia przedmiotu (ważona)
+            val numericSubjectGrades = subjectGrades.filter { it.grade != -1.0 }
             val subjectAverage = if (numericSubjectGrades.isNotEmpty()) {
-                numericSubjectGrades.average()
+                val sum = numericSubjectGrades.sumOf { it.grade * it.weight }
+                val weightSum = numericSubjectGrades.sumOf { it.weight }
+                if (weightSum > 0) sum / weightSum else 0.0
             } else {
                 0.0
             }
@@ -109,12 +113,12 @@ class GradesViewModel(
             )
         }
 
-        val numericAllGrades = grades.mapNotNull {
-            if (it.grade == -1.0) null else it.grade
-        }
-
-        val overallAverage = if (numericAllGrades.isNotEmpty()) {
-            numericAllGrades.average()
+        // 3. Średnia całkowita (ważona ze wszystkich ocen)
+        val allNumericGrades = grades.filter { it.grade != -1.0 }
+        val overallAverage = if (allNumericGrades.isNotEmpty()) {
+            val sum = allNumericGrades.sumOf { it.grade * it.weight }
+            val weightSum = allNumericGrades.sumOf { it.weight }
+            if (weightSum > 0) sum / weightSum else 0.0
         } else {
             0.0
         }
@@ -126,14 +130,13 @@ class GradesViewModel(
             allGrades = grades
         )
     }
-        .flowOn(Dispatchers.Default) // ZMIANA: Przeniesienie obliczeń na wątek tła
+        .flowOn(Dispatchers.Default)
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = GradesUiState(isLoading = true)
         )
 
-    // ZMIANA: suspend zamiast runBlocking
     suspend fun isPlanSelected(): Boolean {
         val settings = settingsRepository.getSettingsStream().first()
         return !settings?.selectedGroupCode.isNullOrBlank()

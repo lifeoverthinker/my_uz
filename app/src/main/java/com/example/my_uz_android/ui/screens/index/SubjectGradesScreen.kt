@@ -30,16 +30,18 @@ fun SubjectGradesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Filtruj oceny dla tego przedmiotu i typu
+    // Filtrowanie
     val filteredGrades = uiState.allGrades.filter {
         it.subjectName == subjectName && it.classType == classType
     }
 
+    // Obliczanie średniej (pomijamy aktywność -1.0)
     val gradesForAvg = filteredGrades.filter { it.grade != -1.0 }
+
     val average = if (gradesForAvg.isNotEmpty()) {
         val sum = gradesForAvg.sumOf { it.grade * it.weight }
         val weightSum = gradesForAvg.sumOf { it.weight }
-        sum / weightSum
+        if (weightSum > 0) sum / weightSum else 0.0
     } else null
 
     Scaffold(
@@ -51,7 +53,6 @@ fun SubjectGradesScreen(
             )
         },
         floatingActionButton = {
-            // ✅ POPRAWIONE WYWOŁANIE
             UniversalFab(
                 onMainFabClick = onAddGradeClick,
                 iconRes = R.drawable.ic_plus,
