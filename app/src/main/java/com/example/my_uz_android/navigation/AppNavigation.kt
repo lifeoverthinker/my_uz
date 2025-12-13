@@ -22,6 +22,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.screens.account.AccountScreen
+import com.example.my_uz_android.ui.screens.account.EditPersonalDataScreen
+import com.example.my_uz_android.ui.screens.account.PersonalDataScreen
 import com.example.my_uz_android.ui.screens.calendar.TaskAddEditScreen
 import com.example.my_uz_android.ui.screens.calendar.TasksScreen
 import com.example.my_uz_android.ui.screens.home.HomeScreen
@@ -151,7 +153,7 @@ fun AppNavigation(
                     onAccountClick = { navController.navigate(Screen.Account.route) },
                     onCalendarClick = { navController.navigate(Screen.Calendar.route) },
                     onAddGradeClick = { navController.navigate("add_grade") },
-                    onAddAbsenceClick = { navController.navigate("add_absence") }, // ✅ PRZEKIEROWANIE
+                    onAddAbsenceClick = { navController.navigate("add_absence") },
                     onAddTaskClick = { navController.navigate("add_task") }
                 )
             }
@@ -163,7 +165,6 @@ fun AppNavigation(
                 )
             }
 
-            // ✅ ZAKTUALIZOWANA TRASA DLA INDEX SCREEN
             composable(Screen.Index.route) {
                 IndexScreen(
                     onGradeDetailsClick = { gradeId ->
@@ -179,7 +180,6 @@ fun AppNavigation(
                             navController.navigate("add_grade")
                         }
                     },
-                    // ✅ DODANO BRAKUJĄCE PARAMETRY
                     onAddAbsenceClick = { subject, classType ->
                         if (subject != null && classType != null) {
                             navController.navigate("add_absence?subject=$subject&classType=$classType")
@@ -193,6 +193,7 @@ fun AppNavigation(
                 )
             }
 
+            // ✅ ZAKTUALIZOWANA NAWIGACJA KONTA Z OBSŁUGĄ DANYCH OSOBOWYCH
             composable(Screen.Account.route) {
                 AccountScreen(
                     onBackClick = { },
@@ -200,7 +201,25 @@ fun AppNavigation(
                         navController.navigate("landing") {
                             popUpTo(0) { inclusive = true }
                         }
+                    },
+                    onPersonalDataClick = {
+                        navController.navigate("personal_data")
                     }
+                )
+            }
+
+            // ✅ EKRAN PODGLĄDU DANYCH OSOBOWYCH
+            composable("personal_data") {
+                PersonalDataScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onEditClick = { navController.navigate("edit_personal_data") }
+                )
+            }
+
+            // ✅ EKRAN EDYCJI DANYCH OSOBOWYCH
+            composable("edit_personal_data") {
+                EditPersonalDataScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
@@ -321,7 +340,6 @@ fun AppNavigation(
                 )
             }
 
-            // --- TRASY NIEOBECNOŚCI (DODANE) ---
             composable(
                 route = "add_absence?subject={subject}&classType={classType}",
                 arguments = listOf(
