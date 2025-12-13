@@ -21,10 +21,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.my_uz_android.R
+import com.example.my_uz_android.ui.screens.account.AboutAppScreen // ✅ Import
 import com.example.my_uz_android.ui.screens.account.AccountScreen
 import com.example.my_uz_android.ui.screens.account.EditPersonalDataScreen
 import com.example.my_uz_android.ui.screens.account.PersonalDataScreen
-import com.example.my_uz_android.ui.screens.account.SettingsScreen // ✅ Dodano import
+import com.example.my_uz_android.ui.screens.account.SettingsScreen
 import com.example.my_uz_android.ui.screens.calendar.TaskAddEditScreen
 import com.example.my_uz_android.ui.screens.calendar.TasksScreen
 import com.example.my_uz_android.ui.screens.home.HomeScreen
@@ -194,7 +195,7 @@ fun AppNavigation(
                 )
             }
 
-            // ✅ ZAKTUALIZOWANA NAWIGACJA KONTA
+            // ✅ POPRAWIONA SEKCJA KONTA
             composable(Screen.Account.route) {
                 AccountScreen(
                     onBackClick = { },
@@ -206,13 +207,16 @@ fun AppNavigation(
                     onPersonalDataClick = {
                         navController.navigate("personal_data")
                     },
-                    onSettingsClick = { // ✅ Obsługa kliknięcia w ustawienia
+                    onSettingsClick = {
                         navController.navigate("settings")
+                    },
+                    onAboutClick = { // ✅ Teraz to zadziała, bo trasa "about_app" jest zdefiniowana niżej
+                        navController.navigate("about_app")
                     }
                 )
             }
 
-            // ✅ EKRAN PODGLĄDU DANYCH OSOBOWYCH
+            // ✅ DEFINICJE EKRANÓW POMOCNICZYCH KONTA
             composable("personal_data") {
                 PersonalDataScreen(
                     onNavigateBack = { navController.popBackStack() },
@@ -220,21 +224,26 @@ fun AppNavigation(
                 )
             }
 
-            // ✅ EKRAN EDYCJI DANYCH OSOBOWYCH
             composable("edit_personal_data") {
                 EditPersonalDataScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
 
-            // ✅ EKRAN USTAWIEŃ (NOWY)
             composable("settings") {
                 SettingsScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
 
-            // --- DETALE I INNE EKRANY ---
+            // ✅ NAPRAWA: Dodano brakującą trasę
+            composable("about_app") {
+                AboutAppScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // --- POZOSTAŁE EKRANY ---
             composable(
                 "class_details/{classId}",
                 arguments = listOf(navArgument("classId") { type = NavType.IntType })
