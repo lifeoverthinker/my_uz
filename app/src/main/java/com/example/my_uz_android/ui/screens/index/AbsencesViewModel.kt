@@ -3,17 +3,12 @@ package com.example.my_uz_android.ui.screens.index
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.AbsenceEntity
-import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.data.repositories.AbsenceRepository
 import com.example.my_uz_android.data.repositories.ClassRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+// ✅ Klasy danych potrzebne dla listy
 data class SubjectAbsences(
     val subjectName: String,
     val types: List<AbsenceTypeGroup>
@@ -25,6 +20,12 @@ data class AbsenceTypeGroup(
     val limit: Int
 )
 
+sealed interface AbsencesUiState {
+    data object Loading : AbsencesUiState
+    data class Success(val data: List<SubjectAbsences>) : AbsencesUiState
+    data class Error(val message: String) : AbsencesUiState
+}
+
 class AbsencesViewModel(
     private val absenceRepository: AbsenceRepository,
     private val classRepository: ClassRepository
@@ -32,12 +33,13 @@ class AbsencesViewModel(
 
     private val _limits = MutableStateFlow<Map<String, Int>>(emptyMap())
 
-    val availableClasses: StateFlow<List<ClassEntity>> = classRepository.getAllClassesStream()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Potrzebne do odświeżania widoku
+    private val _uiState = MutableStateFlow<AbsencesUiState>(AbsencesUiState.Loading)
+    val uiState: StateFlow<AbsencesUiState> = _uiState.asStateFlow()
 
-    val absencesState: StateFlow<List<SubjectAbsences>> = combine(
+    private val absencesDataFlow: Flow<List<SubjectAbsences>> = combine(
         absenceRepository.getAllAbsencesStream(),
-        availableClasses,
+        classRepository.getAllClassesStream(), // Trigger odświeżania przy zmianie planu
         _limits
     ) { absences, _, limits ->
         absences.groupBy { it.subjectName }
@@ -56,20 +58,26 @@ class AbsencesViewModel(
 
                 SubjectAbsences(subjectName, typeGroups)
             }.sortedBy { it.subjectName }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }
 
-    // ✅ ZMIANA: Dodano parametr description
-    fun addAbsence(subjectName: String, classType: String, date: Long, description: String?) {
+    init {
         viewModelScope.launch {
-            val absence = AbsenceEntity(
-                subjectName = subjectName,
-                classType = classType,
-                date = date,
-                description = description
-            )
-            absenceRepository.insertAbsence(absence)
+            absencesDataFlow
+                .catch { e ->
+                    _uiState.value = AbsencesUiState.Error(e.message ?: "Wystąpił błąd")
+                }
+                .collect { data ->
+                    _uiState.value = AbsencesUiState.Success(data)
+                }
         }
     }
+
+    // Dla kompatybilności z UI (jeśli UI używa collectAsState na liście)
+    val absencesState: StateFlow<List<SubjectAbsences>> = _uiState
+        .map { state ->
+            if (state is AbsencesUiState.Success) state.data else emptyList()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun deleteAbsence(absence: AbsenceEntity) {
         viewModelScope.launch {

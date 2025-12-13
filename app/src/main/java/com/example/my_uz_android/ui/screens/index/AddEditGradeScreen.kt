@@ -52,14 +52,11 @@ fun AddEditGradeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // ✅ POPRAWKA: Obsługa ładowania danych przy edycji
     LaunchedEffect(gradeId, prefilledSubject, prefilledClassType) {
         if (gradeId != null && gradeId != 0) {
             viewModel.loadGrade(gradeId)
         } else {
-            // Tylko dla nowej oceny wypełniamy "prefilled"
-            if (prefilledSubject != null) viewModel.updateSubjectName(prefilledSubject)
-            if (prefilledClassType != null) viewModel.updateClassType(prefilledClassType)
+            viewModel.initNewGrade(prefilledSubject, prefilledClassType)
         }
     }
 
@@ -148,7 +145,7 @@ fun AddEditGradeContent(
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = primaryColor, contentColor = MaterialTheme.colorScheme.onPrimary),
                     contentPadding = PaddingValues(horizontal = 24.dp),
-                    modifier = Modifier.height(48.dp)
+                    modifier = Modifier.height(40.dp) // ✅ ZMIANA: 40dp (smukły)
                 ) {
                     Text(stringResource(R.string.btn_save), fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
                 }
@@ -220,7 +217,7 @@ fun AddEditGradeContent(
                 HorizontalDivider(color = dividerColor)
 
                 // 2. DATA
-                CommonRowGrade(iconRes = R.drawable.ic_clock, iconTint = iconTint) {
+                CommonRowGrade(iconRes = R.drawable.ic_calendar, iconTint = iconTint) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -354,7 +351,6 @@ fun AddEditGradeContent(
             )
         }
 
-        // --- Modale (Bez zmian) ---
         if (showSubjectModal) {
             Dialog(onDismissRequest = { showSubjectModal = false }) {
                 Surface(
@@ -364,8 +360,15 @@ fun AddEditGradeContent(
                 ) {
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
                         item { Text(text = "Wybierz przedmiot", style = MaterialTheme.typography.titleLarge.copy(fontFamily = InterFontFamily), color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
-                        items(uiState.availableSubjects) { (subject, _) ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable { onSubjectChange(subject); onClassTypeChange(null); showSubjectModal = false }.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        items(uiState.availableSubjects.size) { index ->
+                            val (subject, _) = uiState.availableSubjects[index]
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSubjectChange(subject); onClassTypeChange(null); showSubjectModal = false }
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 RadioButton(selected = uiState.subjectName == subject, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(subject, style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
@@ -383,8 +386,15 @@ fun AddEditGradeContent(
                 Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
                         item { Text(text = "Wybierz rodzaj zajęć", style = MaterialTheme.typography.titleLarge.copy(fontFamily = InterFontFamily), color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
-                        items(availableTypes) { type ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable { onClassTypeChange(type); showTypeModal = false }.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        items(availableTypes.size) { index ->
+                            val type = availableTypes[index]
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onClassTypeChange(type); showTypeModal = false }
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 RadioButton(selected = uiState.classType == type, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(ClassTypeUtils.getFullName(type), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
@@ -425,7 +435,7 @@ fun AddEditGradeContent(
 fun CommonRowGrade(
     iconRes: Int,
     iconTint: Color,
-    content: @Composable () -> Unit
+    content: @Composable BoxScope.() -> Unit
 ) {
     Row(
         modifier = Modifier

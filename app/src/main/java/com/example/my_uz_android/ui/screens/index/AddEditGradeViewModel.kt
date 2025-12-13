@@ -25,6 +25,7 @@ data class AddEditGradeUiState(
     val description: String = "", // Tytuł
     val comment: String = "",     // Opis
     val date: Long = System.currentTimeMillis(),
+    // Lista par: (Nazwa przedmiotu, Lista typów zajęć)
     val availableSubjects: List<Pair<String, List<String>>> = emptyList()
 )
 
@@ -67,6 +68,18 @@ class AddEditGradeViewModel(
                     )
                 }
             }
+        }
+    }
+
+    fun initNewGrade(subject: String?, type: String?) {
+        _uiState.update {
+            it.copy(
+                subjectName = subject,
+                classType = type,
+                gradeType = GradeType.STANDARD,
+                description = "",
+                date = System.currentTimeMillis()
+            )
         }
     }
 

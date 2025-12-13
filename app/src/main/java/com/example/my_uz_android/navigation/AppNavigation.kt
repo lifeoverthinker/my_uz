@@ -28,13 +28,13 @@ import com.example.my_uz_android.ui.screens.home.HomeScreen
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsScreen
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
 import com.example.my_uz_android.ui.screens.home.details.TaskDetailsScreen
-import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
-import com.example.my_uz_android.ui.theme.extendedColors
-// Importujemy ekrany indeksu
+import com.example.my_uz_android.ui.screens.index.AddEditAbsenceScreen
 import com.example.my_uz_android.ui.screens.index.AddEditGradeScreen
 import com.example.my_uz_android.ui.screens.index.GradeDetailsScreen
 import com.example.my_uz_android.ui.screens.index.IndexScreen
 import com.example.my_uz_android.ui.screens.index.SubjectGradesScreen
+import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
+import com.example.my_uz_android.ui.theme.extendedColors
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
@@ -151,9 +151,7 @@ fun AppNavigation(
                     onAccountClick = { navController.navigate(Screen.Account.route) },
                     onCalendarClick = { navController.navigate(Screen.Calendar.route) },
                     onAddGradeClick = { navController.navigate("add_grade") },
-                    // Uwaga: HomeScreen ma przycisk "Dodaj nieobecność", ale logika przeniosła się do Indexu.
-                    // Możesz tu przekierować do Indexu lub otworzyć ten sam ekran placeholder
-                    onAddAbsenceClick = { navController.navigate(Screen.Index.route) },
+                    onAddAbsenceClick = { navController.navigate("add_absence") }, // ✅ PRZEKIEROWANIE
                     onAddTaskClick = { navController.navigate("add_task") }
                 )
             }
@@ -165,6 +163,7 @@ fun AppNavigation(
                 )
             }
 
+            // ✅ ZAKTUALIZOWANA TRASA DLA INDEX SCREEN
             composable(Screen.Index.route) {
                 IndexScreen(
                     onGradeDetailsClick = { gradeId ->
@@ -179,8 +178,18 @@ fun AppNavigation(
                         } else {
                             navController.navigate("add_grade")
                         }
+                    },
+                    // ✅ DODANO BRAKUJĄCE PARAMETRY
+                    onAddAbsenceClick = { subject, classType ->
+                        if (subject != null && classType != null) {
+                            navController.navigate("add_absence?subject=$subject&classType=$classType")
+                        } else {
+                            navController.navigate("add_absence")
+                        }
+                    },
+                    onEditAbsenceClick = { absenceId ->
+                        navController.navigate("edit_absence/$absenceId")
                     }
-                    // ✅ USUNIĘTE: onAddAbsenceClick (IndexScreen obsługuje to wewnętrznie)
                 )
             }
 
@@ -256,10 +265,13 @@ fun AppNavigation(
                 )
             }
 
-            // Opcjonalnie: Zachowujemy ten route jeśli np. HomeScreen chciałby tu nawigować,
-            // ale IndexScreen robi to lepiej (Bottom Sheet).
             composable("add_absence") {
-                PlaceholderScreen("Użyj zakładki 'Indeks' aby dodać nieobecność.")
+                AddEditAbsenceScreen(
+                    absenceId = null,
+                    prefilledSubject = null,
+                    prefilledClassType = null,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
 
             composable(
@@ -306,6 +318,36 @@ fun AppNavigation(
                     onAddGradeClick = {
                         navController.navigate("add_grade?subject=$subjectName&classType=$classType")
                     }
+                )
+            }
+
+            // --- TRASY NIEOBECNOŚCI (DODANE) ---
+            composable(
+                route = "add_absence?subject={subject}&classType={classType}",
+                arguments = listOf(
+                    navArgument("subject") { nullable = true },
+                    navArgument("classType") { nullable = true }
+                )
+            ) { backStackEntry ->
+                val subject = backStackEntry.arguments?.getString("subject")
+                val classType = backStackEntry.arguments?.getString("classType")
+
+                AddEditAbsenceScreen(
+                    absenceId = null,
+                    prefilledSubject = subject,
+                    prefilledClassType = classType,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "edit_absence/{absenceId}",
+                arguments = listOf(navArgument("absenceId") { type = NavType.IntType })
+            ) { backStackEntry ->
+                val absenceId = backStackEntry.arguments?.getInt("absenceId")
+                AddEditAbsenceScreen(
+                    absenceId = absenceId,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }

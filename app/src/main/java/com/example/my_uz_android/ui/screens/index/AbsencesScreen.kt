@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
@@ -38,26 +37,18 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AbsencesScreen(
     viewModel: AbsencesViewModel,
-    showAddSheet: Boolean,
-    onDismissSheet: () -> Unit
+    onAddAbsenceClick: (String?, String?) -> Unit,
+    onEditAbsenceClick: (Int) -> Unit
 ) {
     val absencesState by viewModel.absencesState.collectAsStateWithLifecycle()
-    val availableClasses by viewModel.availableClasses.collectAsStateWithLifecycle()
-
-    var preselectedSubject by remember { mutableStateOf<String?>(null) }
-    var preselectedType by remember { mutableStateOf<String?>(null) }
-    var absenceToEdit by remember { mutableStateOf<AbsenceEntity?>(null) }
 
     var showLimitDialog by remember { mutableStateOf(false) }
     var limitEditSubject by remember { mutableStateOf("") }
     var limitEditType by remember { mutableStateOf("") }
     var limitEditValue by remember { mutableStateOf("2") }
-
-    var internalShowSheet by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (absencesState.isEmpty()) {
@@ -79,10 +70,7 @@ fun AbsencesScreen(
                         subjectData = subjectGroup,
                         onDeleteAbsence = { viewModel.deleteAbsence(it) },
                         onAddAbsenceClick = { type ->
-                            preselectedSubject = subjectGroup.subjectName
-                            preselectedType = type
-                            absenceToEdit = null
-                            internalShowSheet = true
+                            onAddAbsenceClick(subjectGroup.subjectName, type)
                         },
                         onEditLimitClick = { type, currentLimit ->
                             limitEditSubject = subjectGroup.subjectName
@@ -91,61 +79,10 @@ fun AbsencesScreen(
                             showLimitDialog = true
                         },
                         onEditAbsenceClick = { absence ->
-                            preselectedSubject = absence.subjectName
-                            preselectedType = absence.classType
-                            absenceToEdit = absence
-                            internalShowSheet = true
+                            onEditAbsenceClick(absence.id)
                         }
                     )
                 }
-            }
-        }
-
-        LaunchedEffect(showAddSheet) {
-            if (showAddSheet) {
-                preselectedSubject = null
-                preselectedType = null
-                absenceToEdit = null
-                internalShowSheet = true
-            }
-        }
-
-        if (internalShowSheet) {
-            ModalBottomSheet(
-                onDismissRequest = {
-                    internalShowSheet = false
-                    onDismissSheet()
-                },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-            ) {
-                AddEditAbsenceScreen(
-                    availableClasses = availableClasses,
-                    initialSubject = preselectedSubject,
-                    initialType = preselectedType,
-                    existingAbsence = absenceToEdit,
-                    onSave = { subject, type, date, description ->
-                        if (absenceToEdit != null) {
-                            viewModel.deleteAbsence(absenceToEdit!!)
-                            viewModel.addAbsence(subject, type, date, description)
-                        } else {
-                            viewModel.addAbsence(subject, type, date, description)
-                        }
-                        internalShowSheet = false
-                        onDismissSheet()
-                    },
-                    onDelete = {
-                        if (absenceToEdit != null) {
-                            viewModel.deleteAbsence(absenceToEdit!!)
-                        }
-                        internalShowSheet = false
-                        onDismissSheet()
-                    },
-                    onCancel = {
-                        internalShowSheet = false
-                        onDismissSheet()
-                    }
-                )
             }
         }
 
@@ -243,7 +180,6 @@ fun AbsenceCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Column(
                 modifier = Modifier.padding(16.dp)
-                // Usunięto verticalArrangement, zarządzamy odstępami ręcznie w pętli
             ) {
                 subjectData.types.forEachIndexed { index, typeGroup ->
                     AbsenceTypeSection(
@@ -254,7 +190,6 @@ fun AbsenceCard(
                         onEditAbsence = onEditAbsenceClick
                     )
 
-                    // Dodajemy Divider tylko jeśli to NIE jest ostatni element
                     if (index < subjectData.types.lastIndex) {
                         Spacer(modifier = Modifier.height(16.dp))
                         HorizontalDivider(
@@ -287,7 +222,6 @@ fun AbsenceTypeSection(
     val primaryColor = MaterialTheme.colorScheme.primary
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // --- HEADER SEKCJI ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -301,7 +235,6 @@ fun AbsenceTypeSection(
                 )
             )
 
-            // Subtelny licznik z ołówkiem (do edycji limitu)
             Surface(
                 color = counterContainerColor,
                 shape = RoundedCornerShape(8.dp),
@@ -329,7 +262,6 @@ fun AbsenceTypeSection(
             }
         }
 
-        // --- LISTA NIEOBECNOŚCI ---
         if (typeGroup.absences.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 typeGroup.absences.forEach { absence ->
@@ -348,7 +280,6 @@ fun AbsenceTypeSection(
             )
         }
 
-        // --- PRZYCISK DODAJ (Wyrównany do prawej) ---
         Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.CenterEnd
@@ -384,8 +315,6 @@ fun AbsenceTypeSection(
                 }
             }
         }
-
-        // Usunięto Divider z końca tej funkcji – teraz zarządza nim AbsenceCard
     }
 }
 
