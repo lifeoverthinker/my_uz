@@ -24,6 +24,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.screens.account.AccountScreen
 import com.example.my_uz_android.ui.screens.account.EditPersonalDataScreen
 import com.example.my_uz_android.ui.screens.account.PersonalDataScreen
+import com.example.my_uz_android.ui.screens.account.SettingsScreen // ✅ Dodano import
 import com.example.my_uz_android.ui.screens.calendar.TaskAddEditScreen
 import com.example.my_uz_android.ui.screens.calendar.TasksScreen
 import com.example.my_uz_android.ui.screens.home.HomeScreen
@@ -193,7 +194,7 @@ fun AppNavigation(
                 )
             }
 
-            // ✅ ZAKTUALIZOWANA NAWIGACJA KONTA Z OBSŁUGĄ DANYCH OSOBOWYCH
+            // ✅ ZAKTUALIZOWANA NAWIGACJA KONTA
             composable(Screen.Account.route) {
                 AccountScreen(
                     onBackClick = { },
@@ -204,6 +205,9 @@ fun AppNavigation(
                     },
                     onPersonalDataClick = {
                         navController.navigate("personal_data")
+                    },
+                    onSettingsClick = { // ✅ Obsługa kliknięcia w ustawienia
+                        navController.navigate("settings")
                     }
                 )
             }
@@ -219,6 +223,13 @@ fun AppNavigation(
             // ✅ EKRAN EDYCJI DANYCH OSOBOWYCH
             composable("edit_personal_data") {
                 EditPersonalDataScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // ✅ EKRAN USTAWIEŃ (NOWY)
+            composable("settings") {
+                SettingsScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
