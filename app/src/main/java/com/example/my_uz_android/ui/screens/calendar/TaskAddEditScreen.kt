@@ -1,14 +1,12 @@
 package com.example.my_uz_android.ui.screens.calendar
 
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -23,7 +21,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -110,7 +107,6 @@ fun TaskAddEditContent(
     onDescriptionChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ✅ Kolory dostosowane do Dark Mode
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -142,7 +138,7 @@ fun TaskAddEditContent(
             .statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // HEADER
+            // --- HEADER ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -152,7 +148,7 @@ fun TaskAddEditContent(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .clickable { onNavigateBack() },
                     contentAlignment = Alignment.Center
@@ -174,7 +170,7 @@ fun TaskAddEditContent(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     contentPadding = PaddingValues(horizontal = 24.dp),
-                    modifier = Modifier.height(48.dp)
+                    modifier = Modifier.height(40.dp) // ✅ ZMIANA: 40dp (smukły)
                 ) {
                     Text(stringResource(R.string.btn_save), fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
                 }
@@ -227,7 +223,7 @@ fun TaskAddEditContent(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
+                HorizontalDivider(color = dividerColor)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // QUICK CHIPS
@@ -264,7 +260,7 @@ fun TaskAddEditContent(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
+                HorizontalDivider(color = dividerColor)
 
                 // CAŁY DZIEŃ + DATA/CZAS
                 CommonRow(iconRes = R.drawable.ic_clock, iconTint = iconTint) {
@@ -313,7 +309,7 @@ fun TaskAddEditContent(
                     }
                 }
 
-                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
+                HorizontalDivider(color = dividerColor)
 
                 // PRZEDMIOT
                 CommonRow(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
@@ -340,7 +336,7 @@ fun TaskAddEditContent(
                     }
                 }
 
-                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
+                HorizontalDivider(color = dividerColor)
 
                 // RODZAJ
                 CommonRow(
@@ -375,7 +371,7 @@ fun TaskAddEditContent(
                     }
                 }
 
-                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
+                HorizontalDivider(color = dividerColor)
 
                 // OPIS
                 CommonRow(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
@@ -406,7 +402,7 @@ fun TaskAddEditContent(
                     }
                 }
 
-                HorizontalDivider(color = dividerColor) // ✅ UJEDNOLICONY
+                HorizontalDivider(color = dividerColor)
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }

@@ -8,12 +8,14 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.ui.screens.account.AccountViewModel
 import com.example.my_uz_android.ui.screens.calendar.TaskAddEditViewModel
-import com.example.my_uz_android.ui.screens.calendar.TaskDetailsViewModel
 import com.example.my_uz_android.ui.screens.calendar.TasksViewModel
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsViewModel
-import com.example.my_uz_android.ui.screens.index.AbsencesViewModel // ✅ DODANY IMPORT
+// ✅ Ten import teraz zadziała, bo stworzyliśmy plik powyżej z poprawnym pakietem
+import com.example.my_uz_android.ui.screens.home.details.TaskDetailsViewModel
+import com.example.my_uz_android.ui.screens.index.AbsencesViewModel
+import com.example.my_uz_android.ui.screens.index.AddEditAbsenceViewModel
 import com.example.my_uz_android.ui.screens.index.AddEditGradeViewModel
 import com.example.my_uz_android.ui.screens.index.GradeDetailsViewModel
 import com.example.my_uz_android.ui.screens.index.GradesViewModel
@@ -72,7 +74,7 @@ object AppViewModelProvider {
             )
         }
 
-        // Grades
+        // Grades (Lista)
         initializer {
             GradesViewModel(
                 gradesRepository = myUZApplication().container.gradesRepository,
@@ -98,9 +100,17 @@ object AppViewModelProvider {
             )
         }
 
-        // ✅ NOWOŚĆ: Absences (Nieobecności)
+        // Absences (Lista)
         initializer {
             AbsencesViewModel(
+                absenceRepository = myUZApplication().container.absenceRepository,
+                classRepository = myUZApplication().container.classRepository
+            )
+        }
+
+        // Add/Edit Absence (Formularz)
+        initializer {
+            AddEditAbsenceViewModel(
                 absenceRepository = myUZApplication().container.absenceRepository,
                 classRepository = myUZApplication().container.classRepository
             )
