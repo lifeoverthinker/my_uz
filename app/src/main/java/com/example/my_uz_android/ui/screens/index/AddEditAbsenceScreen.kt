@@ -140,9 +140,7 @@ fun AddEditAbsenceContent(
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     contentPadding = PaddingValues(horizontal = 24.dp),
                     modifier = Modifier.height(40.dp)
