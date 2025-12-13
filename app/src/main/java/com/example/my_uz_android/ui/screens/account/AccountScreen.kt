@@ -1,15 +1,20 @@
 package com.example.my_uz_android.ui.screens.account
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -19,32 +24,24 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.extendedColors
+import java.util.Locale
 
-@OptIn(ExperimentalLayoutApi::class) // ✅ Naprawa błędu FlowRow
 @Composable
 fun AccountScreen(
     onBackClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onSettingsClick: () -> Unit = {},
+    onPersonalDataClick: () -> Unit = {},
+    onAboutClick: () -> Unit = {},
     viewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val isLoaded by viewModel.isSettingsLoaded.collectAsState()
     val settings by viewModel.settings.collectAsState()
+    val isLoaded by viewModel.isSettingsLoaded.collectAsState()
 
-    val groupSearchQuery by viewModel.groupSearchQuery.collectAsState()
-    val filteredGroups by viewModel.filteredGroups.collectAsState()
-    val draftSelectedGroup by viewModel.draftSelectedGroup.collectAsState()
-
-    val availableSubgroups by viewModel.availableSubgroups.collectAsState()
-    val draftSubgroups by viewModel.draftSubgroups.collectAsState()
-
-    val isLoading by viewModel.isLoading.collectAsState()
-    val saveMessage by viewModel.saveMessage.collectAsState()
-
+    val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
     val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val backgroundColor = MaterialTheme.colorScheme.background
 
     if (!isLoaded) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -56,236 +53,307 @@ fun AccountScreen(
     Scaffold(
         containerColor = backgroundColor,
         topBar = {
-            Row(
+            // Nagłówek "Konto" zgodnie z Figmą
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(top = 16.dp, bottom = 16.dp, start = 16.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
                 Text(
                     text = "Konto",
-                    style = MaterialTheme.typography.displaySmall.copy(
+                    style = MaterialTheme.typography.headlineSmall.copy(
                         fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 32.sp
+                        fontWeight = FontWeight.Normal, // Figma: W400
+                        fontSize = 24.sp
                     ),
                     color = textColor
                 )
-                Spacer(modifier = Modifier.weight(1f))
             }
         }
     ) { paddingValues ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 1. DANE STUDENTA (Tylko do odczytu)
-            item {
-                SectionHeader("Twoje dane")
-                if (settings?.isAnonymous == true) {
-                    Text(
-                        text = "Tryb anonimowy (Gość)",
-                        color = secondaryTextColor,
-                        fontFamily = InterFontFamily
-                    )
-                } else {
-                    InfoRow("Imię", settings?.userName ?: "-")
-                    InfoRow("Wydział", settings?.faculty ?: "-")
-                    InfoRow("Kierunek", settings?.fieldOfStudy ?: "-")
-                    InfoRow("Tryb", settings?.studyMode ?: "-")
-                }
-            }
+            // 1. Profil (Avatar + Imię)
+            ProfileSection(
+                userName = settings?.userName ?: "Student",
+                subtitle = if (settings?.isAnonymous == true) "Gość" else "Student"
+            )
 
-            // 2. SEMESTR
-            item {
-                SectionHeader("Twój Semestr")
-                Text(
-                    text = "Wybierz aktualny semestr, aby poprawnie liczyć średnią w indeksie.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = secondaryTextColor,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+            // 2. Dane studiów
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                SectionTitle(text = "Dane studiów")
 
+                // Lista kart kierunków
                 LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    // ✅ NAPRAWA: Zamiana zakresu 1..7 na listę (1..7).toList()
-                    items((1..7).toList()) { sem ->
-                        val isSelected = uiState.currentSemester == sem
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { viewModel.updateSemester(sem) },
-                            label = { Text("Semestr $sem") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = primaryColor,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                            )
+                    item {
+                        StudyCard(
+                            fieldOfStudy = settings?.fieldOfStudy ?: "Brak kierunku",
+                            faculty = settings?.faculty ?: "Brak wydziału",
+                            group = settings?.selectedGroupCode ?: "-",
+                            subgroup = settings?.selectedSubgroup?.takeIf { it.isNotBlank() } ?: "-",
+                            mode = settings?.studyMode ?: "-"
                         )
                     }
                 }
             }
 
-            // 3. USTAWIENIA GRUPY (Edytowalne)
-            item {
-                SectionHeader("Ustawienia planu")
+            // 3. Zarządzanie kontem
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionTitle(text = "Zarządzanie kontem")
 
-                // Wyszukiwarka grup
-                OutlinedTextField(
-                    value = groupSearchQuery,
-                    onValueChange = { viewModel.onSearchQueryChange(it) },
-                    label = { Text("Szukaj grupy (np. 32INF)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AccountOptionItem(
+                        iconRes = R.drawable.ic_user,
+                        label = "Dane osobowe",
+                        onClick = onPersonalDataClick
+                    )
+
+                    AccountOptionItem(
+                        iconRes = R.drawable.ic_settings,
+                        label = "Ustawienia",
+                        onClick = onSettingsClick
+                    )
+
+                    AccountOptionItem(
+                        iconRes = R.drawable.ic_info_circle,
+                        label = "O aplikacji",
+                        onClick = onAboutClick,
+                        showDivider = false
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+// --- Komponenty ---
+
+@Composable
+fun ProfileSection(userName: String, subtitle: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Avatar
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary), // Figma: 0xFF68548E
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = getInitials(userName),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 22.sp,
+                    color = MaterialTheme.colorScheme.onPrimary // Biały
                 )
+            )
+        }
 
-                // Wyniki wyszukiwania
-                if (filteredGroups.isNotEmpty()) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        elevation = CardDefaults.cardElevation(4.dp)
-                    ) {
-                        Column {
-                            filteredGroups.forEach { code ->
-                                Text(
-                                    text = code,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { viewModel.selectGroup(code) }
-                                        .padding(16.dp),
-                                    fontWeight = if (code == draftSelectedGroup) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (code == draftSelectedGroup) primaryColor else textColor
-                                )
-                                HorizontalDivider()
-                            }
-                        }
-                    }
-                }
+        // Tekst
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = userName,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium, // Figma: W500
+                    fontSize = 16.sp,
+                    letterSpacing = 0.15.sp,
+                    color = MaterialTheme.colorScheme.onBackground // Figma: 0xFF1D1B20
+                )
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium, // Figma: W500
+                    fontSize = 14.sp,
+                    letterSpacing = 0.1.sp,
+                    color = MaterialTheme.colorScheme.outline // Figma: 0xFF7A757F
+                )
+            )
+        }
+    }
+}
 
-                // Wybrana grupa
-                if (draftSelectedGroup != null) {
-                    Text(
-                        text = "Wybrana grupa: $draftSelectedGroup",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = primaryColor,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
+@Composable
+fun StudyCard(
+    fieldOfStudy: String,
+    faculty: String,
+    group: String,
+    subgroup: String,
+    mode: String
+) {
+    Card(
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.extendedColors.classCardBackground // Figma: 0xFFE9DEF8
+        ),
+        modifier = Modifier.width(290.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Nazwa kierunku
+            Text(
+                text = fieldOfStudy,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    letterSpacing = 0.1.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            )
 
-                // Podgrupy
-                if (availableSubgroups.isNotEmpty()) {
-                    Text(
-                        "Wybierz podgrupy:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = secondaryTextColor,
-                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                    )
-
-                    // ✅ NAPRAWA: FlowRow jest eksperymentalne, dodano @OptIn na górze funkcji
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        availableSubgroups.forEach { sub ->
-                            val isSelected = draftSubgroups.contains(sub)
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { viewModel.toggleSubgroup(sub) },
-                                label = { Text(sub) },
-                                leadingIcon = if (isSelected) {
-                                    { Icon(painterResource(R.drawable.ic_check), null, Modifier.size(16.dp)) }
-                                } else null
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = { viewModel.saveChanges() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                    } else {
-                        Text("Zapisz zmiany w planie")
-                    }
-                }
-
-                if (saveMessage != null) {
-                    Text(
-                        text = saveMessage!!,
-                        color = if (saveMessage!!.contains("Error") || saveMessage!!.contains("Błąd")) MaterialTheme.colorScheme.error else primaryColor,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-
-            // 4. WYGLĄD
-            item {
-                SectionHeader("Wygląd")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Ciemny motyw", color = textColor, fontFamily = InterFontFamily)
-                    Switch(
-                        checked = uiState.isDarkMode,
-                        onCheckedChange = { viewModel.toggleDarkMode(it) }
-                    )
-                }
-            }
-
-            // 5. INNE AKCJE
-            item {
-                SectionHeader("Inne")
-                OutlinedButton(
-                    onClick = onLogoutClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Icon(painterResource(R.drawable.ic_x_close), null, Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Wyloguj się / Resetuj dane")
-                }
-                Spacer(modifier = Modifier.height(32.dp))
+            // Szczegóły
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StudyDetailRow(label = "Wydział", value = faculty)
+                StudyDetailRow(label = "Grupa", value = group)
+                StudyDetailRow(label = "Podgrupa", value = subgroup)
+                StudyDetailRow(label = "Tryb studiów", value = mode)
             }
         }
     }
 }
 
 @Composable
-fun SectionHeader(title: String) {
+fun StudyDetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Normal,
+                fontSize = 12.sp,
+                letterSpacing = 0.4.sp,
+                color = MaterialTheme.colorScheme.outline // Figma: 0xFF7A757F
+            ),
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.Normal,
+                fontSize = 12.sp,
+                letterSpacing = 0.4.sp,
+                color = MaterialTheme.colorScheme.onBackground // Figma: 0xFF1D1B20
+            ),
+            modifier = Modifier.weight(1f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
+    }
+}
+
+@Composable
+fun SectionTitle(text: String) {
     Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium.copy(
-            fontWeight = FontWeight.SemiBold,
-            fontFamily = InterFontFamily
-        ),
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(bottom = 12.dp)
+        text = text,
+        style = MaterialTheme.typography.bodyLarge.copy(
+            fontFamily = InterFontFamily,
+            fontWeight = FontWeight.Medium, // Figma: W500
+            fontSize = 16.sp,
+            letterSpacing = 0.15.sp,
+            color = MaterialTheme.colorScheme.onBackground // Figma: Black
+        )
     )
 }
 
 @Composable
-fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+fun AccountOptionItem(
+    iconRes: Int,
+    label: String,
+    onClick: () -> Unit,
+    showDivider: Boolean = true
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = Color.Transparent,
     ) {
-        Text(text = label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontFamily = InterFontFamily)
-        Text(text = value, color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Medium, fontFamily = InterFontFamily)
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Normal, // Figma: W400
+                            fontSize = 16.sp,
+                            letterSpacing = 0.5.sp,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    )
+                }
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            if (showDivider) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 1.dp
+                )
+            }
+        }
+    }
+}
+
+// Zaktualizowana funkcja do inicjałów
+fun getInitials(name: String): String {
+    val parts = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+
+    return when {
+        parts.isEmpty() -> ""
+        // Jeśli jest tylko jedno słowo (np. samo imię), zwróć 1 literę
+        parts.size == 1 -> parts[0].take(1).uppercase()
+        // Jeśli jest więcej słów, zwróć pierwszą literę pierwszego i ostatniego słowa (Imię + Nazwisko)
+        else -> {
+            val first = parts.first().take(1).uppercase()
+            val last = parts.last().take(1).uppercase()
+            "$first$last"
+        }
     }
 }
