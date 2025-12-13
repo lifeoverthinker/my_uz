@@ -1,9 +1,10 @@
 package com.example.my_uz_android.ui.screens.index
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.items // ✅ Ten import jest kluczowy dla list
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -23,58 +25,72 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
-import com.example.my_uz_android.data.models.AbsenceEntity
-import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.DatePicker
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditAbsenceScreen(
-    availableClasses: List<ClassEntity>,
-    initialSubject: String? = null,
-    initialType: String? = null,
-    existingAbsence: AbsenceEntity? = null,
-    onSave: (String, String, Long, String?) -> Unit,
-    onDelete: () -> Unit,
-    onCancel: () -> Unit
+    absenceId: Int?,
+    prefilledSubject: String? = null,
+    prefilledClassType: String? = null,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: AddEditAbsenceViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    var title by remember { mutableStateOf("Nieobecność") }
-    var selectedSubject by remember { mutableStateOf(existingAbsence?.subjectName ?: initialSubject ?: "") }
-    var selectedType by remember { mutableStateOf(existingAbsence?.classType ?: initialType ?: "") }
-    var description by remember { mutableStateOf(existingAbsence?.description ?: "") }
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
-    var selectedDate by remember {
-        mutableStateOf(
-            if (existingAbsence != null)
-                Instant.ofEpochMilli(existingAbsence.date).atZone(ZoneId.systemDefault()).toLocalDate()
-            else
-                LocalDate.now()
-        )
+    LaunchedEffect(absenceId, prefilledSubject, prefilledClassType) {
+        if (absenceId != null && absenceId != 0) {
+            viewModel.loadAbsence(absenceId)
+        } else {
+            viewModel.initNewAbsence(prefilledSubject, prefilledClassType)
+        }
     }
 
-    var showSubjectModal by remember { mutableStateOf(false) }
-    var showTypeModal by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
+    AddEditAbsenceContent(
+        uiState = uiState,
+        onNavigateBack = onNavigateBack,
+        onSaveAbsence = {
+            viewModel.saveAbsence {
+                Toast.makeText(context, "Zapisano nieobecność", Toast.LENGTH_SHORT).show()
+                onNavigateBack()
+            }
+        },
+        onDeleteAbsence = {
+            viewModel.deleteAbsence {
+                Toast.makeText(context, "Usunięto nieobecność", Toast.LENGTH_SHORT).show()
+                onNavigateBack()
+            }
+        },
+        onSubjectChange = viewModel::updateSubjectName,
+        onClassTypeChange = viewModel::updateClassType,
+        onDescriptionChange = viewModel::updateDescription,
+        onDateChange = viewModel::updateDate,
+        modifier = modifier
+    )
+}
 
-    val uniqueSubjects = remember(availableClasses) {
-        availableClasses.map { it.subjectName }.distinct().sorted()
-    }
-    val availableTypes = remember(selectedSubject, availableClasses) {
-        availableClasses
-            .filter { it.subjectName == selectedSubject }
-            .map { it.classType }
-            .distinct()
-            .sorted()
-    }
-
+@Composable
+fun AddEditAbsenceContent(
+    uiState: AddEditAbsenceUiState,
+    onNavigateBack: () -> Unit,
+    onSaveAbsence: () -> Unit,
+    onDeleteAbsence: () -> Unit,
+    onSubjectChange: (String?) -> Unit,
+    onClassTypeChange: (String?) -> Unit,
+    onDescriptionChange: (String) -> Unit,
+    onDateChange: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -82,15 +98,20 @@ fun AddEditAbsenceScreen(
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
 
-    val isFormValid = selectedSubject.isNotBlank() && selectedType.isNotBlank()
+    var showSubjectModal by remember { mutableStateOf(false) }
+    var showTypeModal by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    val isFormValid = !uiState.subjectName.isNullOrBlank() && !uiState.classType.isNullOrBlank()
+    val isTypeSelectionEnabled = !uiState.subjectName.isNullOrBlank()
 
     Surface(
         color = surfaceColor,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = Modifier.fillMaxSize().statusBarsPadding()
+        modifier = modifier.fillMaxSize().statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // --- HEADER (Zgodny z TaskAddEditScreen) ---
+            // --- HEADER ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -100,9 +121,9 @@ fun AddEditAbsenceScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .clickable { onCancel() },
+                        .clickable { onNavigateBack() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -114,20 +135,23 @@ fun AddEditAbsenceScreen(
                 }
 
                 Button(
-                    onClick = {
-                        val dateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        onSave(selectedSubject, selectedType, dateMillis, description.ifBlank { null })
-                    },
+                    onClick = onSaveAbsence,
                     enabled = isFormValid,
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
                     ),
                     contentPadding = PaddingValues(horizontal = 24.dp),
-                    modifier = Modifier.height(48.dp)
+                    modifier = Modifier.height(40.dp)
                 ) {
-                    Text("Zapisz", fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.btn_save),
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -137,7 +161,7 @@ fun AddEditAbsenceScreen(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
-                // --- TYTUŁ ---
+                // 1. TYTUŁ (Statyczny "Nieobecność")
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -145,41 +169,35 @@ fun AddEditAbsenceScreen(
                         .padding(top = 8.dp),
                     verticalAlignment = Alignment.Top
                 ) {
-                    Box(modifier = Modifier.size(48.dp)) // Spacer pod ikonę (dla wyrównania)
+                    Box(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Box(modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
-                        BasicTextField(
-                            value = title,
-                            onValueChange = { title = it },
-                            textStyle = TextStyle(
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 28.sp,
-                                lineHeight = 36.sp,
-                                color = textColor
-                            ),
-                            cursorBrush = SolidColor(primaryColor),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+                    Text(
+                        text = "Nieobecność",
+                        style = TextStyle(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 28.sp,
+                            lineHeight = 36.sp,
+                            color = textColor
+                        ),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = dividerColor)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // --- DATA ---
+                // 2. DATA
                 AbsenceCommonRow(iconRes = R.drawable.ic_calendar, iconTint = iconTint) {
-                    Row(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { showDatePicker = true }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 12.dp)
                     ) {
                         Text(
-                            text = formatDateLong(selectedDate),
+                            text = formatDateLong(uiState.date),
                             style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
                             color = textColor
                         )
@@ -188,7 +206,7 @@ fun AddEditAbsenceScreen(
 
                 HorizontalDivider(color = dividerColor)
 
-                // --- PRZEDMIOT ---
+                // 3. PRZEDMIOT
                 AbsenceCommonRow(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
                     Row(
                         modifier = Modifier
@@ -199,9 +217,9 @@ fun AddEditAbsenceScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (selectedSubject.isBlank()) "Wybierz przedmiot" else selectedSubject,
+                            text = uiState.subjectName ?: "Wybierz przedmiot",
                             style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                            color = if (selectedSubject.isBlank()) subTextColor else textColor
+                            color = if (uiState.subjectName == null) subTextColor else textColor
                         )
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
                     }
@@ -209,43 +227,52 @@ fun AddEditAbsenceScreen(
 
                 HorizontalDivider(color = dividerColor)
 
-                // --- RODZAJ ---
-                val isTypeEnabled = selectedSubject.isNotBlank()
+                // 4. RODZAJ ZAJĘĆ
                 AbsenceCommonRow(
                     iconRes = R.drawable.ic_graduation_hat,
-                    iconTint = if (isTypeEnabled) iconTint else iconTint.copy(alpha = 0.4f)
+                    iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(alpha = 0.4f)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(enabled = isTypeEnabled) { showTypeModal = true }
+                            .clickable(enabled = isTypeSelectionEnabled) { showTypeModal = true }
                             .padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val typeText = if (selectedType.isBlank()) "Rodzaj zajęć" else ClassTypeUtils.getFullName(selectedType)
+                        val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć"
                         Text(
                             text = typeText,
                             style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                            color = if (!isTypeEnabled) subTextColor.copy(alpha = 0.4f) else if (selectedType.isBlank()) subTextColor else textColor
+                            color = if (!isTypeSelectionEnabled) subTextColor.copy(alpha = 0.4f) else if (uiState.classType == null) subTextColor else textColor
                         )
-                        Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeEnabled) subTextColor else subTextColor.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))
+                        Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))
                     }
                 }
 
                 HorizontalDivider(color = dividerColor)
 
-                // --- OPIS ---
+                // 5. OPIS
                 AbsenceCommonRow(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
                     Box(modifier = Modifier.padding(vertical = 12.dp)) {
                         BasicTextField(
-                            value = description,
-                            onValueChange = { description = it },
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor, lineHeight = 24.sp),
+                            value = uiState.description,
+                            onValueChange = onDescriptionChange,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                fontFamily = InterFontFamily,
+                                color = textColor,
+                                lineHeight = 24.sp
+                            ),
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { innerTextField ->
-                                if (description.isEmpty()) {
-                                    Text("Dodaj opis...", style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = subTextColor))
+                                if (uiState.description.isEmpty()) {
+                                    Text(
+                                        text = "Dodaj opis (opcjonalnie)",
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontFamily = InterFontFamily,
+                                            color = subTextColor
+                                        )
+                                    )
                                 }
                                 innerTextField()
                             },
@@ -255,63 +282,103 @@ fun AddEditAbsenceScreen(
                 }
 
                 HorizontalDivider(color = dividerColor)
-
-                // --- USUWANIE ---
-                if (existingAbsence != null) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        TextButton(
-                            onClick = onDelete,
-                            colors = ButtonDefaults.textButtonColors(contentColor = Color.Black), // ✅ CZARNY KOSZ I TEKST
-                            modifier = Modifier.fillMaxWidth().height(48.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_trash), // ✅ TWOJA IKONA KOSZA
-                                contentDescription = null,
-                                tint = Color.Black
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Usuń nieobecność", fontFamily = InterFontFamily, fontWeight = FontWeight.Medium)
-                        }
-                    }
-                }
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
 
-        // --- Modale (Bez zmian) ---
+        // --- Dialogi ---
         if (showDatePicker) {
-            val dateMillis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
             DatePicker(
-                date = dateMillis,
-                onDateSelected = { newMillis -> selectedDate = Instant.ofEpochMilli(newMillis).atZone(ZoneId.systemDefault()).toLocalDate(); showDatePicker = false },
+                date = uiState.date,
+                onDateSelected = { millis ->
+                    onDateChange(millis)
+                    showDatePicker = false
+                },
                 onDismiss = { showDatePicker = false }
             )
         }
+
         if (showSubjectModal) {
             Dialog(onDismissRequest = { showSubjectModal = false }) {
-                Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                ) {
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        items(uniqueSubjects) { subject ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable { selectedSubject = subject; selectedType = ""; showSubjectModal = false }.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(selected = selectedSubject == subject, onClick = null)
+                        item {
+                            Text(
+                                text = "Wybierz przedmiot",
+                                style = MaterialTheme.typography.titleLarge.copy(fontFamily = InterFontFamily),
+                                color = textColor,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                            )
+                        }
+                        // ✅ NAPRAWIONE: items(items = ...)
+                        items(items = uiState.availableSubjects) { item ->
+                            val subject = item.first
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onSubjectChange(subject)
+                                        onClassTypeChange(null)
+                                        showSubjectModal = false
+                                    }
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = uiState.subjectName == subject, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(subject, style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
+                                Text(
+                                    text = subject,
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                                    color = textColor
+                                )
                             }
                         }
                     }
                 }
             }
         }
+
         if (showTypeModal) {
+            val selectedSubject = uiState.availableSubjects.find { it.first == uiState.subjectName }
+            val availableTypes = selectedSubject?.second ?: emptyList()
             Dialog(onDismissRequest = { showTypeModal = false }) {
-                Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                ) {
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        items(availableTypes) { type ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable { selectedType = type; showTypeModal = false }.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(selected = selectedType == type, onClick = null)
+                        item {
+                            Text(
+                                text = "Wybierz rodzaj zajęć",
+                                style = MaterialTheme.typography.titleLarge.copy(fontFamily = InterFontFamily),
+                                color = textColor,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                            )
+                        }
+                        // ✅ NAPRAWIONE: items(items = ...)
+                        items(items = availableTypes) { type ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onClassTypeChange(type)
+                                        showTypeModal = false
+                                    }
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = uiState.classType == type, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(ClassTypeUtils.getFullName(type), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
+                                Text(
+                                    text = ClassTypeUtils.getFullName(type),
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                                    color = textColor
+                                )
                             }
                         }
                     }
@@ -321,23 +388,32 @@ fun AddEditAbsenceScreen(
     }
 }
 
-// Komponent wiersza (spójny z TaskAddEdit)
+// Używamy lokalnej nazwy, żeby nie było konfliktu
 @Composable
-fun AbsenceCommonRow(iconRes: Int, iconTint: Color, content: @Composable BoxScope.() -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), verticalAlignment = Alignment.Top) {
+private fun AbsenceCommonRow(iconRes: Int, iconTint: Color, content: @Composable BoxScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
         Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconTint, modifier = Modifier.size(24.dp))
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(24.dp)
+            )
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) { content() }
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            content()
+        }
     }
 }
 
-private fun formatDateLong(date: LocalDate): String {
-    return try {
-        val formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale("pl"))
-        date.format(formatter).replaceFirstChar { it.titlecase(Locale("pl")) }
-    } catch (e: Exception) {
-        date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-    }
+private fun formatDateLong(millis: Long): String {
+    val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+    val formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale("pl"))
+    return date.format(formatter).replaceFirstChar { it.titlecase(Locale("pl")) }
 }
