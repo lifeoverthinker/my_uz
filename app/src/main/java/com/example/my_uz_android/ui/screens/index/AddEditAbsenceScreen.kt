@@ -184,7 +184,7 @@ fun AddEditAbsenceContent(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = dividerColor)
-                Spacer(modifier = Modifier.height(16.dp))
+                // ❌ USUNIĘTO: Spacer(modifier = Modifier.height(16.dp)) - to on powodował dodatkowy odstęp
 
                 // 2. DATA
                 AbsenceCommonRow(iconRes = R.drawable.ic_calendar, iconTint = iconTint) {
@@ -312,7 +312,6 @@ fun AddEditAbsenceContent(
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                             )
                         }
-                        // ✅ NAPRAWIONE: items(items = ...)
                         items(items = uiState.availableSubjects) { item ->
                             val subject = item.first
                             Row(
@@ -358,7 +357,6 @@ fun AddEditAbsenceContent(
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                             )
                         }
-                        // ✅ NAPRAWIONE: items(items = ...)
                         items(items = availableTypes) { type ->
                             Row(
                                 modifier = Modifier
@@ -404,7 +402,7 @@ private fun AbsenceCommonRow(iconRes: Int, iconTint: Color, content: @Composable
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+        Box(modifier = Modifier.weight(1f)) {
             content()
         }
     }
