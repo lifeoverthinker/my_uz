@@ -41,7 +41,6 @@ fun AccountScreen(
 
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
-    val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     if (!isLoaded) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -53,7 +52,6 @@ fun AccountScreen(
     Scaffold(
         containerColor = backgroundColor,
         topBar = {
-            // Nagłówek "Konto" zgodnie z Figmą
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -64,7 +62,7 @@ fun AccountScreen(
                     text = "Konto",
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Normal, // Figma: W400
+                        fontWeight = FontWeight.Normal,
                         fontSize = 24.sp
                     ),
                     color = textColor
@@ -80,7 +78,7 @@ fun AccountScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 1. Profil (Avatar + Imię)
+            // 1. Profil
             ProfileSection(
                 userName = settings?.userName ?: "Student",
                 subtitle = if (settings?.isAnonymous == true) "Gość" else "Student"
@@ -90,7 +88,6 @@ fun AccountScreen(
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle(text = "Dane studiów")
 
-                // Lista kart kierunków
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -111,9 +108,7 @@ fun AccountScreen(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionTitle(text = "Zarządzanie kontem")
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AccountOptionItem(
                         iconRes = R.drawable.ic_user,
                         label = "Dane osobowe",
@@ -129,7 +124,7 @@ fun AccountScreen(
                     AccountOptionItem(
                         iconRes = R.drawable.ic_info_circle,
                         label = "O aplikacji",
-                        onClick = onAboutClick,
+                        onClick = onAboutClick, // ✅ Podpięte kliknięcie
                         showDivider = false
                     )
                 }
@@ -140,7 +135,7 @@ fun AccountScreen(
     }
 }
 
-// --- Komponenty ---
+// --- Komponenty (Bez zmian) ---
 
 @Composable
 fun ProfileSection(userName: String, subtitle: String) {
@@ -149,12 +144,11 @@ fun ProfileSection(userName: String, subtitle: String) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        // Avatar
         Box(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary), // Figma: 0xFF68548E
+                .background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -163,31 +157,30 @@ fun ProfileSection(userName: String, subtitle: String) {
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = 22.sp,
-                    color = MaterialTheme.colorScheme.onPrimary // Biały
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
 
-        // Tekst
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = userName,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Medium, // Figma: W500
+                    fontWeight = FontWeight.Medium,
                     fontSize = 16.sp,
                     letterSpacing = 0.15.sp,
-                    color = MaterialTheme.colorScheme.onBackground // Figma: 0xFF1D1B20
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Medium, // Figma: W500
+                    fontWeight = FontWeight.Medium,
                     fontSize = 14.sp,
                     letterSpacing = 0.1.sp,
-                    color = MaterialTheme.colorScheme.outline // Figma: 0xFF7A757F
+                    color = MaterialTheme.colorScheme.outline
                 )
             )
         }
@@ -205,7 +198,7 @@ fun StudyCard(
     Card(
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.extendedColors.classCardBackground // Figma: 0xFFE9DEF8
+            containerColor = MaterialTheme.extendedColors.classCardBackground
         ),
         modifier = Modifier.width(290.dp)
     ) {
@@ -213,7 +206,6 @@ fun StudyCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Nazwa kierunku
             Text(
                 text = fieldOfStudy,
                 style = MaterialTheme.typography.bodyLarge.copy(
@@ -225,7 +217,6 @@ fun StudyCard(
                 )
             )
 
-            // Szczegóły
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 StudyDetailRow(label = "Wydział", value = faculty)
                 StudyDetailRow(label = "Grupa", value = group)
@@ -250,7 +241,7 @@ fun StudyDetailRow(label: String, value: String) {
                 fontWeight = FontWeight.Normal,
                 fontSize = 12.sp,
                 letterSpacing = 0.4.sp,
-                color = MaterialTheme.colorScheme.outline // Figma: 0xFF7A757F
+                color = MaterialTheme.colorScheme.outline
             ),
             modifier = Modifier.weight(1f)
         )
@@ -261,7 +252,7 @@ fun StudyDetailRow(label: String, value: String) {
                 fontWeight = FontWeight.Normal,
                 fontSize = 12.sp,
                 letterSpacing = 0.4.sp,
-                color = MaterialTheme.colorScheme.onBackground // Figma: 0xFF1D1B20
+                color = MaterialTheme.colorScheme.onBackground
             ),
             modifier = Modifier.weight(1f),
             textAlign = androidx.compose.ui.text.style.TextAlign.End
@@ -275,10 +266,10 @@ fun SectionTitle(text: String) {
         text = text,
         style = MaterialTheme.typography.bodyLarge.copy(
             fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Medium, // Figma: W500
+            fontWeight = FontWeight.Medium,
             fontSize = 16.sp,
             letterSpacing = 0.15.sp,
-            color = MaterialTheme.colorScheme.onBackground // Figma: Black
+            color = MaterialTheme.colorScheme.onBackground
         )
     )
 }
@@ -317,7 +308,7 @@ fun AccountOptionItem(
                         text = label,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Normal, // Figma: W400
+                            fontWeight = FontWeight.Normal,
                             fontSize = 16.sp,
                             letterSpacing = 0.5.sp,
                             color = MaterialTheme.colorScheme.onBackground
@@ -341,15 +332,11 @@ fun AccountOptionItem(
     }
 }
 
-// Zaktualizowana funkcja do inicjałów
 fun getInitials(name: String): String {
     val parts = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-
     return when {
         parts.isEmpty() -> ""
-        // Jeśli jest tylko jedno słowo (np. samo imię), zwróć 1 literę
         parts.size == 1 -> parts[0].take(1).uppercase()
-        // Jeśli jest więcej słów, zwróć pierwszą literę pierwszego i ostatniego słowa (Imię + Nazwisko)
         else -> {
             val first = parts.first().take(1).uppercase()
             val last = parts.last().take(1).uppercase()
