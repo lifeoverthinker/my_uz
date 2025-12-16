@@ -1,4 +1,4 @@
-package com.example.my_uz_android.ui.screens.calendar
+package com.example.my_uz_android.ui.screens.calendar.tasks
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -19,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -29,7 +28,6 @@ import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.theme.InterFontFamily
-import com.example.my_uz_android.ui.theme.MyUZTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth

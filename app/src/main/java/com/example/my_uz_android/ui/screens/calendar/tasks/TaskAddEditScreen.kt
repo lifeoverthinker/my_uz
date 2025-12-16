@@ -1,6 +1,7 @@
-package com.example.my_uz_android.ui.screens.calendar
+package com.example.my_uz_android.ui.screens.calendar.tasks
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -238,7 +239,7 @@ fun TaskAddEditContent(
                             onClick = { onTitleChange(title) },
                             shape = RoundedCornerShape(12.dp),
                             color = if (isSelected) primaryColor else Color.Transparent,
-                            border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, dividerColor) else null,
+                            border = if (!isSelected) BorderStroke(1.dp, dividerColor) else null,
                             modifier = Modifier.height(32.dp)
                         ) {
                             Box(
