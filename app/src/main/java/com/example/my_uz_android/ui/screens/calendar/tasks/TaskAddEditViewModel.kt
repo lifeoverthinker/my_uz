@@ -1,4 +1,4 @@
-package com.example.my_uz_android.ui.screens.calendar
+package com.example.my_uz_android.ui.screens.calendar.tasks
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -8,6 +8,7 @@ import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.TasksRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -74,10 +75,10 @@ class TaskAddEditViewModel(
                     classType = task.classType,
                     priority = task.priority, // Poprawiono z 1 na task.priority
                     isAllDay = task.isAllDay, // Poprawiono odczyt z pola isAllDay
-                    startDate = java.time.Instant.ofEpochMilli(task.dueDate)
+                    startDate = Instant.ofEpochMilli(task.dueDate)
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate(),
-                    endDate = java.time.Instant.ofEpochMilli(task.endDate) // Poprawiono dueDate -> endDate
+                    endDate = Instant.ofEpochMilli(task.endDate) // Poprawiono dueDate -> endDate
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate(),
                     startTime = task.dueTime?.let {
