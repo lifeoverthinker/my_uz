@@ -16,19 +16,18 @@ import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
-import com.example.my_uz_android.ui.theme.extendedColors
-import com.example.my_uz_android.ui.theme.getClassColor // ✅ Import funkcji
+import com.example.my_uz_android.ui.theme.getClassAccentColor
+import com.example.my_uz_android.ui.theme.getClassBackgroundColor
 
 @Composable
 fun UpcomingClasses(
     classes: List<ClassEntity>,
     emptyMessage: String?,
     dayLabel: String?,
-    classColorMap: Map<String, Int> = emptyMap(), // ✅ Mapa kolorów
+    classColorMap: Map<String, Int> = emptyMap(),
     modifier: Modifier = Modifier,
     onClassClick: (Int) -> Unit
 ) {
-    // Sprawdzamy systemowy tryb ciemny (lub nadpisujemy, jeśli ViewModel przekazuje stan)
     val isDark = isSystemInDarkTheme()
 
     Column(
@@ -93,13 +92,16 @@ fun UpcomingClasses(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(classes) { classItem ->
-                    // ✅ Dynamiczny wybór koloru
                     val colorIndex = classColorMap[classItem.classType] ?: 0
-                    val cardColor = getClassColor(colorIndex, isDark)
+
+                    // Pobieramy parę: Tło + Akcent
+                    val bgColor = getClassBackgroundColor(colorIndex, isDark)
+                    val accentColor = getClassAccentColor(colorIndex, isDark)
 
                     ClassCard(
                         classItem = classItem,
-                        backgroundColor = cardColor, // ✅ Przekazanie koloru
+                        backgroundColor = bgColor,
+                        accentColor = accentColor, // ✅ Przekazujemy akcent
                         onClick = { onClassClick(classItem.id) },
                         modifier = Modifier.width(264.dp)
                     )

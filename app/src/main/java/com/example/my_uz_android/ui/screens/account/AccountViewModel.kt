@@ -26,14 +26,13 @@ class AccountViewModel(
     private val _isSettingsLoaded = MutableStateFlow(false)
     val isSettingsLoaded: StateFlow<Boolean> = _isSettingsLoaded.asStateFlow()
 
-    // --- DANE EDYCJI (Osobne pola) ---
+    // --- DANE EDYCJI ---
     private val _draftName = MutableStateFlow("")
     val draftName: StateFlow<String> = _draftName.asStateFlow()
 
     private val _draftSurname = MutableStateFlow("")
     val draftSurname: StateFlow<String> = _draftSurname.asStateFlow()
 
-    // --- DANE UCZELNIANE ---
     private val _groupSearchQuery = MutableStateFlow("")
     val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
 
@@ -67,13 +66,11 @@ class AccountViewModel(
             settingsRepository.getSettingsStream().collect { retrievedSettings ->
                 _settings.value = retrievedSettings
                 if (retrievedSettings != null) {
-                    // Aktualizujemy dane do edycji TYLKO jeśli nie są już modyfikowane (przy pierwszym wejściu)
-                    // Dzięki temu zmiana w bazie (synchronizacja) nie nadpisze tego co user właśnie pisze
+                    // Aktualizuj pola edycji tylko przy pierwszym załadowaniu (nie nadpisuj edycji w trakcie)
                     if (!_isSettingsLoaded.value) {
                         _draftSelectedGroup.value = retrievedSettings.selectedGroupCode
-                        _groupSearchQuery.value = retrievedSettings.selectedGroupCode ?: "" // ✅ Wypełnij pole szukania obecną grupą
+                        _groupSearchQuery.value = retrievedSettings.selectedGroupCode ?: ""
 
-                        // ✅ Rozdzielanie imienia i nazwiska
                         val fullName = retrievedSettings.userName.trim()
                         val parts = fullName.split(" ").filter { it.isNotBlank() }
                         if (parts.isNotEmpty()) {
@@ -111,7 +108,7 @@ class AccountViewModel(
 
     fun onSearchQueryChange(query: String) {
         _groupSearchQuery.value = query
-        // Jeśli użytkownik zmienia tekst, resetujemy wybraną grupę (chyba że wpisze idealnie)
+        // Reset wyboru jeśli zmieniono tekst
         if (query != _draftSelectedGroup.value) {
             _draftSelectedGroup.value = null
             _availableSubgroups.value = emptyList()
@@ -158,18 +155,13 @@ class AccountViewModel(
         _draftSubgroups.value = current
     }
 
-    // ✅ ZAPIS DANYCH
     fun saveChanges() {
-        // Pobieramy dane z pól edycji (Drafts)
-        // Jeśli _draftSelectedGroup jest null (user wpisał coś ręcznie ale nie wybrał), bierzemy to co wpisał
-        // Ale dla bezpieczeństwa lepiej wymagać wyboru lub poprawności. Tutaj zakładamy, że query = kod grupy.
+        // Używamy tego co wpisano, nawet jeśli nie wybrano z listy (dla elastyczności)
         val groupCode = if(!_draftSelectedGroup.value.isNullOrBlank()) _draftSelectedGroup.value else _groupSearchQuery.value.takeIf { it.isNotBlank() }
-
         val subgroups = _draftSubgroups.value
         val newName = _draftName.value.trim()
         val newSurname = _draftSurname.value.trim()
 
-        // Łączymy imię i nazwisko
         val combinedName = if (newSurname.isNotBlank()) "$newName $newSurname" else newName
 
         viewModelScope.launch {
@@ -179,9 +171,7 @@ class AccountViewModel(
                 var fieldOfStudy: String? = _settings.value?.fieldOfStudy
                 var studyMode: String? = _settings.value?.studyMode
 
-                // 1. Jeśli grupa jest wpisana, spróbuj pobrać jej dane i plan
                 if (!groupCode.isNullOrBlank()) {
-                    // a) Szczegóły grupy (Wydział/Kierunek)
                     val detailsResult = universityRepository.getGroupDetails(groupCode)
                     if (detailsResult is NetworkResult.Success) {
                         detailsResult.data?.let {
@@ -193,7 +183,6 @@ class AccountViewModel(
                         }
                     }
 
-                    // b) Plan zajęć (To odświeża Home Screen)
                     val planResult = universityRepository.getSchedule(groupCode, subgroups)
                     if (planResult is NetworkResult.Success && planResult.data != null) {
                         classRepository.deleteAllClasses()
@@ -201,7 +190,6 @@ class AccountViewModel(
                     }
                 }
 
-                // 2. Zapisz Ustawienia (To odświeża Account Screen i Header w Home)
                 val current = _settings.value ?: SettingsEntity()
                 val newSettings = current.copy(
                     userName = combinedName,
@@ -210,14 +198,13 @@ class AccountViewModel(
                     faculty = faculty,
                     fieldOfStudy = fieldOfStudy,
                     studyMode = studyMode,
-                    isAnonymous = false // Wyłączenie trybu gościa po edycji
+                    isAnonymous = false
                 )
 
                 settingsRepository.insertSettings(newSettings)
                 _saveMessage.value = "✅ Zapisano pomyślnie!"
             } catch (e: Exception) {
-                _saveMessage.value = "❌ Błąd zapisu: ${e.message}"
-                e.printStackTrace()
+                _saveMessage.value = "❌ Błąd: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -225,6 +212,5 @@ class AccountViewModel(
     }
 
     fun clearSaveMessage() { _saveMessage.value = null }
-
     data class AccountUiState(val dummy: Boolean = false)
 }
