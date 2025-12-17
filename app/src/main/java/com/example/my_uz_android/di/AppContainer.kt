@@ -3,47 +3,31 @@ package com.example.my_uz_android.di
 import android.content.Context
 import androidx.room.Room
 import com.example.my_uz_android.data.db.AppDatabase
+import com.example.my_uz_android.data.provideSupabaseClient // ✅ Importujemy Twoją funkcję
 import com.example.my_uz_android.data.repositories.*
-import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.postgrest
 
 interface AppContainer {
-    val settingsRepository: SettingsRepository
     val classRepository: ClassRepository
     val tasksRepository: TasksRepository
+    val settingsRepository: SettingsRepository
     val gradesRepository: GradesRepository
-    val eventRepository: EventRepository
     val absenceRepository: AbsenceRepository
+    val eventRepository: EventRepository
     val universityRepository: UniversityRepository
+    val favoritesRepository: FavoritesRepository
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
-    // Konfiguracja bazy danych Room
+
     private val database: AppDatabase by lazy {
-        Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "my_uz_database"
-        ).fallbackToDestructiveMigration()
+        Room.databaseBuilder(context, AppDatabase::class.java, "app_database")
+            .fallbackToDestructiveMigration()
             .build()
     }
 
-    // Konfiguracja Supabase
-    private val supabase: SupabaseClient by lazy {
-        createSupabaseClient(
-            supabaseUrl = "https://aovlvwjbnjsfplpgqzjv.supabase.co",
-            supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvdmx2d2pibmpzZnBscGdxemp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE5ODY5OTEsImV4cCI6MjA1NzU2Mjk5MX0.TYvFUUhrksgleb-jiLDa-TxdItWuEO_CqIClPYyHdN0"
-        ) {
-            install(Postgrest)
-        }
-    }
-
-    // Repozytoria
-    override val universityRepository: UniversityRepository by lazy {
-        SupabaseUniversityRepository(supabase.postgrest)
-    }
+    // ✅ Tworzymy instancję klienta Supabase używając Twojej funkcji
+    private val supabase by lazy { provideSupabaseClient() }
 
     override val classRepository: ClassRepository by lazy {
         ClassRepository(database.classDao())
@@ -51,6 +35,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val tasksRepository: TasksRepository by lazy {
         TasksRepository(database.tasksDao())
+    }
+
+    override val settingsRepository: SettingsRepository by lazy {
+        SettingsRepository(database.settingsDao())
     }
 
     override val gradesRepository: GradesRepository by lazy {
@@ -62,10 +50,15 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val eventRepository: EventRepository by lazy {
-        EventRepository(database.eventDao())  // ✅ UPROSZCZONA WERSJA
+        EventRepository(database.eventDao())
     }
 
-    override val settingsRepository: SettingsRepository by lazy {
-        SettingsRepository(database.settingsDao())
+    override val universityRepository: UniversityRepository by lazy {
+        // ✅ Przekazujemy moduł Postgrest z utworzonej instancji
+        UniversityRepository(supabase.postgrest)
+    }
+
+    override val favoritesRepository: FavoritesRepository by lazy {
+        FavoritesRepository(database.favoritesDao())
     }
 }

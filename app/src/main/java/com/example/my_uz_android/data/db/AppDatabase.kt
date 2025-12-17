@@ -12,9 +12,10 @@ import com.example.my_uz_android.data.models.*
         GradeEntity::class,
         AbsenceEntity::class,
         EventEntity::class,
-        SettingsEntity::class
+        SettingsEntity::class,
+        FavoriteEntity::class // Upewnij się, że ta klasa istnieje
     ],
-    version = 13, // ✅ ZMIANA: Wersja 13
+    version = 14,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,4 +25,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun absenceDao(): AbsenceDao
     abstract fun eventDao(): EventDao
     abstract fun settingsDao(): SettingsDao
+    // ✅ DODANO BRAKUJĄCE DAO:
+    abstract fun favoritesDao(): FavoritesDao
 }
