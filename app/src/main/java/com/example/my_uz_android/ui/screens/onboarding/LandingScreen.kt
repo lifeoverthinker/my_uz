@@ -48,7 +48,7 @@ fun LandingScreen(
 ) {
     val currentPage by viewModel.currentPage.collectAsState()
     val totalPages = viewModel.totalPages
-    val isLoading by viewModel.isLoading.collectAsState() // Dodano obserwację ładowania
+    val isLoading by viewModel.isLoading.collectAsState()
 
     val imeInsets = WindowInsets.ime
     val density = LocalDensity.current
@@ -71,9 +71,12 @@ fun LandingScreen(
                     if (currentPage < 5) {
                         TextButton(
                             onClick = {
-                                viewModel.skipOnboarding()
-                                onFinishOnboarding()
-                            }
+                                // ✅ POPRAWKA: Przekazujemy callback onSuccess
+                                viewModel.skipOnboarding {
+                                    onFinishOnboarding()
+                                }
+                            },
+                            enabled = !isLoading
                         ) {
                             Text("Pomiń", style = MaterialTheme.typography.labelLarge)
                         }
@@ -135,7 +138,6 @@ fun LandingScreen(
                                         }
                                         Button(
                                             onClick = {
-                                                // POPRAWKA: Czekamy na zakończenie zapisu
                                                 viewModel.saveOnboardingData {
                                                     onFinishOnboarding()
                                                 }
@@ -229,6 +231,10 @@ fun LandingScreen(
         }
     }
 }
+
+// ... (Reszta funkcji pomocniczych: ResponsiveOnboardingStep, WelcomeStepContent, PersonalizationStepContent, GroupSelectionStepContent, etc. pozostaje bez zmian) ...
+// Upewnij się, że reszta pliku jest taka sama jak poprzednio, poprawka była tylko w metodzie skipOnboarding() wewnątrz Scaffold -> topBar
+// Poniżej wklejam resztę pliku dla pewności, żebyś miał komplet:
 
 @Composable
 fun ResponsiveOnboardingStep(

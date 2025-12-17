@@ -164,3 +164,46 @@ val button_background_dark = Color(0xFF4B4358)
 
 val icon_text_light = Color(0xFF000000)
 val icon_text_dark = Color(0xFFE7E0E8)
+
+// --- PALETA KOLORÓW ZAJĘĆ (PASTELE) ---
+
+// 1. Lavender
+val PastelLavenderLight = Color(0xFFE8DEF8)
+val PastelLavenderDark = Color(0xFF4A4458) // Ciemniejszy odpowiednik
+
+// 2. Pink
+val PastelPinkLight = Color(0xFFFFD8E4)
+val PastelPinkDark = Color(0xFF633B48)
+
+// 3. Green
+val PastelGreenLight = Color(0xFFDAF5D7)
+val PastelGreenDark = Color(0xFF2E4E30)
+
+// 4. Blue
+val PastelBlueLight = Color(0xFFD7E3FF)
+val PastelBlueDark = Color(0xFF32476E)
+
+// 5. Orange
+val PastelOrangeLight = Color(0xFFFFDBCF)
+val PastelOrangeDark = Color(0xFF5E4035)
+
+// 6. Yellow
+val PastelYellowLight = Color(0xFFF3E2A9)
+val PastelYellowDark = Color(0xFF5C5326)
+
+// Lista par kolorów (Light, Dark) do wyboru
+val ClassColorPalette = listOf(
+    PastelLavenderLight to PastelLavenderDark,
+    PastelPinkLight to PastelPinkDark,
+    PastelGreenLight to PastelGreenDark,
+    PastelBlueLight to PastelBlueDark,
+    PastelOrangeLight to PastelOrangeDark,
+    PastelYellowLight to PastelYellowDark
+)
+
+// Funkcja pomocnicza do pobrania koloru
+fun getClassColor(index: Int, isDark: Boolean): Color {
+    val safeIndex = index.coerceIn(0, ClassColorPalette.lastIndex)
+    val pair = ClassColorPalette[safeIndex]
+    return if (isDark) pair.second else pair.first
+}

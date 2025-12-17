@@ -8,4 +8,7 @@ class AbsenceRepository(private val absenceDao: AbsenceDao) {
     fun getAllAbsencesStream(): Flow<List<AbsenceEntity>> = absenceDao.getAllAbsences()
     suspend fun insertAbsence(absence: AbsenceEntity) = absenceDao.insertAbsence(absence)
     suspend fun deleteAbsence(absence: AbsenceEntity) = absenceDao.deleteAbsence(absence)
+
+    // ✅ DODANE: Metoda repozytorium do czyszczenia tabeli
+    suspend fun deleteAllAbsences() = absenceDao.deleteAll()
 }

@@ -1,11 +1,7 @@
 package com.example.my_uz_android.ui.screens.account
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,8 +21,8 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
-import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     onBackClick: () -> Unit,
@@ -78,30 +74,24 @@ fun AccountScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 1. Profil
+            // 1. Profil (Karta Gościa lub Studenta)
             ProfileSection(
-                userName = settings?.userName ?: "Student",
-                subtitle = if (settings?.isAnonymous == true) "Gość" else "Student"
+                userName = settings?.userName ?: "",
+                isAnonymous = settings?.isAnonymous == true
             )
 
             // 2. Dane studiów
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle(text = "Dane studiów")
 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    item {
-                        StudyCard(
-                            fieldOfStudy = settings?.fieldOfStudy ?: "Brak kierunku",
-                            faculty = settings?.faculty ?: "Brak wydziału",
-                            group = settings?.selectedGroupCode ?: "-",
-                            subgroup = settings?.selectedSubgroup?.takeIf { it.isNotBlank() } ?: "-",
-                            mode = settings?.studyMode ?: "-"
-                        )
-                    }
-                }
+                StudyCard(
+                    fieldOfStudy = settings?.fieldOfStudy ?: "Brak danych",
+                    faculty = settings?.faculty ?: "Brak danych",
+                    group = settings?.selectedGroupCode ?: "-",
+                    subgroup = settings?.selectedSubgroup?.takeIf { it.isNotBlank() } ?: "-",
+                    mode = settings?.studyMode ?: "-",
+                    isAnonymous = settings?.isAnonymous == true
+                )
             }
 
             // 3. Zarządzanie kontem
@@ -124,7 +114,7 @@ fun AccountScreen(
                     AccountOptionItem(
                         iconRes = R.drawable.ic_info_circle,
                         label = "O aplikacji",
-                        onClick = onAboutClick, // ✅ Podpięte kliknięcie
+                        onClick = onAboutClick,
                         showDivider = false
                     )
                 }
@@ -135,10 +125,8 @@ fun AccountScreen(
     }
 }
 
-// --- Komponenty (Bez zmian) ---
-
 @Composable
-fun ProfileSection(userName: String, subtitle: String) {
+fun ProfileSection(userName: String, isAnonymous: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -151,20 +139,29 @@ fun ProfileSection(userName: String, subtitle: String) {
                 .background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = getInitials(userName),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 22.sp,
-                    color = MaterialTheme.colorScheme.onPrimary
+            if (isAnonymous || userName.isBlank()) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_user),
+                    contentDescription = "Gość",
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(28.dp) // ✅ Rozmiar ikony wewnątrz avatara
                 )
-            )
+            } else {
+                Text(
+                    text = getInitials(userName),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 22.sp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = userName,
+                text = if (isAnonymous) "Użytkownik Gość" else userName,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Medium,
@@ -174,7 +171,7 @@ fun ProfileSection(userName: String, subtitle: String) {
                 )
             )
             Text(
-                text = subtitle,
+                text = if (isAnonymous) "Konto gościa" else "Student",
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Medium,
@@ -193,35 +190,53 @@ fun StudyCard(
     faculty: String,
     group: String,
     subgroup: String,
-    mode: String
+    mode: String,
+    isAnonymous: Boolean
 ) {
     Card(
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.extendedColors.classCardBackground
         ),
-        modifier = Modifier.width(290.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = fieldOfStudy,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp,
-                    letterSpacing = 0.1.sp,
-                    color = MaterialTheme.colorScheme.onBackground
+            if (isAnonymous) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_info_circle),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp) // ✅ Wymiar
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Zaloguj się lub uzupełnij dane, aby widzieć informacje o studiach.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Text(
+                    text = fieldOfStudy,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp,
+                        letterSpacing = 0.1.sp,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
                 )
-            )
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                StudyDetailRow(label = "Wydział", value = faculty)
-                StudyDetailRow(label = "Grupa", value = group)
-                StudyDetailRow(label = "Podgrupa", value = subgroup)
-                StudyDetailRow(label = "Tryb studiów", value = mode)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StudyDetailRow(label = "Wydział", value = faculty)
+                    StudyDetailRow(label = "Grupa", value = group)
+                    StudyDetailRow(label = "Podgrupa", value = subgroup)
+                    StudyDetailRow(label = "Tryb studiów", value = mode)
+                }
             }
         }
     }
@@ -301,7 +316,7 @@ fun AccountOptionItem(
                     Icon(
                         painter = painterResource(id = iconRes),
                         contentDescription = null,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(24.dp), // ✅ Sztywny wymiar ikony
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
@@ -318,7 +333,7 @@ fun AccountOptionItem(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_chevron_right),
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(24.dp), // ✅ Sztywny wymiar strzałki
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }

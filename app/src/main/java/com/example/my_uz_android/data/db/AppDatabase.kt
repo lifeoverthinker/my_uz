@@ -14,7 +14,7 @@ import com.example.my_uz_android.data.models.*
         EventEntity::class,
         SettingsEntity::class
     ],
-    version = 11, // ✅ ZMIANA: Wersja 10 (dodano pole comment do GradeEntity)
+    version = 13, // ✅ ZMIANA: Wersja 13
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
