@@ -8,8 +8,8 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.ui.screens.account.AccountViewModel
 import com.example.my_uz_android.ui.screens.account.SettingsViewModel
-import com.example.my_uz_android.ui.screens.calendar.TaskAddEditViewModel
-import com.example.my_uz_android.ui.screens.calendar.TasksViewModel
+import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditViewModel // ✅ DODANY IMPORT
+import com.example.my_uz_android.ui.screens.calendar.tasks.TasksViewModel       // ✅ DODANY IMPORT
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsViewModel
@@ -23,7 +23,7 @@ import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
-        // HomeViewModel
+
         initializer {
             HomeViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
@@ -33,7 +33,6 @@ object AppViewModelProvider {
             )
         }
 
-        // TasksViewModel (Calendar)
         initializer {
             TasksViewModel(
                 tasksRepository = myUZApplication().container.tasksRepository,
@@ -41,7 +40,6 @@ object AppViewModelProvider {
             )
         }
 
-        // TaskAddEditViewModel
         initializer {
             TaskAddEditViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
@@ -50,7 +48,6 @@ object AppViewModelProvider {
             )
         }
 
-        // ClassDetailsViewModel
         initializer {
             ClassDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
@@ -58,7 +55,6 @@ object AppViewModelProvider {
             )
         }
 
-        // EventDetailsViewModel
         initializer {
             EventDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
@@ -66,7 +62,6 @@ object AppViewModelProvider {
             )
         }
 
-        // TaskDetailsViewModel
         initializer {
             TaskDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
@@ -74,7 +69,6 @@ object AppViewModelProvider {
             )
         }
 
-        // GradesViewModel (Indeks - lista ocen)
         initializer {
             GradesViewModel(
                 gradesRepository = myUZApplication().container.gradesRepository,
@@ -83,7 +77,6 @@ object AppViewModelProvider {
             )
         }
 
-        // GradeDetailsViewModel
         initializer {
             GradeDetailsViewModel(
                 savedStateHandle = this.createSavedStateHandle(),
@@ -91,7 +84,6 @@ object AppViewModelProvider {
             )
         }
 
-        // AddEditGradeViewModel
         initializer {
             AddEditGradeViewModel(
                 gradesRepository = myUZApplication().container.gradesRepository,
@@ -100,7 +92,6 @@ object AppViewModelProvider {
             )
         }
 
-        // AbsencesViewModel (Indeks - lista nieobecności)
         initializer {
             AbsencesViewModel(
                 absenceRepository = myUZApplication().container.absenceRepository,
@@ -108,7 +99,6 @@ object AppViewModelProvider {
             )
         }
 
-        // AddEditAbsenceViewModel
         initializer {
             AddEditAbsenceViewModel(
                 absenceRepository = myUZApplication().container.absenceRepository,
@@ -116,7 +106,6 @@ object AppViewModelProvider {
             )
         }
 
-        // AccountViewModel
         initializer {
             AccountViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
@@ -125,16 +114,19 @@ object AppViewModelProvider {
             )
         }
 
-        // SettingsViewModel
+        // ✅ ZMIANA: SettingsViewModel otrzymuje wszystkie repozytoria (do backupu)
         initializer {
             SettingsViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
                 universityRepository = myUZApplication().container.universityRepository,
-                classRepository = myUZApplication().container.classRepository // Dodano
+                classRepository = myUZApplication().container.classRepository,
+                tasksRepository = myUZApplication().container.tasksRepository,
+                gradesRepository = myUZApplication().container.gradesRepository,
+                absenceRepository = myUZApplication().container.absenceRepository,
+                eventRepository = myUZApplication().container.eventRepository
             )
         }
 
-        // OnboardingViewModel
         initializer {
             OnboardingViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
@@ -145,8 +137,5 @@ object AppViewModelProvider {
     }
 }
 
-/**
- * Funkcja rozszerzająca do pobierania obiektu [MyUZApplication] z [CreationExtras].
- */
 fun CreationExtras.myUZApplication(): MyUZApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)

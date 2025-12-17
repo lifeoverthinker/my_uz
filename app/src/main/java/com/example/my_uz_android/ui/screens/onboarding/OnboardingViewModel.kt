@@ -36,12 +36,11 @@ class OnboardingViewModel(
 
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
-    val totalPages = 6
+    val totalPages = 6 // Liczba stron onboardingu
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // NOWE: Obsługa błędów w UI
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
@@ -76,6 +75,7 @@ class OnboardingViewModel(
     val filteredGroups: StateFlow<List<String>> = _filteredGroups.asStateFlow()
 
     init {
+        // Obsługa wyszukiwania grup
         _groupSearchQuery
             .onEach { query ->
                 if (query.isEmpty()) {
@@ -106,17 +106,19 @@ class OnboardingViewModel(
                     _allGroups.value = result.data ?: emptyList()
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message ?: "Błąd pobierania grup"
+                    // Nie blokujemy UI błędem na start, po prostu lista będzie pusta
+                    // _errorMessage.value = result.message
                     _allGroups.value = emptyList()
+                    Log.e(TAG, "Błąd pobierania grup: ${result.message}")
                 }
-                is NetworkResult.Loading -> { /* opcjonalnie */ }
+                is NetworkResult.Loading -> { }
             }
 
             _isLoading.value = false
         }
     }
 
-    // --- ZAPIS DANYCH Z ONBOARDINGU ---
+    // --- ZAPIS DANYCH Z ONBOARDINGU (Zatwierdzenie) ---
     fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -131,8 +133,8 @@ class OnboardingViewModel(
             var studyMode: String? = null
             var downloadSuccess = true
 
-            if (groupCode != null) {
-                // A. Szczegóły grupy
+            if (!groupCode.isNullOrBlank()) {
+                // A. Szczegóły grupy (Wydział, Kierunek)
                 when (val detailsResult = universityRepository.getGroupDetails(groupCode)) {
                     is NetworkResult.Success -> {
                         val details = detailsResult.data
@@ -145,85 +147,103 @@ class OnboardingViewModel(
                         }
                     }
                     is NetworkResult.Error -> {
-                        // Nie przerywamy, ale logujemy (opcjonalnie można pokazać błąd)
-                        Log.e(TAG, "Błąd szczegółów: ${detailsResult.message}")
+                        Log.e(TAG, "Błąd pobierania szczegółów grupy: ${detailsResult.message}")
                     }
                     else -> {}
                 }
 
                 // B. Pobierz Plan Zajęć
                 val subgroups = _selectedSubgroups.value.toList()
+                // Jeśli nie wybrano podgrup, pobieramy dla wszystkich (pusta lista w API często to oznacza)
+                // lub obsługujemy to w repozytorium
+
                 when (val scheduleResult = universityRepository.getSchedule(groupCode, subgroups)) {
                     is NetworkResult.Success -> {
                         val schedule = scheduleResult.data ?: emptyList()
-                        classRepository.deleteAllClasses()
+                        classRepository.deleteAllClasses() // Czyścimy stare (bezpiecznik)
                         classRepository.insertClasses(schedule)
                         Log.d(TAG, "✅ Zapisano ${schedule.size} zajęć")
                     }
                     is NetworkResult.Error -> {
-                        // Tutaj błąd jest krytyczny - użytkownik chce plan, a go nie dostał
-                        _errorMessage.value = "Nie udało się pobrać planu: ${scheduleResult.message}"
+                        // Jeśli użytkownik wybrał grupę, a nie udało się pobrać planu - to błąd
+                        _errorMessage.value = "Nie udało się pobrać planu zajęć. Sprawdź połączenie."
                         downloadSuccess = false
                     }
                     else -> {}
                 }
             }
 
-            // Jeśli pobieranie się nie powiodło (krytyczny błąd sieci przy pobieraniu planu), przerywamy
             if (!downloadSuccess) {
                 _isLoading.value = false
                 return@launch
             }
 
-            // 2. Zapisz ustawienia (tylko jeśli wszystko OK)
+            // 2. Utwórz obiekt ustawień
             val settings = SettingsEntity(
-                id = 0,
+                id = 0, // Room nadpisze/zinkrementuje jeśli to Insert
                 isAnonymous = isAnonymous,
-                userName = if (isAnonymous) "Student" else _userName.value,
+                // Jeśli anonimowy lub nie wpisał imienia -> "Student" lub puste
+                userName = if (isAnonymous) "" else _userName.value.ifBlank { "" },
                 gender = _selectedGender.value.name,
                 selectedGroupCode = groupCode,
                 selectedSubgroup = _selectedSubgroups.value.joinToString(","),
                 faculty = faculty,
                 fieldOfStudy = fieldOfStudy,
                 studyMode = studyMode,
+                // Flagi systemowe
                 isFirstRun = false,
                 isDarkMode = false,
-                notificationsEnabled = true
+                notificationsEnabled = true,
+                offlineModeEnabled = false // Domyślnie online po instalacji
             )
 
+            // 3. Zapisz do bazy -> To wyzwoli Flow w HomeViewModel i zaktualizuje UI
             settingsRepository.insertSettings(settings)
-            _isLoading.value = false
 
-            // Wywołaj callback nawigacji
-            onSuccess()
+            _isLoading.value = false
+            onSuccess() // Nawigacja do ekranu głównego
         }
     }
 
-    fun skipOnboarding() {
+    // --- POMINIĘCIE ONBOARDINGU (Tryb Gościa) ---
+    fun skipOnboarding(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
-            val defaultSettings = SettingsEntity(
+
+            // ✅ Ustawienia dla Gościa (Zgodne z wymaganiami)
+            val guestSettings = SettingsEntity(
                 id = 0,
-                isAnonymous = false,
-                userName = "Gościu",
+                isAnonymous = true,      // Jest anonimowy
+                userName = "",           // Puste imię -> Powitanie "Cześć!"
                 gender = null,
                 selectedGroupCode = null,
                 selectedSubgroup = null,
                 faculty = null,
                 fieldOfStudy = null,
                 studyMode = null,
-                isFirstRun = false,
+                isFirstRun = false,      // Onboarding zakończony
                 isDarkMode = false,
-                notificationsEnabled = true
+                notificationsEnabled = true,
+                offlineModeEnabled = false
             )
-            settingsRepository.insertSettings(defaultSettings)
+
+            // Czyścimy ewentualne śmieci z bazy (opcjonalnie)
+            classRepository.deleteAllClasses()
+
+            // Zapisz ustawienia
+            settingsRepository.insertSettings(guestSettings)
+
             _isLoading.value = false
+            onSuccess()
         }
     }
 
+    // --- NAWIGACJA W STRONACH ONBOARDINGU ---
     fun onNextClick() {
         if (_currentPage.value < totalPages - 1) {
             _currentPage.update { it + 1 }
+            // Jeśli przechodzimy do strony wyboru grupy (zakładamy że to np. index 2),
+            // a lista jest pusta, ponawiamy próbę pobrania.
             if (_currentPage.value == 2 && _allGroups.value.isEmpty()) {
                 fetchAllGroups()
             }
@@ -236,6 +256,7 @@ class OnboardingViewModel(
         }
     }
 
+    // --- SETTERY DANYCH UI ---
     fun setMode(mode: OnboardingMode) { _selectedMode.value = mode }
     fun setGender(gender: UserGender) { _selectedGender.value = gender }
     fun setUserName(name: String) { _userName.value = name }
@@ -252,25 +273,27 @@ class OnboardingViewModel(
     fun selectGroup(groupCode: String) {
         _selectedGroup.value = groupCode
         _groupSearchQuery.value = groupCode
-        _filteredGroups.value = emptyList()
+        _filteredGroups.value = emptyList() // Ukryj podpowiedzi po wyborze
 
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
 
+            // Pobierz podgrupy dla wybranej grupy
             when (val result = universityRepository.getSubgroups(groupCode)) {
                 is NetworkResult.Success -> {
                     _availableSubgroups.value = result.data ?: emptyList()
                 }
                 is NetworkResult.Error -> {
-                    _errorMessage.value = result.message
+                    // Nie blokujemy, po prostu brak podgrup
+                    Log.e(TAG, "Błąd pobierania podgrup: ${result.message}")
                     _availableSubgroups.value = emptyList()
                 }
                 else -> {}
             }
 
             _isLoading.value = false
-            _selectedSubgroups.value = emptySet()
+            _selectedSubgroups.value = emptySet() // Reset wyboru podgrup
         }
     }
 

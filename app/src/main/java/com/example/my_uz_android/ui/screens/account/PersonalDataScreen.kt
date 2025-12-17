@@ -1,80 +1,97 @@
 package com.example.my_uz_android.ui.screens.account
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.InterFontFamily
-import com.example.my_uz_android.ui.theme.extendedColors
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Importy do FlowRow i MenuAnchor
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PersonalDataScreen(
     onNavigateBack: () -> Unit,
-    onEditClick: () -> Unit,
+    onEditClick: () -> Unit = {},
     viewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val settings by viewModel.settings.collectAsState()
-    val isLoaded by viewModel.isSettingsLoaded.collectAsState()
+    // Collect states
+    val draftName by viewModel.draftName.collectAsState()
+    val draftSurname by viewModel.draftSurname.collectAsState()
 
+    val availableGroups by viewModel.filteredGroups.collectAsState()
+    val availableSubgroups by viewModel.availableSubgroups.collectAsState()
+    val draftSubgroups by viewModel.draftSubgroups.collectAsState()
+    val groupSearchQuery by viewModel.groupSearchQuery.collectAsState()
+
+    val saveMessage by viewModel.saveMessage.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    var expandedGroupDropdown by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
     val primaryColor = MaterialTheme.colorScheme.primary
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val outlineColor = MaterialTheme.colorScheme.outline
 
-    if (!isLoaded) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+    // Automatyczne ukrycie klawiatury po zapisie (opcjonalnie)
+    LaunchedEffect(saveMessage) {
+        if (saveMessage != null && saveMessage!!.contains("Zapisano")) {
+            focusManager.clearFocus()
         }
-        return
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            // ZMIANA: TopAppBar zamiast CenterAlignedTopAppBar (wyrównanie do lewej)
             TopAppBar(
                 title = {
                     Text(
-                        text = "Dane osobowe",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 22.sp
-                        )
+                        "Dane osobowe",
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.SemiBold
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_chevron_left),
+                            painter = painterResource(R.drawable.ic_chevron_left),
                             contentDescription = "Wróć",
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
-                )
+                actions = {
+                    TextButton(onClick = {
+                        viewModel.saveChanges()
+                        focusManager.clearFocus()
+                    }) {
+                        Text("Zapisz", fontWeight = FontWeight.Bold)
+                    }
+                }
             )
+        },
+        snackbarHost = {
+            if(saveMessage != null) {
+                Snackbar(
+                    action = {
+                        TextButton(onClick = { viewModel.clearSaveMessage() }) { Text("OK") }
+                    },
+                    modifier = Modifier.padding(16.dp)
+                ) { Text(saveMessage!!) }
+            }
         }
     ) { paddingValues ->
         Column(
@@ -82,205 +99,113 @@ fun PersonalDataScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 1. Profil (Avatar + Imię)
-            ContainerBox {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(primaryColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = getInitials(settings?.userName ?: "S"),
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 22.sp,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        )
-                    }
+            // --- 1. SEKCJA: DANE OSOBOWE ---
+            Text("Twoje dane", style = MaterialTheme.typography.labelLarge, color = primaryColor)
 
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = settings?.userName ?: "Brak danych",
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
-                                color = textColor
-                            )
-                        )
-                        Text(
-                            text = if (settings?.isAnonymous == true) "Gość" else "Student",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp,
-                                color = outlineColor
-                            )
-                        )
-                    }
-                }
-            }
-
-            // 2. Karta Kierunku
-            if (settings?.fieldOfStudy != null || settings?.faculty != null) {
-                StudyDirectionCard(
-                    fieldOfStudy = settings?.fieldOfStudy ?: "Nieznany kierunek",
-                    faculty = settings?.faculty ?: "Nieznany wydział",
-                    group = settings?.selectedGroupCode ?: "-",
-                    subgroup = settings?.selectedSubgroup ?: "-",
-                    studyMode = settings?.studyMode ?: "-",
-                    onEditClick = onEditClick,
-                    onDeleteClick = { /* Opcjonalnie */ }
-                )
-            }
-
-            // 3. Przycisk Dodaj kierunek
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
-                    .clickable { onEditClick() }
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_plus),
-                        contentDescription = null,
-                        tint = primaryColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "Dodaj kierunek studiów",
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 12.sp,
-                            color = primaryColor
-                        )
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun StudyDirectionCard(
-    fieldOfStudy: String,
-    faculty: String,
-    group: String,
-    subgroup: String,
-    studyMode: String,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
-) {
-    ContainerBox(
-        color = MaterialTheme.extendedColors.classCardBackground,
-        padding = PaddingValues(16.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(
+            // Pole Imię (Wypełnione draftName z VM)
+            OutlinedTextField(
+                value = draftName,
+                onValueChange = { viewModel.updateDraftName(it) },
+                label = { Text("Imię") },
+                placeholder = { Text("Np. Jan") },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            // Pole Nazwisko (Wypełnione draftSurname z VM)
+            OutlinedTextField(
+                value = draftSurname,
+                onValueChange = { viewModel.updateDraftSurname(it) },
+                label = { Text("Nazwisko") },
+                placeholder = { Text("Np. Kowalski") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            HorizontalDivider()
+
+            // --- 2. SEKCJA: UCZELNIA ---
+            Text("Uczelnia", style = MaterialTheme.typography.labelLarge, color = primaryColor)
+
+            // Wyszukiwarka Grupy
+            ExposedDropdownMenuBox(
+                expanded = expandedGroupDropdown,
+                onExpandedChange = { expandedGroupDropdown = !expandedGroupDropdown }
             ) {
-                Text(
-                    text = fieldOfStudy,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onBackground
-                    ),
-                    modifier = Modifier.weight(1f)
+                OutlinedTextField(
+                    value = groupSearchQuery, // ✅ Powiązane z VM, więc pokazuje aktualną grupę
+                    onValueChange = {
+                        viewModel.onSearchQueryChange(it)
+                        expandedGroupDropdown = true
+                    },
+                    label = { Text("Kod grupy (szukaj)") },
+                    placeholder = { Text("Np. 32INF-SP") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedGroupDropdown) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(
-                        text = "Edytuj",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontFamily = InterFontFamily,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        ),
-                        modifier = Modifier.clickable { onEditClick() }
-                    )
-                    Text(
-                        text = "Usuń",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontFamily = InterFontFamily,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.error
-                        ),
-                        modifier = Modifier.clickable { onDeleteClick() }
-                    )
+                if (availableGroups.isNotEmpty()) {
+                    ExposedDropdownMenu(
+                        expanded = expandedGroupDropdown,
+                        onDismissRequest = { expandedGroupDropdown = false }
+                    ) {
+                        availableGroups.forEach { group ->
+                            DropdownMenuItem(
+                                text = { Text(group) },
+                                onClick = {
+                                    viewModel.selectGroup(group)
+                                    expandedGroupDropdown = false
+                                    focusManager.clearFocus()
+                                }
+                            )
+                        }
+                    }
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DetailRow(label = "Wydział", value = faculty)
-                DetailRow(label = "Grupa", value = group)
-                DetailRow(label = "Podgrupa", value = subgroup)
-                DetailRow(label = "Tryb studiów", value = studyMode)
+            // Pasek ładowania (Styl Onboardingu)
+            if (isLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .height(2.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             }
-        }
-    }
-}
 
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        )
-    }
-}
+            // Podgrupy (Chips)
+            if (availableSubgroups.isNotEmpty()) {
+                Text("Podgrupy (opcjonalne):", style = MaterialTheme.typography.bodySmall)
 
-@Composable
-private fun ContainerBox(
-    color: Color = MaterialTheme.colorScheme.surface,
-    padding: PaddingValues = PaddingValues(vertical = 8.dp),
-    content: @Composable () -> Unit
-) {
-    Surface(
-        color = color,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Box(modifier = Modifier.padding(padding)) {
-            content()
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    availableSubgroups.forEach { subgroup ->
+                        val isSelected = draftSubgroups.contains(subgroup)
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { viewModel.toggleSubgroup(subgroup) },
+                            label = { Text(subgroup) },
+                            leadingIcon = if (isSelected) {
+                                { Icon(painterResource(R.drawable.ic_check), null, Modifier.size(16.dp)) }
+                            } else null
+                        )
+                    }
+                }
+            }
         }
     }
 }

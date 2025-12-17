@@ -26,8 +26,6 @@ import com.example.my_uz_android.ui.screens.account.AccountScreen
 import com.example.my_uz_android.ui.screens.account.EditPersonalDataScreen
 import com.example.my_uz_android.ui.screens.account.PersonalDataScreen
 import com.example.my_uz_android.ui.screens.account.SettingsScreen
-import com.example.my_uz_android.ui.screens.calendar.TaskAddEditScreen
-import com.example.my_uz_android.ui.screens.calendar.TasksScreen
 import com.example.my_uz_android.ui.screens.home.HomeScreen
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsScreen
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
@@ -39,7 +37,8 @@ import com.example.my_uz_android.ui.screens.index.IndexScreen
 import com.example.my_uz_android.ui.screens.index.SubjectGradesScreen
 import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 import com.example.my_uz_android.ui.theme.extendedColors
-
+import com.example.my_uz_android.ui.screens.calendar.tasks.TasksScreen // ✅
+import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditScreen // ✅
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
     data object Calendar : Screen("calendar", "Kalendarz", R.drawable.ic_calendar)
