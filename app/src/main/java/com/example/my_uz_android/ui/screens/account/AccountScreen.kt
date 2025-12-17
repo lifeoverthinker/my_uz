@@ -1,7 +1,9 @@
 package com.example.my_uz_android.ui.screens.account
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,16 +76,13 @@ fun AccountScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 1. Profil (Karta Gościa lub Studenta)
             ProfileSection(
                 userName = settings?.userName ?: "",
                 isAnonymous = settings?.isAnonymous == true
             )
 
-            // 2. Dane studiów
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle(text = "Dane studiów")
-
                 StudyCard(
                     fieldOfStudy = settings?.fieldOfStudy ?: "Brak danych",
                     faculty = settings?.faculty ?: "Brak danych",
@@ -94,23 +93,19 @@ fun AccountScreen(
                 )
             }
 
-            // 3. Zarządzanie kontem
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionTitle(text = "Zarządzanie kontem")
-
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AccountOptionItem(
                         iconRes = R.drawable.ic_user,
                         label = "Dane osobowe",
                         onClick = onPersonalDataClick
                     )
-
                     AccountOptionItem(
                         iconRes = R.drawable.ic_settings,
                         label = "Ustawienia",
                         onClick = onSettingsClick
                     )
-
                     AccountOptionItem(
                         iconRes = R.drawable.ic_info_circle,
                         label = "O aplikacji",
@@ -119,8 +114,67 @@ fun AccountScreen(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+// ... ProfileSection, StudyCard, StudyDetailRow, SectionTitle (Takie same jak w poprzednich krokach) ...
+
+@Composable
+fun AccountOptionItem(
+    iconRes: Int,
+    label: String,
+    onClick: () -> Unit,
+    showDivider: Boolean = true
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = Color.Transparent,
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp), // ✅ Rozmiar 24dp
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 16.sp,
+                            letterSpacing = 0.5.sp,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    )
+                }
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            if (showDivider) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 1.dp
+                )
+            }
         }
     }
 }
@@ -144,7 +198,7 @@ fun ProfileSection(userName: String, isAnonymous: Boolean) {
                     painter = painterResource(id = R.drawable.ic_user),
                     contentDescription = "Gość",
                     tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(28.dp) // ✅ Rozmiar ikony wewnątrz avatara
+                    modifier = Modifier.size(28.dp)
                 )
             } else {
                 Text(
@@ -209,8 +263,7 @@ fun StudyCard(
                     Icon(
                         painter = painterResource(R.drawable.ic_info_circle),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp) // ✅ Wymiar
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -287,64 +340,6 @@ fun SectionTitle(text: String) {
             color = MaterialTheme.colorScheme.onBackground
         )
     )
-}
-
-@Composable
-fun AccountOptionItem(
-    iconRes: Int,
-    label: String,
-    onClick: () -> Unit,
-    showDivider: Boolean = true
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = Color.Transparent,
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp), // ✅ Sztywny wymiar ikony
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 16.sp,
-                            letterSpacing = 0.5.sp,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    )
-                }
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_chevron_right),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp), // ✅ Sztywny wymiar strzałki
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-            if (showDivider) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 1.dp
-                )
-            }
-        }
-    }
 }
 
 fun getInitials(name: String): String {

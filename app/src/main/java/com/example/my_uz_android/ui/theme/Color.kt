@@ -2,7 +2,16 @@ package com.example.my_uz_android.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// --- Podstawowe (bez zmian) ---
+// --- Podstawowe ---
+val Purple80 = Color(0xFFD0BCFF)
+val PurpleGrey80 = Color(0xFFCCC2DC)
+val Pink80 = Color(0xFFEFB8C8)
+
+val Purple40 = Color(0xFF6650a4)
+val PurpleGrey40 = Color(0xFF625b71)
+val Pink40 = Color(0xFF7D5260)
+
+// --- Motywy Material 3 (Light) ---
 val md_theme_light_primary = Color(0xFF68548e)
 val md_theme_light_onPrimary = Color(0xFFffffff)
 val md_theme_light_primaryContainer = Color(0xFFebddff)
@@ -19,13 +28,10 @@ val md_theme_light_error = Color(0xFFba1a1a)
 val md_theme_light_onError = Color(0xFFffffff)
 val md_theme_light_errorContainer = Color(0xFFffdad6)
 val md_theme_light_onErrorContainer = Color(0xFF93000a)
-
-// ZMIANA: Czysta biel dla tła w Light Mode
 val md_theme_light_background = Color(0xFFFFFFFF)
 val md_theme_light_onBackground = Color(0xFF1d1b20)
 val md_theme_light_surface = Color(0xFFFFFFFF)
 val md_theme_light_onSurface = Color(0xFF1d1b20)
-
 val md_theme_light_surfaceVariant = Color(0xFFe7e0eb)
 val md_theme_light_onSurfaceVariant = Color(0xFF49454e)
 val md_theme_light_outline = Color(0xFF7a757f)
@@ -34,32 +40,18 @@ val md_theme_light_scrim = Color(0xFF000000)
 val md_theme_light_inverseSurface = Color(0xFF322f35)
 val md_theme_light_inverseOnSurface = Color(0xFFf5eff7)
 val md_theme_light_inversePrimary = Color(0xFFd3bcfd)
+val md_theme_light_surfaceTint = Color(0xFF68548e)
 
-// --- LIGHT: Rozszerzone ---
+// M3 Extended Light
 val md_theme_light_surfaceDim = Color(0xFFded8e0)
-// ZMIANA: Czysta biel
 val md_theme_light_surfaceBright = Color(0xFFFFFFFF)
 val md_theme_light_surfaceContainerLowest = Color(0xFFffffff)
 val md_theme_light_surfaceContainerLow = Color(0xFFf8f1fa)
-// Możesz też ustawić kontenery na białe, jeśli wolisz brak odcienia fioletu
 val md_theme_light_surfaceContainer = Color(0xFFf2ecf4)
 val md_theme_light_surfaceContainerHigh = Color(0xFFede6ee)
 val md_theme_light_surfaceContainerHighest = Color(0xFFe7e0e8)
 
-val md_theme_light_primaryFixed = Color(0xFFebddff)
-val md_theme_light_onPrimaryFixed = Color(0xFF230f46)
-val md_theme_light_primaryFixedDim = Color(0xFFd3bcfd)
-val md_theme_light_onPrimaryFixedVariant = Color(0xFF4f3d74)
-val md_theme_light_secondaryFixed = Color(0xFFe9def8)
-val md_theme_light_onSecondaryFixed = Color(0xFF1f182b)
-val md_theme_light_secondaryFixedDim = Color(0xFFcdc2db)
-val md_theme_light_onSecondaryFixedVariant = Color(0xFF4b4358)
-val md_theme_light_tertiaryFixed = Color(0xFFffd9e1)
-val md_theme_light_onTertiaryFixed = Color(0xFF31101b)
-val md_theme_light_tertiaryFixedDim = Color(0xFFf0b7c5)
-val md_theme_light_onTertiaryFixedVariant = Color(0xFF643b46)
-
-// --- DARK: Podstawowe ---
+// --- Motywy Material 3 (Dark) ---
 val md_theme_dark_primary = Color(0xFFd3bcfd)
 val md_theme_dark_onPrimary = Color(0xFF38265c)
 val md_theme_dark_primaryContainer = Color(0xFF4f3d74)
@@ -76,13 +68,10 @@ val md_theme_dark_error = Color(0xFFffb4ab)
 val md_theme_dark_onError = Color(0xFF690005)
 val md_theme_dark_errorContainer = Color(0xFF93000a)
 val md_theme_dark_onErrorContainer = Color(0xFFffdad6)
-
-// ZMIANA: Neutralne ciemne tła (bez fioletu)
 val md_theme_dark_background = Color(0xFF121212)
 val md_theme_dark_onBackground = Color(0xFFe7e0e8)
 val md_theme_dark_surface = Color(0xFF121212)
 val md_theme_dark_onSurface = Color(0xFFe7e0e8)
-
 val md_theme_dark_surfaceVariant = Color(0xFF49454e)
 val md_theme_dark_onSurfaceVariant = Color(0xFFcbc4cf)
 val md_theme_dark_outline = Color(0xFF948f99)
@@ -91,30 +80,16 @@ val md_theme_dark_scrim = Color(0xFF000000)
 val md_theme_dark_inverseSurface = Color(0xFFe7e0e8)
 val md_theme_dark_inverseOnSurface = Color(0xFF322f35)
 val md_theme_dark_inversePrimary = Color(0xFF68548e)
+val md_theme_dark_surfaceTint = Color(0xFFd3bcfd)
 
-// --- DARK: Rozszerzone (Poprawione modale) ---
+// M3 Extended Dark
 val md_theme_dark_surfaceDim = Color(0xFF121212)
 val md_theme_dark_surfaceBright = Color(0xFF3b383e)
-
-// ZMIANA: Neutralne szarości dla kontenerów (Dialogi, Pickery, BottomSheets)
 val md_theme_dark_surfaceContainerLowest = Color(0xFF0F0F0F)
 val md_theme_dark_surfaceContainerLow = Color(0xFF1D1D1D)
 val md_theme_dark_surfaceContainer = Color(0xFF212121)
-val md_theme_dark_surfaceContainerHigh = Color(0xFF2B2B2B) // Kluczowe dla DatePicker/Dialog
+val md_theme_dark_surfaceContainerHigh = Color(0xFF2B2B2B)
 val md_theme_dark_surfaceContainerHighest = Color(0xFF363636)
-
-val md_theme_dark_primaryFixed = Color(0xFFebddff)
-val md_theme_dark_onPrimaryFixed = Color(0xFF230f46)
-val md_theme_dark_primaryFixedDim = Color(0xFFd3bcfd)
-val md_theme_dark_onPrimaryFixedVariant = Color(0xFF4f3d74)
-val md_theme_dark_secondaryFixed = Color(0xFFe9def8)
-val md_theme_dark_onSecondaryFixed = Color(0xFF1f182b)
-val md_theme_dark_secondaryFixedDim = Color(0xFFcdc2db)
-val md_theme_dark_onSecondaryFixedVariant = Color(0xFF4b4358)
-val md_theme_dark_tertiaryFixed = Color(0xFFffd9e1)
-val md_theme_dark_onTertiaryFixed = Color(0xFF31101b)
-val md_theme_dark_tertiaryFixedDim = Color(0xFFf0b7c5)
-val md_theme_dark_onTertiaryFixedVariant = Color(0xFF643b46)
 
 // --- NOWE KOLORY KART ---
 val card_class_light = Color(0xFFE8DEF8)
@@ -135,14 +110,10 @@ val custom_orange_dark = Color(0xFFffb599)
 val custom_blue_dark = Color(0xFFa2c9fe)
 
 // Home Screen Colors
-
-// LIGHT: Twój customowy fiolet F7F2F9
 val home_top_background_light = Color(0xFFF7F2F9)
-
-// DARK: Czysta czerń dla górnej sekcji, żeby dolna (szara) była widoczna
 val home_top_background_dark = Color(0xFF000000)
 
-val home_header_light = Color(0xFFF7F2F9) // Też dopasuj, żeby nagłówek nie odcinał się od tła
+val home_header_light = Color(0xFFF7F2F9)
 val home_header_dark = Color(0xFF000000)
 
 val home_content_light = Color(0xFFFFFFFF)
@@ -167,43 +138,77 @@ val icon_text_dark = Color(0xFFE7E0E8)
 
 // --- PALETA KOLORÓW ZAJĘĆ (PASTELE) ---
 
-// 1. Lavender
-val PastelLavenderLight = Color(0xFFE8DEF8)
-val PastelLavenderDark = Color(0xFF4A4458) // Ciemniejszy odpowiednik
-
-// 2. Pink
-val PastelPinkLight = Color(0xFFFFD8E4)
-val PastelPinkDark = Color(0xFF633B48)
-
-// 3. Green
-val PastelGreenLight = Color(0xFFDAF5D7)
-val PastelGreenDark = Color(0xFF2E4E30)
-
-// 4. Blue
-val PastelBlueLight = Color(0xFFD7E3FF)
-val PastelBlueDark = Color(0xFF32476E)
-
-// 5. Orange
-val PastelOrangeLight = Color(0xFFFFDBCF)
-val PastelOrangeDark = Color(0xFF5E4035)
-
-// 6. Yellow
-val PastelYellowLight = Color(0xFFF3E2A9)
-val PastelYellowDark = Color(0xFF5C5326)
-
-// Lista par kolorów (Light, Dark) do wyboru
-val ClassColorPalette = listOf(
-    PastelLavenderLight to PastelLavenderDark,
-    PastelPinkLight to PastelPinkDark,
-    PastelGreenLight to PastelGreenDark,
-    PastelBlueLight to PastelBlueDark,
-    PastelOrangeLight to PastelOrangeDark,
-    PastelYellowLight to PastelYellowDark
+data class ClassColorSet(
+    val lightBg: Color,
+    val darkBg: Color,
+    val lightAccent: Color,
+    val darkAccent: Color
 )
 
-// Funkcja pomocnicza do pobrania koloru
-fun getClassColor(index: Int, isDark: Boolean): Color {
-    val safeIndex = index.coerceIn(0, ClassColorPalette.lastIndex)
-    val pair = ClassColorPalette[safeIndex]
-    return if (isDark) pair.second else pair.first
+// 1. Lavender
+val ColorSetLavender = ClassColorSet(
+    lightBg = Color(0xFFE8DEF8),
+    darkBg = Color(0xFF4A4458),
+    lightAccent = Color(0xFF6750A4),
+    darkAccent = Color(0xFFD0BCFF)
+)
+
+// 2. Pink
+val ColorSetPink = ClassColorSet(
+    lightBg = Color(0xFFFFD8E4),
+    darkBg = Color(0xFF633B48),
+    lightAccent = Color(0xFF7D5260),
+    darkAccent = Color(0xFFEFB8C8)
+)
+
+// 3. Green
+val ColorSetGreen = ClassColorSet(
+    lightBg = Color(0xFFDAF5D7),
+    darkBg = Color(0xFF2E4E30),
+    lightAccent = Color(0xFF146C2E),
+    darkAccent = Color(0xFFA5D6A7)
+)
+
+// 4. Blue
+val ColorSetBlue = ClassColorSet(
+    lightBg = Color(0xFFD7E3FF),
+    darkBg = Color(0xFF32476E),
+    lightAccent = Color(0xFF004A77),
+    darkAccent = Color(0xFF90CAF9)
+)
+
+// 5. Orange
+val ColorSetOrange = ClassColorSet(
+    lightBg = Color(0xFFFFDBCF),
+    darkBg = Color(0xFF5E4035),
+    lightAccent = Color(0xFF8C1D18),
+    darkAccent = Color(0xFFFFCC80)
+)
+
+// 6. Yellow
+val ColorSetYellow = ClassColorSet(
+    lightBg = Color(0xFFF3E2A9),
+    darkBg = Color(0xFF5C5326),
+    lightAccent = Color(0xFF564600),
+    darkAccent = Color(0xFFFFF59D)
+)
+
+val ClassColorPalette = listOf(
+    ColorSetLavender,
+    ColorSetPink,
+    ColorSetGreen,
+    ColorSetBlue,
+    ColorSetOrange,
+    ColorSetYellow
+)
+
+// Helpery
+fun getClassBackgroundColor(index: Int, isDark: Boolean): Color {
+    val set = ClassColorPalette.getOrElse(index) { ColorSetLavender }
+    return if (isDark) set.darkBg else set.lightBg
+}
+
+fun getClassAccentColor(index: Int, isDark: Boolean): Color {
+    val set = ClassColorPalette.getOrElse(index) { ColorSetLavender }
+    return if (isDark) set.darkAccent else set.lightAccent
 }

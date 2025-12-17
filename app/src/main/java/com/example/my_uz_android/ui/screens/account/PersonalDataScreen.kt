@@ -20,7 +20,6 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.InterFontFamily
 
-// Importy do FlowRow i MenuAnchor
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 
@@ -31,7 +30,6 @@ fun PersonalDataScreen(
     onEditClick: () -> Unit = {},
     viewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    // Collect states
     val draftName by viewModel.draftName.collectAsState()
     val draftSurname by viewModel.draftSurname.collectAsState()
 
@@ -47,7 +45,6 @@ fun PersonalDataScreen(
     val focusManager = LocalFocusManager.current
     val primaryColor = MaterialTheme.colorScheme.primary
 
-    // Automatyczne ukrycie klawiatury po zapisie (opcjonalnie)
     LaunchedEffect(saveMessage) {
         if (saveMessage != null && saveMessage!!.contains("Zapisano")) {
             focusManager.clearFocus()
@@ -100,12 +97,11 @@ fun PersonalDataScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // --- 1. SEKCJA: DANE OSOBOWE ---
             Text("Twoje dane", style = MaterialTheme.typography.labelLarge, color = primaryColor)
 
-            // Pole Imię (Wypełnione draftName z VM)
+            // Imię
             OutlinedTextField(
                 value = draftName,
                 onValueChange = { viewModel.updateDraftName(it) },
@@ -115,10 +111,10 @@ fun PersonalDataScreen(
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(8.dp) // Styl jak w onboardingu
             )
 
-            // Pole Nazwisko (Wypełnione draftSurname z VM)
+            // Nazwisko
             OutlinedTextField(
                 value = draftSurname,
                 onValueChange = { viewModel.updateDraftSurname(it) },
@@ -128,33 +124,32 @@ fun PersonalDataScreen(
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(8.dp)
             )
 
-            HorizontalDivider()
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // --- 2. SEKCJA: UCZELNIA ---
             Text("Uczelnia", style = MaterialTheme.typography.labelLarge, color = primaryColor)
 
-            // Wyszukiwarka Grupy
+            // Wyszukiwarka grup
             ExposedDropdownMenuBox(
                 expanded = expandedGroupDropdown,
                 onExpandedChange = { expandedGroupDropdown = !expandedGroupDropdown }
             ) {
                 OutlinedTextField(
-                    value = groupSearchQuery, // ✅ Powiązane z VM, więc pokazuje aktualną grupę
+                    value = groupSearchQuery,
                     onValueChange = {
                         viewModel.onSearchQueryChange(it)
                         expandedGroupDropdown = true
                     },
-                    label = { Text("Kod grupy (szukaj)") },
+                    label = { Text("Kod grupy") },
                     placeholder = { Text("Np. 32INF-SP") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedGroupDropdown) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(8.dp)
                 )
 
                 if (availableGroups.isNotEmpty()) {
@@ -176,22 +171,18 @@ fun PersonalDataScreen(
                 }
             }
 
-            // Pasek ładowania (Styl Onboardingu)
+            // Pasek ładowania
             if (isLoading) {
                 LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                        .height(2.dp),
+                    modifier = Modifier.fillMaxWidth().height(2.dp),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
 
-            // Podgrupy (Chips)
+            // Podgrupy
             if (availableSubgroups.isNotEmpty()) {
                 Text("Podgrupy (opcjonalne):", style = MaterialTheme.typography.bodySmall)
-
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     availableSubgroups.forEach { subgroup ->
                         val isSelected = draftSubgroups.contains(subgroup)

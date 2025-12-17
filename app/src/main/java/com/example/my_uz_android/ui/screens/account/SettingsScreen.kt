@@ -32,7 +32,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
-
+import com.example.my_uz_android.ui.theme.ClassColorPalette
+import com.example.my_uz_android.ui.theme.getClassAccentColor // Użyjemy jako obwódki dla wybranych
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
@@ -171,28 +172,44 @@ fun ClassColorPickerItem(
         )
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp), // Większy odstęp
             modifier = Modifier.fillMaxWidth()
         ) {
-            ClassColorPalette.forEachIndexed { index, (lightColor, _) ->
+            ClassColorPalette.forEachIndexed { index, colorSet ->
                 val isSelected = index == selectedColorIndex
+
+                // Kolor obwódki: Jeśli wybrany -> Czarny/Primary, Jeśli nie -> Akcent (ciemniejszy od tła)
+                val borderColor = if (isSelected) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    colorSet.lightAccent.copy(alpha = 0.3f) // Subtelna obwódka
+                }
+
+                val borderWidth = if (isSelected) 2.dp else 1.dp
+
                 Box(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(lightColor)
-                        .border(
-                            width = if (isSelected) 2.dp else 0.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            shape = CircleShape
+                        .background(colorSet.lightBg) // Zawsze pokazuj Light w pickerze dla czytelności
+                        .border(borderWidth, borderColor, CircleShape)
+                        .clickable { onColorSelected(index) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        // Opcjonalnie: "Ptaszek" w środku dla wybranego
+                        Icon(
+                            painter = painterResource(R.drawable.ic_check),
+                            contentDescription = null,
+                            tint = colorSet.lightAccent, // Kolor "ptaszka"
+                            modifier = Modifier.size(16.dp)
                         )
-                        .clickable { onColorSelected(index) }
-                )
+                    }
+                }
             }
         }
     }
 }
-
 @Composable
 fun SettingsTopBar(onBack: () -> Unit) {
     Row(
