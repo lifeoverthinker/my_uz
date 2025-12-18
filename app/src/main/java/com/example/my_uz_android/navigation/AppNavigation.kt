@@ -14,6 +14,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController // Import
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,7 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.screens.account.AboutAppScreen // ✅ Import
+import com.example.my_uz_android.ui.screens.account.AboutAppScreen
 import com.example.my_uz_android.ui.screens.account.AccountScreen
 import com.example.my_uz_android.ui.screens.account.EditPersonalDataScreen
 import com.example.my_uz_android.ui.screens.account.PersonalDataScreen
@@ -37,8 +38,9 @@ import com.example.my_uz_android.ui.screens.index.IndexScreen
 import com.example.my_uz_android.ui.screens.index.SubjectGradesScreen
 import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 import com.example.my_uz_android.ui.theme.extendedColors
-import com.example.my_uz_android.ui.screens.calendar.tasks.TasksScreen // ✅
-import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditScreen // ✅
+import com.example.my_uz_android.ui.screens.calendar.tasks.TasksScreen
+import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditScreen
+
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
     data object Calendar : Screen("calendar", "Kalendarz", R.drawable.ic_calendar)
@@ -48,9 +50,9 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val iconR
 
 @Composable
 fun AppNavigation(
-    startDestination: String
+    startDestination: String,
+    navController: NavHostController = rememberNavController()
 ) {
-    val navController = rememberNavController()
     val items = listOf(Screen.Main, Screen.Calendar, Screen.Index, Screen.Account)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -88,8 +90,7 @@ fun AppNavigation(
                     ) {
                         val currentDestination = navBackStackEntry?.destination
                         items.forEach { screen ->
-                            val selected =
-                                currentDestination?.hierarchy?.any { it.route == screen.route } == true
+                            val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
 
                             NavigationBarItem(
                                 icon = {
@@ -194,7 +195,6 @@ fun AppNavigation(
                 )
             }
 
-            // ✅ POPRAWIONA SEKCJA KONTA
             composable(Screen.Account.route) {
                 AccountScreen(
                     onBackClick = { },
@@ -209,13 +209,12 @@ fun AppNavigation(
                     onSettingsClick = {
                         navController.navigate("settings")
                     },
-                    onAboutClick = { // ✅ Teraz to zadziała, bo trasa "about_app" jest zdefiniowana niżej
+                    onAboutClick = {
                         navController.navigate("about_app")
                     }
                 )
             }
 
-            // ✅ DEFINICJE EKRANÓW POMOCNICZYCH KONTA
             composable("personal_data") {
                 PersonalDataScreen(
                     onNavigateBack = { navController.popBackStack() },
@@ -235,14 +234,12 @@ fun AppNavigation(
                 )
             }
 
-            // ✅ NAPRAWA: Dodano brakującą trasę
             composable("about_app") {
                 AboutAppScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
 
-            // --- POZOSTAŁE EKRANY ---
             composable(
                 "class_details/{classId}",
                 arguments = listOf(navArgument("classId") { type = NavType.IntType })

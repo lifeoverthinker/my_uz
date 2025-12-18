@@ -8,10 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,7 +24,10 @@ import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.components.UniversalFab
+import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
+import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -42,9 +42,26 @@ fun TasksScreen(
     onAddTaskClick: () -> Unit,
     onTaskClick: (TaskEntity) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    // Parametry nawigacji dolnej (wymagane przez sygnaturę w AppNavigation, nawet jeśli puste)
+    onHomeClick: () -> Unit = {},
+    onCalendarClick: () -> Unit = {},
+    onAccountClick: () -> Unit = {},
+    onIndexClick: () -> Unit = {},
+    // ViewModele
+    viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    calendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
+    // Stan zadań
     val tasks by viewModel.tasksStream.collectAsState(initial = emptyList())
+
+    // Stan kalendarza (tytuł, drawer)
+    val calendarUiState by calendarViewModel.uiState.collectAsState()
+
+    // Logika Drawera
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    // Grupowanie zadań po miesiącach i dniach
     val groupedByMonth = remember(tasks) {
         tasks
             .sortedBy { it.dueDate }
@@ -56,98 +73,136 @@ fun TasksScreen(
             }
     }
 
-    val backgroundColor = MaterialTheme.colorScheme.surfaceContainerLowest
+    val backgroundColor = MaterialTheme.colorScheme.surface
 
-    Box(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            containerColor = backgroundColor,
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.tasks_screen_title),
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = backgroundColor
-                    )
-                )
-            }
-        ) { innerPadding ->
-            if (tasks.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Image(
-                            painter = painterResource(id = R.drawable.time_rafiki),
-                            contentDescription = null,
-                            modifier = Modifier.size(220.dp)
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Text(
-                            text = stringResource(R.string.tasks_empty_title),
-                            fontFamily = InterFontFamily,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+    // --- STRUKTURA EKRANU Z DRAWEREM ---
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            CalendarDrawerContent(
+                selectedSource = calendarUiState.selectedSource,
+                favorites = calendarUiState.favorites,
+                onSelect = { source ->
+                    calendarViewModel.selectSchedule(source)
+                    scope.launch { drawerState.close() }
+                },
+                onCloseDrawer = {
+                    scope.launch { drawerState.close() }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
-                    groupedByMonth.forEach { (yearMonth, tasksInMonth) ->
-                        stickyHeader {
-                            MonthHeaderSticky(yearMonth = yearMonth, backgroundColor = backgroundColor)
-                        }
+            )
+        }
+    ) {
+        Box(modifier = modifier.fillMaxSize()) {
+            Scaffold(
+                containerColor = backgroundColor,
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            Text(
+                                // Tytuł dynamiczny: "Mój Plan" lub nazwa Ulubionego
+                                text = calendarViewModel.getCurrentTitle(),
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_menu),
+                                    contentDescription = "Menu"
+                                )
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { /* TODO: Wyszukiwarka (Etap 3) */ }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_search),
+                                    contentDescription = "Szukaj"
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                            containerColor = backgroundColor
+                        )
+                    )
+                }
+            ) { innerPadding ->
+                if (tasks.isEmpty()) {
+                    // PUSTY STAN
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Image(
+                                painter = painterResource(id = R.drawable.time_rafiki),
+                                contentDescription = null,
+                                modifier = Modifier.size(220.dp)
+                            )
 
-                        val tasksByDay = tasksInMonth.groupBy {
-                            Instant.ofEpochMilli(it.dueDate)
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDate()
-                        }
+                            Spacer(modifier = Modifier.height(24.dp))
 
-                        items(
-                            items = tasksByDay.toList(),
-                            key = { (date, _) -> date.toEpochDay() }
-                        ) { (date, dailyTasks) ->
-                            DayScheduleRow(
-                                date = date,
-                                tasks = dailyTasks,
-                                onTaskClick = onTaskClick
+                            Text(
+                                text = stringResource(R.string.tasks_empty_title),
+                                fontFamily = InterFontFamily,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyLarge
                             )
                         }
                     }
+                } else {
+                    // LISTA ZADAŃ Z NAGŁÓWKAMI
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    ) {
+                        groupedByMonth.forEach { (yearMonth, tasksInMonth) ->
+                            stickyHeader {
+                                MonthHeaderSticky(yearMonth = yearMonth, backgroundColor = backgroundColor)
+                            }
 
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
+                            val tasksByDay = tasksInMonth.groupBy {
+                                Instant.ofEpochMilli(it.dueDate)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDate()
+                            }
+
+                            items(
+                                items = tasksByDay.toList(),
+                                key = { (date, _) -> date.toEpochDay() }
+                            ) { (date, dailyTasks) ->
+                                DayScheduleRow(
+                                    date = date,
+                                    tasks = dailyTasks,
+                                    onTaskClick = onTaskClick
+                                )
+                            }
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(80.dp))
+                        }
                     }
                 }
             }
-        }
 
-        // ✅ POPRAWKA: Używamy onMainFabClick
-        UniversalFab(
-            isExpandable = false,
-            isExpanded = false,
-            onMainFabClick = onAddTaskClick,
-            options = emptyList()
-        )
+            // FAB
+            UniversalFab(
+                isExpandable = false,
+                isExpanded = false,
+                onMainFabClick = onAddTaskClick,
+                options = emptyList()
+            )
+        }
     }
 }
 
-// ... reszta pliku bez zmian (MonthHeaderSticky, DayScheduleRow, Previews)
+// --- KOMPONENTY POMOCNICZE ---
+
 @Composable
 fun MonthHeaderSticky(
     yearMonth: YearMonth,
@@ -194,6 +249,7 @@ fun DayScheduleRow(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Top
     ) {
+        // Lewa kolumna: Dzień
         Column(
             modifier = Modifier
                 .width(50.dp)
@@ -235,6 +291,7 @@ fun DayScheduleRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
+        // Prawa kolumna: Lista zadań
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(8.dp)

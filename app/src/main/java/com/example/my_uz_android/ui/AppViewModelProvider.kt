@@ -1,6 +1,6 @@
 package com.example.my_uz_android.ui
 
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
@@ -8,17 +8,14 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.ui.screens.account.AccountViewModel
 import com.example.my_uz_android.ui.screens.account.SettingsViewModel
-import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditViewModel // ✅ DODANY IMPORT
-import com.example.my_uz_android.ui.screens.calendar.tasks.TasksViewModel       // ✅ DODANY IMPORT
+import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
+import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditViewModel
+import com.example.my_uz_android.ui.screens.calendar.tasks.TasksViewModel
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.screens.home.details.ClassDetailsViewModel
 import com.example.my_uz_android.ui.screens.home.details.EventDetailsViewModel
 import com.example.my_uz_android.ui.screens.home.details.TaskDetailsViewModel
-import com.example.my_uz_android.ui.screens.index.AbsencesViewModel
-import com.example.my_uz_android.ui.screens.index.AddEditAbsenceViewModel
-import com.example.my_uz_android.ui.screens.index.AddEditGradeViewModel
-import com.example.my_uz_android.ui.screens.index.GradeDetailsViewModel
-import com.example.my_uz_android.ui.screens.index.GradesViewModel
+import com.example.my_uz_android.ui.screens.index.*
 import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
 
 object AppViewModelProvider {
@@ -114,7 +111,6 @@ object AppViewModelProvider {
             )
         }
 
-        // ✅ ZMIANA: SettingsViewModel otrzymuje wszystkie repozytoria (do backupu)
         initializer {
             SettingsViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
@@ -134,8 +130,16 @@ object AppViewModelProvider {
                 classRepository = myUZApplication().container.classRepository
             )
         }
+
+        // ✅ Inicjalizacja CalendarViewModel (wymagana, aby nie było crasha)
+        initializer {
+            CalendarViewModel(
+                favoritesRepository = myUZApplication().container.favoritesRepository,
+                classRepository = myUZApplication().container.classRepository
+            )
+        }
     }
 }
 
 fun CreationExtras.myUZApplication(): MyUZApplication =
-    (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)
+    (this[AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)
