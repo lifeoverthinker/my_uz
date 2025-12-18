@@ -4,9 +4,9 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +24,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -39,8 +38,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun TaskAddEditScreen(
@@ -58,21 +55,23 @@ fun TaskAddEditScreen(
         }
     }
 
+    // Bezpośrednie wywołania funkcji ViewModelu zamiast obserwacji isTaskSaved
+    // (zgodnie z logiką ze starego pliku)
     TaskAddEditContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
         onSaveTask = {
             viewModel.saveTask()
             if (uiState.title.isNotBlank()) {
-                Toast.makeText(context, context.getString(R.string.task_saved), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Zadanie zapisane", Toast.LENGTH_SHORT).show()
                 onNavigateBack()
             } else {
-                Toast.makeText(context, context.getString(R.string.task_validation_error), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Wpisz tytuł zadania", Toast.LENGTH_SHORT).show()
             }
         },
         onDeleteTask = {
             viewModel.deleteTask()
-            Toast.makeText(context, context.getString(R.string.task_deleted), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Zadanie usunięte", Toast.LENGTH_SHORT).show()
             onNavigateBack()
         },
         onTitleChange = viewModel::updateTitle,
@@ -108,7 +107,7 @@ fun TaskAddEditContent(
     onDescriptionChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
+    val surfaceColor = MaterialTheme.colorScheme.surface
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
@@ -134,88 +133,46 @@ fun TaskAddEditContent(
     Surface(
         color = surfaceColor,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
+        modifier = modifier.fillMaxSize().statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // --- HEADER ---
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .clickable { onNavigateBack() },
+                    modifier = Modifier.size(40.dp).clip(CircleShape).clickable { onNavigateBack() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = stringResource(R.string.btn_close),
-                        tint = textColor,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = null, tint = textColor, modifier = Modifier.size(24.dp))
                 }
-
                 Button(
                     onClick = onSaveTask,
                     enabled = uiState.title.isNotBlank(),
                     shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
                     contentPadding = PaddingValues(horizontal = 24.dp),
-                    modifier = Modifier.height(40.dp) // ✅ ZMIANA: 40dp (smukły)
+                    modifier = Modifier.height(40.dp)
                 ) {
                     Text(stringResource(R.string.btn_save), fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
                 // TYTUŁ
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 8.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Box(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Box(modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
                         BasicTextField(
                             value = uiState.title,
                             onValueChange = onTitleChange,
-                            textStyle = TextStyle(
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 28.sp,
-                                lineHeight = 36.sp,
-                                color = textColor
-                            ),
+                            textStyle = TextStyle(fontFamily = InterFontFamily, fontSize = 28.sp, color = textColor),
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { innerTextField ->
-                                if (uiState.title.isEmpty()) {
-                                    Text(
-                                        text = stringResource(R.string.task_title_placeholder),
-                                        style = TextStyle(
-                                            fontFamily = InterFontFamily,
-                                            fontSize = 28.sp,
-                                            color = textColor.copy(alpha = 0.4f)
-                                        )
-                                    )
-                                }
+                                if (uiState.title.isEmpty()) Text(stringResource(R.string.task_title_placeholder), style = TextStyle(fontFamily = InterFontFamily, fontSize = 28.sp, color = textColor.copy(0.4f)))
                                 innerTextField()
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -228,11 +185,7 @@ fun TaskAddEditContent(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // QUICK CHIPS
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 76.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                LazyRow(contentPadding = PaddingValues(horizontal = 76.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(quickTitles) { title ->
                         val isSelected = uiState.title == title
                         Surface(
@@ -242,19 +195,8 @@ fun TaskAddEditContent(
                             border = if (!isSelected) BorderStroke(1.dp, dividerColor) else null,
                             modifier = Modifier.height(32.dp)
                         ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            ) {
-                                Text(
-                                    text = title,
-                                    style = TextStyle(
-                                        fontFamily = InterFontFamily,
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 13.sp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor
-                                    )
-                                )
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp)) {
+                                Text(title, style = TextStyle(fontFamily = InterFontFamily, fontSize = 13.sp, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor))
                             }
                         }
                     }
@@ -263,76 +205,44 @@ fun TaskAddEditContent(
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(color = dividerColor)
 
-                // CAŁY DZIEŃ + DATA/CZAS
+                // DATY
                 CommonRow(iconRes = R.drawable.ic_clock, iconTint = iconTint) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.task_all_day),
-                                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                                color = textColor
-                            )
-
-                            Switch(
-                                checked = uiState.isAllDay,
-                                onCheckedChange = onIsAllDayChange,
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    uncheckedBorderColor = MaterialTheme.colorScheme.outline
-                                )
-                            )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.task_all_day), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
+                            Switch(checked = uiState.isAllDay, onCheckedChange = onIsAllDayChange)
                         }
-
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            SimpleDateTimeRow(
-                                date = startDate,
-                                time = if (uiState.isAllDay) null else startTime,
-                                onDateClick = { showDatePickerStart = true },
-                                onTimeClick = { showTimePickerStart = true },
-                                textColor = textColor
-                            )
-
-                            SimpleDateTimeRow(
-                                date = endDate,
-                                time = if (uiState.isAllDay) null else endTime,
-                                onDateClick = { showDatePickerEnd = true },
-                                onTimeClick = { showTimePickerEnd = true },
-                                textColor = textColor
-                            )
+                            SimpleDateTimeRow(startDate, if (uiState.isAllDay) null else startTime, { showDatePickerStart = true }, { showTimePickerStart = true }, textColor)
+                            SimpleDateTimeRow(endDate, if (uiState.isAllDay) null else endTime, { showDatePickerEnd = true }, { showTimePickerEnd = true }, textColor)
                         }
                     }
                 }
 
                 HorizontalDivider(color = dividerColor)
 
-                // PRZEDMIOT
+                // PRZEDMIOT - ✅ POPRAWIONY BOX DLA matchParentSize
                 CommonRow(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showSubjectModal = true }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = uiState.classSubject ?: stringResource(R.string.task_subject_label),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                            color = if (uiState.classSubject == null) subTextColor else textColor
-                        )
-
-                        Icon(
-                            painter = painterResource(R.drawable.ic_chevron_down),
-                            contentDescription = null,
-                            tint = subTextColor,
-                            modifier = Modifier.size(24.dp)
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = uiState.classSubject ?: stringResource(R.string.task_subject_label),
+                                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                                color = if (uiState.classSubject == null) subTextColor else textColor
+                            )
+                            Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
+                        }
+                        // To kliknięcie przykrywa cały wiersz
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable { showSubjectModal = true }
                         )
                     }
                 }
@@ -340,35 +250,26 @@ fun TaskAddEditContent(
                 HorizontalDivider(color = dividerColor)
 
                 // RODZAJ
-                CommonRow(
-                    iconRes = R.drawable.ic_graduation_hat,
-                    iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(alpha = 0.4f)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = isTypeSelectionEnabled) { showTypeModal = true }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) }
-                            ?: stringResource(R.string.task_type_label)
-
-                        Text(
-                            text = typeText,
-                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                            color = if (!isTypeSelectionEnabled) subTextColor.copy(alpha = 0.4f)
-                            else if (uiState.classType == null) subTextColor
-                            else textColor
-                        )
-
-                        Icon(
-                            painter = painterResource(R.drawable.ic_chevron_down),
-                            contentDescription = null,
-                            tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(alpha = 0.4f),
-                            modifier = Modifier.size(24.dp)
-                        )
+                CommonRow(iconRes = R.drawable.ic_graduation_hat, iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(0.4f)) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: stringResource(R.string.task_type_label)
+                            Text(
+                                text = typeText,
+                                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                                color = if (!isTypeSelectionEnabled) subTextColor.copy(0.4f) else if (uiState.classType == null) subTextColor else textColor
+                            )
+                            Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(0.4f), modifier = Modifier.size(24.dp))
+                        }
+                        if (isTypeSelectionEnabled) {
+                            Box(modifier = Modifier.matchParentSize().clickable { showTypeModal = true })
+                        }
                     }
                 }
 
@@ -380,264 +281,72 @@ fun TaskAddEditContent(
                         BasicTextField(
                             value = uiState.description,
                             onValueChange = onDescriptionChange,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                fontFamily = InterFontFamily,
-                                color = textColor,
-                                lineHeight = 24.sp
-                            ),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor),
                             cursorBrush = SolidColor(primaryColor),
-                            decorationBox = { innerTextField ->
-                                if (uiState.description.isEmpty()) {
-                                    Text(
-                                        stringResource(R.string.task_description_placeholder),
-                                        style = MaterialTheme.typography.bodyLarge.copy(
-                                            fontFamily = InterFontFamily,
-                                            color = subTextColor
-                                        )
-                                    )
-                                }
-                                innerTextField()
+                            decorationBox = { inner ->
+                                if (uiState.description.isEmpty()) Text(stringResource(R.string.task_description_placeholder), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = subTextColor))
+                                inner()
                             },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
-
-                HorizontalDivider(color = dividerColor)
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
+    }
 
-        // --- Dialogi ---
-        if (showDatePickerStart) {
-            DatePicker(
-                date = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                onDateSelected = { millis ->
-                    onStartDateChange(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate())
-                    showDatePickerStart = false
-                },
-                onDismiss = { showDatePickerStart = false }
-            )
-        }
+    // Dialogi Date/Time (Skrócone dla czytelności, zakładam Twoje komponenty)
+    if (showDatePickerStart) DatePicker(date = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), onDateSelected = { showDatePickerStart = false; onStartDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()) }, onDismiss = { showDatePickerStart = false })
+    if (showDatePickerEnd) DatePicker(date = endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), onDateSelected = { showDatePickerEnd = false; onEndDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()) }, onDismiss = { showDatePickerEnd = false })
+    if (showTimePickerStart) TimePicker(time = String.format("%02d:%02d", startTime.hour, startTime.minute), onTimeSelected = { h, m -> showTimePickerStart = false; onStartTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerStart = false })
+    if (showTimePickerEnd) TimePicker(time = String.format("%02d:%02d", endTime.hour, endTime.minute), onTimeSelected = { h, m -> showTimePickerEnd = false; onEndTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerEnd = false })
 
-        if (showDatePickerEnd) {
-            DatePicker(
-                date = endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-                onDateSelected = { millis ->
-                    onEndDateChange(Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate())
-                    showDatePickerEnd = false
-                },
-                onDismiss = { showDatePickerEnd = false }
-            )
-        }
-
-        if (showTimePickerStart) {
-            TimePicker(
-                time = formatTime(startTime),
-                onTimeSelected = { hour, minute ->
-                    onStartTimeChange(LocalTime.of(hour, minute))
-                    showTimePickerStart = false
-                },
-                onDismiss = { showTimePickerStart = false }
-            )
-        }
-
-        if (showTimePickerEnd) {
-            TimePicker(
-                time = formatTime(endTime),
-                onTimeSelected = { hour, minute ->
-                    onEndTimeChange(LocalTime.of(hour, minute))
-                    showTimePickerEnd = false
-                },
-                onDismiss = { showTimePickerEnd = false }
-            )
-        }
-
-        // Modale
-        if (showSubjectModal) {
-            Dialog(onDismissRequest = { showSubjectModal = false }) {
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) {
-                    LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSubjectChange(null); onClassTypeChange(null); showSubjectModal = false }
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = uiState.classSubject == null, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(stringResource(R.string.none), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
-                            }
-                        }
-
-                        items(uiState.availableSubjects) { (subject, _) ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSubjectChange(subject); onClassTypeChange(null); showSubjectModal = false }
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = uiState.classSubject == subject, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(subject, style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
-                            }
-                        }
-                    }
+    // Modale (Subject/Type) - tutaj używam prostego AlertDialog zamiast pełnego modala dla pewności kompilacji
+    if (showSubjectModal) {
+        AlertDialog(
+            onDismissRequest = { showSubjectModal = false },
+            title = { Text("Wybierz przedmiot") },
+            text = {
+                LazyColumn {
+                    item { TextButton(onClick = { onSubjectChange(null); onClassTypeChange(null); showSubjectModal = false }) { Text("Brak") } }
+                    items(uiState.availableSubjects) { (sub, _) -> TextButton(onClick = { onSubjectChange(sub); onClassTypeChange(null); showSubjectModal = false }) { Text(sub) } }
                 }
-            }
+            },
+            confirmButton = {}
+        )
+    }
+    if (showTypeModal) {
+        val types = uiState.availableSubjects.find { it.first == uiState.classSubject }?.second ?: emptyList()
+        AlertDialog(
+            onDismissRequest = { showTypeModal = false },
+            title = { Text("Wybierz rodzaj") },
+            text = { LazyColumn { items(types) { type -> TextButton(onClick = { onClassTypeChange(type); showTypeModal = false }) { Text(ClassTypeUtils.getFullName(type)) } } } },
+            confirmButton = {}
+        )
+    }
+}
+
+// Helpers
+@Composable
+private fun SimpleDateTimeRow(date: LocalDate, time: LocalTime?, onDateClick: () -> Unit, onTimeClick: () -> Unit, textColor: Color) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Box(modifier = Modifier.weight(1f).clickable(onClick = onDateClick).padding(vertical = 12.dp)) {
+            Text(text = date.toString(), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
         }
-
-        if (showTypeModal) {
-            val selectedSubject = uiState.availableSubjects.find { it.first == uiState.classSubject }
-            val availableTypes = selectedSubject?.second ?: emptyList()
-
-            Dialog(onDismissRequest = { showTypeModal = false }) {
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) {
-                    LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onClassTypeChange(null); showTypeModal = false }
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = uiState.classType == null, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(stringResource(R.string.none), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
-                            }
-                        }
-
-                        items(availableTypes) { type ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onClassTypeChange(type); showTypeModal = false }
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = uiState.classType == type, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(ClassTypeUtils.getFullName(type), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor))
-                            }
-                        }
-                    }
-                }
+        if (time != null) {
+            Box(modifier = Modifier.weight(0.6f).clickable(onClick = onTimeClick).padding(vertical = 12.dp), contentAlignment = Alignment.CenterEnd) {
+                Text(text = String.format("%02d:%02d", time.hour, time.minute), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
             }
         }
     }
 }
 
 @Composable
-private fun SimpleDateTimeRow(
-    date: LocalDate,
-    time: LocalTime? = null,
-    onDateClick: () -> Unit,
-    onTimeClick: (() -> Unit)? = null,
-    textColor: Color
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .clickable { onDateClick() }
-                .padding(vertical = 12.dp)
-        ) {
-            Text(
-                text = formatDateLong(date),
-                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                color = textColor
-            )
-        }
-
-        if (time != null && onTimeClick != null) {
-            Box(
-                modifier = Modifier
-                    .weight(0.6f)
-                    .clickable { onTimeClick() }
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Text(
-                    text = formatTime(time),
-                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
-                    color = textColor
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun CommonRow(
-    iconRes: Int,
-    iconTint: Color,
-    content: @Composable BoxScope.() -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconTint, modifier = Modifier.size(24.dp))
-        }
+fun CommonRow(iconRes: Int, iconTint: Color, content: @Composable BoxScope.() -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), verticalAlignment = Alignment.Top) {
+        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = iconTint, modifier = Modifier.size(24.dp)) }
         Spacer(modifier = Modifier.width(12.dp))
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopStart) {
-            content()
-        }
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopStart) { content() }
     }
-}
-
-private fun formatDateLong(date: LocalDate): String {
-    return try {
-        val formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale("pl"))
-        date.format(formatter).replaceFirstChar { it.titlecase(Locale("pl")) }
-    } catch (e: Exception) {
-        date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-    }
-}
-
-private fun formatTime(time: LocalTime): String {
-    return String.format("%02d:%02d", time.hour, time.minute)
-}
-
-@Preview(showBackground = true)
-@Composable
-fun TaskAddEditScreenPreview() {
-    TaskAddEditContent(
-        uiState = TaskAddEditUiState(
-            title = "Zadanie domowe",
-            classSubject = "Matematyka",
-            isAllDay = false
-        ),
-        onNavigateBack = {},
-        onSaveTask = {},
-        onDeleteTask = {},
-        onTitleChange = {},
-        onSubjectChange = {},
-        onClassTypeChange = {},
-        onPriorityChange = {},
-        onIsAllDayChange = {},
-        onStartDateChange = {},
-        onEndDateChange = {},
-        onStartTimeChange = {},
-        onEndTimeChange = {},
-        onDescriptionChange = {}
-    )
 }

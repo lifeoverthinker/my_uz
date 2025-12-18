@@ -64,7 +64,7 @@ fun TaskDetailsScreen(
                                     showMenu = false
                                     viewModel.duplicateTask { onNavigateBack() }
                                 },
-                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) } // Używam Add jako ikony duplikacji
+                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) }
                             )
                             DropdownMenuItem(
                                 text = { Text("Usuń") },
@@ -87,12 +87,8 @@ fun TaskDetailsScreen(
             contentAlignment = Alignment.Center
         ) {
             when (val state = uiState) {
-                is TaskDetailsUiState.Loading -> {
-                    CircularProgressIndicator()
-                }
-                is TaskDetailsUiState.Error -> {
-                    Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                }
+                is TaskDetailsUiState.Loading -> CircularProgressIndicator()
+                is TaskDetailsUiState.Error -> Text(text = state.message, color = MaterialTheme.colorScheme.error)
                 is TaskDetailsUiState.Success -> {
                     val task = state.task
                     Column(
@@ -101,7 +97,6 @@ fun TaskDetailsScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Tytuł
                         Text(
                             text = task.title,
                             style = MaterialTheme.typography.headlineMedium,
@@ -109,7 +104,6 @@ fun TaskDetailsScreen(
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        // Checkbox ukończenia
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
@@ -126,7 +120,6 @@ fun TaskDetailsScreen(
 
                         Divider()
 
-                        // Szczegóły
                         if (!task.subjectName.isNullOrEmpty()) {
                             DetailRow(label = "Przedmiot", value = task.subjectName)
                         }
@@ -135,18 +128,13 @@ fun TaskDetailsScreen(
                             DetailRow(label = "Rodzaj", value = ClassTypeUtils.getFullName(task.classType))
                         }
 
-                        // Data
-                        val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
-                            .withZone(ZoneId.systemDefault())
-                        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-                            .withZone(ZoneId.systemDefault())
-
+                        val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy").withZone(ZoneId.systemDefault())
+                        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
                         val dateStr = dateFormatter.format(Instant.ofEpochMilli(task.dueDate))
                         val timeStr = if (!task.isAllDay) ", ${timeFormatter.format(Instant.ofEpochMilli(task.dueDate))}" else ""
 
                         DetailRow(label = "Termin", value = "$dateStr$timeStr")
 
-                        // Opis
                         if (!task.description.isNullOrEmpty()) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(text = "Opis", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -162,14 +150,7 @@ fun TaskDetailsScreen(
 @Composable
 fun DetailRow(label: String, value: String) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.secondary
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge
-        )
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+        Text(text = value, style = MaterialTheme.typography.bodyLarge)
     }
 }

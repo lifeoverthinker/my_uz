@@ -168,7 +168,6 @@ fun HomeScreen(
                                     classes = uiState.upcomingClasses,
                                     emptyMessage = uiState.classesMessage,
                                     dayLabel = uiState.classesDayLabel,
-                                    // ✅ Przekazanie mapy kolorów
                                     classColorMap = uiState.classColorMap,
                                     onClassClick = onClassClick
                                 )
