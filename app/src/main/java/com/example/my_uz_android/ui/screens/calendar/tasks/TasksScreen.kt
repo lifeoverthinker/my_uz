@@ -42,7 +42,7 @@ fun TasksScreen(
     onAddTaskClick: () -> Unit,
     onTaskClick: (TaskEntity) -> Unit,
     modifier: Modifier = Modifier,
-    // Parametry nawigacji dolnej (wymagane przez sygnaturę w AppNavigation, nawet jeśli puste)
+    // Callbacki nawigacyjne
     onHomeClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onAccountClick: () -> Unit = {},
@@ -51,17 +51,12 @@ fun TasksScreen(
     viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory),
     calendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    // Stan zadań
     val tasks by viewModel.tasksStream.collectAsState(initial = emptyList())
-
-    // Stan kalendarza (tytuł, drawer)
     val calendarUiState by calendarViewModel.uiState.collectAsState()
 
-    // Logika Drawera
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // Grupowanie zadań po miesiącach i dniach
     val groupedByMonth = remember(tasks) {
         tasks
             .sortedBy { it.dueDate }
@@ -75,20 +70,30 @@ fun TasksScreen(
 
     val backgroundColor = MaterialTheme.colorScheme.surface
 
-    // --- STRUKTURA EKRANU Z DRAWEREM ---
+    // ✅ INTEGRACJA DRAWERA (Poprawione parametry)
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             CalendarDrawerContent(
-                selectedSource = calendarUiState.selectedSource,
                 favorites = calendarUiState.favorites,
-                onSelect = { source ->
-                    calendarViewModel.selectSchedule(source)
+                selectedResourceId = calendarUiState.selectedResourceId,
+                onMyPlanClick = {
+                    calendarViewModel.selectMyPlan()
                     scope.launch { drawerState.close() }
                 },
-                onCloseDrawer = {
+                onFavoriteClick = { fav ->
+                    calendarViewModel.selectFavoritePlan(fav)
                     scope.launch { drawerState.close() }
-                }
+                },
+                onSearchClick = {
+                    scope.launch { drawerState.close() }
+                    // TODO: Nawigacja do wyszukiwarki (Etap 3)
+                },
+                onSettingsClick = {
+                    scope.launch { drawerState.close() }
+                    onAccountClick() // Przejście do ustawień/konta
+                },
+                onCloseDrawer = { scope.launch { drawerState.close() } }
             )
         }
     ) {
@@ -99,8 +104,7 @@ fun TasksScreen(
                     CenterAlignedTopAppBar(
                         title = {
                             Text(
-                                // Tytuł dynamiczny: "Mój Plan" lub nazwa Ulubionego
-                                text = calendarViewModel.getCurrentTitle(),
+                                text = calendarUiState.selectedPlanName,
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -115,21 +119,18 @@ fun TasksScreen(
                             }
                         },
                         actions = {
-                            IconButton(onClick = { /* TODO: Wyszukiwarka (Etap 3) */ }) {
+                            IconButton(onClick = { /* TODO: Search */ }) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_search),
                                     contentDescription = "Szukaj"
                                 )
                             }
                         },
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = backgroundColor
-                        )
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = backgroundColor)
                     )
                 }
             ) { innerPadding ->
                 if (tasks.isEmpty()) {
-                    // PUSTY STAN
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -142,9 +143,7 @@ fun TasksScreen(
                                 contentDescription = null,
                                 modifier = Modifier.size(220.dp)
                             )
-
                             Spacer(modifier = Modifier.height(24.dp))
-
                             Text(
                                 text = stringResource(R.string.tasks_empty_title),
                                 fontFamily = InterFontFamily,
@@ -154,7 +153,6 @@ fun TasksScreen(
                         }
                     }
                 } else {
-                    // LISTA ZADAŃ Z NAGŁÓWKAMI
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -164,33 +162,21 @@ fun TasksScreen(
                             stickyHeader {
                                 MonthHeaderSticky(yearMonth = yearMonth, backgroundColor = backgroundColor)
                             }
-
                             val tasksByDay = tasksInMonth.groupBy {
-                                Instant.ofEpochMilli(it.dueDate)
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalDate()
+                                Instant.ofEpochMilli(it.dueDate).atZone(ZoneId.systemDefault()).toLocalDate()
                             }
-
                             items(
                                 items = tasksByDay.toList(),
                                 key = { (date, _) -> date.toEpochDay() }
                             ) { (date, dailyTasks) ->
-                                DayScheduleRow(
-                                    date = date,
-                                    tasks = dailyTasks,
-                                    onTaskClick = onTaskClick
-                                )
+                                DayScheduleRow(date = date, tasks = dailyTasks, onTaskClick = onTaskClick)
                             }
                         }
-
-                        item {
-                            Spacer(modifier = Modifier.height(80.dp))
-                        }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
                 }
             }
 
-            // FAB
             UniversalFab(
                 isExpandable = false,
                 isExpanded = false,
@@ -201,108 +187,35 @@ fun TasksScreen(
     }
 }
 
-// --- KOMPONENTY POMOCNICZE ---
+// --- Komponenty pomocnicze (bez zmian) ---
 
 @Composable
-fun MonthHeaderSticky(
-    yearMonth: YearMonth,
-    backgroundColor: Color
-) {
+fun MonthHeaderSticky(yearMonth: YearMonth, backgroundColor: Color) {
     val formatter = remember { DateTimeFormatter.ofPattern("MMMM yyyy", Locale("pl")) }
-    val title = yearMonth.format(formatter).replaceFirstChar {
-        if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString()
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(backgroundColor)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        )
+    val title = yearMonth.format(formatter).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
+    Box(modifier = Modifier.fillMaxWidth().background(backgroundColor).padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(text = title, style = MaterialTheme.typography.titleMedium.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface))
     }
 }
 
 @Composable
-fun DayScheduleRow(
-    date: LocalDate,
-    tasks: List<TaskEntity>,
-    onTaskClick: (TaskEntity) -> Unit
-) {
+fun DayScheduleRow(date: LocalDate, tasks: List<TaskEntity>, onTaskClick: (TaskEntity) -> Unit) {
     val isToday = date == LocalDate.now()
-    val dayOfWeekShort = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl"))
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
-        .replace(".", "")
+    val dayOfWeekShort = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl")).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }.replace(".", "")
     val dayOfMonth = date.dayOfMonth.toString()
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        // Lewa kolumna: Dzień
-        Column(
-            modifier = Modifier
-                .width(50.dp)
-                .padding(top = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = dayOfWeekShort,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
-                )
-            )
-
+    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.Top) {
+        Column(modifier = Modifier.width(50.dp).padding(top = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = dayOfWeekShort, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium))
             Spacer(modifier = Modifier.height(4.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isToday) MaterialTheme.colorScheme.primary
-                        else Color.Transparent
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = dayOfMonth,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isToday) MaterialTheme.colorScheme.onPrimary
-                        else MaterialTheme.colorScheme.onSurface
-                    )
-                )
+            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent), contentAlignment = Alignment.Center) {
+                Text(text = dayOfMonth, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface))
             }
         }
-
         Spacer(modifier = Modifier.width(12.dp))
-
-        // Prawa kolumna: Lista zadań
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             tasks.forEach { task ->
-                TaskCard(
-                    task = task,
-                    onTaskClick = { onTaskClick(task) },
-                    showDayMarker = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                TaskCard(task = task, onTaskClick = { onTaskClick(task) }, showDayMarker = true, modifier = Modifier.fillMaxWidth())
             }
         }
     }
