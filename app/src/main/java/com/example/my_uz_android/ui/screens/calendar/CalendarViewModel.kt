@@ -3,7 +3,6 @@ package com.example.my_uz_android.ui.screens.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.FavoriteEntity
-import com.example.my_uz_android.data.models.ScheduleType
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.FavoritesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,17 +11,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-// Źródło danych: Mój Plan, Ulubione, Udostępnione
-sealed class ScheduleSource {
-    data object MyPlan : ScheduleSource()
-    data class Favorite(val entity: FavoriteEntity) : ScheduleSource()
-    data object Shared : ScheduleSource()
-}
-
 data class CalendarUiState(
-    val selectedSource: ScheduleSource = ScheduleSource.MyPlan,
     val favorites: List<FavoriteEntity> = emptyList(),
-    val drawerOpen: Boolean = false
+    val selectedResourceId: String? = null, // null = Mój Plan
+    val selectedPlanName: String = "Mój Terminarz"
 )
 
 class CalendarViewModel(
@@ -39,24 +31,26 @@ class CalendarViewModel(
 
     private fun loadFavorites() {
         viewModelScope.launch {
-            favoritesRepository.getAllFavorites().collectLatest { list ->
+            // ✅ Używamy poprawnej nazwy metody: getAllFavoritesStream()
+            favoritesRepository.getAllFavoritesStream().collectLatest { list ->
                 _uiState.value = _uiState.value.copy(favorites = list)
             }
         }
     }
 
-    fun selectSchedule(source: ScheduleSource) {
+    fun selectMyPlan() {
         _uiState.value = _uiState.value.copy(
-            selectedSource = source
+            selectedResourceId = null,
+            selectedPlanName = "Mój Terminarz"
         )
-        // TODO: Tutaj w przyszłości dodamy logikę przeładowania danych w kalendarzu
+        // TODO: Tutaj w przyszłości odśwież dane w ClassRepository dla zalogowanego studenta
     }
 
-    fun getCurrentTitle(): String {
-        return when (val source = _uiState.value.selectedSource) {
-            is ScheduleSource.MyPlan -> "Mój Plan"
-            is ScheduleSource.Favorite -> source.entity.name
-            is ScheduleSource.Shared -> "Udostępniony"
-        }
+    fun selectFavoritePlan(favorite: FavoriteEntity) {
+        _uiState.value = _uiState.value.copy(
+            selectedResourceId = favorite.resourceId,
+            selectedPlanName = favorite.name
+        )
+        // TODO: Tutaj w przyszłości pobierz plan dla resourceId
     }
 }

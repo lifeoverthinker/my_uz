@@ -1,5 +1,6 @@
 package com.example.my_uz_android.data.models
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -7,12 +8,13 @@ import androidx.room.PrimaryKey
 data class FavoriteEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val name: String, // np. "32INF-SP" lub "Dr Jan Kowalski"
-    val type: String, // Używamy wartości z ScheduleType (np. "GROUP", "TEACHER")
-    val code: String  // Unikalny identyfikator do pobierania planu
-)
 
-object ScheduleType {
-    const val GROUP = "GROUP"
-    const val TEACHER = "TEACHER"
-}
+    @ColumnInfo(name = "name")
+    val name: String,
+
+    @ColumnInfo(name = "type")
+    val type: String,
+
+    @ColumnInfo(name = "resource_id") // ✅ To jest poprawna nazwa kolumny
+    val resourceId: String
+)

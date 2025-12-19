@@ -10,8 +10,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface FavoritesDao {
-    @Query("SELECT * FROM favorites ORDER BY id DESC")
-    fun getAllFavorites(): Flow<List<FavoriteEntity>>
+    // ✅ Poprawne zapytanie o wszystkie ulubione
+    @Query("SELECT * FROM favorites ORDER BY name ASC")
+    fun getAllFavoritesStream(): Flow<List<FavoriteEntity>>
+
+    // ✅ Poprawne zapytanie sprawdzające istnienie (używamy resource_id)
+    // Zwraca Boolean (suspend), co jest łatwiejsze w obsłudze niż Flow<Boolean> w tym przypadku
+    @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE resource_id = :resourceId LIMIT 1)")
+    suspend fun isFavorite(resourceId: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFavorite(favorite: FavoriteEntity)
@@ -19,7 +25,7 @@ interface FavoritesDao {
     @Delete
     suspend fun deleteFavorite(favorite: FavoriteEntity)
 
-    // Sprawdzenie, czy dany plan jest już w ulubionych (do obsługi "gwiazdki")
-    @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE code = :code AND type = :type)")
-    fun isFavorite(code: String, type: String): Flow<Boolean>
+    // ✅ Poprawne usuwanie po ID zasobu (używamy resource_id)
+    @Query("DELETE FROM favorites WHERE resource_id = :resourceId")
+    suspend fun deleteByResourceId(resourceId: String)
 }

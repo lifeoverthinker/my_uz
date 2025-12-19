@@ -4,18 +4,20 @@ import com.example.my_uz_android.data.daos.FavoritesDao
 import com.example.my_uz_android.data.models.FavoriteEntity
 import kotlinx.coroutines.flow.Flow
 
-class FavoritesRepository(private val favoritesDao: FavoritesDao) {
+class FavoritesRepository(
+    private val favoritesDao: FavoritesDao
+) {
+    // ✅ Nazwa metody: getAllFavoritesStream
+    fun getAllFavoritesStream(): Flow<List<FavoriteEntity>> = favoritesDao.getAllFavoritesStream()
 
-    fun getAllFavorites(): Flow<List<FavoriteEntity>> = favoritesDao.getAllFavorites()
-
-    fun isFavorite(code: String, type: String): Flow<Boolean> = favoritesDao.isFavorite(code, type)
-
-    suspend fun addFavorite(name: String, type: String, code: String) {
-        val favorite = FavoriteEntity(name = name, type = type, code = code)
-        favoritesDao.insertFavorite(favorite)
+    suspend fun addFavorite(name: String, type: String, resourceId: String) {
+        val entity = FavoriteEntity(name = name, type = type, resourceId = resourceId)
+        favoritesDao.insertFavorite(entity)
     }
 
-    suspend fun removeFavorite(favorite: FavoriteEntity) {
-        favoritesDao.deleteFavorite(favorite)
+    suspend fun removeFavorite(resourceId: String) {
+        favoritesDao.deleteByResourceId(resourceId)
     }
+
+    suspend fun isFavorite(resourceId: String): Boolean = favoritesDao.isFavorite(resourceId)
 }
