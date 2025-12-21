@@ -167,6 +167,15 @@ fun AppNavigation(
             }
 
             composable(Screen.Calendar.route) {
+                com.example.my_uz_android.ui.screens.calendar.CalendarScreen(
+                    onSearchClick = { navController.navigate("schedule_search") },
+                    onTasksClick = { navController.navigate("tasks") },
+                    onAccountClick = { navController.navigate(Screen.Account.route) }
+                )
+            }
+
+            // --- NOWA TRASA DLA TERMINARZA (ZADAŃ) DOSTĘPNA Z DRAWERA ---
+            composable("tasks") {
                 TasksScreen(
                     onAddTaskClick = { navController.navigate("add_task") },
                     onTaskClick = { task -> navController.navigate("task_details/${task.id}") },
@@ -357,7 +366,6 @@ fun AppNavigation(
                 val subject = backStackEntry.arguments?.getString("subject")
                 val classType = backStackEntry.arguments?.getString("classType")
 
-                // ✅ FIX: Dodano brakujący parametr onNavigateBack
                 AddEditAbsenceScreen(
                     absenceId = null,
                     prefilledSubject = subject,

@@ -22,14 +22,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-// Importujemy Twój nowy TopAppBar
-import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.CalendarTopAppBar
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
 import com.example.my_uz_android.ui.theme.InterFontFamily
-import com.example.my_uz_android.ui.theme.extendedColors
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -45,14 +43,11 @@ fun TasksScreen(
     onAddTaskClick: () -> Unit,
     onTaskClick: (TaskEntity) -> Unit,
     modifier: Modifier = Modifier,
-    // Callbacki nawigacyjne
     onHomeClick: () -> Unit = {},
     onCalendarClick: () -> Unit = {},
     onAccountClick: () -> Unit = {},
     onIndexClick: () -> Unit = {},
-    // Callback do wyszukiwania
     onSearchClick: () -> Unit = {},
-    // ViewModele
     viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory),
     calendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -84,10 +79,15 @@ fun TasksScreen(
                 onMyPlanClick = {
                     calendarViewModel.selectMyPlan()
                     scope.launch { drawerState.close() }
+                    onCalendarClick()
+                },
+                onTasksClick = {
+                    scope.launch { drawerState.close() }
                 },
                 onFavoriteClick = { fav ->
                     calendarViewModel.selectFavoritePlan(fav)
                     scope.launch { drawerState.close() }
+                    onCalendarClick()
                 },
                 onSearchClick = {
                     scope.launch { drawerState.close() }
@@ -105,15 +105,12 @@ fun TasksScreen(
             Scaffold(
                 containerColor = backgroundColor,
                 topBar = {
-                    TopAppBar(
-                        title = calendarUiState.selectedPlanName,
-                        isCenterAligned = true,
-                        navigationIcon = R.drawable.ic_menu, // Poprawna ikonka
-                        isNavigationIconFilled = true, // Włącza styl "kółka"
+                    CalendarTopAppBar(
+                        title = "Terminarz",
                         onNavigationClick = { scope.launch { drawerState.open() } },
-                        actions = {
-                            // Puste akcje (brak lupy)
-                        }
+                        onSearchClick = onSearchClick,
+                        onAddClick = onAddTaskClick,
+                        onTitleClick = null
                     )
                 }
             ) { innerPadding ->
@@ -173,8 +170,6 @@ fun TasksScreen(
         }
     }
 }
-
-// --- Komponenty pomocnicze ---
 
 @Composable
 fun MonthHeaderSticky(yearMonth: YearMonth, backgroundColor: Color) {

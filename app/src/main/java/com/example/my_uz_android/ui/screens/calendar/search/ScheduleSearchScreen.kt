@@ -11,11 +11,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.TopAppBar // Używamy standardowego paska
 
 @Composable
 fun ScheduleSearchScreen(
-    onNavigateBack: () -> Unit, // ✅ Teraz nazwa pasuje do AppNavigation
+    onNavigateBack: () -> Unit,
     viewModel: ScheduleSearchViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -35,7 +35,14 @@ fun ScheduleSearchScreen(
                 onValueChange = { viewModel.onQueryChange(it) },
                 label = { Text("Wpisz kod grupy lub nazwisko") },
                 modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(painterResource(R.drawable.ic_search), null) }
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_search),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp) // Wymiary ikony
+                    )
+                },
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -51,9 +58,10 @@ fun ScheduleSearchScreen(
                         trailingContent = {
                             IconButton(onClick = { viewModel.toggleFavorite(result) }) {
                                 Icon(
-                                    painter = painterResource(if (result.isFavorite) R.drawable.ic_heart else R.drawable.ic_heart), // Użyj odpowiednich ikon wypełnionych/pustych jeśli masz
+                                    painter = painterResource(if (result.isFavorite) R.drawable.ic_heart else R.drawable.ic_heart),
                                     contentDescription = null,
-                                    tint = if (result.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    tint = if (result.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
