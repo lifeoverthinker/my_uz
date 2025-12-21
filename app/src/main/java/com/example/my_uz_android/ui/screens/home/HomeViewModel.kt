@@ -69,8 +69,8 @@ class HomeViewModel(
             }
             // SCENARIUSZ 2: TRYB ANONIMOWY (Anonimowy, ale z grupą)
             isAnonymous && hasGroup -> {
-                val suffix = if (gender == "STUDENTKA") "studentko" else "studencie"
-                "Cześć $suffix 👋" to "" // Inicjały puste, bo to anonim
+                val suffix = if (gender == "STUDENTKA") "Studentko" else "Studencie"
+                "Cześć, $suffix 👋" to "" // Inicjały puste, bo to anonim
             }
             // SCENARIUSZ 3: TRYB PEŁNY (Z imieniem)
             else -> {
