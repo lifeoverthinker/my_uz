@@ -56,30 +56,47 @@ class HomeViewModel(
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
 
-        val rawName = settings?.userName ?: ""
+        // --- NOWA LOGIKA POWITAŃ ---
         val isAnonymous = settings?.isAnonymous == true
+        val hasGroup = !settings?.selectedGroupCode.isNullOrBlank()
+        val gender = settings?.gender // "STUDENT" lub "STUDENTKA"
 
-        val (greeting, initials) = if (isAnonymous || rawName.isBlank()) {
-            "Witaj w MyUZ!" to ""
-        } else {
-            val parts = rawName.trim().split(" ").filter { it.isNotBlank() }
-            val firstName = parts.firstOrNull() ?: ""
-            val initialsStr = if (parts.size >= 2) {
-                "${parts.first().take(1)}${parts.last().take(1)}"
-            } else {
-                firstName.take(2)
-            }.uppercase()
-            "Cześć, $firstName 👋" to initialsStr
+        // 1. Ustalanie Powitania i Inicjałów
+        val (greeting, initials) = when {
+            // SCENARIUSZ 1: TRYB GOŚCIA (Pomiń - brak grupy)
+            isAnonymous && !hasGroup -> {
+                "Witaj w MyUZ!" to ""
+            }
+            // SCENARIUSZ 2: TRYB ANONIMOWY (Anonimowy, ale z grupą)
+            isAnonymous && hasGroup -> {
+                val suffix = if (gender == "STUDENTKA") "studentko" else "studencie"
+                "Cześć $suffix 👋" to "" // Inicjały puste, bo to anonim
+            }
+            // SCENARIUSZ 3: TRYB PEŁNY (Z imieniem)
+            else -> {
+                val rawName = settings?.userName ?: ""
+                val parts = rawName.trim().split(" ").filter { it.isNotBlank() }
+                val firstName = parts.firstOrNull() ?: ""
+                val initialsStr = if (parts.size >= 2) {
+                    "${parts.first().take(1)}${parts.last().take(1)}"
+                } else {
+                    firstName.take(2)
+                }.uppercase()
+                "Cześć, $firstName 👋" to initialsStr
+            }
         }
 
+        // 2. Ustalanie Podtytułu (Wydział lub Uczelnia)
         val faculty = settings?.faculty
-        val departmentInfo = if (isAnonymous) "Tryb gościa" else if (!faculty.isNullOrBlank()) {
-            faculty
-        } else {
-            "Uniwersytet Zielonogórski"
+        val departmentInfo = when {
+            // Dla Gościa zawsze Uczelnia
+            isAnonymous && !hasGroup -> "Uniwersytet Zielonogórski"
+            // Dla reszty (Anonim i Student) - nazwa wydziału jeśli jest, w przeciwnym razie Uczelnia
+            !faculty.isNullOrBlank() -> faculty
+            else -> "Uniwersytet Zielonogórski"
         }
 
-        val isPlanSelected = !settings?.selectedGroupCode.isNullOrBlank()
+        val isPlanSelected = hasGroup // Używamy tej samej flagi co wyżej
 
         val todayString = today.toString()
         val tomorrowString = today.plusDays(1).toString()
