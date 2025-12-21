@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,7 +35,6 @@ import com.kizitonwose.calendar.compose.weekcalendar.rememberWeekCalendarState
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.atStartOfMonth
 import com.kizitonwose.calendar.core.daysOfWeek
-import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -44,16 +42,19 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-// --- STAŁE WYMIARY I KOLORY ---
+private val PolandZone = ZoneId.of("Europe/Warsaw")
+
+// Wymiary
 private val HourHeight = 60.dp
-private val HourColWidth = 60.dp // Zwiększono nieco, aby zmieścić tekst + odstęp + kreskę
-private val LineOverlap = 8.dp   // Długość poziomej kreseczki przy godzinie
-private val TextGap = 5.dp       // Odstęp tekstu od kreseczki
-private val TextVerticalOffset = (-5).dp // Wyśrodkowanie tekstu względem linii
+private val HourColWidth = 50.dp // Dopasowane do krawędzi
+private val LineOverlap = 8.dp
+private val TextGap = 4.dp
+private val TextVerticalOffset = (-5).dp
 
 private val ColorSelectedBg = Color(0xFF6750A4)
 private val ColorTextDark = Color(0xFF4A4A4A)
@@ -68,15 +69,15 @@ fun CalendarScreen(
     onSearchClick: () -> Unit,
     onTasksClick: () -> Unit,
     onAccountClick: () -> Unit,
-    // Dodano parametr do obsługi kliknięcia w zajęcia
     onClassClick: (Int) -> Unit = {},
     viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allClasses by viewModel.classes.collectAsState()
+    val classColorMap = uiState.classColorMap // Teraz ViewModel ma to pole
 
-    val currentDate = remember { LocalDate.now() }
-    val currentMonth = remember { YearMonth.now() }
+    val currentDate = remember { LocalDate.now(PolandZone) }
+    val currentMonth = remember { YearMonth.now(PolandZone) }
     val startMonth = remember { currentMonth.minusMonths(24) }
     val endMonth = remember { currentMonth.plusMonths(24) }
 
@@ -88,7 +89,6 @@ fun CalendarScreen(
 
     val classesForDay = remember(allClasses, selectedDate) {
         allClasses.filter {
-            // Logika filtrowania (dostosuj do swoich potrzeb, np. po dacie)
             it.dayOfWeek == (selectedDate.dayOfWeek.value - 1)
         }.sortedBy { it.startTime }
     }
@@ -112,7 +112,7 @@ fun CalendarScreen(
 
     // Auto-scroll do 8:00
     LaunchedEffect(Unit) {
-        scrollState.scrollTo(1200)
+        scrollState.scrollTo(480 * 2)
     }
 
     val titleMonth = if (isMonthView) {
@@ -169,8 +169,6 @@ fun CalendarScreen(
                     .background(Color.White)
                     .padding(horizontal = 16.dp)
             ) {
-                Spacer(modifier = Modifier.height(10.dp))
-
                 // --- 1. NAGŁÓWEK DNI TYGODNIA ---
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Spacer(modifier = Modifier.width(HourColWidth))
@@ -232,31 +230,29 @@ fun CalendarScreen(
                         .verticalScroll(scrollState)
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        // Generujemy godziny 0..24
+                        // Godziny 0..24
                         repeat(25) { index ->
                             HourRow(hour = index, isLastLine = index == 24)
                         }
-
-                        // Brak dodatkowego dużego odstępu, tylko tyle by navbar nie zasłaniał
-                        Spacer(modifier = Modifier.height(24.dp))
                     }
 
                     // --- WARSTWA ZAJĘĆ ---
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = HourColWidth) // Zajmuje wszystko od linii pionowej w prawo
+                            .padding(start = HourColWidth)
                     ) {
                         classesForDay.forEach { classEntity ->
                             ScheduledClassItem(
                                 classEntity = classEntity,
                                 selectedDate = selectedDate,
+                                classColorMap = classColorMap,
                                 onClassClick = onClassClick
                             )
                         }
                     }
 
-                    if (selectedDate == LocalDate.now()) {
+                    if (selectedDate == LocalDate.now(PolandZone)) {
                         CurrentTimeIndicator()
                     }
                 }
@@ -298,7 +294,7 @@ fun Day(
     isSelected: Boolean,
     onClick: (LocalDate) -> Unit
 ) {
-    val isToday = date == LocalDate.now()
+    val isToday = date == LocalDate.now(PolandZone)
     val textColor = if (isDateInMonth) {
         if (isSelected) Color.White
         else if (isToday) Color(0xFF6750A4)
@@ -348,13 +344,10 @@ fun Day(
 
 @Composable
 fun HourRow(hour: Int, isLastLine: Boolean) {
-    // Wysokość wiersza (jeśli ostatnia linia = 1dp dla domknięcia, inaczej 60dp)
     val rowHeight = if (isLastLine) 1.dp else HourHeight
 
     Row(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
-        // KOLUMNA GODZIN (LEWA STRONA)
         Box(modifier = Modifier.width(HourColWidth).fillMaxHeight()) {
-            // Logika wyświetlania tekstu godziny
             if (!isLastLine && hour != 0) {
                 Text(
                     text = String.format("%d:00", hour),
@@ -366,41 +359,35 @@ fun HourRow(hour: Int, isLastLine: Boolean) {
                     ),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        // Matematyka odstępów: Text | 5dp | LineOverlap(8dp) | VerticalDivider
                         .padding(end = (LineOverlap + TextGap))
                         .offset(y = TextVerticalOffset)
                 )
-            }
 
-            // Ozdobnik: Pozioma kreska ("krzyżyk") wychodząca z pionowej linii w lewo
-            // Rysujemy zawsze, chyba że to 0:00 lub 24:00 (user prosił usunąć dla granicznych)
-            if (hour != 0 && !isLastLine) {
                 HorizontalDivider(
                     modifier = Modifier
-                        .width(LineOverlap) // 8dp
-                        .align(Alignment.TopEnd), // Styk z pionową linią
+                        .width(LineOverlap)
+                        .align(Alignment.TopEnd),
                     thickness = 1.dp,
                     color = ColorDivider
                 )
             }
         }
 
-        // PIONOWA LINIA (Separator) - Zawsze ciągła na całą wysokość
         VerticalDivider(
             modifier = Modifier.fillMaxHeight(),
             thickness = 1.dp,
             color = ColorDivider
         )
 
-        // POZIOMA LINIA (PRAWA STRONA - SIATKA)
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            // Ukrywamy linię dla 0:00 i >23:00 (isLastLine)
-            if (hour != 0 && !isLastLine) {
-                HorizontalDivider(
-                    modifier = Modifier.align(Alignment.TopStart),
-                    thickness = 1.dp,
-                    color = ColorDivider
-                )
+            if (hour != 0 || isLastLine) {
+                if (hour != 0 && !isLastLine) {
+                    HorizontalDivider(
+                        modifier = Modifier.align(Alignment.TopStart),
+                        thickness = 1.dp,
+                        color = ColorDivider
+                    )
+                }
             }
         }
     }
@@ -410,46 +397,50 @@ fun HourRow(hour: Int, isLastLine: Boolean) {
 fun ScheduledClassItem(
     classEntity: ClassEntity,
     selectedDate: LocalDate,
+    classColorMap: Map<String, Int>,
     onClassClick: (Int) -> Unit
 ) {
     val startParts = classEntity.startTime.split(":")
     val startMinutes = startParts[0].toInt() * 60 + startParts[1].toInt()
-
     val endParts = classEntity.endTime.split(":")
     val endMinutes = endParts[0].toInt() * 60 + endParts[1].toInt()
-
     val durationMinutes = endMinutes - startMinutes
 
-    // 1 minuta = 1 dp (przy HourHeight = 60dp)
     val topOffset = startMinutes.dp
     val height = durationMinutes.dp
 
-    // --- LOGIKA CZASU (Kropka / Przezroczystość) ---
-    val now = LocalDateTime.now()
-    val classStartDateTime = LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
+    val now = LocalDateTime.now(PolandZone)
     val classEndDateTime = LocalDateTime.of(selectedDate, LocalTime.of(endParts[0].toInt(), endParts[1].toInt()))
+    val classStartDateTime = LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
 
-    val isPast = now.isAfter(classEndDateTime) // Zniknęła kropka, włącz przezroczystość
-    val isFuture = now.isBefore(classStartDateTime) // Jeszcze się nie zaczęły (pokaż kropkę)
+    val isPast = now.isAfter(classEndDateTime)
+    val isFuture = now.isBefore(classStartDateTime)
+
+    val assignedColorInt = classColorMap[classEntity.subjectName]
+    val baseColor = if (assignedColorInt != null) Color(assignedColorInt) else MaterialTheme.colorScheme.secondaryContainer
+
+    // Tło dla przeszłych zajęć: ten sam kolor, ale przezroczysty
+    val cardBackgroundColor = baseColor
+    val containerAlpha = if (isPast) 0.5f else 1f
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            // Brak paddingu bocznego - karta wypełnia kolumnę
             .padding(bottom = 2.dp)
             .offset(y = topOffset)
             .height(height)
-            .alpha(if (isPast) 0.5f else 1f) // Przezroczyste tylko jak minęły
+            .alpha(containerAlpha)
     ) {
         ClassCard(
             classItem = classEntity,
             type = ClassCardType.CALENDAR,
-            backgroundColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+            backgroundColor = cardBackgroundColor,
             accentColor = ColorSelectedBg,
-            onClick = { onClassClick(classEntity.id) }
+            onClick = { onClassClick(classEntity.id) },
+            modifier = Modifier.fillMaxSize()
         )
 
-        // Kropka tylko jeśli zajęcia są w przyszłości
+        // Kropka TYLKO jeśli przyszłe zajęcia
         if (isFuture) {
             Box(
                 modifier = Modifier
@@ -465,11 +456,11 @@ fun ScheduledClassItem(
 
 @Composable
 fun CurrentTimeIndicator() {
-    var currentTime by remember { mutableStateOf(LocalTime.now()) }
+    var currentTime by remember { mutableStateOf(LocalTime.now(PolandZone)) }
 
     LaunchedEffect(Unit) {
         while(true) {
-            currentTime = LocalTime.now()
+            currentTime = LocalTime.now(PolandZone)
             delay(60_000)
         }
     }

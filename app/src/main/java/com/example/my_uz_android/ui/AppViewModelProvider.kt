@@ -9,7 +9,7 @@ import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.ui.screens.account.AccountViewModel
 import com.example.my_uz_android.ui.screens.account.SettingsViewModel
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
-import com.example.my_uz_android.ui.screens.calendar.search.ScheduleSearchViewModel // ✅ Import
+import com.example.my_uz_android.ui.screens.calendar.search.ScheduleSearchViewModel
 import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditViewModel
 import com.example.my_uz_android.ui.screens.calendar.tasks.TasksViewModel
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
@@ -84,7 +84,7 @@ object AppViewModelProvider {
 
         initializer {
             AddEditGradeViewModel(
-                savedStateHandle = this.createSavedStateHandle(), // ✅ Dodano (niezbędne!)
+                savedStateHandle = this.createSavedStateHandle(),
                 gradesRepository = myUZApplication().container.gradesRepository,
                 classRepository = myUZApplication().container.classRepository,
                 settingsRepository = myUZApplication().container.settingsRepository
@@ -100,7 +100,7 @@ object AppViewModelProvider {
 
         initializer {
             AddEditAbsenceViewModel(
-                savedStateHandle = this.createSavedStateHandle(), // ✅ Dodano (niezbędne!)
+                savedStateHandle = this.createSavedStateHandle(),
                 absenceRepository = myUZApplication().container.absenceRepository,
                 classRepository = myUZApplication().container.classRepository
             )
@@ -137,11 +137,12 @@ object AppViewModelProvider {
         initializer {
             CalendarViewModel(
                 favoritesRepository = myUZApplication().container.favoritesRepository,
-                classRepository = myUZApplication().container.classRepository
+                classRepository = myUZApplication().container.classRepository,
+                // WAŻNE: Dodano settingsRepository, aby ViewModel mógł pobrać kolory
+                settingsRepository = myUZApplication().container.settingsRepository
             )
         }
 
-        // ✅ Dodano, bo ten ekran jest w Navigation
         initializer {
             ScheduleSearchViewModel(
                 universityRepository = myUZApplication().container.universityRepository,
