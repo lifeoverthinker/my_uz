@@ -27,12 +27,13 @@ fun CalendarDrawerContent(
     favorites: List<FavoriteEntity>,
     selectedResourceId: String?,
     onMyPlanClick: () -> Unit,
+    onTasksClick: () -> Unit, // NOWY CALLBACK DO TERMINARZA
     onFavoriteClick: (FavoriteEntity) -> Unit,
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onCloseDrawer: () -> Unit
 ) {
-    // Kolory z motywu (dla trybu jasnego/ciemnego)
+    // Kolory z motywu
     val backgroundColor = MaterialTheme.colorScheme.surface
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val secondaryContainer = MaterialTheme.colorScheme.secondaryContainer
@@ -53,13 +54,27 @@ fun CalendarDrawerContent(
             // --- Sekcja: Menu ---
             SectionHeader(text = "Menu", textColor = onSurfaceVariant)
 
-            // Mój Terminarz
+            // Mój Plan (wcześniej Mój Terminarz)
             DrawerItem(
-                label = "Mój Terminarz",
+                label = "Mój Plan",
                 iconRes = R.drawable.ic_home,
-                selected = selectedResourceId == null,
+                selected = selectedResourceId == null, // Logika zaznaczenia dla planu głównego
                 onClick = {
                     onMyPlanClick()
+                    onCloseDrawer()
+                },
+                activeColor = secondaryContainer,
+                activeContentColor = onSecondaryContainer,
+                inactiveContentColor = onSurfaceVariant
+            )
+
+            // NOWA ZAKŁADKA: Terminarz (Zadania)
+            DrawerItem(
+                label = "Terminarz",
+                iconRes = R.drawable.ic_calendar_check, // Ikona zadań
+                selected = false, // Terminarz jest osobnym ekranem, zaznaczenie opcjonalne lub do obsłużenia
+                onClick = {
+                    onTasksClick()
                     onCloseDrawer()
                 },
                 activeColor = secondaryContainer,
