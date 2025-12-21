@@ -82,6 +82,7 @@ fun HomeScreen(
                         )
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Mapa
                             Box(
                                 modifier = Modifier
                                     .size(48.dp)
@@ -98,6 +99,7 @@ fun HomeScreen(
                                 }
                             }
 
+                            // Poczta
                             Box {
                                 Box(
                                     modifier = Modifier
@@ -114,7 +116,8 @@ fun HomeScreen(
                                         )
                                     }
                                 }
-                                // Kropka powiadomień (opcjonalnie)
+                                // Kropka powiadomień (tymczasowo zawsze widoczna dla przykładu, lub usuń)
+                                /*
                                 Box(
                                     modifier = Modifier
                                         .size(8.dp)
@@ -122,6 +125,7 @@ fun HomeScreen(
                                         .offset(x = (-10).dp, y = 10.dp)
                                         .background(MaterialTheme.colorScheme.error, CircleShape)
                                 )
+                                */
                             }
                         }
                     }

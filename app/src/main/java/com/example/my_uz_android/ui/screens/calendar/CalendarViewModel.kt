@@ -2,25 +2,29 @@ package com.example.my_uz_android.ui.screens.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.data.models.FavoriteEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.FavoritesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.collectLatest // Dodano brakujący import
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
-data class CalendarUiState(
-    val favorites: List<FavoriteEntity> = emptyList(),
-    val selectedResourceId: String? = null, // null = Mój Plan
-    val selectedPlanName: String = "Mój Terminarz"
-)
 
 class CalendarViewModel(
     private val favoritesRepository: FavoritesRepository,
     private val classRepository: ClassRepository
 ) : ViewModel() {
+
+    val classes: StateFlow<List<ClassEntity>> = classRepository.getAllClassesStream()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
@@ -40,7 +44,7 @@ class CalendarViewModel(
     fun selectMyPlan() {
         _uiState.value = _uiState.value.copy(
             selectedResourceId = null,
-            selectedPlanName = "Mój Terminarz"
+            selectedPlanName = "Mój Plan"
         )
     }
 
@@ -51,3 +55,10 @@ class CalendarViewModel(
         )
     }
 }
+
+// Klasa zadeklarowana tylko raz na końcu
+data class CalendarUiState(
+    val favorites: List<FavoriteEntity> = emptyList(),
+    val selectedResourceId: String? = null,
+    val selectedPlanName: String = "Mój Plan"
+)

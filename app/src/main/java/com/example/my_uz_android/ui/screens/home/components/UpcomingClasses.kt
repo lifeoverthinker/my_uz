@@ -16,14 +16,15 @@ import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
+import com.example.my_uz_android.ui.components.ClassCardType
 import com.example.my_uz_android.ui.theme.getClassAccentColor
 import com.example.my_uz_android.ui.theme.getClassBackgroundColor
 
 @Composable
 fun UpcomingClasses(
     classes: List<ClassEntity>,
-    emptyMessage: String?,
-    dayLabel: String?,
+    emptyMessage: String? = null,
+    dayLabel: String? = null,
     classColorMap: Map<String, Int> = emptyMap(),
     modifier: Modifier = Modifier,
     onClassClick: (Int) -> Unit
@@ -99,8 +100,9 @@ fun UpcomingClasses(
 
                     ClassCard(
                         classItem = classItem,
-                        backgroundColor = bgColor,
-                        accentColor = accentColor,
+                        type = ClassCardType.HOME,
+                        backgroundColor = bgColor, // Przywrócono przekazywanie
+                        accentColor = accentColor, // Przywrócono przekazywanie
                         onClick = { onClassClick(classItem.id) },
                         modifier = Modifier.width(264.dp)
                     )
