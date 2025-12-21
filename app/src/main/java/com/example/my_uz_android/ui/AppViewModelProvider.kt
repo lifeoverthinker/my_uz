@@ -138,8 +138,7 @@ object AppViewModelProvider {
             CalendarViewModel(
                 favoritesRepository = myUZApplication().container.favoritesRepository,
                 classRepository = myUZApplication().container.classRepository,
-                // WAŻNE: Dodano settingsRepository, aby ViewModel mógł pobrać kolory
-                settingsRepository = myUZApplication().container.settingsRepository
+                settingsRepository = myUZApplication().container.settingsRepository // DODANO
             )
         }
 

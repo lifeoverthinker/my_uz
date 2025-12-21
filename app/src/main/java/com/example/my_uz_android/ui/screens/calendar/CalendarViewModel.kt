@@ -42,12 +42,11 @@ class CalendarViewModel(
 
     private fun loadData() {
         viewModelScope.launch {
-            // Łączymy dane z ulubionych i ustawień (kolory)
             combine(
                 favoritesRepository.getAllFavoritesStream(),
                 settingsRepository.getSettingsStream()
             ) { favorites, settings ->
-                // Parsowanie mapy kolorów z JSON
+                // Parsowanie kolorów
                 val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
                 val classColorMap: Map<String, Int> = try {
                     gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
@@ -84,5 +83,5 @@ data class CalendarUiState(
     val favorites: List<FavoriteEntity> = emptyList(),
     val selectedResourceId: String? = null,
     val selectedPlanName: String = "Mój Plan",
-    val classColorMap: Map<String, Int> = emptyMap() // To pole jest kluczowe dla CalendarScreen
+    val classColorMap: Map<String, Int> = emptyMap()
 )
