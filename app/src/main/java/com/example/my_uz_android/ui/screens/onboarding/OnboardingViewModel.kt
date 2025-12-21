@@ -104,11 +104,13 @@ class OnboardingViewModel(
                 is NetworkResult.Success -> {
                     _allGroups.value = result.data ?: emptyList()
                 }
+
                 is NetworkResult.Error -> {
                     _allGroups.value = emptyList()
                     Log.e(TAG, "Błąd pobierania grup: ${result.message}")
                 }
-                is NetworkResult.Loading -> { }
+
+                is NetworkResult.Loading -> {}
             }
 
             _isLoading.value = false
@@ -140,9 +142,11 @@ class OnboardingViewModel(
                             }
                         }
                     }
+
                     is NetworkResult.Error -> {
                         Log.e(TAG, "Błąd pobierania szczegółów grupy: ${detailsResult.message}")
                     }
+
                     else -> {}
                 }
 
@@ -155,10 +159,13 @@ class OnboardingViewModel(
                         classRepository.insertClasses(schedule)
                         Log.d(TAG, "✅ Zapisano ${schedule.size} zajęć")
                     }
+
                     is NetworkResult.Error -> {
-                        _errorMessage.value = "Nie udało się pobrać planu zajęć. Sprawdź połączenie."
+                        _errorMessage.value =
+                            "Nie udało się pobrać planu zajęć. Sprawdź połączenie."
                         downloadSuccess = false
                     }
+
                     else -> {}
                 }
             }
@@ -169,7 +176,7 @@ class OnboardingViewModel(
             }
 
             val settings = SettingsEntity(
-                id = 0,
+                id = 0, // To powoduje autogenerowanie nowego ID
                 isAnonymous = isAnonymous,
                 userName = if (isAnonymous) "" else _userName.value.ifBlank { "" },
                 gender = _selectedGender.value.name,
@@ -184,6 +191,10 @@ class OnboardingViewModel(
                 offlineModeEnabled = false
             )
 
+            // --- POPRAWKA TUTAJ ---
+            // Najpierw usuń stare śmieci, żeby w bazie był tylko jeden wiersz z ustawieniami
+            settingsRepository.clearSettings()
+            // Dopiero potem zapisz nowe
             settingsRepository.insertSettings(settings)
 
             _isLoading.value = false
@@ -212,6 +223,9 @@ class OnboardingViewModel(
             )
 
             classRepository.deleteAllClasses()
+
+            // --- POPRAWKA TUTAJ ---
+            settingsRepository.clearSettings() // Dodaj to
             settingsRepository.insertSettings(guestSettings)
 
             _isLoading.value = false
@@ -234,10 +248,21 @@ class OnboardingViewModel(
         }
     }
 
-    fun setMode(mode: OnboardingMode) { _selectedMode.value = mode }
-    fun setGender(gender: UserGender) { _selectedGender.value = gender }
-    fun setUserName(name: String) { _userName.value = name }
-    fun setUserSurname(surname: String) { _userSurname.value = surname }
+    fun setMode(mode: OnboardingMode) {
+        _selectedMode.value = mode
+    }
+
+    fun setGender(gender: UserGender) {
+        _selectedGender.value = gender
+    }
+
+    fun setUserName(name: String) {
+        _userName.value = name
+    }
+
+    fun setUserSurname(surname: String) {
+        _userSurname.value = surname
+    }
 
     fun setGroupSearchQuery(query: String) {
         _groupSearchQuery.value = query
@@ -260,10 +285,12 @@ class OnboardingViewModel(
                 is NetworkResult.Success -> {
                     _availableSubgroups.value = result.data ?: emptyList()
                 }
+
                 is NetworkResult.Error -> {
                     Log.e(TAG, "Błąd pobierania podgrup: ${result.message}")
                     _availableSubgroups.value = emptyList()
                 }
+
                 else -> {}
             }
 

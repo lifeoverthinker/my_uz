@@ -260,7 +260,9 @@ fun StudyCard(
                     Icon(
                         painter = painterResource(R.drawable.ic_info_circle),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // --- POPRAWKA TUTAJ: Dodaj modifier z rozmiarem ---
+                        modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(

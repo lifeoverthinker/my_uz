@@ -44,13 +44,13 @@ private fun getIllustrationResId(currentPage: Int): Int = when (currentPage) {
 @Composable
 fun LandingScreen(
     viewModel: OnboardingViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    // ZMIANA: Dodano argumenty zgodne z AppNavigation (onNavigateToOnboarding)
     onNavigateToOnboarding: () -> Unit = {},
     onNavigateToHome: () -> Unit = {},
-    // Zachowujemy dla kompatybilności wstecznej jeśli używane gdzie indziej
     onFinishOnboarding: () -> Unit = { onNavigateToHome() }
 ) {
     val currentPage by viewModel.currentPage.collectAsState()
+    // WAŻNE: Dodano obserwację wybranej grupy, aby móc zablokować przycisk "Dalej"
+    val selectedGroup by viewModel.selectedGroup.collectAsState()
     val totalPages = viewModel.totalPages
     val isLoading by viewModel.isLoading.collectAsState()
 
@@ -117,7 +117,10 @@ fun LandingScreen(
                                                 contentColor = MaterialTheme.colorScheme.onPrimary
                                             )
                                         ) {
-                                            Text("Rozpocznij", style = MaterialTheme.typography.labelLarge)
+                                            Text(
+                                                "Rozpocznij",
+                                                style = MaterialTheme.typography.labelLarge
+                                            )
                                             Spacer(Modifier.width(8.dp))
                                             Icon(
                                                 painter = painterResource(id = R.drawable.ic_chevron_right),
@@ -127,6 +130,7 @@ fun LandingScreen(
                                         }
                                     }
                                 }
+
                                 5 -> {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -134,7 +138,9 @@ fun LandingScreen(
                                     ) {
                                         FilledTonalButton(
                                             onClick = { viewModel.onBackClick() },
-                                            modifier = Modifier.weight(1f).height(48.dp),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(48.dp),
                                             enabled = !isLoading
                                         ) {
                                             Text("Wstecz")
@@ -145,7 +151,9 @@ fun LandingScreen(
                                                     onFinishOnboarding()
                                                 }
                                             },
-                                            modifier = Modifier.weight(1f).height(48.dp),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(48.dp),
                                             enabled = !isLoading
                                         ) {
                                             if (isLoading) {
@@ -159,14 +167,26 @@ fun LandingScreen(
                                         }
                                     }
                                 }
+
                                 else -> {
+                                    // TUTAJ JEST PRZYCISK "DALEJ" DLA STRON 1-4
+
+                                    // Obliczamy czy przycisk ma być aktywny
+                                    val isNextEnabled = if (currentPage == 2) {
+                                        !selectedGroup.isNullOrBlank() // Blokada tylko na stronie 2 (wybór grupy)
+                                    } else {
+                                        true
+                                    }
+
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         FilledTonalButton(
                                             onClick = { viewModel.onBackClick() },
-                                            modifier = Modifier.weight(1f).height(48.dp)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(48.dp)
                                         ) {
                                             Icon(
                                                 painterResource(R.drawable.ic_chevron_left),
@@ -178,7 +198,10 @@ fun LandingScreen(
                                         }
                                         Button(
                                             onClick = { viewModel.onNextClick() },
-                                            modifier = Modifier.weight(1f).height(48.dp)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .height(48.dp),
+                                            enabled = isNextEnabled // <--- PRZYPISANIE BLOKADY
                                         ) {
                                             Text("Dalej")
                                             Spacer(Modifier.width(8.dp))
@@ -192,7 +215,6 @@ fun LandingScreen(
                                 }
                             }
                         }
-
                         Spacer(Modifier.height(16.dp))
                         FooterText()
                     }
@@ -234,10 +256,6 @@ fun LandingScreen(
         }
     }
 }
-
-// ... Funkcje pomocnicze z Twojego pliku (ResponsiveOnboardingStep, WelcomeStepContent itd.) są poprawne.
-// Wystarczy, że podmienisz górną część z definicją LandingScreen.
-// Poniżej pomocnicze funkcje, aby plik był kompletny:
 
 @Composable
 fun ResponsiveOnboardingStep(
@@ -351,7 +369,11 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+                    keyboardActions = KeyboardActions(onNext = {
+                        focusManager.moveFocus(
+                            FocusDirection.Down
+                        )
+                    })
                 )
                 OutlinedTextField(
                     value = userSurname,
@@ -419,7 +441,9 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
                         }
                     },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -446,7 +470,9 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
             }
 
             if (isLoading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+                LinearProgressIndicator(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp))
             }
 
             if (!isLoading && searchQuery.isNotEmpty() && filteredGroups.isEmpty() && selectedGroup == null) {
@@ -454,14 +480,18 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
                     text = "Nie znaleziono takiej grupy",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .align(Alignment.CenterHorizontally)
                 )
             }
         }
 
         AnimatedVisibility(visible = selectedGroup != null && availableSubgroups.isNotEmpty()) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -487,7 +517,12 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
 
 @Composable
 fun CalendarFeatureStepContent() {
-    InfoStepContent(3, "Terminarz", "Zarządzaj czasem", "Twój plan zajęć i osobiste notatki w przejrzystym kalendarzu.")
+    InfoStepContent(
+        3,
+        "Terminarz",
+        "Zarządzaj czasem",
+        "Twój plan zajęć i osobiste notatki w przejrzystym kalendarzu."
+    )
 }
 
 @Composable
@@ -497,7 +532,12 @@ fun GradesFeatureStepContent() {
 
 @Composable
 fun MapFeatureStepContent() {
-    InfoStepContent(5, "Mapa Kampusu", "Nawigacja", "Znajdź każdą salę i budynek na terenie kampusu.")
+    InfoStepContent(
+        5,
+        "Mapa Kampusu",
+        "Nawigacja",
+        "Znajdź każdą salę i budynek na terenie kampusu."
+    )
 }
 
 @Composable
@@ -541,7 +581,8 @@ fun PageIndicators(totalPages: Int, currentPage: Int) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(totalPages) { index ->
             val isActive = index == currentPage
-            val color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+            val color =
+                if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
             val width = if (isActive) 24.dp else 8.dp
             Box(
                 modifier = Modifier
