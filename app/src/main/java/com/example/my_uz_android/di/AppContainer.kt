@@ -1,33 +1,37 @@
 package com.example.my_uz_android.di
 
 import android.content.Context
-import androidx.room.Room
 import com.example.my_uz_android.data.db.AppDatabase
-import com.example.my_uz_android.data.provideSupabaseClient // ✅ Importujemy Twoją funkcję
+import com.example.my_uz_android.data.provideSupabaseClient
 import com.example.my_uz_android.data.repositories.*
 import io.github.jan.supabase.postgrest.postgrest
 
 interface AppContainer {
+    val settingsRepository: SettingsRepository
+    val universityRepository: UniversityRepository
     val classRepository: ClassRepository
     val tasksRepository: TasksRepository
-    val settingsRepository: SettingsRepository
     val gradesRepository: GradesRepository
     val absenceRepository: AbsenceRepository
     val eventRepository: EventRepository
-    val universityRepository: UniversityRepository
     val favoritesRepository: FavoritesRepository
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
 
     private val database: AppDatabase by lazy {
-        Room.databaseBuilder(context, AppDatabase::class.java, "app_database")
-            .fallbackToDestructiveMigration()
-            .build()
+        AppDatabase.getDatabase(context)
     }
 
-    // ✅ Tworzymy instancję klienta Supabase używając Twojej funkcji
     private val supabase by lazy { provideSupabaseClient() }
+
+    override val settingsRepository: SettingsRepository by lazy {
+        SettingsRepository(database.settingsDao())
+    }
+
+    override val universityRepository: UniversityRepository by lazy {
+        UniversityRepository(supabase.postgrest)
+    }
 
     override val classRepository: ClassRepository by lazy {
         ClassRepository(database.classDao())
@@ -35,10 +39,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val tasksRepository: TasksRepository by lazy {
         TasksRepository(database.tasksDao())
-    }
-
-    override val settingsRepository: SettingsRepository by lazy {
-        SettingsRepository(database.settingsDao())
     }
 
     override val gradesRepository: GradesRepository by lazy {
@@ -51,11 +51,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val eventRepository: EventRepository by lazy {
         EventRepository(database.eventDao())
-    }
-
-    override val universityRepository: UniversityRepository by lazy {
-        // ✅ Przekazujemy moduł Postgrest z utworzonej instancji
-        UniversityRepository(supabase.postgrest)
     }
 
     override val favoritesRepository: FavoritesRepository by lazy {

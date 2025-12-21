@@ -6,15 +6,15 @@ import kotlinx.coroutines.flow.Flow
 
 class SettingsRepository(private val settingsDao: SettingsDao) {
 
-    // Pobiera ustawienia jako Flow (auto-update UI)
     fun getSettingsStream(): Flow<SettingsEntity?> = settingsDao.getSettings()
 
-    // Wstawia lub aktualizuje ustawienia (używa insertOrUpdate z DAO)
     suspend fun insertSettings(settings: SettingsEntity) = settingsDao.insertOrUpdate(settings)
 
-    // Aktualizuje ustawienia (również używa insertOrUpdate)
-    suspend fun updateSettings(settings: SettingsEntity) = settingsDao.insertOrUpdate(settings)
+    // Alias dla wstecznej kompatybilności
+    suspend fun insertOrUpdate(settings: SettingsEntity) = settingsDao.insertOrUpdate(settings)
 
-    // Usuwa wszystkie ustawienia
     suspend fun clearSettings() = settingsDao.clearAll()
+
+    // Alias
+    suspend fun deleteAllSettings() = settingsDao.clearAll()
 }

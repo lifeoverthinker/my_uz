@@ -3,7 +3,6 @@ package com.example.my_uz_android.ui.screens.account
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -119,8 +118,6 @@ fun AccountScreen(
     }
 }
 
-// ... ProfileSection, StudyCard, StudyDetailRow, SectionTitle (Takie same jak w poprzednich krokach) ...
-
 @Composable
 fun AccountOptionItem(
     iconRes: Int,
@@ -148,7 +145,7 @@ fun AccountOptionItem(
                     Icon(
                         painter = painterResource(id = iconRes),
                         contentDescription = null,
-                        modifier = Modifier.size(24.dp), // ✅ Rozmiar 24dp
+                        modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                     Text(

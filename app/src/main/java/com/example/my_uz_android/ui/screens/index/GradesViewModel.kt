@@ -67,7 +67,7 @@ class GradesViewModel(
             val types = classTypes.map { typeName ->
                 val typeGrades = subjectGrades.filter { it.classType == typeName }
 
-                // Mapujemy oceny na GradeItem (do wyświetlenia w bąbelkach)
+                // Mapujemy oceny na GradeItem
                 val gradeItems = typeGrades.map { grade ->
                     GradeItem(
                         id = grade.id,
@@ -77,7 +77,7 @@ class GradesViewModel(
                     )
                 }
 
-                // Liczymy średnią dla typu zajęć (pomijamy "+")
+                // Liczymy średnią dla typu zajęć
                 val numericGrades = typeGrades.mapNotNull {
                     if (it.grade == -1.0) null else it.grade
                 }

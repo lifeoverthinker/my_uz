@@ -41,7 +41,6 @@ data class FieldOfStudyDto(
     @SerialName("nazwa") val name: String?
 )
 
-// ✅ ZMIANA: To jest teraz klasa (nie interfejs), żeby pasowało do DI w AppContainer
 class UniversityRepository(private val supabase: Postgrest) {
 
     suspend fun getGroupCodes(): NetworkResult<List<String>> {

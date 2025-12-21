@@ -94,14 +94,13 @@ fun UpcomingClasses(
                 items(classes) { classItem ->
                     val colorIndex = classColorMap[classItem.classType] ?: 0
 
-                    // Pobieramy parę: Tło + Akcent
                     val bgColor = getClassBackgroundColor(colorIndex, isDark)
                     val accentColor = getClassAccentColor(colorIndex, isDark)
 
                     ClassCard(
                         classItem = classItem,
                         backgroundColor = bgColor,
-                        accentColor = accentColor, // ✅ Przekazujemy akcent
+                        accentColor = accentColor,
                         onClick = { onClassClick(classItem.id) },
                         modifier = Modifier.width(264.dp)
                     )

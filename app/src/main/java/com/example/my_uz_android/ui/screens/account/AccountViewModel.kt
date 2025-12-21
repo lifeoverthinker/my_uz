@@ -1,6 +1,5 @@
 package com.example.my_uz_android.ui.screens.account
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.SettingsEntity
@@ -66,7 +65,7 @@ class AccountViewModel(
             settingsRepository.getSettingsStream().collect { retrievedSettings ->
                 _settings.value = retrievedSettings
                 if (retrievedSettings != null) {
-                    // Aktualizuj pola edycji tylko przy pierwszym załadowaniu (nie nadpisuj edycji w trakcie)
+                    // Aktualizuj pola edycji tylko przy pierwszym załadowaniu
                     if (!_isSettingsLoaded.value) {
                         _draftSelectedGroup.value = retrievedSettings.selectedGroupCode
                         _groupSearchQuery.value = retrievedSettings.selectedGroupCode ?: ""
@@ -156,7 +155,6 @@ class AccountViewModel(
     }
 
     fun saveChanges() {
-        // Używamy tego co wpisano, nawet jeśli nie wybrano z listy (dla elastyczności)
         val groupCode = if(!_draftSelectedGroup.value.isNullOrBlank()) _draftSelectedGroup.value else _groupSearchQuery.value.takeIf { it.isNotBlank() }
         val subgroups = _draftSubgroups.value
         val newName = _draftName.value.trim()

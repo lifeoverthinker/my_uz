@@ -1,26 +1,16 @@
 package com.example.my_uz_android.ui.screens.home.details
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.util.ClassTypeUtils
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.example.my_uz_android.ui.components.MyUZTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,128 +19,57 @@ fun TaskDetailsScreen(
     onEditTask: (Int) -> Unit,
     viewModel: TaskDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var showMenu by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
+
+    // ✅ FIX: Wyciągamy taska tylko jeśli stan to Success
+    val currentTask = (uiState as? TaskDetailsUiState.Success)?.task
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Szczegóły zadania") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(painter = painterResource(id = R.drawable.ic_chevron_left), contentDescription = "Wróć")
-                    }
-                },
+            MyUZTopAppBar(
+                title = "Szczegóły zadania",
+                navigationIcon = R.drawable.ic_chevron_left,
+                onNavigationClick = onNavigateBack,
                 actions = {
-                    if (uiState is TaskDetailsUiState.Success) {
-                        IconButton(onClick = { showMenu = !showMenu }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Opcje")
+                    if (currentTask != null) {
+                        IconButton(onClick = { onEditTask(currentTask.id) }) {
+                            Icon(painterResource(R.drawable.ic_edit), null)
                         }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Edytuj") },
-                                onClick = {
-                                    showMenu = false
-                                    onEditTask((uiState as TaskDetailsUiState.Success).task.id)
-                                },
-                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Duplikuj") },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.duplicateTask { onNavigateBack() }
-                                },
-                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Usuń") },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.deleteTask { onNavigateBack() }
-                                },
-                                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
-                            )
+                        IconButton(onClick = {
+                            // ✅ FIX: Przekazujemy callback onSuccess
+                            viewModel.deleteTask { onNavigateBack() }
+                        }) {
+                            Icon(painterResource(R.drawable.ic_trash), null)
                         }
                     }
                 }
             )
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentAlignment = Alignment.Center
-        ) {
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (val state = uiState) {
-                is TaskDetailsUiState.Loading -> CircularProgressIndicator()
-                is TaskDetailsUiState.Error -> Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                is TaskDetailsUiState.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
+                is TaskDetailsUiState.Error -> {
+                    Text(
+                        text = state.message,
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 is TaskDetailsUiState.Success -> {
                     val task = state.task
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            text = task.title,
-                            style = MaterialTheme.typography.headlineMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Checkbox(
-                                checked = task.isCompleted,
-                                onCheckedChange = { viewModel.toggleTaskCompletion() }
-                            )
-                            Text(
-                                text = if (task.isCompleted) "Ukończone" else "Do zrobienia",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(task.title, style = MaterialTheme.typography.headlineMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (!task.description.isNullOrBlank()) {
+                            Text(task.description, style = MaterialTheme.typography.bodyMedium)
                         }
-
-                        Divider()
-
-                        if (!task.subjectName.isNullOrEmpty()) {
-                            DetailRow(label = "Przedmiot", value = task.subjectName)
-                        }
-
-                        if (!task.classType.isNullOrEmpty()) {
-                            DetailRow(label = "Rodzaj", value = ClassTypeUtils.getFullName(task.classType))
-                        }
-
-                        val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy").withZone(ZoneId.systemDefault())
-                        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
-                        val dateStr = dateFormatter.format(Instant.ofEpochMilli(task.dueDate))
-                        val timeStr = if (!task.isAllDay) ", ${timeFormatter.format(Instant.ofEpochMilli(task.dueDate))}" else ""
-
-                        DetailRow(label = "Termin", value = "$dateStr$timeStr")
-
-                        if (!task.description.isNullOrEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = "Opis", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                            Text(text = task.description, style = MaterialTheme.typography.bodyMedium)
-                        }
+                        // Możesz dodać więcej szczegółów
                     }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun DetailRow(label: String, value: String) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
-        Text(text = value, style = MaterialTheme.typography.bodyLarge)
     }
 }

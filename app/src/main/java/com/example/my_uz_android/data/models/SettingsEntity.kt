@@ -9,6 +9,7 @@ data class SettingsEntity(
     val id: Int = 0,
     val isAnonymous: Boolean = false,
     val userName: String = "Student",
+    // Usunięto albumNumber zgodnie z życzeniem
     val gender: String? = null,
 
     // Uczelnia
@@ -26,7 +27,5 @@ data class SettingsEntity(
     val notificationsEnabled: Boolean = true,
     val offlineModeEnabled: Boolean = false,
 
-    // ✅ NOWE: Mapa kolorów zajęć (JSON: "TypZajęć" -> IndexKoloru)
-    // Np. {"Wykład": 0, "Laboratorium": 2}
     val classColorsJson: String = "{}"
 )

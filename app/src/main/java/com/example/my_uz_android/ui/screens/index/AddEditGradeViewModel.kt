@@ -1,5 +1,6 @@
 package com.example.my_uz_android.ui.screens.index
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.GradeEntity
@@ -22,14 +23,14 @@ data class AddEditGradeUiState(
     val gradeValue: Double? = null,
     val customGradeValue: String = "",
     val weight: String = "1",
-    val description: String = "", // Tytuł
-    val comment: String = "",     // Opis
+    val description: String = "",
+    val comment: String = "",
     val date: Long = System.currentTimeMillis(),
-    // Lista par: (Nazwa przedmiotu, Lista typów zajęć)
     val availableSubjects: List<Pair<String, List<String>>> = emptyList()
 )
 
 class AddEditGradeViewModel(
+    savedStateHandle: SavedStateHandle, // ✅ Dodano
     private val gradesRepository: GradesRepository,
     private val classRepository: ClassRepository,
     private val settingsRepository: SettingsRepository
@@ -44,6 +45,12 @@ class AddEditGradeViewModel(
     init {
         loadAvailableSubjects()
         loadCurrentSemester()
+
+        // ✅ Dodano: Automatyczne ładowanie, jeśli ID przyszło z nawigacji
+        val gradeId = savedStateHandle.get<Int>("gradeId")
+        if (gradeId != null && gradeId != 0 && gradeId != -1) {
+            loadGrade(gradeId)
+        }
     }
 
     fun loadGrade(gradeId: Int) {

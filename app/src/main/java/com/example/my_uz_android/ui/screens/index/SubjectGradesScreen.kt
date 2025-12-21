@@ -30,12 +30,10 @@ fun SubjectGradesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Filtrowanie
     val filteredGrades = uiState.allGrades.filter {
         it.subjectName == subjectName && it.classType == classType
     }
 
-    // Obliczanie średniej (pomijamy aktywność -1.0)
     val gradesForAvg = filteredGrades.filter { it.grade != -1.0 }
 
     val average = if (gradesForAvg.isNotEmpty()) {

@@ -12,7 +12,7 @@ interface TasksDao {
     @Query("SELECT * FROM tasks WHERE id = :id")
     fun getTaskById(id: Int): Flow<TaskEntity?>
 
-    @Query("SELECT * FROM tasks WHERE id = :id")  // DODANE
+    @Query("SELECT * FROM tasks WHERE id = :id")
     suspend fun getTaskByIdSuspend(id: Int): TaskEntity?
 
     @Query("SELECT * FROM tasks WHERE isCompleted = 0 ORDER BY dueDate ASC")

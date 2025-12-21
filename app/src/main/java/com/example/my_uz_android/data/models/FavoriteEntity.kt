@@ -9,12 +9,11 @@ data class FavoriteEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
 
-    @ColumnInfo(name = "name")
     val name: String,
 
-    @ColumnInfo(name = "type")
     val type: String,
 
-    @ColumnInfo(name = "resource_id") // ✅ To jest poprawna nazwa kolumny
+    // ✅ FIX: Jawnie przypisujemy nazwę kolumny, o którą pyta DAO
+    @ColumnInfo(name = "resource_id")
     val resourceId: String
 )

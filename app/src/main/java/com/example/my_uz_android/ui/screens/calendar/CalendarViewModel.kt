@@ -31,7 +31,6 @@ class CalendarViewModel(
 
     private fun loadFavorites() {
         viewModelScope.launch {
-            // ✅ Używamy poprawnej nazwy metody: getAllFavoritesStream()
             favoritesRepository.getAllFavoritesStream().collectLatest { list ->
                 _uiState.value = _uiState.value.copy(favorites = list)
             }
@@ -43,7 +42,6 @@ class CalendarViewModel(
             selectedResourceId = null,
             selectedPlanName = "Mój Terminarz"
         )
-        // TODO: Tutaj w przyszłości odśwież dane w ClassRepository dla zalogowanego studenta
     }
 
     fun selectFavoritePlan(favorite: FavoriteEntity) {
@@ -51,6 +49,5 @@ class CalendarViewModel(
             selectedResourceId = favorite.resourceId,
             selectedPlanName = favorite.name
         )
-        // TODO: Tutaj w przyszłości pobierz plan dla resourceId
     }
 }

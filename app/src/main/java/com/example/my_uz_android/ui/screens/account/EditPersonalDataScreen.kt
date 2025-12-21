@@ -22,7 +22,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.InterFontFamily
-import com.example.my_uz_android.ui.theme.extendedColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -38,7 +37,10 @@ fun EditPersonalDataScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val saveMessage by viewModel.saveMessage.collectAsState()
 
-    var userName by remember { mutableStateOf(settings?.userName ?: "") }
+    // Używamy draftName/draftSurname z ViewModela zamiast lokalnego state, aby zachować spójność
+    val draftName by viewModel.draftName.collectAsState()
+    val draftSurname by viewModel.draftSurname.collectAsState()
+
     var expanded by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
@@ -46,16 +48,9 @@ fun EditPersonalDataScreen(
     val primaryColor = MaterialTheme.colorScheme.primary
     val textColor = MaterialTheme.colorScheme.onSurface
 
-    LaunchedEffect(settings) {
-        if (settings != null && userName.isBlank()) {
-            userName = settings!!.userName
-        }
-    }
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            // ZMIANA: TopAppBar zamiast CenterAlignedTopAppBar
             TopAppBar(
                 title = {
                     Text(
@@ -101,10 +96,10 @@ fun EditPersonalDataScreen(
 
                 Button(
                     onClick = {
-                        // TODO: Implementacja aktualizacji imienia w VM
                         viewModel.saveChanges()
-                        Toast.makeText(context, "Zapisano zmiany", Toast.LENGTH_SHORT).show()
-                        onNavigateBack()
+                        // Toast wyświetlamy po sukcesie w VM (obserwując saveMessage), ale tu dla uproszczenia
+                        // viewModel.saveChanges() jest asynchroniczny, więc Toast może się pojawić za wcześnie
+                        // Lepiej obserwować stan w LaunchedEffect, ale zostawiam jak chciałaś
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -147,9 +142,21 @@ fun EditPersonalDataScreen(
                 )
 
                 OutlinedTextField(
-                    value = userName,
-                    onValueChange = { userName = it },
-                    label = { Text("Imię i Nazwisko") },
+                    value = draftName,
+                    onValueChange = { viewModel.updateDraftName(it) },
+                    label = { Text("Imię") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) })
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = draftSurname,
+                    onValueChange = { viewModel.updateDraftSurname(it) },
+                    label = { Text("Nazwisko") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),

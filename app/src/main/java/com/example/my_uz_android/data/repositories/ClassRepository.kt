@@ -1,6 +1,6 @@
 package com.example.my_uz_android.data.repositories
 
-import com.example.my_uz_android.data.db.ClassDao
+import com.example.my_uz_android.data.daos.ClassDao
 import com.example.my_uz_android.data.models.ClassEntity
 import kotlinx.coroutines.flow.Flow
 

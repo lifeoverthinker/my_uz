@@ -6,12 +6,24 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SettingsDao {
-    @Query("SELECT * FROM settings WHERE id = 1 LIMIT 1")
+    // Pobiera ustawienia (zawsze jeden wiersz)
+    @Query("SELECT * FROM settings LIMIT 1")
     fun getSettings(): Flow<SettingsEntity?>
+
+    // Alias dla spójności
+    @Query("SELECT * FROM settings LIMIT 1")
+    fun getSettingsStream(): Flow<SettingsEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(settings: SettingsEntity)
 
+    // Alias
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSettings(settings: SettingsEntity)
+
     @Query("DELETE FROM settings")
     suspend fun clearAll()
+
+    @Query("DELETE FROM settings")
+    suspend fun deleteAllSettings()
 }

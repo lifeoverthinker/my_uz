@@ -114,6 +114,7 @@ fun HomeScreen(
                                         )
                                     }
                                 }
+                                // Kropka powiadomień (opcjonalnie)
                                 Box(
                                     modifier = Modifier
                                         .size(8.dp)

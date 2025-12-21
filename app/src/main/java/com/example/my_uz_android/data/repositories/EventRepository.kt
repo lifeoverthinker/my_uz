@@ -18,6 +18,5 @@ class EventRepository(private val eventDao: EventDao) {
 
     suspend fun deleteEvent(event: EventEntity) = eventDao.delete(event)
 
-    // ✅ DODANE: Metoda repozytorium do czyszczenia tabeli
     suspend fun deleteAllEvents() = eventDao.deleteAll()
 }
