@@ -47,13 +47,13 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
+// Strefa czasowa
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 
-// Wymiary
+// --- STAŁE WYMIARY I KOLORY ---
 private val HourHeight = 60.dp
-private val HourColWidth = 50.dp // Dopasowane do krawędzi
+private val HourColWidth = 50.dp
 private val LineOverlap = 8.dp
-private val TextGap = 4.dp
 private val TextVerticalOffset = (-5).dp
 
 private val ColorSelectedBg = Color(0xFF6750A4)
@@ -74,7 +74,7 @@ fun CalendarScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allClasses by viewModel.classes.collectAsState()
-    val classColorMap = uiState.classColorMap // Teraz ViewModel ma to pole
+    val classColorMap = uiState.classColorMap
 
     val currentDate = remember { LocalDate.now(PolandZone) }
     val currentMonth = remember { YearMonth.now(PolandZone) }
@@ -110,7 +110,6 @@ fun CalendarScreen(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
-    // Auto-scroll do 8:00
     LaunchedEffect(Unit) {
         scrollState.scrollTo(480 * 2)
     }
@@ -231,6 +230,7 @@ fun CalendarScreen(
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         // Godziny 0..24
+                        // 24 to linia zamykająca (1dp)
                         repeat(25) { index ->
                             HourRow(hour = index, isLastLine = index == 24)
                         }
@@ -359,7 +359,7 @@ fun HourRow(hour: Int, isLastLine: Boolean) {
                     ),
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(end = (LineOverlap + TextGap))
+                        .padding(end = (LineOverlap + 4.dp)) // TextGap = 4.dp
                         .offset(y = TextVerticalOffset)
                 )
 
@@ -419,8 +419,6 @@ fun ScheduledClassItem(
     val assignedColorInt = classColorMap[classEntity.subjectName]
     val baseColor = if (assignedColorInt != null) Color(assignedColorInt) else MaterialTheme.colorScheme.secondaryContainer
 
-    // Tło dla przeszłych zajęć: ten sam kolor, ale przezroczysty
-    val cardBackgroundColor = baseColor
     val containerAlpha = if (isPast) 0.5f else 1f
 
     Box(
@@ -429,28 +427,17 @@ fun ScheduledClassItem(
             .padding(bottom = 2.dp)
             .offset(y = topOffset)
             .height(height)
-            .alpha(containerAlpha)
+            .alpha(containerAlpha) // Przezroczystość dla przeszłych
     ) {
         ClassCard(
             classItem = classEntity,
             type = ClassCardType.CALENDAR,
-            backgroundColor = cardBackgroundColor,
+            backgroundColor = baseColor,
             accentColor = ColorSelectedBg,
+            showBadge = isFuture, // Brak kropki dla przeszłych/trwających
             onClick = { onClassClick(classEntity.id) },
             modifier = Modifier.fillMaxSize()
         )
-
-        // Kropka TYLKO jeśli przyszłe zajęcia
-        if (isFuture) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 8.dp, end = 8.dp)
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(ColorSelectedBg)
-                    .align(Alignment.TopEnd)
-            )
-        }
     }
 }
 

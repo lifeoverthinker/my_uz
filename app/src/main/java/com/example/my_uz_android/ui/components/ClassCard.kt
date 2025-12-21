@@ -2,22 +2,29 @@ package com.example.my_uz_android.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,170 +46,140 @@ fun ClassCard(
     type: ClassCardType = ClassCardType.HOME,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     accentColor: Color = MaterialTheme.colorScheme.primary,
+    // showBadge pozwala ukryć kropkę np. dla minionych zajęć, jeśli chcesz
+    showBadge: Boolean = true,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val contentColor = Color(0xFF1D1B20)
-
-    // Dla Kalendarza mniejsze zaokrąglenie (6dp), dla Home (16dp - jak w Twoim wzorze)
-    val cornerRadius = if (type == ClassCardType.CALENDAR) 6.dp else 16.dp
+    // Kolory z Twojego designu (Figma/Flutter)
+    val titleColor = Color(0xFF1D192B)
+    val detailsColor = Color(0xFF494949)
+    val avatarTextColor = Color(0xFFFFFBFE)
 
     Card(
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(cornerRadius),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        if (type == ClassCardType.CALENDAR) {
-            // --- WIDOK KALENDARZA (Kompaktowy, tekst u góry) ---
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top // Wyrównanie do góry (ważne przy długich opisach)
+        ) {
+            // --- LEWA STRONA (Teksty) ---
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.Top // Wyrównanie do góry (jak kropka)
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp) // spacing: 8
             ) {
-                // Mały odstęp od góry
-                Spacer(modifier = Modifier.height(2.dp))
-
+                // Tytuł przedmiotu
                 Text(
                     text = classItem.subjectName,
-                    style = MaterialTheme.typography.labelMedium.copy(
+                    style = TextStyle(
                         fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp,
-                        lineHeight = 12.sp
+                        fontWeight = FontWeight.Medium, // w500
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp, // height 1.43 przy 14sp ~ 20sp
+                        color = titleColor
                     ),
-                    color = contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Text(
-                    text = "${classItem.room ?: ""} (${classItem.classType})",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 10.sp,
-                        lineHeight = 12.sp
-                    ),
-                    color = contentColor.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        } else {
-            // --- WIDOK HOME (Twój wzór z poprzedniego zgłoszenia) ---
-            Row(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .height(IntrinsicSize.Min),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 1. Kolumna Czasu
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(60.dp)
+                // Wiersz z Czasem i Salą
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp) // spacing: 16 między grupami
                 ) {
-                    Text(
-                        text = classItem.startTime,
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = InterFontFamily
-                        ),
-                        color = contentColor
-                    )
-                    Text(
-                        text = classItem.endTime,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontFamily = InterFontFamily
-                        ),
-                        color = contentColor.copy(alpha = 0.6f)
-                    )
-                }
-
-                // 2. Separator pionowy
-                VerticalDivider(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .fillMaxHeight(),
-                    thickness = 1.dp,
-                    color = contentColor.copy(alpha = 0.1f)
-                )
-
-                // 3. Informacje o zajęciach
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = classItem.subjectName,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontFamily = InterFontFamily,
-                            fontSize = 18.sp
-                        ),
-                        color = contentColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Ikona Sali
+                    // Grupa Czasu
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp) // spacing: 4
+                    ) {
+                        // Container 16x16 z ikoną (w Flutterze był pusty Stack, tu daję ikonę)
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_marker_pin),
+                            painter = painterResource(id = R.drawable.ic_clock),
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = contentColor.copy(alpha = 0.7f)
+                            tint = detailsColor
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${classItem.startTime} - ${classItem.endTime}",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Normal, // w400
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp, // height 1.33 przy 12sp ~ 16sp
+                                color = detailsColor
+                            ),
+                            maxLines = 1
+                        )
+                    }
+
+                    // Grupa Sali
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
                         Text(
                             text = classItem.room ?: "",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = InterFontFamily
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Normal, // w400
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = detailsColor
                             ),
-                            color = contentColor.copy(alpha = 0.7f)
-                        )
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        // Ikona Nauczyciela
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_user),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = contentColor.copy(alpha = 0.7f)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = classItem.teacherName ?: "",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = InterFontFamily
-                            ),
-                            color = contentColor.copy(alpha = 0.7f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
+            }
 
-                // 4. Badge z typem zajęć
-                Surface(
-                    color = contentColor.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
-                    Text(
-                        text = classItem.classType.take(1).uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = InterFontFamily
-                        ),
-                        color = contentColor
-                    )
+            // Odstęp między tekstem a badge'm
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // --- PRAWA STRONA (Badge) ---
+            if (showBadge) {
+                when (type) {
+                    ClassCardType.HOME -> {
+                        // Kółko z literą (32x32)
+                        val letter = classItem.classType.firstOrNull()?.uppercase() ?: "A"
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(accentColor)
+                        ) {
+                            Text(
+                                text = letter,
+                                style = TextStyle(
+                                    fontFamily = InterFontFamily, // Roboto w oryginale, ale Inter spójniejszy
+                                    fontWeight = FontWeight.Medium, // w500
+                                    fontSize = 16.sp,
+                                    lineHeight = 24.sp,
+                                    letterSpacing = 0.15.sp,
+                                    color = avatarTextColor
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    ClassCardType.CALENDAR -> {
+                        // Mała kropka (8x8)
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp) // Zgodnie z Figmą 8x8
+                                .clip(CircleShape)
+                                .background(accentColor) // W Figmie 0xFF7D5260, tu dynamiczny
+                        )
+                    }
                 }
             }
         }
@@ -213,23 +190,37 @@ fun ClassCard(
 @Composable
 fun ClassCardPreview() {
     val mockClass = ClassEntity(
-        subjectName = "Wstęp do programowania",
-        classType = "Laboratorium",
-        startTime = "08:00",
-        endTime = "09:30",
+        id = 1,
+        subjectName = "Podstawy systemów dyskretnych",
+        classType = "Wykład",
+        startTime = "10:00",
+        endTime = "10:45",
         dayOfWeek = 1,
         date = "2025-01-01",
-        groupCode = "G1",
+        groupCode = "32INF",
         subgroup = null,
-        room = "301",
-        teacherName = "dr inż. Jan Kowalski"
+        room = "Sala 102",
+        teacherName = "Jan Kowalski"
     )
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ClassCard(mockClass, type = ClassCardType.HOME, backgroundColor = Color(0xFFE8DEF8))
 
-        // Symulacja małego boxa w kalendarzu
-        Box(modifier = Modifier.height(90.dp)) {
-            ClassCard(mockClass, type = ClassCardType.CALENDAR, backgroundColor = Color(0xFFE8DEF8), modifier = Modifier.fillMaxSize())
-        }
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Wariant HOME:")
+        ClassCard(
+            classItem = mockClass,
+            type = ClassCardType.HOME,
+            backgroundColor = Color(0xFFE8DEF8),
+            accentColor = Color(0xFF6750A4)
+        )
+
+        Text("Wariant CALENDAR:")
+        ClassCard(
+            classItem = mockClass,
+            type = ClassCardType.CALENDAR,
+            backgroundColor = Color(0xFFE8DEF8),
+            accentColor = Color(0xFF7D5260) // Kolor z Figmy
+        )
     }
 }
