@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.MyUZTopAppBar
+import com.example.my_uz_android.ui.components.TopAppBar
 
 @Composable
 fun ScheduleSearchScreen(
@@ -22,7 +22,7 @@ fun ScheduleSearchScreen(
 
     Scaffold(
         topBar = {
-            MyUZTopAppBar(
+            TopAppBar(
                 title = "Szukaj planu",
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onNavigateBack

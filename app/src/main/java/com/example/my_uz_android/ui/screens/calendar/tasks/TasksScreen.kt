@@ -22,11 +22,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
+// Importujemy Twój nowy TopAppBar
+import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.extendedColors
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -47,7 +50,7 @@ fun TasksScreen(
     onCalendarClick: () -> Unit = {},
     onAccountClick: () -> Unit = {},
     onIndexClick: () -> Unit = {},
-    // ✅ DODANO: Callback do wyszukiwania
+    // Callback do wyszukiwania
     onSearchClick: () -> Unit = {},
     // ViewModele
     viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory),
@@ -88,7 +91,7 @@ fun TasksScreen(
                 },
                 onSearchClick = {
                     scope.launch { drawerState.close() }
-                    onSearchClick() // ✅ Wywołanie nawigacji
+                    onSearchClick()
                 },
                 onSettingsClick = {
                     scope.launch { drawerState.close() }
@@ -102,32 +105,15 @@ fun TasksScreen(
             Scaffold(
                 containerColor = backgroundColor,
                 topBar = {
-                    CenterAlignedTopAppBar(
-                        title = {
-                            Text(
-                                text = calendarUiState.selectedPlanName,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_menu),
-                                    contentDescription = "Menu"
-                                )
-                            }
-                        },
+                    TopAppBar(
+                        title = calendarUiState.selectedPlanName,
+                        isCenterAligned = true,
+                        navigationIcon = R.drawable.ic_menu, // Poprawna ikonka
+                        isNavigationIconFilled = true, // Włącza styl "kółka"
+                        onNavigationClick = { scope.launch { drawerState.open() } },
                         actions = {
-                            IconButton(onClick = onSearchClick) { // ✅ Podpięcie pod lupę
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_search),
-                                    contentDescription = "Szukaj"
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = backgroundColor)
+                            // Puste akcje (brak lupy)
+                        }
                     )
                 }
             ) { innerPadding ->
@@ -146,7 +132,7 @@ fun TasksScreen(
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
-                                text = stringResource(R.string.tasks_empty_title), // Upewnij się, że string istnieje
+                                text = stringResource(R.string.tasks_empty_title),
                                 fontFamily = InterFontFamily,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyLarge

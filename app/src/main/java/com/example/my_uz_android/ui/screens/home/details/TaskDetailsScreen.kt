@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.MyUZTopAppBar
+import com.example.my_uz_android.ui.components.TopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,7 +26,7 @@ fun TaskDetailsScreen(
 
     Scaffold(
         topBar = {
-            MyUZTopAppBar(
+            TopAppBar(
                 title = "Szczegóły zadania",
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onNavigateBack,
