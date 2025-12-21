@@ -37,14 +37,13 @@ fun ClassCard(
     classItem: ClassEntity,
     type: ClassCardType = ClassCardType.HOME,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
-    accentColor: Color = MaterialTheme.colorScheme.primary, // ✅ Używane do kółka
+    accentColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Stałe kolory tekstów dla jasnego tła (zgodne z Twoim kodem Fluttera)
     val titleColor = Color(0xFF1D192B)
     val detailsColor = Color(0xFF49454F)
-    val avatarTextColor = Color.White // Biały tekst na ciemnym akcencie
+    val avatarTextColor = Color.White
 
     Card(
         shape = RoundedCornerShape(8.dp),
@@ -58,13 +57,12 @@ fun ClassCard(
                 .padding(12.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top // Tytuł i Kółko wyrównane do góry
+            verticalAlignment = Alignment.Top
         ) {
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Tytuł
                 Text(
                     text = classItem.subjectName,
                     style = TextStyle(
@@ -79,17 +77,14 @@ fun ClassCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Wiersz: Czas + Sala
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Czas (Ikona + Tekst)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // Mała kropka/ikona zamiast pustego kontenera 16x16
                         Icon(
                             painter = painterResource(id = R.drawable.ic_clock),
                             contentDescription = null,
@@ -110,7 +105,6 @@ fun ClassCard(
                         )
                     }
 
-                    // Sala
                     Text(
                         text = classItem.room ?: "",
                         style = TextStyle(
@@ -123,7 +117,7 @@ fun ClassCard(
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false) // Zapobiega rozpychaniu
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
             }
@@ -138,7 +132,7 @@ fun ClassCard(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
-                            .background(accentColor) // ✅ Ciemniejszy kolor akcentu
+                            .background(accentColor)
                     ) {
                         Text(
                             text = letter,

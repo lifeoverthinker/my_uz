@@ -1,4 +1,4 @@
-package com.example.my_uz_android.data.db
+package com.example.my_uz_android.data.daos
 
 import androidx.room.*
 import com.example.my_uz_android.data.models.ClassEntity

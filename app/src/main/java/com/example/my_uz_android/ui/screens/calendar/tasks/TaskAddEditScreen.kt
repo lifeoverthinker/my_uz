@@ -26,7 +26,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
@@ -55,8 +54,6 @@ fun TaskAddEditScreen(
         }
     }
 
-    // Bezpośrednie wywołania funkcji ViewModelu zamiast obserwacji isTaskSaved
-    // (zgodnie z logiką ze starego pliku)
     TaskAddEditContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
@@ -136,7 +133,6 @@ fun TaskAddEditContent(
         modifier = modifier.fillMaxSize().statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // --- HEADER ---
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -161,7 +157,6 @@ fun TaskAddEditContent(
             }
 
             Column(modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
-                // TYTUŁ
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Box(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.width(12.dp))
@@ -184,7 +179,6 @@ fun TaskAddEditContent(
                 HorizontalDivider(color = dividerColor)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // QUICK CHIPS
                 LazyRow(contentPadding = PaddingValues(horizontal = 76.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(quickTitles) { title ->
                         val isSelected = uiState.title == title
@@ -205,7 +199,6 @@ fun TaskAddEditContent(
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(color = dividerColor)
 
-                // DATY
                 CommonRow(iconRes = R.drawable.ic_clock, iconTint = iconTint) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -221,7 +214,6 @@ fun TaskAddEditContent(
 
                 HorizontalDivider(color = dividerColor)
 
-                // PRZEDMIOT - ✅ POPRAWIONY BOX DLA matchParentSize
                 CommonRow(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Row(
@@ -238,7 +230,6 @@ fun TaskAddEditContent(
                             )
                             Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
                         }
-                        // To kliknięcie przykrywa cały wiersz
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
@@ -249,7 +240,6 @@ fun TaskAddEditContent(
 
                 HorizontalDivider(color = dividerColor)
 
-                // RODZAJ
                 CommonRow(iconRes = R.drawable.ic_graduation_hat, iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(0.4f)) {
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Row(
@@ -275,7 +265,6 @@ fun TaskAddEditContent(
 
                 HorizontalDivider(color = dividerColor)
 
-                // OPIS
                 CommonRow(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
                     Box(modifier = Modifier.padding(vertical = 12.dp)) {
                         BasicTextField(
@@ -296,13 +285,11 @@ fun TaskAddEditContent(
         }
     }
 
-    // Dialogi Date/Time (Skrócone dla czytelności, zakładam Twoje komponenty)
     if (showDatePickerStart) DatePicker(date = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), onDateSelected = { showDatePickerStart = false; onStartDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()) }, onDismiss = { showDatePickerStart = false })
     if (showDatePickerEnd) DatePicker(date = endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), onDateSelected = { showDatePickerEnd = false; onEndDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()) }, onDismiss = { showDatePickerEnd = false })
     if (showTimePickerStart) TimePicker(time = String.format("%02d:%02d", startTime.hour, startTime.minute), onTimeSelected = { h, m -> showTimePickerStart = false; onStartTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerStart = false })
     if (showTimePickerEnd) TimePicker(time = String.format("%02d:%02d", endTime.hour, endTime.minute), onTimeSelected = { h, m -> showTimePickerEnd = false; onEndTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerEnd = false })
 
-    // Modale (Subject/Type) - tutaj używam prostego AlertDialog zamiast pełnego modala dla pewności kompilacji
     if (showSubjectModal) {
         AlertDialog(
             onDismissRequest = { showSubjectModal = false },
@@ -327,7 +314,6 @@ fun TaskAddEditContent(
     }
 }
 
-// Helpers
 @Composable
 private fun SimpleDateTimeRow(date: LocalDate, time: LocalTime?, onDateClick: () -> Unit, onTimeClick: () -> Unit, textColor: Color) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {

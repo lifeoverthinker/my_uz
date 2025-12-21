@@ -25,8 +25,8 @@ data class SettingsUiState(
     val settings: SettingsEntity? = null,
     val availableGroups: List<String> = emptyList(),
     val availableSubgroups: List<String> = emptyList(),
-    val uniqueClassTypes: List<String> = emptyList(), // ✅ Lista typów z planu
-    val classColorMap: Map<String, Int> = emptyMap(), // ✅ Mapa kolorów
+    val uniqueClassTypes: List<String> = emptyList(),
+    val classColorMap: Map<String, Int> = emptyMap(),
     val isLoading: Boolean = false,
     val importMessage: String? = null
 )
@@ -67,14 +67,12 @@ class SettingsViewModel(
                 settingsRepository.getSettingsStream(),
                 classRepository.getAllClassesStream()
             ) { settings, classes ->
-                // Wyciągnij unikalne typy zajęć z bazy
                 val uniqueTypes = classes
                     .map { it.classType }
                     .filter { it.isNotBlank() }
                     .distinct()
                     .sorted()
 
-                // Rozparsuj JSON z kolorami
                 val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
                 val colorMap: Map<String, Int> = try {
                     gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
@@ -84,12 +82,10 @@ class SettingsViewModel(
 
                 Triple(settings, uniqueTypes, colorMap)
             }.collect { (settings, uniqueTypes, colorMap) ->
-                val loadedGroups = groups // Używamy pobranych wcześniej
-
                 _uiState.update {
                     it.copy(
                         settings = settings,
-                        availableGroups = loadedGroups,
+                        availableGroups = groups,
                         uniqueClassTypes = uniqueTypes,
                         classColorMap = colorMap
                     )
@@ -98,23 +94,20 @@ class SettingsViewModel(
         }
     }
 
-    // ✅ Funkcja aktualizacji koloru dla typu zajęć
     fun updateClassColor(classType: String, colorIndex: Int) {
         val currentSettings = _uiState.value.settings ?: return
         val currentMap = _uiState.value.classColorMap.toMutableMap()
-
         currentMap[classType] = colorIndex
-
         val newJson = gson.toJson(currentMap)
 
         viewModelScope.launch {
-            settingsRepository.updateSettings(currentSettings.copy(classColorsJson = newJson))
+            settingsRepository.insertSettings(currentSettings.copy(classColorsJson = newJson))
         }
     }
 
     fun updateSettings(newSettings: SettingsEntity) {
         viewModelScope.launch {
-            settingsRepository.updateSettings(newSettings)
+            settingsRepository.insertSettings(newSettings)
         }
     }
 
@@ -164,10 +157,10 @@ class SettingsViewModel(
                 if (settings != null) settingsRepository.insertSettings(settings)
 
                 classRepository.insertClasses(backupData.classes)
-                for (task in backupData.tasks) tasksRepository.insertTask(task)
-                for (grade in backupData.grades) gradesRepository.insertGrade(grade)
-                for (absence in backupData.absences) absenceRepository.insertAbsence(absence)
-                for (event in backupData.events) eventRepository.insertEvent(event)
+                backupData.tasks.forEach { tasksRepository.insertTask(it) }
+                backupData.grades.forEach { gradesRepository.insertGrade(it) }
+                backupData.absences.forEach { absenceRepository.insertAbsence(it) }
+                backupData.events.forEach { eventRepository.insertEvent(it) }
 
                 withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isLoading = false, importMessage = "Przywrócono kopię zapasową!") }

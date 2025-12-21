@@ -11,8 +11,8 @@ data class GradeEntity(
     val classType: String = "",
     val grade: Double,
     val weight: Int = 1,
-    val description: String?, // To jest nasz "Tytuł" (np. Kolokwium)
-    val comment: String? = null, // ✅ NOWE: To jest "Opis" (dodatkowe notatki)
+    val description: String?,
+    val comment: String? = null,
     val date: Long,
     val semester: Int = 1
 )

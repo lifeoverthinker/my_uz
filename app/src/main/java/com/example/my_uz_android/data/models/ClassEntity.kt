@@ -13,7 +13,7 @@ data class ClassEntity(
     val startTime: String,
     val endTime: String,
     val dayOfWeek: Int,
-    val date: String, // ← DODANE: "2025-12-09"
+    val date: String,
     val groupCode: String,
     val subgroup: String?,
     val teacherName: String? = null,

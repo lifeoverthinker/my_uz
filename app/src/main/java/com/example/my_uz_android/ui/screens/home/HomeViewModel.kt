@@ -59,7 +59,6 @@ class HomeViewModel(
         val rawName = settings?.userName ?: ""
         val isAnonymous = settings?.isAnonymous == true
 
-        // ✅ ZMIANA: Powitanie dla gościa vs studenta
         val (greeting, initials) = if (isAnonymous || rawName.isBlank()) {
             "Witaj w MyUZ!" to ""
         } else {

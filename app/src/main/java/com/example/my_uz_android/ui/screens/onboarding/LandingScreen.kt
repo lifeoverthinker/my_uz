@@ -44,7 +44,11 @@ private fun getIllustrationResId(currentPage: Int): Int = when (currentPage) {
 @Composable
 fun LandingScreen(
     viewModel: OnboardingViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    onFinishOnboarding: () -> Unit = {}
+    // ZMIANA: Dodano argumenty zgodne z AppNavigation (onNavigateToOnboarding)
+    onNavigateToOnboarding: () -> Unit = {},
+    onNavigateToHome: () -> Unit = {},
+    // Zachowujemy dla kompatybilności wstecznej jeśli używane gdzie indziej
+    onFinishOnboarding: () -> Unit = { onNavigateToHome() }
 ) {
     val currentPage by viewModel.currentPage.collectAsState()
     val totalPages = viewModel.totalPages
@@ -71,7 +75,6 @@ fun LandingScreen(
                     if (currentPage < 5) {
                         TextButton(
                             onClick = {
-                                // ✅ POPRAWKA: Przekazujemy callback onSuccess
                                 viewModel.skipOnboarding {
                                     onFinishOnboarding()
                                 }
@@ -232,9 +235,9 @@ fun LandingScreen(
     }
 }
 
-// ... (Reszta funkcji pomocniczych: ResponsiveOnboardingStep, WelcomeStepContent, PersonalizationStepContent, GroupSelectionStepContent, etc. pozostaje bez zmian) ...
-// Upewnij się, że reszta pliku jest taka sama jak poprzednio, poprawka była tylko w metodzie skipOnboarding() wewnątrz Scaffold -> topBar
-// Poniżej wklejam resztę pliku dla pewności, żebyś miał komplet:
+// ... Funkcje pomocnicze z Twojego pliku (ResponsiveOnboardingStep, WelcomeStepContent itd.) są poprawne.
+// Wystarczy, że podmienisz górną część z definicją LandingScreen.
+// Poniżej pomocnicze funkcje, aby plik był kompletny:
 
 @Composable
 fun ResponsiveOnboardingStep(

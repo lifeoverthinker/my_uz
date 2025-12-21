@@ -32,11 +32,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import com.example.my_uz_android.ui.theme.ClassColorPalette
-import com.example.my_uz_android.ui.theme.getClassAccentColor // Użyjemy jako obwódki dla wybranych
+
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onBackClick: () -> Unit = onNavigateBack, // Alias dla kompatybilności
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -64,7 +64,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        topBar = { SettingsTopBar(onBack = onNavigateBack) }
+        topBar = { SettingsTopBar(onBack = onBackClick) }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             Column(
@@ -84,7 +84,7 @@ fun SettingsScreen(
                     )
                 }
 
-                // ✅ NOWA SEKCJA: KOLORY ZAJĘĆ
+                // Sekcja: Kolory zajęć
                 if (uiState.uniqueClassTypes.isNotEmpty()) {
                     SettingsSection(title = "Kolory zajęć") {
                         uiState.uniqueClassTypes.forEach { classType ->
@@ -150,66 +150,8 @@ fun SettingsScreen(
     }
 }
 
-// --- Komponenty Pomocnicze ---
+// --- KOMPONENTY POMOCNICZE (Brakowało ich wcześniej) ---
 
-@Composable
-fun ClassColorPickerItem(
-    classType: String,
-    selectedColorIndex: Int,
-    onColorSelected: (Int) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-    ) {
-        Text(
-            text = classType,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 8.dp),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp), // Większy odstęp
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            ClassColorPalette.forEachIndexed { index, colorSet ->
-                val isSelected = index == selectedColorIndex
-
-                // Kolor obwódki: Jeśli wybrany -> Czarny/Primary, Jeśli nie -> Akcent (ciemniejszy od tła)
-                val borderColor = if (isSelected) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    colorSet.lightAccent.copy(alpha = 0.3f) // Subtelna obwódka
-                }
-
-                val borderWidth = if (isSelected) 2.dp else 1.dp
-
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(colorSet.lightBg) // Zawsze pokazuj Light w pickerze dla czytelności
-                        .border(borderWidth, borderColor, CircleShape)
-                        .clickable { onColorSelected(index) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isSelected) {
-                        // Opcjonalnie: "Ptaszek" w środku dla wybranego
-                        Icon(
-                            painter = painterResource(R.drawable.ic_check),
-                            contentDescription = null,
-                            tint = colorSet.lightAccent, // Kolor "ptaszka"
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 @Composable
 fun SettingsTopBar(onBack: () -> Unit) {
     Row(
@@ -302,6 +244,57 @@ fun SettingsActionItem(
         Icon(painterResource(id = R.drawable.ic_chevron_right), contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+@Composable
+fun ClassColorPickerItem(
+    classType: String,
+    selectedColorIndex: Int,
+    onColorSelected: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(8.dp)
+    ) {
+        Text(
+            text = classType,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 8.dp),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ClassColorPalette.forEachIndexed { index, colorSet ->
+                val isSelected = index == selectedColorIndex
+                val borderColor = if (isSelected) MaterialTheme.colorScheme.onSurface else colorSet.lightAccent.copy(alpha = 0.3f)
+                val borderWidth = if (isSelected) 2.dp else 1.dp
+
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(colorSet.lightBg)
+                        .border(borderWidth, borderColor, CircleShape)
+                        .clickable { onColorSelected(index) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_check),
+                            contentDescription = null,
+                            tint = colorSet.lightAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// --- Funkcje I/O ---
 
 private suspend fun saveBackupToFile(context: Context, uri: Uri, viewModel: SettingsViewModel) {
     withContext(Dispatchers.IO) {

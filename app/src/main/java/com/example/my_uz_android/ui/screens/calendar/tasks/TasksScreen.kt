@@ -47,6 +47,8 @@ fun TasksScreen(
     onCalendarClick: () -> Unit = {},
     onAccountClick: () -> Unit = {},
     onIndexClick: () -> Unit = {},
+    // ✅ DODANO: Callback do wyszukiwania
+    onSearchClick: () -> Unit = {},
     // ViewModele
     viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory),
     calendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -70,7 +72,6 @@ fun TasksScreen(
 
     val backgroundColor = MaterialTheme.colorScheme.surface
 
-    // ✅ INTEGRACJA DRAWERA (Poprawione parametry)
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -87,11 +88,11 @@ fun TasksScreen(
                 },
                 onSearchClick = {
                     scope.launch { drawerState.close() }
-                    // TODO: Nawigacja do wyszukiwarki (Etap 3)
+                    onSearchClick() // ✅ Wywołanie nawigacji
                 },
                 onSettingsClick = {
                     scope.launch { drawerState.close() }
-                    onAccountClick() // Przejście do ustawień/konta
+                    onAccountClick()
                 },
                 onCloseDrawer = { scope.launch { drawerState.close() } }
             )
@@ -119,7 +120,7 @@ fun TasksScreen(
                             }
                         },
                         actions = {
-                            IconButton(onClick = { /* TODO: Search */ }) {
+                            IconButton(onClick = onSearchClick) { // ✅ Podpięcie pod lupę
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_search),
                                     contentDescription = "Szukaj"
@@ -145,7 +146,7 @@ fun TasksScreen(
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
-                                text = stringResource(R.string.tasks_empty_title),
+                                text = stringResource(R.string.tasks_empty_title), // Upewnij się, że string istnieje
                                 fontFamily = InterFontFamily,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyLarge
@@ -187,7 +188,7 @@ fun TasksScreen(
     }
 }
 
-// --- Komponenty pomocnicze (bez zmian) ---
+// --- Komponenty pomocnicze ---
 
 @Composable
 fun MonthHeaderSticky(yearMonth: YearMonth, backgroundColor: Color) {
