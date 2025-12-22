@@ -3,7 +3,7 @@ package com.example.my_uz_android.ui.screens.onboarding
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.compose.foundation.background // Dodano brakujący import
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.MyUZTheme
 
@@ -73,7 +74,21 @@ fun LandingScreen(
                         .statusBarsPadding(),
                     contentAlignment = Alignment.TopEnd
                 ) {
-                    // Puste - konfiguracja obowiązkowa
+                    // Przycisk Pomiń (tylko na stronach < 5)
+                    if (currentPage < 5) {
+                        TextButton(
+                            onClick = {
+                                viewModel.skipOnboarding { onFinishOnboarding() }
+                            },
+                            enabled = !isLoading
+                        ) {
+                            Text(
+                                "Pomiń",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
             },
             bottomBar = {
@@ -92,29 +107,23 @@ fun LandingScreen(
                         Box(modifier = Modifier.fillMaxWidth()) {
                             when (currentPage) {
                                 0 -> {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    Button(
+                                        onClick = { viewModel.onNextClick() },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary
+                                        )
                                     ) {
-                                        Spacer(modifier = Modifier.weight(1f))
-                                        Button(
-                                            onClick = { viewModel.onNextClick() },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .height(48.dp),
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.primary,
-                                                contentColor = MaterialTheme.colorScheme.onPrimary
-                                            )
-                                        ) {
-                                            Text("Rozpocznij", style = MaterialTheme.typography.labelLarge)
-                                            Spacer(Modifier.width(8.dp))
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_chevron_right),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
+                                        Text("Rozpocznij", style = MaterialTheme.typography.labelLarge)
+                                        Spacer(Modifier.width(8.dp))
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_chevron_right),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
                                 }
                                 5 -> {
@@ -148,7 +157,6 @@ fun LandingScreen(
                                     }
                                 }
                                 else -> {
-                                    // Logika blokowania przycisku "Dalej"
                                     val isNextEnabled = when(currentPage) {
                                         1 -> selectedGender != null && userName.isNotBlank()
                                         2 -> !selectedGroup.isNullOrBlank()
@@ -226,7 +234,7 @@ fun LandingScreen(
 
 @Composable
 fun WelcomeStepContent() {
-    ResponsiveOnboardingStep(illustrationResId = R.drawable.college_students_rafiki) { // Zakładam, że getIllustrationResId(0) to ten obrazek
+    ResponsiveOnboardingStep(illustrationResId = R.drawable.college_students_rafiki) {
         OnboardingTexts(
             title = "Witaj w MyUZ! 👋",
             subtitle = "Twój cyfrowy asystent",
@@ -250,9 +258,6 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
             description = "Dzięki temu aplikacja będzie zwracać się do Ciebie tak, jak lubisz."
         )
 
-        // Usunięto zbędny Spacer(16.dp), parent (ResponsiveOnboardingStep) już zapewnia odstęp.
-
-        // Grupowanie w Column, aby tytuł i przyciski były blisko siebie
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -311,8 +316,6 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Usunięto duży Spacer(24.dp). Layout nadrzędny zapewnia odstęp między sekcją płci a danymi.
-
                 Text(
                     text = "Twoje dane",
                     style = MaterialTheme.typography.labelMedium,
@@ -438,7 +441,7 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp), // Spójny odstęp
+                    .padding(top = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -479,7 +482,6 @@ fun MapFeatureStepContent() {
 
 @Composable
 fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description: String) {
-    // pageIndex mapuje do zasobu w getIllustrationResId
     val resId = when(pageIndex) {
         3 -> R.drawable.calendar_rafiki
         4 -> R.drawable.grades_rafiki
