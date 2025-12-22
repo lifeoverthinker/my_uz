@@ -40,7 +40,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
-// Definicja Enuma w tym samym pliku
 enum class ClassCardType {
     HOME,
     CALENDAR
@@ -58,7 +57,7 @@ fun ClassCard(
 ) {
     val titleColor = Color(0xFF1D192B)
     val detailsColor = Color(0xFF494949)
-    val avatarTextColor = Color(0xFFFFFBFE)
+    val avatarTextColor = Color(0xFFFFFBFE) // Biały tekst na kolorowym badge'u
 
     val isPast = remember(classItem) {
         try {
@@ -72,7 +71,7 @@ fun ClassCard(
         }
     }
 
-    // Aplikuj alpha tylko dla kalendarza
+    // Aplikuj alpha tylko dla kalendarza (wyszarzenie przeszłych)
     val contentAlpha = if (isPast && type == ClassCardType.CALENDAR) 0.6f else 1f
 
     Card(
@@ -183,6 +182,7 @@ fun ClassCard(
                         }
                     }
                     ClassCardType.CALENDAR -> {
+                        // Mała kropka w kalendarzu
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
@@ -193,44 +193,5 @@ fun ClassCard(
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ClassCardPreview() {
-    val mockClassNormal = ClassEntity(
-        id = 1,
-        subjectName = "Podstawy systemów dyskretnych",
-        classType = "Wykład",
-        startTime = "10:00",
-        endTime = "11:30",
-        dayOfWeek = 1,
-        date = LocalDate.now().plusDays(1).toString(),
-        groupCode = "32INF",
-        subgroup = null,
-        room = "Sala 102",
-        teacherName = "Jan Kowalski"
-    )
-
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Wariant HOME:")
-        ClassCard(
-            classItem = mockClassNormal,
-            type = ClassCardType.HOME,
-            backgroundColor = Color(0xFFE8DEF8),
-            accentColor = Color(0xFF6750A4)
-        )
-
-        Text("Wariant CALENDAR (Aktywne):")
-        ClassCard(
-            classItem = mockClassNormal,
-            type = ClassCardType.CALENDAR,
-            backgroundColor = Color(0xFFE8DEF8),
-            accentColor = Color(0xFF7D5260)
-        )
     }
 }

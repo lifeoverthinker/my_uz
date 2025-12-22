@@ -36,7 +36,7 @@ import java.io.InputStreamReader
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    onBackClick: () -> Unit = onNavigateBack, // Alias dla kompatybilności
+    onBackClick: () -> Unit = onNavigateBack,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -150,7 +150,7 @@ fun SettingsScreen(
     }
 }
 
-// --- KOMPONENTY POMOCNICZE (Brakowało ich wcześniej) ---
+// --- KOMPONENTY POMOCNICZE ---
 
 @Composable
 fun SettingsTopBar(onBack: () -> Unit) {

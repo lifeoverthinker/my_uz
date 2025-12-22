@@ -29,6 +29,7 @@ import com.example.my_uz_android.ui.components.CalendarTopAppBar
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.components.ClassCardType
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
+import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 import com.kizitonwose.calendar.compose.HorizontalCalendar
@@ -49,6 +50,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlin.math.abs
 
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
@@ -73,7 +75,7 @@ fun CalendarScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allClasses by viewModel.classes.collectAsState()
-    val classColorMap = uiState.classColorMap
+    val classColorMap = uiState.classColorMap // Mapa TypZajec -> IndexKoloru
 
     val currentDate = remember { LocalDate.now(PolandZone) }
     val currentMonth = remember { YearMonth.now(PolandZone) }
@@ -302,7 +304,6 @@ fun HourRow(hour: Int, isLastLine: Boolean) {
     Row(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
         Box(modifier = Modifier.width(HourColWidth).fillMaxHeight()) {
             if (!isLastLine && hour != 0) {
-                // POPRAWIONE: Wyrównanie do lewej (Start) + odstęp 5dp
                 Row(
                     modifier = Modifier.fillMaxWidth().offset(y = TextVerticalOffset),
                     verticalAlignment = Alignment.CenterVertically
@@ -310,12 +311,12 @@ fun HourRow(hour: Int, isLastLine: Boolean) {
                     Text(
                         text = String.format("%02d:00", hour),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = ColorTextGray, fontWeight = FontWeight.Medium, fontFamily = InterFontFamily),
-                        modifier = Modifier.padding(start = 0.dp), // Zero paddingu z lewej
-                        textAlign = TextAlign.Start, // Do lewej
+                        modifier = Modifier.padding(start = 0.dp),
+                        textAlign = TextAlign.Start,
                         maxLines = 1, softWrap = false
                     )
-                    Spacer(modifier = Modifier.width(5.dp)) // Odstęp 5dp
-                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 1.dp, color = ColorDivider) // Linia
+                    Spacer(modifier = Modifier.width(5.dp))
+                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 1.dp, color = ColorDivider)
                 }
             }
         }
@@ -348,18 +349,15 @@ fun ScheduledClassItem(
     val classStartDateTime = LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
     val isFuture = now.isBefore(classStartDateTime)
 
-    // POPRAWIONE KOLORY: IgnoreCase i Trim, fallback na extendedColors
-    val assignedColorInt = classColorMap.entries.firstOrNull {
-        it.key.trim().equals(classEntity.classType.trim(), ignoreCase = true)
-    }?.value ?: classColorMap.entries.firstOrNull {
-        it.key.trim().equals(classEntity.subjectName.trim(), ignoreCase = true)
-    }?.value
+    // ✅ ZMIANA: Pobranie indexu koloru z mapy lub wyliczenie hasha (fallback)
+    // Dzięki temu nowe zajęcia mają deterministyczny kolor, a te zapisane w ustawieniach - kolor użytkownika.
+    val assignedColorIndex = classColorMap[classEntity.classType] ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
 
-    val baseColor = if (assignedColorInt != null) {
-        Color(assignedColorInt).copy(alpha = 1f)
-    } else {
-        MaterialTheme.extendedColors.classCardBackground // Fallback z motywu
-    }
+    // ✅ ZMIANA: Pobranie rzeczywistego koloru z palety na podstawie indeksu
+    val colorSet = ClassColorPalette.getOrElse(assignedColorIndex) { ClassColorPalette[0] }
+
+    val baseColor = colorSet.lightBg
+    val accentColor = colorSet.lightAccent
 
     Box(
         modifier = Modifier
@@ -372,7 +370,7 @@ fun ScheduledClassItem(
             classItem = classEntity,
             type = ClassCardType.CALENDAR,
             backgroundColor = baseColor,
-            accentColor = ColorSelectedBg,
+            accentColor = accentColor, // Przekazujemy kolor akcentu (kropki)
             showBadge = isFuture,
             onClick = { onClassClick(classEntity.id) },
             modifier = Modifier.fillMaxSize()
