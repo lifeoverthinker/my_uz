@@ -16,20 +16,22 @@ import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
-import com.example.my_uz_android.ui.components.ClassCardType
+import com.example.my_uz_android.ui.theme.ClassColorPalette
+import com.example.my_uz_android.ui.theme.extendedColors
 import com.example.my_uz_android.ui.theme.getClassAccentColor
-import com.example.my_uz_android.ui.theme.getClassBackgroundColor
+import kotlin.math.abs
 
 @Composable
 fun UpcomingClasses(
     classes: List<ClassEntity>,
-    emptyMessage: String? = null,
-    dayLabel: String? = null,
-    classColorMap: Map<String, Int> = emptyMap(),
+    emptyMessage: String?,
+    dayLabel: String?,
+    classColorMap: Map<String, Int>, // ✅ Dodano brakujący parametr
     modifier: Modifier = Modifier,
     onClassClick: (Int) -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
+    val classCardColor = MaterialTheme.extendedColors.classCardBackground
+    val isDark = isSystemInDarkTheme() // Potrzebne do wyboru wariantu koloru (light/dark) z palety
 
     Column(
         modifier = modifier
@@ -93,16 +95,19 @@ fun UpcomingClasses(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(classes) { classItem ->
-                    val colorIndex = classColorMap[classItem.classType] ?: 0
+                    // ✅ Logika synchronizacji kolorów:
+                    // 1. Sprawdź, czy użytkownik wybrał kolor w ustawieniach (classColorMap)
+                    // 2. Jeśli nie, użyj hasha nazwy typu zajęć (fallback), aby kolor był stały
+                    val colorIndex = classColorMap[classItem.classType]
+                        ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
 
-                    val bgColor = getClassBackgroundColor(colorIndex, isDark)
+                    // ✅ Pobierz kolor z globalnej palety (tej samej co w Settings i Calendar)
                     val accentColor = getClassAccentColor(colorIndex, isDark)
 
                     ClassCard(
                         classItem = classItem,
-                        type = ClassCardType.HOME,
-                        backgroundColor = bgColor, // Przywrócono przekazywanie
-                        accentColor = accentColor, // Przywrócono przekazywanie
+                        backgroundColor = classCardColor,
+                        accentColor = accentColor, // Przekazujemy wyliczony kolor
                         onClick = { onClassClick(classItem.id) },
                         modifier = Modifier.width(264.dp)
                     )
