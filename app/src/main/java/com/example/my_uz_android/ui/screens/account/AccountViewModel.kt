@@ -3,15 +3,12 @@ package com.example.my_uz_android.ui.screens.account
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.SettingsEntity
+import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.util.NetworkResult
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-
-enum class UserGender {
-    STUDENT, STUDENTKA
-}
 
 class AccountViewModel(
     private val settingsRepository: SettingsRepository,
@@ -122,16 +119,12 @@ class AccountViewModel(
                     if (!settings.selectedGroupCode.isNullOrEmpty()) {
                         _selectedGroup.value = settings.selectedGroupCode
 
-                        // Ustawiamy query tylko jeśli jest puste, żeby nie nadpisywać w trakcie pisania (choć tutaj to load initial)
                         if (_groupSearchQuery.value.isEmpty()) {
                             _groupSearchQuery.value = settings.selectedGroupCode
                         }
 
                         loadSubgroupsForGroup(settings.selectedGroupCode)
 
-                        // --- POPRAWKA: Rozdzielamy string podgrup na listę ---
-                        // Jeśli w bazie jest "Lab 1, Proj 2", tworzymy Set ["Lab 1", "Proj 2"]
-                        // Dzięki temu FilterChip w edycji będzie wiedział, co zaznaczyć.
                         _selectedSubgroups.value = if (!settings.selectedSubgroup.isNullOrEmpty()) {
                             settings.selectedSubgroup.split(",")
                                 .map { it.trim() }
@@ -205,14 +198,13 @@ class AccountViewModel(
             val fullName = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
             val genderString = if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
 
-            // --- POPRAWKA: Łączymy wybrane podgrupy w jeden string po przecinku ---
             val subgroupsString = _selectedSubgroups.value.joinToString(", ")
 
             val newSettings = currentSettingsEntity?.copy(
                 userName = fullName,
                 gender = genderString,
                 selectedGroupCode = _selectedGroup.value,
-                selectedSubgroup = subgroupsString // Zapisujemy jako string
+                selectedSubgroup = subgroupsString
             ) ?: SettingsEntity(
                 userName = fullName,
                 gender = genderString,
