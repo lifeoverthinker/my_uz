@@ -1,142 +1,120 @@
 package com.example.my_uz_android.ui.screens.account
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.TopAppBar
-import com.example.my_uz_android.ui.theme.InterFontFamily
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PersonalDataScreen(
     onNavigateBack: () -> Unit,
-    onEditClick: () -> Unit,
+    onNavigateToEdit: () -> Unit,
     viewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val settings by viewModel.settings.collectAsState()
-    val scrollState = rememberScrollState()
+    val userName by viewModel.userName.collectAsState()
+    val userSurname by viewModel.userSurname.collectAsState()
+    val selectedGender by viewModel.selectedGender.collectAsState()
+    val selectedGroup by viewModel.selectedGroup.collectAsState()
+    val selectedSubgroups by viewModel.selectedSubgroups.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "Dane osobowe",
-                navigationIcon = R.drawable.ic_chevron_left, // Poprawne ID ikony
-                onNavigationClick = onNavigateBack,
-                isCenterAligned = true,
+                title = { Text("Dane osobowe") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
+                    }
+                },
                 actions = {
-                    IconButton(onClick = onEditClick) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_edit),
-                            contentDescription = "Edytuj",
-                            modifier = Modifier.size(24.dp), // Wymiar ikonki
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    IconButton(onClick = onNavigateToEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edytuj")
                     }
                 }
             )
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 24.dp)
-                .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Avatar / Placeholder
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
+            // Sekcja: Imię, Nazwisko, Płeć
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = getInitials(settings?.userName ?: ""),
-                    style = MaterialTheme.typography.displaySmall.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    text = "Imię i nazwisko",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "$userName $userSurname",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Normal
+                )
+                Text(
+                    text = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider()
 
-            // Imię i Nazwisko
-            Text(
-                text = settings?.userName?.takeIf { it.isNotBlank() } ?: "Brak danych",
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            // Rola (Forma zwrotu)
-            val roleLabel = when(settings?.gender) {
-                "STUDENTKA" -> "Studentka"
-                else -> "Student"
-            }
-
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
+            // Sekcja: Grupa
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = roleLabel,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    text = "Grupa dziekańska",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = selectedGroup ?: "Brak danych",
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Sekcja informacyjna
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_info_circle),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp), // Wymiar ikonki
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
+            // Sekcja: Podgrupy - osobne kafelki
+            if (selectedSubgroups.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Dane te są używane tylko wewnątrz aplikacji do personalizacji powitań.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Podgrupy",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        selectedSubgroups.forEach { subgroup ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            ) {
+                                Text(
+                                    text = subgroup,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -34,12 +34,14 @@ fun CalendarTopAppBar(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .statusBarsPadding(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceBetween, // Rozłożenie elementów
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Lewa sekcja + Tytuł (zajmuje dostępną przestrzeń)
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f) // KLUCZOWA ZMIANA: Tytuł nie rozepcha paska
         ) {
             Box(
                 modifier = Modifier
@@ -57,6 +59,7 @@ fun CalendarTopAppBar(
                 )
             }
 
+            // Kontener tytułu
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -64,6 +67,7 @@ fun CalendarTopAppBar(
                     .clip(MaterialTheme.shapes.small)
                     .clickable(enabled = onTitleClick != null) { onTitleClick?.invoke() }
                     .padding(4.dp)
+                    .weight(1f, fill = false) // Ważne: nie rozciągaj się na siłę, ale miej limit
             ) {
                 Text(
                     text = title,
@@ -73,7 +77,9 @@ fun CalendarTopAppBar(
                         fontSize = 24.sp,
                         lineHeight = 24.sp
                     ),
-                    color = contentColor
+                    color = contentColor,
+                    maxLines = 1, // Tylko jedna linia
+                    overflow = TextOverflow.Ellipsis // Ucinanie z "..."
                 )
 
                 if (onTitleClick != null) {
@@ -87,9 +93,11 @@ fun CalendarTopAppBar(
             }
         }
 
+        // Prawa sekcja (ikony) - zawsze widoczna, nieściśnięta
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 8.dp) // Lekki odstęp od tytułu
         ) {
             if (onSearchClick != null) {
                 Box(
@@ -118,7 +126,6 @@ fun CalendarTopAppBar(
                         .clickable(onClick = onAddClick),
                     contentAlignment = Alignment.Center
                 ) {
-                    // ZMIANA: Zamiast ic_plus jest teraz ic_calendar (powrót do dzisiaj)
                     Icon(
                         painter = painterResource(R.drawable.ic_calendar),
                         contentDescription = "Dzisiaj",
@@ -144,7 +151,6 @@ fun TopAppBar(
     isNavigationIconFilled: Boolean = false,
     titleContent: (@Composable () -> Unit)? = null
 ) {
-    // ...
     val navigationIconContent: @Composable () -> Unit = {
         if (navigationIcon != null) {
             if (isNavigationIconFilled) {

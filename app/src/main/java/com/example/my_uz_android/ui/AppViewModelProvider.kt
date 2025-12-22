@@ -109,8 +109,8 @@ object AppViewModelProvider {
         initializer {
             AccountViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
-                universityRepository = myUZApplication().container.universityRepository,
-                classRepository = myUZApplication().container.classRepository
+                universityRepository = myUZApplication().container.universityRepository
+                // Usunięto classRepository, którego brakowało w konstruktorze AccountViewModel
             )
         }
 

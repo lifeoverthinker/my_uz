@@ -3,219 +3,229 @@ package com.example.my_uz_android.ui.screens.account
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.SettingsEntity
-import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.util.NetworkResult
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+enum class UserGender {
+    STUDENT, STUDENTKA
+}
+
 class AccountViewModel(
     private val settingsRepository: SettingsRepository,
-    private val universityRepository: UniversityRepository,
-    private val classRepository: ClassRepository
+    private val universityRepository: UniversityRepository
 ) : ViewModel() {
 
-    val settings: StateFlow<SettingsEntity?> = settingsRepository.getSettingsStream()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = null
-        )
+    // --- Dane Użytkownika ---
+    private val _userName = MutableStateFlow("")
+    val userName: StateFlow<String> = _userName.asStateFlow()
 
-    private val _isSettingsLoaded = MutableStateFlow(false)
-    val isSettingsLoaded: StateFlow<Boolean> = _isSettingsLoaded.asStateFlow()
+    private val _userSurname = MutableStateFlow("")
+    val userSurname: StateFlow<String> = _userSurname.asStateFlow()
 
-    // --- Drafts (Dane osobowe) ---
-    private val _draftName = MutableStateFlow("")
-    val draftName: StateFlow<String> = _draftName.asStateFlow()
+    private val _selectedGender = MutableStateFlow<UserGender?>(null)
+    val selectedGender: StateFlow<UserGender?> = _selectedGender.asStateFlow()
 
-    private val _draftSurname = MutableStateFlow("")
-    val draftSurname: StateFlow<String> = _draftSurname.asStateFlow()
+    // --- Dane Studiów ---
+    private val _isAnonymous = MutableStateFlow(false)
+    val isAnonymous: StateFlow<Boolean> = _isAnonymous.asStateFlow()
 
-    private val _draftRole = MutableStateFlow("STUDENT")
-    val draftRole: StateFlow<String> = _draftRole.asStateFlow()
+    private val _faculty = MutableStateFlow("")
+    val faculty: StateFlow<String> = _faculty.asStateFlow()
 
-    // --- Grupy (SettingsScreen) ---
+    private val _fieldOfStudy = MutableStateFlow("")
+    val fieldOfStudy: StateFlow<String> = _fieldOfStudy.asStateFlow()
+
+    private val _studyMode = MutableStateFlow("")
+    val studyMode: StateFlow<String> = _studyMode.asStateFlow()
+
+    // --- Wybór Grupy ---
     private val _groupSearchQuery = MutableStateFlow("")
     val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
 
-    private val _filteredGroups = MutableStateFlow<List<String>>(emptyList())
-    val filteredGroups: StateFlow<List<String>> = _filteredGroups.asStateFlow()
+    private val _selectedGroup = MutableStateFlow<String?>(null)
+    val selectedGroup: StateFlow<String?> = _selectedGroup.asStateFlow()
 
     private val _availableSubgroups = MutableStateFlow<List<String>>(emptyList())
     val availableSubgroups: StateFlow<List<String>> = _availableSubgroups.asStateFlow()
 
-    private val _draftSubgroups = MutableStateFlow<List<String>>(emptyList())
-    val draftSubgroups: StateFlow<List<String>> = _draftSubgroups.asStateFlow()
+    private val _selectedSubgroups = MutableStateFlow<Set<String>>(emptySet())
+    val selectedSubgroups: StateFlow<Set<String>> = _selectedSubgroups.asStateFlow()
 
-    private val _draftSelectedGroup = MutableStateFlow<String?>(null)
-    val draftSelectedGroup: StateFlow<String?> = _draftSelectedGroup.asStateFlow()
+    // Pełna lista grup pobrana z serwera
+    private val _allGroups = MutableStateFlow<List<String>>(emptyList())
+
+    // Filtrowanie grup
+    val filteredGroups: StateFlow<List<String>> = combine(
+        _groupSearchQuery,
+        _allGroups
+    ) { query, allGroups ->
+        if (query.isBlank()) {
+            emptyList()
+        } else {
+            allGroups.filter { it.contains(query, ignoreCase = true) }
+                .sorted()
+                .take(5)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _saveMessage = MutableStateFlow<String?>(null)
-    val saveMessage: StateFlow<String?> = _saveMessage.asStateFlow()
+    private val _isSaved = MutableStateFlow(false)
+    val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
 
-    private var allGroupCodes: List<String> = emptyList()
+    private var currentSettingsEntity: SettingsEntity? = null
 
     init {
+        loadCurrentData()
+        loadAllGroups()
+    }
+
+    private fun loadAllGroups() {
         viewModelScope.launch {
-            settings.collectLatest { retrievedSettings ->
-                _isSettingsLoaded.value = true
-                if (retrievedSettings != null) {
-                    // Inicjalizuj drafty tylko raz lub gdy są puste, by nie nadpisywać wpisywania
-                    if (_draftName.value.isEmpty() && _groupSearchQuery.value.isEmpty()) {
-                        initializeDrafts(retrievedSettings)
-                    }
+            when (val result = universityRepository.getGroupCodes()) {
+                is NetworkResult.Success -> {
+                    _allGroups.value = result.data ?: emptyList()
+                }
+                else -> {
+                    _allGroups.value = emptyList()
                 }
             }
         }
-        loadGroupCodes()
     }
 
-    private fun initializeDrafts(settings: SettingsEntity) {
-        val fullName = settings.userName.trim()
-        val parts = fullName.split(" ").filter { it.isNotBlank() }
-        if (parts.isNotEmpty()) {
-            _draftName.value = parts[0]
-            _draftSurname.value = if (parts.size > 1) parts.drop(1).joinToString(" ") else ""
-        }
-        _draftRole.value = settings.gender.takeIf { !it.isNullOrBlank() } ?: "STUDENT"
-
-        _draftSelectedGroup.value = settings.selectedGroupCode
-        _groupSearchQuery.value = settings.selectedGroupCode ?: ""
-        _draftSubgroups.value = settings.selectedSubgroup?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
-
-        if (!settings.selectedGroupCode.isNullOrBlank()) {
-            loadSubgroupsForGroup(settings.selectedGroupCode)
-        }
-    }
-
-    fun updateDraftName(name: String) { _draftName.value = name }
-    fun updateDraftSurname(surname: String) { _draftSurname.value = surname }
-    fun updateDraftRole(role: String) { _draftRole.value = role }
-
-    // ZAPIS DANYCH OSOBOWYCH (Imię, Nazwisko, Rola)
-    fun savePersonalData() {
+    private fun loadCurrentData() {
         viewModelScope.launch {
             _isLoading.value = true
-            val current = settings.value ?: SettingsEntity()
+            settingsRepository.getSettingsStream().collect { settings ->
+                if (settings != null) {
+                    currentSettingsEntity = settings
 
-            val newName = _draftName.value.trim()
-            val newSurname = _draftSurname.value.trim()
-            val combinedName = if (newSurname.isNotBlank()) "$newName $newSurname" else newName
+                    val nameParts = settings.userName.split(" ", limit = 2)
+                    _userName.value = nameParts.getOrElse(0) { "" }
+                    _userSurname.value = nameParts.getOrElse(1) { "" }
 
-            val newSettings = current.copy(
-                userName = combinedName,
-                gender = _draftRole.value,
-                isAnonymous = false
-            )
+                    _isAnonymous.value = settings.isAnonymous
+                    _faculty.value = settings.faculty ?: ""
+                    _fieldOfStudy.value = settings.fieldOfStudy ?: ""
+                    _studyMode.value = settings.studyMode ?: ""
 
-            settingsRepository.insertSettings(newSettings)
-            _saveMessage.value = "Zapisano" // Sygnał dla UI
-            _isLoading.value = false
-        }
-    }
+                    _selectedGender.value = when (settings.gender?.lowercase()) {
+                        "studentka" -> UserGender.STUDENTKA
+                        "student" -> UserGender.STUDENT
+                        else -> UserGender.STUDENT
+                    }
 
-    // --- Logika Grup (dla SettingsScreen) ---
-    private fun loadGroupCodes() {
-        viewModelScope.launch {
-            val result = universityRepository.getGroupCodes()
-            if (result is NetworkResult.Success) allGroupCodes = result.data ?: emptyList()
-        }
-    }
+                    if (!settings.selectedGroupCode.isNullOrEmpty()) {
+                        _selectedGroup.value = settings.selectedGroupCode
 
-    fun onSearchQueryChange(query: String) {
-        _groupSearchQuery.value = query
-        if (query != _draftSelectedGroup.value) {
-            _draftSelectedGroup.value = null
-            _availableSubgroups.value = emptyList()
-            _draftSubgroups.value = emptyList()
-        }
-        if (query.isBlank()) {
-            _filteredGroups.value = emptyList()
-        } else {
-            _filteredGroups.value = allGroupCodes.filter { it.contains(query, ignoreCase = true) }.take(10)
-        }
-    }
+                        // Ustawiamy query tylko jeśli jest puste, żeby nie nadpisywać w trakcie pisania (choć tutaj to load initial)
+                        if (_groupSearchQuery.value.isEmpty()) {
+                            _groupSearchQuery.value = settings.selectedGroupCode
+                        }
 
-    fun selectGroup(groupCode: String) {
-        _draftSelectedGroup.value = groupCode
-        _groupSearchQuery.value = groupCode
-        _filteredGroups.value = emptyList()
-        loadSubgroupsForGroup(groupCode)
-        _draftSubgroups.value = emptyList()
-    }
+                        loadSubgroupsForGroup(settings.selectedGroupCode)
 
-    private fun loadSubgroupsForGroup(groupCode: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val result = universityRepository.getSubgroups(groupCode)
-            if (result is NetworkResult.Success) {
-                _availableSubgroups.value = result.data ?: emptyList()
-            } else {
-                _availableSubgroups.value = emptyList()
-            }
-            _isLoading.value = false
-        }
-    }
-
-    fun toggleSubgroup(subgroup: String) {
-        val current = _draftSubgroups.value.toMutableList()
-        if (current.contains(subgroup)) current.remove(subgroup) else current.add(subgroup)
-        _draftSubgroups.value = current
-    }
-
-    // ZAPIS GRUPY (Dla SettingsScreen - nie dla PersonalData)
-    fun saveChanges() {
-        // Ta metoda jest wywoływana z SettingsScreen, gdzie user wybiera grupę
-        val groupCode = if(!_draftSelectedGroup.value.isNullOrBlank()) _draftSelectedGroup.value else _groupSearchQuery.value.takeIf { it.isNotBlank() }
-        val subgroups = _draftSubgroups.value
-
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val current = settings.value ?: SettingsEntity()
-                var faculty: String? = current.faculty
-                var fieldOfStudy: String? = current.fieldOfStudy
-                var studyMode: String? = current.studyMode
-
-                if (!groupCode.isNullOrBlank()) {
-                    val detailsResult = universityRepository.getGroupDetails(groupCode)
-                    if (detailsResult is NetworkResult.Success) {
-                        detailsResult.data?.let {
-                            studyMode = it.studyMode
-                            it.fieldInfo?.let { info ->
-                                faculty = info.faculty
-                                fieldOfStudy = info.name
-                            }
+                        // --- POPRAWKA: Rozdzielamy string podgrup na listę ---
+                        // Jeśli w bazie jest "Lab 1, Proj 2", tworzymy Set ["Lab 1", "Proj 2"]
+                        // Dzięki temu FilterChip w edycji będzie wiedział, co zaznaczyć.
+                        _selectedSubgroups.value = if (!settings.selectedSubgroup.isNullOrEmpty()) {
+                            settings.selectedSubgroup.split(",")
+                                .map { it.trim() }
+                                .filter { it.isNotEmpty() }
+                                .toSet()
+                        } else {
+                            emptySet()
                         }
                     }
-                    val planResult = universityRepository.getSchedule(groupCode, subgroups)
-                    if (planResult is NetworkResult.Success && planResult.data != null) {
-                        classRepository.deleteAllClasses()
-                        classRepository.insertClasses(planResult.data)
-                    }
                 }
-
-                val newSettings = current.copy(
-                    selectedGroupCode = groupCode,
-                    selectedSubgroup = subgroups.joinToString(","),
-                    faculty = faculty,
-                    fieldOfStudy = fieldOfStudy,
-                    studyMode = studyMode
-                )
-                settingsRepository.insertSettings(newSettings)
-                _saveMessage.value = "Zapisano plan"
-            } catch (e: Exception) {
-                _saveMessage.value = "Błąd: ${e.message}"
-            } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    fun clearSaveMessage() { _saveMessage.value = null }
+    fun setUserName(name: String) {
+        _userName.value = name
+    }
+
+    fun setUserSurname(surname: String) {
+        _userSurname.value = surname
+    }
+
+    fun setGender(gender: UserGender) {
+        _selectedGender.value = gender
+    }
+
+    fun setGroupSearchQuery(query: String) {
+        _groupSearchQuery.value = query
+        if (query.isBlank()) {
+            _selectedGroup.value = null
+            _availableSubgroups.value = emptyList()
+            _selectedSubgroups.value = emptySet()
+        }
+    }
+
+    fun selectGroup(group: String) {
+        _selectedGroup.value = group
+        _groupSearchQuery.value = group
+        _selectedSubgroups.value = emptySet()
+        loadSubgroupsForGroup(group)
+    }
+
+    private fun loadSubgroupsForGroup(group: String) {
+        viewModelScope.launch {
+            when (val result = universityRepository.getSubgroups(group)) {
+                is NetworkResult.Success -> {
+                    _availableSubgroups.value = result.data ?: emptyList()
+                }
+                else -> {
+                    _availableSubgroups.value = emptyList()
+                }
+            }
+        }
+    }
+
+    fun toggleSubgroup(subgroup: String) {
+        val current = _selectedSubgroups.value.toMutableSet()
+        if (current.contains(subgroup)) {
+            current.remove(subgroup)
+        } else {
+            current.add(subgroup)
+        }
+        _selectedSubgroups.value = current
+    }
+
+    fun saveChanges(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+
+            val fullName = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
+            val genderString = if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
+
+            // --- POPRAWKA: Łączymy wybrane podgrupy w jeden string po przecinku ---
+            val subgroupsString = _selectedSubgroups.value.joinToString(", ")
+
+            val newSettings = currentSettingsEntity?.copy(
+                userName = fullName,
+                gender = genderString,
+                selectedGroupCode = _selectedGroup.value,
+                selectedSubgroup = subgroupsString // Zapisujemy jako string
+            ) ?: SettingsEntity(
+                userName = fullName,
+                gender = genderString,
+                selectedGroupCode = _selectedGroup.value,
+                selectedSubgroup = subgroupsString
+            )
+
+            settingsRepository.insertOrUpdate(newSettings)
+
+            _isLoading.value = false
+            _isSaved.value = true
+            onSuccess()
+            _isSaved.value = false
+        }
+    }
 }
