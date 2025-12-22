@@ -6,16 +6,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -33,7 +32,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -76,6 +74,7 @@ fun TasksScreen(
             CalendarDrawerContent(
                 favorites = calendarUiState.favorites,
                 selectedResourceId = calendarUiState.selectedResourceId,
+                currentScreen = "tasks",
                 onMyPlanClick = {
                     calendarViewModel.selectMyPlan()
                     scope.launch { drawerState.close() }
@@ -108,8 +107,8 @@ fun TasksScreen(
                     CalendarTopAppBar(
                         title = "Terminarz",
                         onNavigationClick = { scope.launch { drawerState.open() } },
-                        onSearchClick = onSearchClick,
-                        onAddClick = onAddTaskClick,
+                        onSearchClick = null,
+                        onAddClick = null,
                         onTitleClick = null
                     )
                 }
@@ -173,31 +172,80 @@ fun TasksScreen(
 
 @Composable
 fun MonthHeaderSticky(yearMonth: YearMonth, backgroundColor: Color) {
-    val formatter = remember { DateTimeFormatter.ofPattern("MMMM yyyy", Locale("pl")) }
-    val title = yearMonth.format(formatter).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
-    Box(modifier = Modifier.fillMaxWidth().background(backgroundColor).padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface))
+    val monthName = yearMonth.month.getDisplayName(TextStyle.FULL, Locale("pl"))
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
+    val year = yearMonth.year
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = "$monthName $year",
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
 @Composable
-fun DayScheduleRow(date: LocalDate, tasks: List<TaskEntity>, onTaskClick: (TaskEntity) -> Unit) {
-    val isToday = date == LocalDate.now()
-    val dayOfWeekShort = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl")).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }.replace(".", "")
+fun DayScheduleRow(
+    date: LocalDate,
+    tasks: List<TaskEntity>,
+    onTaskClick: (TaskEntity) -> Unit
+) {
+    val dayOfWeek = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl"))
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
     val dayOfMonth = date.dayOfMonth.toString()
 
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.Top) {
-        Column(modifier = Modifier.width(50.dp).padding(top = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = dayOfWeekShort, style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Medium))
-            Spacer(modifier = Modifier.height(4.dp))
-            Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent), contentAlignment = Alignment.Center) {
-                Text(text = dayOfMonth, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface))
-            }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // NIE ZMIENIAĆ PADDINGU: Tylko poziomy 16dp, bez wcięć dla daty
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Lewa kolumna: Data
+        Column(
+            modifier = Modifier.width(48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = dayOfWeek,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+            Text(
+                text = dayOfMonth,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            )
         }
+
         Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+        // Prawa kolumna: Lista zadań
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             tasks.forEach { task ->
-                TaskCard(task = task, onTaskClick = { onTaskClick(task) }, showDayMarker = true, modifier = Modifier.fillMaxWidth())
+                TaskCard(
+                    task = task,
+                    onTaskClick = { onTaskClick(task) }
+                )
             }
         }
     }

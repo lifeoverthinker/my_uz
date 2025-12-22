@@ -49,8 +49,9 @@ fun LandingScreen(
     onFinishOnboarding: () -> Unit = { onNavigateToHome() }
 ) {
     val currentPage by viewModel.currentPage.collectAsState()
-    // WAŻNE: Dodano obserwację wybranej grupy, aby móc zablokować przycisk "Dalej"
     val selectedGroup by viewModel.selectedGroup.collectAsState()
+    val selectedGender by viewModel.selectedGender.collectAsState()
+    val userName by viewModel.userName.collectAsState()
     val totalPages = viewModel.totalPages
     val isLoading by viewModel.isLoading.collectAsState()
 
@@ -72,18 +73,7 @@ fun LandingScreen(
                         .statusBarsPadding(),
                     contentAlignment = Alignment.TopEnd
                 ) {
-                    if (currentPage < 5) {
-                        TextButton(
-                            onClick = {
-                                viewModel.skipOnboarding {
-                                    onFinishOnboarding()
-                                }
-                            },
-                            enabled = !isLoading
-                        ) {
-                            Text("Pomiń", style = MaterialTheme.typography.labelLarge)
-                        }
-                    }
+                    // Puste - konfiguracja obowiązkowa
                 }
             },
             bottomBar = {
@@ -117,10 +107,7 @@ fun LandingScreen(
                                                 contentColor = MaterialTheme.colorScheme.onPrimary
                                             )
                                         ) {
-                                            Text(
-                                                "Rozpocznij",
-                                                style = MaterialTheme.typography.labelLarge
-                                            )
+                                            Text("Rozpocznij", style = MaterialTheme.typography.labelLarge)
                                             Spacer(Modifier.width(8.dp))
                                             Icon(
                                                 painter = painterResource(id = R.drawable.ic_chevron_right),
@@ -130,7 +117,6 @@ fun LandingScreen(
                                         }
                                     }
                                 }
-
                                 5 -> {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -138,22 +124,16 @@ fun LandingScreen(
                                     ) {
                                         FilledTonalButton(
                                             onClick = { viewModel.onBackClick() },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .height(48.dp),
+                                            modifier = Modifier.weight(1f).height(48.dp),
                                             enabled = !isLoading
                                         ) {
                                             Text("Wstecz")
                                         }
                                         Button(
                                             onClick = {
-                                                viewModel.saveOnboardingData {
-                                                    onFinishOnboarding()
-                                                }
+                                                viewModel.saveOnboardingData { onFinishOnboarding() }
                                             },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .height(48.dp),
+                                            modifier = Modifier.weight(1f).height(48.dp),
                                             enabled = !isLoading
                                         ) {
                                             if (isLoading) {
@@ -167,15 +147,12 @@ fun LandingScreen(
                                         }
                                     }
                                 }
-
                                 else -> {
-                                    // TUTAJ JEST PRZYCISK "DALEJ" DLA STRON 1-4
-
-                                    // Obliczamy czy przycisk ma być aktywny
-                                    val isNextEnabled = if (currentPage == 2) {
-                                        !selectedGroup.isNullOrBlank() // Blokada tylko na stronie 2 (wybór grupy)
-                                    } else {
-                                        true
+                                    // Logika blokowania przycisku "Dalej"
+                                    val isNextEnabled = when(currentPage) {
+                                        1 -> selectedGender != null && userName.isNotBlank()
+                                        2 -> !selectedGroup.isNullOrBlank()
+                                        else -> true
                                     }
 
                                     Row(
@@ -184,32 +161,20 @@ fun LandingScreen(
                                     ) {
                                         FilledTonalButton(
                                             onClick = { viewModel.onBackClick() },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .height(48.dp)
+                                            modifier = Modifier.weight(1f).height(48.dp)
                                         ) {
-                                            Icon(
-                                                painterResource(R.drawable.ic_chevron_left),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp)
-                                            )
+                                            Icon(painterResource(R.drawable.ic_chevron_left), null, Modifier.size(20.dp))
                                             Spacer(Modifier.width(8.dp))
                                             Text("Wstecz")
                                         }
                                         Button(
                                             onClick = { viewModel.onNextClick() },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .height(48.dp),
-                                            enabled = isNextEnabled // <--- PRZYPISANIE BLOKADY
+                                            modifier = Modifier.weight(1f).height(48.dp),
+                                            enabled = isNextEnabled
                                         ) {
                                             Text("Dalej")
                                             Spacer(Modifier.width(8.dp))
-                                            Icon(
-                                                painterResource(R.drawable.ic_chevron_right),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp)
-                                            )
+                                            Icon(painterResource(R.drawable.ic_chevron_right), null, Modifier.size(20.dp))
                                         }
                                     }
                                 }
@@ -257,6 +222,273 @@ fun LandingScreen(
     }
 }
 
+// --- EKRANY ZAWARTOŚCI ---
+
+@Composable
+fun WelcomeStepContent() {
+    ResponsiveOnboardingStep(illustrationResId = R.drawable.college_students_rafiki) { // Zakładam, że getIllustrationResId(0) to ten obrazek
+        OnboardingTexts(
+            title = "Witaj w MyUZ! 👋",
+            subtitle = "Twój cyfrowy asystent",
+            description = "Plan zajęć, oceny i mapa kampusu w jednym miejscu."
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
+    val selectedGender by viewModel.selectedGender.collectAsState()
+    val userName by viewModel.userName.collectAsState()
+    val userSurname by viewModel.userSurname.collectAsState()
+    val focusManager = LocalFocusManager.current
+
+    ResponsiveOnboardingStep(illustrationResId = R.drawable.hello_rafiki) {
+        OnboardingTexts(
+            title = "Personalizacja",
+            subtitle = "Kim jesteś?",
+            description = "Dzięki temu aplikacja będzie zwracać się do Ciebie tak, jak lubisz."
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Forma zwrotu - styl spójny z wyborem grupy
+        Text(
+            text = "Forma zwrotu",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            FilterChip(
+                selected = selectedGender == UserGender.STUDENT,
+                onClick = { viewModel.setGender(UserGender.STUDENT) },
+                label = {
+                    Text(
+                        "Student",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                leadingIcon = null
+            )
+
+            FilterChip(
+                selected = selectedGender == UserGender.STUDENTKA,
+                onClick = { viewModel.setGender(UserGender.STUDENTKA) },
+                label = {
+                    Text(
+                        "Studentka",
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                },
+                modifier = Modifier.weight(1f),
+                leadingIcon = null
+            )
+        }
+
+        // Dane osobowe
+        AnimatedVisibility(
+            visible = selectedGender != null,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Twoje dane",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = userName,
+                    onValueChange = { viewModel.setUserName(it) },
+                    label = { Text("Imię") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = userSurname,
+                    onValueChange = { viewModel.setUserSurname(it) },
+                    label = { Text("Nazwisko (opcjonalne)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
+    val searchQuery by viewModel.groupSearchQuery.collectAsState()
+    val selectedGroup by viewModel.selectedGroup.collectAsState()
+    val availableSubgroups by viewModel.availableSubgroups.collectAsState()
+    val selectedSubgroups by viewModel.selectedSubgroups.collectAsState()
+    val filteredGroups by viewModel.filteredGroups.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    var expanded by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    ResponsiveOnboardingStep(illustrationResId = R.drawable.settings_rafiki) {
+        OnboardingTexts(
+            title = "Twoja Grupa",
+            subtitle = "Pobierz plan zajęć",
+            description = "Wpisz kod grupy dziekańskiej (np. 32INF-SP)."
+        )
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+            ExposedDropdownMenuBox(
+                expanded = expanded && filteredGroups.isNotEmpty(),
+                onExpandedChange = { expanded = !expanded }
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        viewModel.setGroupSearchQuery(it)
+                        expanded = true
+                    },
+                    placeholder = { Text("Szukaj grupy...") },
+                    label = { Text("Kod grupy") },
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_search), null, Modifier.size(24.dp)) },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.setGroupSearchQuery("") }) {
+                                Icon(painterResource(R.drawable.ic_x_close), "Wyczyść", Modifier.size(24.dp))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    shape = MaterialTheme.shapes.medium
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded && filteredGroups.isNotEmpty(),
+                    onDismissRequest = { expanded = false }
+                ) {
+                    filteredGroups.forEach { group ->
+                        DropdownMenuItem(
+                            text = { Text(group) },
+                            onClick = {
+                                viewModel.selectGroup(group)
+                                expanded = false
+                                focusManager.clearFocus()
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (isLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+            }
+
+            if (!isLoading && searchQuery.isNotEmpty() && filteredGroups.isEmpty() && selectedGroup == null) {
+                Text(
+                    text = "Nie znaleziono takiej grupy",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = selectedGroup != null && availableSubgroups.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp), // Spójny odstęp
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Wybierz podgrupy",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.Center) {
+                    availableSubgroups.forEach { subgroup ->
+                        FilterChip(
+                            selected = selectedSubgroups.contains(subgroup),
+                            onClick = { viewModel.toggleSubgroup(subgroup) },
+                            label = { Text(subgroup) },
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CalendarFeatureStepContent() {
+    InfoStepContent(3, "Terminarz", "Zarządzaj czasem", "Twój plan zajęć i osobiste notatki w przejrzystym kalendarzu.")
+}
+
+@Composable
+fun GradesFeatureStepContent() {
+    InfoStepContent(4, "Indeks", "Twoje postępy", "Monitoruj swoje oceny i średnią na bieżąco.")
+}
+
+@Composable
+fun MapFeatureStepContent() {
+    InfoStepContent(5, "Mapa Kampusu", "Nawigacja", "Znajdź każdą salę i budynek na terenie kampusu.")
+}
+
+@Composable
+fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description: String) {
+    // pageIndex mapuje do zasobu w getIllustrationResId
+    val resId = when(pageIndex) {
+        3 -> R.drawable.calendar_rafiki
+        4 -> R.drawable.grades_rafiki
+        5 -> R.drawable.paper_map_rafiki
+        else -> R.drawable.ic_user
+    }
+    ResponsiveOnboardingStep(illustrationResId = resId) {
+        OnboardingTexts(title, subtitle, description)
+    }
+}
+
+// --- WSPÓLNE HELPERY ---
+
 @Composable
 fun ResponsiveOnboardingStep(
     illustrationResId: Int,
@@ -297,257 +529,6 @@ fun ResponsiveOnboardingStep(
 }
 
 @Composable
-fun WelcomeStepContent() {
-    ResponsiveOnboardingStep(illustrationResId = getIllustrationResId(0)) {
-        OnboardingTexts(
-            title = "Witaj w MyUZ! 👋",
-            subtitle = "Twój cyfrowy asystent",
-            description = "Plan zajęć, oceny i mapa kampusu w jednym miejscu."
-        )
-    }
-}
-
-@Composable
-fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
-    val selectedMode by viewModel.selectedMode.collectAsState()
-    val selectedGender by viewModel.selectedGender.collectAsState()
-    val userName by viewModel.userName.collectAsState()
-    val userSurname by viewModel.userSurname.collectAsState()
-    val focusManager = LocalFocusManager.current
-
-    ResponsiveOnboardingStep(illustrationResId = getIllustrationResId(1)) {
-        OnboardingTexts(
-            title = "Personalizacja",
-            subtitle = "Przedstaw się nam",
-            description = "Wybierz tryb anonimowy lub podaj swoje dane."
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            ModeSelectionCard(
-                title = "Anonimowy",
-                subtitle = "Bez zapisu",
-                isSelected = selectedMode == OnboardingMode.ANONYMOUS,
-                onClick = {
-                    viewModel.setMode(OnboardingMode.ANONYMOUS)
-                    focusManager.clearFocus()
-                },
-                modifier = Modifier.weight(1f)
-            )
-            ModeSelectionCard(
-                title = "Student",
-                subtitle = "Pełne funkcje",
-                isSelected = selectedMode == OnboardingMode.DATA,
-                onClick = { viewModel.setMode(OnboardingMode.DATA) },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        AnimatedVisibility(visible = selectedMode == OnboardingMode.ANONYMOUS) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                FilterChip(
-                    selected = selectedGender == UserGender.STUDENT,
-                    onClick = { viewModel.setGender(UserGender.STUDENT) },
-                    label = { Text("Student") }
-                )
-                FilterChip(
-                    selected = selectedGender == UserGender.STUDENTKA,
-                    onClick = { viewModel.setGender(UserGender.STUDENTKA) },
-                    label = { Text("Studentka") }
-                )
-            }
-        }
-
-        AnimatedVisibility(visible = selectedMode == OnboardingMode.DATA) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = userName,
-                    onValueChange = { viewModel.setUserName(it) },
-                    label = { Text("Imię") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                    keyboardActions = KeyboardActions(onNext = {
-                        focusManager.moveFocus(
-                            FocusDirection.Down
-                        )
-                    })
-                )
-                OutlinedTextField(
-                    value = userSurname,
-                    onValueChange = { viewModel.setUserSurname(it) },
-                    label = { Text("Nazwisko") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
-    val searchQuery by viewModel.groupSearchQuery.collectAsState()
-    val selectedGroup by viewModel.selectedGroup.collectAsState()
-    val availableSubgroups by viewModel.availableSubgroups.collectAsState()
-    val selectedSubgroups by viewModel.selectedSubgroups.collectAsState()
-    val filteredGroups by viewModel.filteredGroups.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-
-    var expanded by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
-
-    ResponsiveOnboardingStep(illustrationResId = getIllustrationResId(2)) {
-        OnboardingTexts(
-            title = "Twoja Grupa",
-            subtitle = "Pobierz plan zajęć",
-            description = "Wpisz kod grupy dziekańskiej (np. 32INF-SP)."
-        )
-
-        Column(modifier = Modifier.fillMaxWidth()) {
-            ExposedDropdownMenuBox(
-                expanded = expanded && filteredGroups.isNotEmpty(),
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = {
-                        viewModel.setGroupSearchQuery(it)
-                        expanded = true
-                    },
-                    placeholder = { Text("Szukaj grupy...") },
-                    label = { Text("Kod grupy") },
-                    leadingIcon = {
-                        Icon(
-                            painterResource(R.drawable.ic_search),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.setGroupSearchQuery("") }) {
-                                Icon(
-                                    painterResource(R.drawable.ic_x_close),
-                                    contentDescription = "Wyczyść",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
-
-                ExposedDropdownMenu(
-                    expanded = expanded && filteredGroups.isNotEmpty(),
-                    onDismissRequest = { expanded = false }
-                ) {
-                    filteredGroups.forEach { group ->
-                        DropdownMenuItem(
-                            text = { Text(group) },
-                            onClick = {
-                                viewModel.selectGroup(group)
-                                expanded = false
-                                focusManager.clearFocus()
-                            }
-                        )
-                    }
-                }
-            }
-
-            if (isLoading) {
-                LinearProgressIndicator(modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp))
-            }
-
-            if (!isLoading && searchQuery.isNotEmpty() && filteredGroups.isEmpty() && selectedGroup == null) {
-                Text(
-                    text = "Nie znaleziono takiej grupy",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .align(Alignment.CenterHorizontally)
-                )
-            }
-        }
-
-        AnimatedVisibility(visible = selectedGroup != null && availableSubgroups.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Wybierz podgrupy (opcjonalne):",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.height(8.dp))
-                FlowRow(horizontalArrangement = Arrangement.Center) {
-                    availableSubgroups.forEach { subgroup ->
-                        FilterChip(
-                            selected = selectedSubgroups.contains(subgroup),
-                            onClick = { viewModel.toggleSubgroup(subgroup) },
-                            label = { Text(subgroup) },
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CalendarFeatureStepContent() {
-    InfoStepContent(
-        3,
-        "Terminarz",
-        "Zarządzaj czasem",
-        "Twój plan zajęć i osobiste notatki w przejrzystym kalendarzu."
-    )
-}
-
-@Composable
-fun GradesFeatureStepContent() {
-    InfoStepContent(4, "Indeks", "Twoje postępy", "Monitoruj swoje oceny i średnią na bieżąco.")
-}
-
-@Composable
-fun MapFeatureStepContent() {
-    InfoStepContent(
-        5,
-        "Mapa Kampusu",
-        "Nawigacja",
-        "Znajdź każdą salę i budynek na terenie kampusu."
-    )
-}
-
-@Composable
-fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description: String) {
-    ResponsiveOnboardingStep(illustrationResId = getIllustrationResId(pageIndex)) {
-        OnboardingTexts(title, subtitle, description)
-    }
-}
-
-@Composable
 fun OnboardingTexts(title: String, subtitle: String, description: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -581,8 +562,7 @@ fun PageIndicators(totalPages: Int, currentPage: Int) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(totalPages) { index ->
             val isActive = index == currentPage
-            val color =
-                if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+            val color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
             val width = if (isActive) 24.dp else 8.dp
             Box(
                 modifier = Modifier
@@ -603,40 +583,4 @@ fun FooterText() {
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.outline
     )
-}
-
-@Composable
-fun ModeSelectionCard(
-    title: String,
-    subtitle: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-        ),
-        border = if (isSelected) null else CardDefaults.outlinedCardBorder(),
-        modifier = modifier.height(80.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
 }

@@ -1,7 +1,6 @@
 package com.example.my_uz_android.ui.screens.account
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,13 +32,15 @@ fun AccountScreen(
     onAboutClick: () -> Unit = {},
     viewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
+    // CollectAsState zapewnia reaktywność na zmiany w bazie danych
     val settings by viewModel.settings.collectAsState()
     val isLoaded by viewModel.isSettingsLoaded.collectAsState()
 
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
 
-    if (!isLoaded) {
+    // Pokazujemy loader tylko jeśli nie załadowano ustawień po raz pierwszy
+    if (!isLoaded && settings == null) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
@@ -75,6 +76,7 @@ fun AccountScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // Bezpośrednie użycie settings z obserwowanego Flow
             ProfileSection(
                 userName = settings?.userName ?: "",
                 isAnonymous = settings?.isAnonymous == true
@@ -118,6 +120,7 @@ fun AccountScreen(
     }
 }
 
+// Reszta komponentów (AccountOptionItem, ProfileSection, StudyCard, etc.) bez zmian...
 @Composable
 fun AccountOptionItem(
     iconRes: Int,
@@ -261,7 +264,6 @@ fun StudyCard(
                         painter = painterResource(R.drawable.ic_info_circle),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        // --- POPRAWKA TUTAJ: Dodaj modifier z rozmiarem ---
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))

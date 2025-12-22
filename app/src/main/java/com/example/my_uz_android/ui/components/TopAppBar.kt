@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -19,36 +18,29 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
-/**
- * Specjalny pasek dla Kalendarza i Terminarza (Styl z Figmy).
- * Posiada przyciski z tłem w kolorze 0xfff7f2f9.
- */
 @Composable
 fun CalendarTopAppBar(
     title: String,
     onNavigationClick: () -> Unit,
-    onSearchClick: () -> Unit,
-    onAddClick: () -> Unit,
+    onSearchClick: (() -> Unit)? = null,
+    onAddClick: (() -> Unit)? = null,
     onTitleClick: (() -> Unit)? = null
 ) {
-    // Kolory z Figmy / Theme
-    val buttonBackgroundColor = MaterialTheme.extendedColors.homeTopBackground // 0xfff7f2f9
-    val contentColor = MaterialTheme.colorScheme.onSurface // 0xff1d192b
+    val buttonBackgroundColor = MaterialTheme.extendedColors.homeTopBackground
+    val contentColor = MaterialTheme.colorScheme.onSurface
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .statusBarsPadding(), // Obsługa wcięcia na kamerę/pasek stanu
+            .statusBarsPadding(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // --- LEWA STRONA: Menu + Tytuł ---
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Przycisk Menu (Kółko)
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -65,14 +57,13 @@ fun CalendarTopAppBar(
                 )
             }
 
-            // Tytuł (np. "Lipiec" lub "Terminarz") + Opcjonalna strzałka
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
                     .clickable(enabled = onTitleClick != null) { onTitleClick?.invoke() }
-                    .padding(4.dp) // padding dla efektu kliknięcia
+                    .padding(4.dp)
             ) {
                 Text(
                     text = title,
@@ -96,51 +87,51 @@ fun CalendarTopAppBar(
             }
         }
 
-        // --- PRAWA STRONA: Szukaj + Dodaj ---
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Przycisk Szukaj
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(buttonBackgroundColor)
-                    .clickable(onClick = onSearchClick),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_search),
-                    contentDescription = "Szukaj",
-                    modifier = Modifier.size(24.dp),
-                    tint = contentColor
-                )
+            if (onSearchClick != null) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(buttonBackgroundColor)
+                        .clickable(onClick = onSearchClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_search),
+                        contentDescription = "Szukaj",
+                        modifier = Modifier.size(24.dp),
+                        tint = contentColor
+                    )
+                }
             }
 
-            // Przycisk Plus (Dodaj)
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(buttonBackgroundColor)
-                    .clickable(onClick = onAddClick),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_plus),
-                    contentDescription = "Dodaj",
-                    modifier = Modifier.size(24.dp),
-                    tint = contentColor
-                )
+            if (onAddClick != null) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(buttonBackgroundColor)
+                        .clickable(onClick = onAddClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // ZMIANA: Zamiast ic_plus jest teraz ic_calendar (powrót do dzisiaj)
+                    Icon(
+                        painter = painterResource(R.drawable.ic_calendar),
+                        contentDescription = "Dzisiaj",
+                        modifier = Modifier.size(24.dp),
+                        tint = contentColor
+                    )
+                }
             }
         }
     }
 }
 
-/**
- * Standardowy pasek dla innych ekranów aplikacji.
- */
+// ... Reszta (TopAppBar) bez zmian ...
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(
@@ -150,12 +141,13 @@ fun TopAppBar(
     onNavigationClick: () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
     isCenterAligned: Boolean = false,
-    isNavigationIconFilled: Boolean = false
+    isNavigationIconFilled: Boolean = false,
+    titleContent: (@Composable () -> Unit)? = null
 ) {
+    // ...
     val navigationIconContent: @Composable () -> Unit = {
         if (navigationIcon != null) {
             if (isNavigationIconFilled) {
-                // Styl przycisku z tłem (jak w Home)
                 Box(
                     modifier = Modifier
                         .size(48.dp)
@@ -172,7 +164,6 @@ fun TopAppBar(
                     )
                 }
             } else {
-                // Standardowy styl przycisku
                 IconButton(onClick = onNavigationClick) {
                     Icon(
                         painter = painterResource(id = navigationIcon),
@@ -185,7 +176,7 @@ fun TopAppBar(
         }
     }
 
-    val titleContent: @Composable () -> Unit = {
+    val defaultTitleContent: @Composable () -> Unit = {
         Column(horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start) {
             Text(
                 text = title,
@@ -214,6 +205,8 @@ fun TopAppBar(
         }
     }
 
+    val finalTitleContent = titleContent ?: defaultTitleContent
+
     val colors = TopAppBarDefaults.topAppBarColors(
         containerColor = MaterialTheme.colorScheme.surface,
         scrolledContainerColor = MaterialTheme.colorScheme.surface,
@@ -223,14 +216,14 @@ fun TopAppBar(
 
     if (isCenterAligned) {
         CenterAlignedTopAppBar(
-            title = titleContent,
+            title = finalTitleContent,
             navigationIcon = navigationIconContent,
             actions = actions,
             colors = colors
         )
     } else {
         androidx.compose.material3.TopAppBar(
-            title = titleContent,
+            title = finalTitleContent,
             navigationIcon = navigationIconContent,
             actions = actions,
             colors = colors

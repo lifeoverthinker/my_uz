@@ -26,14 +26,14 @@ import com.example.my_uz_android.ui.theme.InterFontFamily
 fun CalendarDrawerContent(
     favorites: List<FavoriteEntity>,
     selectedResourceId: String?,
+    currentScreen: String = "calendar", // "calendar" lub "tasks"
     onMyPlanClick: () -> Unit,
-    onTasksClick: () -> Unit, // NOWY CALLBACK DO TERMINARZA
+    onTasksClick: () -> Unit,
     onFavoriteClick: (FavoriteEntity) -> Unit,
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onCloseDrawer: () -> Unit
 ) {
-    // Kolory z motywu
     val backgroundColor = MaterialTheme.colorScheme.surface
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val secondaryContainer = MaterialTheme.colorScheme.secondaryContainer
@@ -51,14 +51,13 @@ fun CalendarDrawerContent(
                 .verticalScroll(rememberScrollState())
                 .padding(12.dp)
         ) {
-            // --- Sekcja: Menu ---
             SectionHeader(text = "Menu", textColor = onSurfaceVariant)
 
-            // Mój Plan (wcześniej Mój Terminarz)
             DrawerItem(
                 label = "Mój Plan",
                 iconRes = R.drawable.ic_home,
-                selected = selectedResourceId == null, // Logika zaznaczenia dla planu głównego
+                // Zaznaczone tylko gdy jesteśmy w kalendarzu i brak wybranego zasobu (plan domyślny)
+                selected = currentScreen == "calendar" && selectedResourceId == null,
                 onClick = {
                     onMyPlanClick()
                     onCloseDrawer()
@@ -68,11 +67,11 @@ fun CalendarDrawerContent(
                 inactiveContentColor = onSurfaceVariant
             )
 
-            // NOWA ZAKŁADKA: Terminarz (Zadania)
             DrawerItem(
                 label = "Terminarz",
-                iconRes = R.drawable.ic_calendar_check, // Ikona zadań
-                selected = false, // Terminarz jest osobnym ekranem, zaznaczenie opcjonalne lub do obsłużenia
+                iconRes = R.drawable.ic_calendar_check,
+                // Zaznaczone gdy jesteśmy w tasks
+                selected = currentScreen == "tasks",
                 onClick = {
                     onTasksClick()
                     onCloseDrawer()
@@ -82,7 +81,6 @@ fun CalendarDrawerContent(
                 inactiveContentColor = onSurfaceVariant
             )
 
-            // Wyszukaj plan
             DrawerItem(
                 label = "Wyszukaj plan",
                 iconRes = R.drawable.ic_search,
@@ -98,7 +96,6 @@ fun CalendarDrawerContent(
 
             DrawerDivider(color = dividerColor)
 
-            // --- Sekcja: Grupy ---
             val groupFavorites = favorites.filter { it.type == ScheduleType.GROUP.name }
             if (groupFavorites.isNotEmpty()) {
                 SectionHeader(text = "Grupy", textColor = onSurfaceVariant)
@@ -106,7 +103,8 @@ fun CalendarDrawerContent(
                     DrawerItem(
                         label = fav.name,
                         iconRes = R.drawable.ic_users,
-                        selected = selectedResourceId == fav.resourceId,
+                        // Zaznaczone gdy Kalendarz i ID się zgadza
+                        selected = currentScreen == "calendar" && selectedResourceId == fav.resourceId,
                         onClick = {
                             onFavoriteClick(fav)
                             onCloseDrawer()
@@ -119,7 +117,6 @@ fun CalendarDrawerContent(
                 DrawerDivider(color = dividerColor)
             }
 
-            // --- Sekcja: Nauczyciele ---
             val teacherFavorites = favorites.filter { it.type == ScheduleType.TEACHER.name }
             if (teacherFavorites.isNotEmpty()) {
                 SectionHeader(text = "Nauczyciele", textColor = onSurfaceVariant)
@@ -127,7 +124,7 @@ fun CalendarDrawerContent(
                     DrawerItem(
                         label = fav.name,
                         iconRes = R.drawable.ic_user,
-                        selected = selectedResourceId == fav.resourceId,
+                        selected = currentScreen == "calendar" && selectedResourceId == fav.resourceId,
                         onClick = {
                             onFavoriteClick(fav)
                             onCloseDrawer()
@@ -140,7 +137,6 @@ fun CalendarDrawerContent(
                 DrawerDivider(color = dividerColor)
             }
 
-            // --- Sekcja: Inne ---
             SectionHeader(text = "Inne", textColor = onSurfaceVariant)
 
             DrawerItem(

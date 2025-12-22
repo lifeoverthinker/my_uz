@@ -1,6 +1,6 @@
 package com.example.my_uz_android.ui
 
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
@@ -40,7 +40,7 @@ object AppViewModelProvider {
 
         initializer {
             TaskAddEditViewModel(
-                savedStateHandle = this.createSavedStateHandle(),
+                savedStateHandle = createSavedStateHandle(),
                 tasksRepository = myUZApplication().container.tasksRepository,
                 classRepository = myUZApplication().container.classRepository
             )
@@ -48,21 +48,21 @@ object AppViewModelProvider {
 
         initializer {
             ClassDetailsViewModel(
-                savedStateHandle = this.createSavedStateHandle(),
+                savedStateHandle = createSavedStateHandle(),
                 classRepository = myUZApplication().container.classRepository
             )
         }
 
         initializer {
             EventDetailsViewModel(
-                savedStateHandle = this.createSavedStateHandle(),
+                savedStateHandle = createSavedStateHandle(),
                 eventRepository = myUZApplication().container.eventRepository
             )
         }
 
         initializer {
             TaskDetailsViewModel(
-                savedStateHandle = this.createSavedStateHandle(),
+                savedStateHandle = createSavedStateHandle(),
                 tasksRepository = myUZApplication().container.tasksRepository
             )
         }
@@ -77,14 +77,14 @@ object AppViewModelProvider {
 
         initializer {
             GradeDetailsViewModel(
-                savedStateHandle = this.createSavedStateHandle(),
+                savedStateHandle = createSavedStateHandle(),
                 gradesRepository = myUZApplication().container.gradesRepository
             )
         }
 
         initializer {
             AddEditGradeViewModel(
-                savedStateHandle = this.createSavedStateHandle(),
+                savedStateHandle = createSavedStateHandle(),
                 gradesRepository = myUZApplication().container.gradesRepository,
                 classRepository = myUZApplication().container.classRepository,
                 settingsRepository = myUZApplication().container.settingsRepository
@@ -100,7 +100,7 @@ object AppViewModelProvider {
 
         initializer {
             AddEditAbsenceViewModel(
-                savedStateHandle = this.createSavedStateHandle(),
+                savedStateHandle = createSavedStateHandle(),
                 absenceRepository = myUZApplication().container.absenceRepository,
                 classRepository = myUZApplication().container.classRepository
             )
@@ -138,7 +138,7 @@ object AppViewModelProvider {
             CalendarViewModel(
                 favoritesRepository = myUZApplication().container.favoritesRepository,
                 classRepository = myUZApplication().container.classRepository,
-                settingsRepository = myUZApplication().container.settingsRepository // DODANO
+                settingsRepository = myUZApplication().container.settingsRepository
             )
         }
 
@@ -153,4 +153,4 @@ object AppViewModelProvider {
 }
 
 fun CreationExtras.myUZApplication(): MyUZApplication =
-    (this[AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)
+    (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)

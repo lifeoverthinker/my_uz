@@ -16,12 +16,6 @@ class AccountViewModel(
     private val classRepository: ClassRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AccountUiState())
-    val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
-
-    // --- ZMIANA: Bezpośrednie podpięcie do strumienia z repozytorium ---
-    // Używamy stateIn, aby dane były zawsze aktualne i "gorące".
-    // whileSubscribed(5000) pozwala zachować dane przy krótkich zmianach konfiguracji.
     val settings: StateFlow<SettingsEntity?> = settingsRepository.getSettingsStream()
         .stateIn(
             scope = viewModelScope,
@@ -32,13 +26,17 @@ class AccountViewModel(
     private val _isSettingsLoaded = MutableStateFlow(false)
     val isSettingsLoaded: StateFlow<Boolean> = _isSettingsLoaded.asStateFlow()
 
-    // --- DANE EDYCJI ---
+    // --- Drafts (Dane osobowe) ---
     private val _draftName = MutableStateFlow("")
     val draftName: StateFlow<String> = _draftName.asStateFlow()
 
     private val _draftSurname = MutableStateFlow("")
     val draftSurname: StateFlow<String> = _draftSurname.asStateFlow()
 
+    private val _draftRole = MutableStateFlow("STUDENT")
+    val draftRole: StateFlow<String> = _draftRole.asStateFlow()
+
+    // --- Grupy (SettingsScreen) ---
     private val _groupSearchQuery = MutableStateFlow("")
     val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
 
@@ -63,60 +61,71 @@ class AccountViewModel(
     private var allGroupCodes: List<String> = emptyList()
 
     init {
-        // Obserwuj zmiany settings, aby zainicjować pola "draft" (do edycji) tylko raz
         viewModelScope.launch {
-            settings.collect { retrievedSettings ->
+            settings.collectLatest { retrievedSettings ->
+                _isSettingsLoaded.value = true
                 if (retrievedSettings != null) {
-                    _isSettingsLoaded.value = true
-
-                    // Inicjalizuj pola edycji tylko jeśli jeszcze tego nie zrobiono
-                    // Sprawdzamy czy drafty są puste, żeby nie nadpisywać w trakcie edycji (gdyby settings zmieniło się w tle)
+                    // Inicjalizuj drafty tylko raz lub gdy są puste, by nie nadpisywać wpisywania
                     if (_draftName.value.isEmpty() && _groupSearchQuery.value.isEmpty()) {
                         initializeDrafts(retrievedSettings)
                     }
-                } else {
-                    // Jeśli settings jest null (np. pusta baza), też uznajemy, że "załadowano" (brak danych to też stan)
-                    // Ale dajemy chwilę na asynchroniczne pobranie
-                    _isSettingsLoaded.value = true
                 }
             }
         }
         loadGroupCodes()
     }
 
-    private fun initializeDrafts(retrievedSettings: SettingsEntity) {
-        _draftSelectedGroup.value = retrievedSettings.selectedGroupCode
-        _groupSearchQuery.value = retrievedSettings.selectedGroupCode ?: ""
-
-        val fullName = retrievedSettings.userName.trim()
+    private fun initializeDrafts(settings: SettingsEntity) {
+        val fullName = settings.userName.trim()
         val parts = fullName.split(" ").filter { it.isNotBlank() }
         if (parts.isNotEmpty()) {
             _draftName.value = parts[0]
             _draftSurname.value = if (parts.size > 1) parts.drop(1).joinToString(" ") else ""
-        } else {
-            _draftName.value = ""
-            _draftSurname.value = ""
         }
+        _draftRole.value = settings.gender.takeIf { !it.isNullOrBlank() } ?: "STUDENT"
 
-        _draftSubgroups.value = retrievedSettings.selectedSubgroup
-            ?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+        _draftSelectedGroup.value = settings.selectedGroupCode
+        _groupSearchQuery.value = settings.selectedGroupCode ?: ""
+        _draftSubgroups.value = settings.selectedSubgroup?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
 
-        if (!retrievedSettings.selectedGroupCode.isNullOrBlank()) {
-            loadSubgroupsForGroup(retrievedSettings.selectedGroupCode)
-        }
-    }
-
-    private fun loadGroupCodes() {
-        viewModelScope.launch {
-            val result = universityRepository.getGroupCodes()
-            if (result is NetworkResult.Success) {
-                allGroupCodes = result.data ?: emptyList()
-            }
+        if (!settings.selectedGroupCode.isNullOrBlank()) {
+            loadSubgroupsForGroup(settings.selectedGroupCode)
         }
     }
 
     fun updateDraftName(name: String) { _draftName.value = name }
     fun updateDraftSurname(surname: String) { _draftSurname.value = surname }
+    fun updateDraftRole(role: String) { _draftRole.value = role }
+
+    // ZAPIS DANYCH OSOBOWYCH (Imię, Nazwisko, Rola)
+    fun savePersonalData() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val current = settings.value ?: SettingsEntity()
+
+            val newName = _draftName.value.trim()
+            val newSurname = _draftSurname.value.trim()
+            val combinedName = if (newSurname.isNotBlank()) "$newName $newSurname" else newName
+
+            val newSettings = current.copy(
+                userName = combinedName,
+                gender = _draftRole.value,
+                isAnonymous = false
+            )
+
+            settingsRepository.insertSettings(newSettings)
+            _saveMessage.value = "Zapisano" // Sygnał dla UI
+            _isLoading.value = false
+        }
+    }
+
+    // --- Logika Grup (dla SettingsScreen) ---
+    private fun loadGroupCodes() {
+        viewModelScope.launch {
+            val result = universityRepository.getGroupCodes()
+            if (result is NetworkResult.Success) allGroupCodes = result.data ?: emptyList()
+        }
+    }
 
     fun onSearchQueryChange(query: String) {
         _groupSearchQuery.value = query
@@ -125,13 +134,10 @@ class AccountViewModel(
             _availableSubgroups.value = emptyList()
             _draftSubgroups.value = emptyList()
         }
-
         if (query.isBlank()) {
             _filteredGroups.value = emptyList()
         } else {
-            _filteredGroups.value = allGroupCodes
-                .filter { it.contains(query, ignoreCase = true) }
-                .take(10)
+            _filteredGroups.value = allGroupCodes.filter { it.contains(query, ignoreCase = true) }.take(10)
         }
     }
 
@@ -158,28 +164,20 @@ class AccountViewModel(
 
     fun toggleSubgroup(subgroup: String) {
         val current = _draftSubgroups.value.toMutableList()
-        if (current.contains(subgroup)) {
-            current.remove(subgroup)
-        } else {
-            current.add(subgroup)
-        }
+        if (current.contains(subgroup)) current.remove(subgroup) else current.add(subgroup)
         _draftSubgroups.value = current
     }
 
+    // ZAPIS GRUPY (Dla SettingsScreen - nie dla PersonalData)
     fun saveChanges() {
+        // Ta metoda jest wywoływana z SettingsScreen, gdzie user wybiera grupę
         val groupCode = if(!_draftSelectedGroup.value.isNullOrBlank()) _draftSelectedGroup.value else _groupSearchQuery.value.takeIf { it.isNotBlank() }
         val subgroups = _draftSubgroups.value
-        val newName = _draftName.value.trim()
-        val newSurname = _draftSurname.value.trim()
-
-        val combinedName = if (newSurname.isNotBlank()) "$newName $newSurname" else newName
 
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // Pobieramy aktualne settings synchronicznie ze stanu (lub tworzymy nowe)
                 val current = settings.value ?: SettingsEntity()
-
                 var faculty: String? = current.faculty
                 var fieldOfStudy: String? = current.fieldOfStudy
                 var studyMode: String? = current.studyMode
@@ -195,7 +193,6 @@ class AccountViewModel(
                             }
                         }
                     }
-
                     val planResult = universityRepository.getSchedule(groupCode, subgroups)
                     if (planResult is NetworkResult.Success && planResult.data != null) {
                         classRepository.deleteAllClasses()
@@ -203,24 +200,17 @@ class AccountViewModel(
                     }
                 }
 
-                // Zawsze ustawiamy isAnonymous na false przy zapisie danych
                 val newSettings = current.copy(
-                    userName = combinedName,
                     selectedGroupCode = groupCode,
                     selectedSubgroup = subgroups.joinToString(","),
                     faculty = faculty,
                     fieldOfStudy = fieldOfStudy,
-                    studyMode = studyMode,
-                    isAnonymous = false
+                    studyMode = studyMode
                 )
-
-                // UWAGA: Tu również warto wyczyścić stare settingsy dla pewności
-                settingsRepository.clearSettings()
                 settingsRepository.insertSettings(newSettings)
-
-                _saveMessage.value = "✅ Zapisano pomyślnie!"
+                _saveMessage.value = "Zapisano plan"
             } catch (e: Exception) {
-                _saveMessage.value = "❌ Błąd: ${e.message}"
+                _saveMessage.value = "Błąd: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
@@ -228,5 +218,4 @@ class AccountViewModel(
     }
 
     fun clearSaveMessage() { _saveMessage.value = null }
-    data class AccountUiState(val dummy: Boolean = false)
 }

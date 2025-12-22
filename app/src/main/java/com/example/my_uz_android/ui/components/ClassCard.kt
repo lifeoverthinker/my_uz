@@ -19,8 +19,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -34,7 +36,11 @@ import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 
+// Definicja Enuma w tym samym pliku
 enum class ClassCardType {
     HOME,
     CALENDAR
@@ -46,21 +52,35 @@ fun ClassCard(
     type: ClassCardType = ClassCardType.HOME,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     accentColor: Color = MaterialTheme.colorScheme.primary,
-    // showBadge pozwala ukryć kropkę np. dla minionych zajęć, jeśli chcesz
     showBadge: Boolean = true,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Kolory z Twojego designu (Figma/Flutter)
     val titleColor = Color(0xFF1D192B)
     val detailsColor = Color(0xFF494949)
     val avatarTextColor = Color(0xFFFFFBFE)
+
+    val isPast = remember(classItem) {
+        try {
+            val datePart = LocalDate.parse(classItem.date)
+            val timePart = LocalTime.parse(classItem.endTime)
+            val classEndDateTime = LocalDateTime.of(datePart, timePart)
+            val currentDateTime = LocalDateTime.now()
+            classEndDateTime.isBefore(currentDateTime)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Aplikuj alpha tylko dla kalendarza
+    val contentAlpha = if (isPast && type == ClassCardType.CALENDAR) 0.6f else 1f
 
     Card(
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         modifier = modifier
             .fillMaxWidth()
+            .alpha(contentAlpha)
             .clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -69,38 +89,33 @@ fun ClassCard(
                 .padding(12.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top // Wyrównanie do góry (ważne przy długich opisach)
+            verticalAlignment = Alignment.Top
         ) {
-            // --- LEWA STRONA (Teksty) ---
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp) // spacing: 8
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Tytuł przedmiotu
                 Text(
                     text = classItem.subjectName,
                     style = TextStyle(
                         fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Medium, // w500
+                        fontWeight = FontWeight.Medium,
                         fontSize = 14.sp,
-                        lineHeight = 20.sp, // height 1.43 przy 14sp ~ 20sp
+                        lineHeight = 20.sp,
                         color = titleColor
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Wiersz z Czasem i Salą
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp) // spacing: 16 między grupami
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Grupa Czasu
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp) // spacing: 4
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        // Container 16x16 z ikoną (w Flutterze był pusty Stack, tu daję ikonę)
                         Icon(
                             painter = painterResource(id = R.drawable.ic_clock),
                             contentDescription = null,
@@ -111,16 +126,15 @@ fun ClassCard(
                             text = "${classItem.startTime} - ${classItem.endTime}",
                             style = TextStyle(
                                 fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal, // w400
+                                fontWeight = FontWeight.Normal,
                                 fontSize = 12.sp,
-                                lineHeight = 16.sp, // height 1.33 przy 12sp ~ 16sp
+                                lineHeight = 16.sp,
                                 color = detailsColor
                             ),
                             maxLines = 1
                         )
                     }
 
-                    // Grupa Sali
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -129,7 +143,7 @@ fun ClassCard(
                             text = classItem.room ?: "",
                             style = TextStyle(
                                 fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal, // w400
+                                fontWeight = FontWeight.Normal,
                                 fontSize = 12.sp,
                                 lineHeight = 16.sp,
                                 color = detailsColor
@@ -141,14 +155,11 @@ fun ClassCard(
                 }
             }
 
-            // Odstęp między tekstem a badge'm
             Spacer(modifier = Modifier.width(16.dp))
 
-            // --- PRAWA STRONA (Badge) ---
             if (showBadge) {
                 when (type) {
                     ClassCardType.HOME -> {
-                        // Kółko z literą (32x32)
                         val letter = classItem.classType.firstOrNull()?.uppercase() ?: "A"
                         Box(
                             contentAlignment = Alignment.Center,
@@ -160,8 +171,8 @@ fun ClassCard(
                             Text(
                                 text = letter,
                                 style = TextStyle(
-                                    fontFamily = InterFontFamily, // Roboto w oryginale, ale Inter spójniejszy
-                                    fontWeight = FontWeight.Medium, // w500
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.Medium,
                                     fontSize = 16.sp,
                                     lineHeight = 24.sp,
                                     letterSpacing = 0.15.sp,
@@ -172,12 +183,11 @@ fun ClassCard(
                         }
                     }
                     ClassCardType.CALENDAR -> {
-                        // Mała kropka (8x8)
                         Box(
                             modifier = Modifier
-                                .size(8.dp) // Zgodnie z Figmą 8x8
+                                .size(8.dp)
                                 .clip(CircleShape)
-                                .background(accentColor) // W Figmie 0xFF7D5260, tu dynamiczny
+                                .background(accentColor)
                         )
                     }
                 }
@@ -189,14 +199,14 @@ fun ClassCard(
 @Preview(showBackground = true)
 @Composable
 fun ClassCardPreview() {
-    val mockClass = ClassEntity(
+    val mockClassNormal = ClassEntity(
         id = 1,
         subjectName = "Podstawy systemów dyskretnych",
         classType = "Wykład",
         startTime = "10:00",
-        endTime = "10:45",
+        endTime = "11:30",
         dayOfWeek = 1,
-        date = "2025-01-01",
+        date = LocalDate.now().plusDays(1).toString(),
         groupCode = "32INF",
         subgroup = null,
         room = "Sala 102",
@@ -209,18 +219,18 @@ fun ClassCardPreview() {
     ) {
         Text("Wariant HOME:")
         ClassCard(
-            classItem = mockClass,
+            classItem = mockClassNormal,
             type = ClassCardType.HOME,
             backgroundColor = Color(0xFFE8DEF8),
             accentColor = Color(0xFF6750A4)
         )
 
-        Text("Wariant CALENDAR:")
+        Text("Wariant CALENDAR (Aktywne):")
         ClassCard(
-            classItem = mockClass,
+            classItem = mockClassNormal,
             type = ClassCardType.CALENDAR,
             backgroundColor = Color(0xFFE8DEF8),
-            accentColor = Color(0xFF7D5260) // Kolor z Figmy
+            accentColor = Color(0xFF7D5260)
         )
     }
 }

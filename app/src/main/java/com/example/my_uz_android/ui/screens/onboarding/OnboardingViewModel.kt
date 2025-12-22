@@ -16,11 +16,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class OnboardingMode {
-    ANONYMOUS,
-    DATA
-}
-
 enum class UserGender {
     STUDENT,
     STUDENTKA
@@ -44,12 +39,9 @@ class OnboardingViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    // Personalizacja
-    private val _selectedMode = MutableStateFlow<OnboardingMode?>(null)
-    val selectedMode: StateFlow<OnboardingMode?> = _selectedMode.asStateFlow()
-
-    private val _selectedGender = MutableStateFlow(UserGender.STUDENT)
-    val selectedGender: StateFlow<UserGender> = _selectedGender.asStateFlow()
+    // Personalizacja - Gender jest nullem na początku (nic nie wybrane)
+    private val _selectedGender = MutableStateFlow<UserGender?>(null)
+    val selectedGender: StateFlow<UserGender?> = _selectedGender.asStateFlow()
 
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
@@ -91,81 +83,58 @@ class OnboardingViewModel(
         fetchAllGroups()
     }
 
-    fun clearError() {
-        _errorMessage.value = null
-    }
-
     private fun fetchAllGroups() {
         viewModelScope.launch {
             _isLoading.value = true
-            _errorMessage.value = null
-
             when (val result = universityRepository.getGroupCodes()) {
-                is NetworkResult.Success -> {
-                    _allGroups.value = result.data ?: emptyList()
-                }
-
+                is NetworkResult.Success -> _allGroups.value = result.data ?: emptyList()
                 is NetworkResult.Error -> {
                     _allGroups.value = emptyList()
                     Log.e(TAG, "Błąd pobierania grup: ${result.message}")
                 }
-
-                is NetworkResult.Loading -> {}
+                else -> {}
             }
-
             _isLoading.value = false
         }
     }
 
+    // Metoda Save - zawsze zapisuje "zalogowanego" usera
     fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
 
-            val isAnonymous = _selectedMode.value == OnboardingMode.ANONYMOUS
             val groupCode = _selectedGroup.value
-
             var faculty: String? = null
             var fieldOfStudy: String? = null
             var studyMode: String? = null
             var downloadSuccess = true
 
+            // Pobieranie planu
             if (!groupCode.isNullOrBlank()) {
-                when (val detailsResult = universityRepository.getGroupDetails(groupCode)) {
-                    is NetworkResult.Success -> {
-                        val details = detailsResult.data
-                        if (details != null) {
-                            studyMode = details.studyMode
-                            details.fieldInfo?.let { info ->
-                                faculty = info.faculty
-                                fieldOfStudy = info.name
-                            }
+                val detailsResult = universityRepository.getGroupDetails(groupCode)
+                if (detailsResult is NetworkResult.Success) {
+                    val details = detailsResult.data
+                    if (details != null) {
+                        studyMode = details.studyMode
+                        details.fieldInfo?.let { info ->
+                            faculty = info.faculty
+                            fieldOfStudy = info.name
                         }
                     }
-
-                    is NetworkResult.Error -> {
-                        Log.e(TAG, "Błąd pobierania szczegółów grupy: ${detailsResult.message}")
-                    }
-
-                    else -> {}
                 }
 
                 val subgroups = _selectedSubgroups.value.toList()
-
                 when (val scheduleResult = universityRepository.getSchedule(groupCode, subgroups)) {
                     is NetworkResult.Success -> {
                         val schedule = scheduleResult.data ?: emptyList()
                         classRepository.deleteAllClasses()
                         classRepository.insertClasses(schedule)
-                        Log.d(TAG, "✅ Zapisano ${schedule.size} zajęć")
                     }
-
                     is NetworkResult.Error -> {
-                        _errorMessage.value =
-                            "Nie udało się pobrać planu zajęć. Sprawdź połączenie."
+                        _errorMessage.value = "Nie udało się pobrać planu. Sprawdź internet."
                         downloadSuccess = false
                     }
-
                     else -> {}
                 }
             }
@@ -175,11 +144,21 @@ class OnboardingViewModel(
                 return@launch
             }
 
+            // Tworzenie pełnego imienia
+            val fullName = if (_userSurname.value.isNotBlank()) {
+                "${_userName.value.trim()} ${_userSurname.value.trim()}"
+            } else {
+                _userName.value.trim()
+            }
+
+            // Domyślnie STUDENT jeśli jakimś cudem null (ale UI blokuje)
+            val genderStr = _selectedGender.value?.name ?: UserGender.STUDENT.name
+
             val settings = SettingsEntity(
-                id = 0, // To powoduje autogenerowanie nowego ID
-                isAnonymous = isAnonymous,
-                userName = if (isAnonymous) "" else _userName.value.ifBlank { "" },
-                gender = _selectedGender.value.name,
+                id = 0,
+                isAnonymous = false, // Zawsze false, bo user podał dane
+                userName = fullName,
+                gender = genderStr,
                 selectedGroupCode = groupCode,
                 selectedSubgroup = _selectedSubgroups.value.joinToString(","),
                 faculty = faculty,
@@ -191,10 +170,7 @@ class OnboardingViewModel(
                 offlineModeEnabled = false
             )
 
-            // --- POPRAWKA TUTAJ ---
-            // Najpierw usuń stare śmieci, żeby w bazie był tylko jeden wiersz z ustawieniami
             settingsRepository.clearSettings()
-            // Dopiero potem zapisz nowe
             settingsRepository.insertSettings(settings)
 
             _isLoading.value = false
@@ -202,35 +178,9 @@ class OnboardingViewModel(
         }
     }
 
+    // Metoda pomocnicza dla LandingScreen (skip nie jest już używany w UI, ale może zostać w kodzie)
     fun skipOnboarding(onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            val guestSettings = SettingsEntity(
-                id = 0,
-                isAnonymous = true,
-                userName = "",
-                gender = null,
-                selectedGroupCode = null,
-                selectedSubgroup = null,
-                faculty = null,
-                fieldOfStudy = null,
-                studyMode = null,
-                isFirstRun = false,
-                isDarkMode = false,
-                notificationsEnabled = true,
-                offlineModeEnabled = false
-            )
-
-            classRepository.deleteAllClasses()
-
-            // --- POPRAWKA TUTAJ ---
-            settingsRepository.clearSettings() // Dodaj to
-            settingsRepository.insertSettings(guestSettings)
-
-            _isLoading.value = false
-            onSuccess()
-        }
+        saveOnboardingData(onSuccess)
     }
 
     fun onNextClick() {
@@ -243,26 +193,12 @@ class OnboardingViewModel(
     }
 
     fun onBackClick() {
-        if (_currentPage.value > 0) {
-            _currentPage.update { it - 1 }
-        }
+        if (_currentPage.value > 0) _currentPage.update { it - 1 }
     }
 
-    fun setMode(mode: OnboardingMode) {
-        _selectedMode.value = mode
-    }
-
-    fun setGender(gender: UserGender) {
-        _selectedGender.value = gender
-    }
-
-    fun setUserName(name: String) {
-        _userName.value = name
-    }
-
-    fun setUserSurname(surname: String) {
-        _userSurname.value = surname
-    }
+    fun setGender(gender: UserGender) { _selectedGender.value = gender }
+    fun setUserName(name: String) { _userName.value = name }
+    fun setUserSurname(surname: String) { _userSurname.value = surname }
 
     fun setGroupSearchQuery(query: String) {
         _groupSearchQuery.value = query
@@ -279,21 +215,10 @@ class OnboardingViewModel(
 
         viewModelScope.launch {
             _isLoading.value = true
-            _errorMessage.value = null
-
             when (val result = universityRepository.getSubgroups(groupCode)) {
-                is NetworkResult.Success -> {
-                    _availableSubgroups.value = result.data ?: emptyList()
-                }
-
-                is NetworkResult.Error -> {
-                    Log.e(TAG, "Błąd pobierania podgrup: ${result.message}")
-                    _availableSubgroups.value = emptyList()
-                }
-
-                else -> {}
+                is NetworkResult.Success -> _availableSubgroups.value = result.data ?: emptyList()
+                else -> _availableSubgroups.value = emptyList()
             }
-
             _isLoading.value = false
             _selectedSubgroups.value = emptySet()
         }
