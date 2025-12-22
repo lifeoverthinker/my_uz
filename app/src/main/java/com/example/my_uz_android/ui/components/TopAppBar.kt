@@ -34,15 +34,16 @@ fun CalendarTopAppBar(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .statusBarsPadding(),
-        horizontalArrangement = Arrangement.SpaceBetween, // Rozłożenie elementów
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Lewa sekcja + Tytuł (zajmuje dostępną przestrzeń)
+        // --- LEWA SEKCJA (Menu + Tytuł) ---
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f) // KLUCZOWA ZMIANA: Tytuł nie rozepcha paska
+            modifier = Modifier.weight(1f) // Ta sekcja zajmuje tyle miejsca, ile się da, zanim dotknie ikon po prawej
         ) {
+            // Przycisk Menu
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -59,7 +60,7 @@ fun CalendarTopAppBar(
                 )
             }
 
-            // Kontener tytułu
+            // --- KONTENER TYTUŁU ---
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -67,7 +68,7 @@ fun CalendarTopAppBar(
                     .clip(MaterialTheme.shapes.small)
                     .clickable(enabled = onTitleClick != null) { onTitleClick?.invoke() }
                     .padding(4.dp)
-                    .weight(1f, fill = false) // Ważne: nie rozciągaj się na siłę, ale miej limit
+                    .weight(1f, fill = false) // Ważne: Kontener tytułu nie rozpycha się na siłę na pustą przestrzeń
             ) {
                 Text(
                     text = title,
@@ -78,26 +79,34 @@ fun CalendarTopAppBar(
                         lineHeight = 24.sp
                     ),
                     color = contentColor,
-                    maxLines = 1, // Tylko jedna linia
-                    overflow = TextOverflow.Ellipsis // Ucinanie z "..."
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    // ✅ KLUCZOWA ZMIANA 1:
+                    // Tekst ma priorytet do zmniejszania się (ellipsis), gdy brakuje miejsca.
+                    // fill = false sprawia, że przy krótkim tekście (np. "Maj") strzałka jest blisko napisu.
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
                 if (onTitleClick != null) {
                     Icon(
                         painter = painterResource(R.drawable.ic_chevron_down),
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        // ✅ KLUCZOWA ZMIANA 2:
+                        // requiredSize wymusza, że ikona NIGDY się nie zmniejszy/zgniecie,
+                        // nawet jak tekst będzie bardzo długi.
+                        modifier = Modifier.requiredSize(20.dp),
                         tint = contentColor
                     )
                 }
             }
         }
 
-        // Prawa sekcja (ikony) - zawsze widoczna, nieściśnięta
+        // --- PRAWA SEKCJA (Ikony Search / Add) ---
+        // Ta sekcja ma swój stały rozmiar wynikający z zawartości, nie jest ściskana przez lewą stronę.
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 8.dp) // Lekki odstęp od tytułu
+            modifier = Modifier.padding(start = 8.dp)
         ) {
             if (onSearchClick != null) {
                 Box(
@@ -138,7 +147,6 @@ fun CalendarTopAppBar(
     }
 }
 
-// ... Reszta (TopAppBar) bez zmian ...
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(
