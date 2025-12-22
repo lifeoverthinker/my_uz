@@ -244,6 +244,7 @@ fun DayScheduleRow(
             tasks.forEach { task ->
                 TaskCard(
                     task = task,
+                    modifier = Modifier.fillMaxWidth(),
                     onTaskClick = { onTaskClick(task) }
                 )
             }
