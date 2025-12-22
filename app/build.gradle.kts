@@ -115,4 +115,10 @@ dependencies {
     // Kalendarz (wersja beta naprawia błąd SnapPositionInLayout)
     implementation("com.kizitonwose.calendar:core:2.6.0-beta01")
     implementation("com.kizitonwose.calendar:compose:2.6.0-beta01")
+
+    implementation("androidx.glance:glance-appwidget:1.1.0")
+    implementation("androidx.glance:glance-material3:1.1.0")
+    // WorkManager do odświeżania danych w tle
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    debugImplementation("androidx.glance:glance-preview:1.1.0")
 }
