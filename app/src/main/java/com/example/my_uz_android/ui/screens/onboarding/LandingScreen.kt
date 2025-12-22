@@ -250,51 +250,55 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
             description = "Dzięki temu aplikacja będzie zwracać się do Ciebie tak, jak lubisz."
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // Usunięto zbędny Spacer(16.dp), parent (ResponsiveOnboardingStep) już zapewnia odstęp.
 
-        // Forma zwrotu - styl spójny z wyborem grupy
-        Text(
-            text = "Forma zwrotu",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
+        // Grupowanie w Column, aby tytuł i przyciski były blisko siebie
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            FilterChip(
-                selected = selectedGender == UserGender.STUDENT,
-                onClick = { viewModel.setGender(UserGender.STUDENT) },
-                label = {
-                    Text(
-                        "Student",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                },
-                modifier = Modifier.weight(1f),
-                leadingIcon = null
+            Text(
+                text = "Forma zwrotu",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
             )
 
-            FilterChip(
-                selected = selectedGender == UserGender.STUDENTKA,
-                onClick = { viewModel.setGender(UserGender.STUDENTKA) },
-                label = {
-                    Text(
-                        "Studentka",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                },
-                modifier = Modifier.weight(1f),
-                leadingIcon = null
-            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                FilterChip(
+                    selected = selectedGender == UserGender.STUDENT,
+                    onClick = { viewModel.setGender(UserGender.STUDENT) },
+                    label = {
+                        Text(
+                            "Student",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                    leadingIcon = null
+                )
+
+                FilterChip(
+                    selected = selectedGender == UserGender.STUDENTKA,
+                    onClick = { viewModel.setGender(UserGender.STUDENTKA) },
+                    label = {
+                        Text(
+                            "Studentka",
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    },
+                    modifier = Modifier.weight(1f),
+                    leadingIcon = null
+                )
+            }
         }
 
         // Dane osobowe
@@ -307,7 +311,7 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(24.dp))
+                // Usunięto duży Spacer(24.dp). Layout nadrzędny zapewnia odstęp między sekcją płci a danymi.
 
                 Text(
                     text = "Twoje dane",
