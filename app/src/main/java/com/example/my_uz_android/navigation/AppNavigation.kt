@@ -58,7 +58,6 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // POKAZYWANIE NAWIGACJI DOLNEJ: Także dla ekranu "tasks"
     val showBottomBar = items.any { it.route == currentRoute } || currentRoute == "tasks"
 
     val navBackgroundColor = MaterialTheme.extendedColors.navBackground
@@ -93,7 +92,6 @@ fun AppNavigation(
                     ) {
                         val currentDestination = navBackStackEntry?.destination
                         items.forEach { screen ->
-                            // PODŚWIETLANIE IKONY KALENDARZA GDY JESTEŚMY W TASKS
                             val isCalendarActive = screen.route == "calendar" && currentRoute == "tasks"
                             val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true || isCalendarActive
 
@@ -227,14 +225,11 @@ fun AppNavigation(
                 )
             }
 
-            // ... (reszta tras: personal_data, edit_personal_data, settings, class_details itd.)
-            // Zakładam, że są one tutaj dalej, jeśli nie, skopiuj je z poprzedniej wersji pliku.
-            // Dla przejrzystości pokazuję tylko kluczowe trasy Calendar/Tasks.
-
+            // POPRAWIONE: PersonalDataScreen teraz przyjmuje onNavigateBack
             composable("personal_data") {
                 PersonalDataScreen(
                     onNavigateBack = { navController.popBackStack() },
-                    onEditClick = { navController.navigate("edit_personal_data") }
+                    onNavigateToEdit = { navController.navigate("edit_personal_data") }
                 )
             }
 
@@ -291,8 +286,6 @@ fun AppNavigation(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
-
-            // ... (reszta tras dla ocen i nieobecności)
 
             composable(
                 route = "add_grade?subject={subject}&classType={classType}",

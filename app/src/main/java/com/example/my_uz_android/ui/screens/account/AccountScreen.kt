@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -32,15 +33,23 @@ fun AccountScreen(
     onAboutClick: () -> Unit = {},
     viewModel: AccountViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    // CollectAsState zapewnia reaktywność na zmiany w bazie danych
-    val settings by viewModel.settings.collectAsState()
-    val isLoaded by viewModel.isSettingsLoaded.collectAsState()
+    val userName by viewModel.userName.collectAsState()
+    val userSurname by viewModel.userSurname.collectAsState()
+    val isAnonymous by viewModel.isAnonymous.collectAsState()
+    val selectedGender by viewModel.selectedGender.collectAsState()
+
+    val selectedGroup by viewModel.selectedGroup.collectAsState()
+    val selectedSubgroups by viewModel.selectedSubgroups.collectAsState()
+    val faculty by viewModel.faculty.collectAsState()
+    val fieldOfStudy by viewModel.fieldOfStudy.collectAsState()
+    val studyMode by viewModel.studyMode.collectAsState()
+
+    val isLoading by viewModel.isLoading.collectAsState()
 
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
 
-    // Pokazujemy loader tylko jeśli nie załadowano ustawień po raz pierwszy
-    if (!isLoaded && settings == null) {
+    if (isLoading && userName.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
@@ -76,21 +85,21 @@ fun AccountScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Bezpośrednie użycie settings z obserwowanego Flow
             ProfileSection(
-                userName = settings?.userName ?: "",
-                isAnonymous = settings?.isAnonymous == true
+                userName = "$userName $userSurname".trim(),
+                userTitle = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student",
+                isAnonymous = isAnonymous
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle(text = "Dane studiów")
                 StudyCard(
-                    fieldOfStudy = settings?.fieldOfStudy ?: "Brak danych",
-                    faculty = settings?.faculty ?: "Brak danych",
-                    group = settings?.selectedGroupCode ?: "-",
-                    subgroup = settings?.selectedSubgroup?.takeIf { it.isNotBlank() } ?: "-",
-                    mode = settings?.studyMode ?: "-",
-                    isAnonymous = settings?.isAnonymous == true
+                    fieldOfStudy = fieldOfStudy.ifBlank { "Brak danych" },
+                    faculty = faculty.ifBlank { "Brak danych" },
+                    group = selectedGroup ?: "-",
+                    subgroups = selectedSubgroups,
+                    mode = studyMode.ifBlank { "-" },
+                    isAnonymous = isAnonymous
                 )
             }
 
@@ -120,7 +129,6 @@ fun AccountScreen(
     }
 }
 
-// Reszta komponentów (AccountOptionItem, ProfileSection, StudyCard, etc.) bez zmian...
 @Composable
 fun AccountOptionItem(
     iconRes: Int,
@@ -180,7 +188,7 @@ fun AccountOptionItem(
 }
 
 @Composable
-fun ProfileSection(userName: String, isAnonymous: Boolean) {
+fun ProfileSection(userName: String, userTitle: String, isAnonymous: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -225,7 +233,7 @@ fun ProfileSection(userName: String, isAnonymous: Boolean) {
                 )
             )
             Text(
-                text = if (isAnonymous) "Konto gościa" else "Student",
+                text = if (isAnonymous) "Konto gościa" else userTitle,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Medium,
@@ -243,7 +251,7 @@ fun StudyCard(
     fieldOfStudy: String,
     faculty: String,
     group: String,
-    subgroup: String,
+    subgroups: Set<String>,
     mode: String,
     isAnonymous: Boolean
 ) {
@@ -256,7 +264,7 @@ fun StudyCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (isAnonymous) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -285,12 +293,15 @@ fun StudyCard(
                     )
                 )
 
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StudyDetailRow(label = "Wydział", value = faculty)
-                    StudyDetailRow(label = "Grupa", value = group)
-                    StudyDetailRow(label = "Podgrupa", value = subgroup)
-                    StudyDetailRow(label = "Tryb studiów", value = mode)
-                }
+                // Sekcja szczegółów
+                StudyDetailRow(label = "Wydział", value = faculty)
+                StudyDetailRow(label = "Grupa", value = group)
+
+                // POPRAWKA: Wyświetlanie podgrup jako tekst po przecinku (jak reszta pól)
+                val subgroupsText = if (subgroups.isNotEmpty()) subgroups.joinToString(", ") else "-"
+                StudyDetailRow(label = "Podgrupy", value = subgroupsText)
+
+                StudyDetailRow(label = "Tryb studiów", value = mode)
             }
         }
     }
@@ -312,7 +323,7 @@ fun StudyDetailRow(label: String, value: String) {
                 letterSpacing = 0.4.sp,
                 color = MaterialTheme.colorScheme.outline
             ),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.padding(end = 16.dp)
         )
         Text(
             text = value,
@@ -324,7 +335,7 @@ fun StudyDetailRow(label: String, value: String) {
                 color = MaterialTheme.colorScheme.onBackground
             ),
             modifier = Modifier.weight(1f),
-            textAlign = androidx.compose.ui.text.style.TextAlign.End
+            textAlign = TextAlign.End
         )
     }
 }
