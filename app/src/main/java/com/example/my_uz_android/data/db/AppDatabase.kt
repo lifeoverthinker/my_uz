@@ -1,7 +1,9 @@
 package com.example.my_uz_android.data.db
 
 import androidx.room.Database
+import androidx.room.Room
 import androidx.room.RoomDatabase
+import android.content.Context
 import com.example.my_uz_android.data.daos.*
 import com.example.my_uz_android.data.models.*
 
@@ -12,9 +14,10 @@ import com.example.my_uz_android.data.models.*
         GradeEntity::class,
         AbsenceEntity::class,
         EventEntity::class,
-        SettingsEntity::class
+        SettingsEntity::class,
+        FavoriteEntity::class
     ],
-    version = 11, // ✅ ZMIANA: Wersja 10 (dodano pole comment do GradeEntity)
+    version = 1, // ✅ Zwiększono wersję
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,4 +27,24 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun absenceDao(): AbsenceDao
     abstract fun eventDao(): EventDao
     abstract fun settingsDao(): SettingsDao
+    abstract fun favoritesDao(): FavoritesDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "app_database"
+                )
+                    .fallbackToDestructiveMigration() // Uwaga: Kasuje dane przy zmianie schematu!
+                    .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
 }

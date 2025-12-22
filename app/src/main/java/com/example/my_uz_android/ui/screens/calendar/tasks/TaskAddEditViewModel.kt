@@ -1,4 +1,4 @@
-package com.example.my_uz_android.ui.screens.calendar
+package com.example.my_uz_android.ui.screens.calendar.tasks
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -8,6 +8,7 @@ import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.TasksRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -24,7 +25,6 @@ data class TaskAddEditUiState(
     val startTime: LocalTime? = LocalTime.of(8, 0),
     val endTime: LocalTime? = LocalTime.of(10, 0),
     val availableSubjects: List<Pair<String, List<String>>> = emptyList(),
-    // ✅ Pola walidacji
     val isTitleValid: Boolean = true,
     val isSubjectValid: Boolean = true
 )
@@ -72,12 +72,12 @@ class TaskAddEditViewModel(
                     description = task.description ?: "",
                     classSubject = task.subjectName,
                     classType = task.classType,
-                    priority = task.priority, // Poprawiono z 1 na task.priority
-                    isAllDay = task.isAllDay, // Poprawiono odczyt z pola isAllDay
-                    startDate = java.time.Instant.ofEpochMilli(task.dueDate)
+                    priority = task.priority,
+                    isAllDay = task.isAllDay,
+                    startDate = Instant.ofEpochMilli(task.dueDate)
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate(),
-                    endDate = java.time.Instant.ofEpochMilli(task.endDate) // Poprawiono dueDate -> endDate
+                    endDate = Instant.ofEpochMilli(task.endDate)
                         .atZone(ZoneId.systemDefault())
                         .toLocalDate(),
                     startTime = task.dueTime?.let {
@@ -86,7 +86,7 @@ class TaskAddEditViewModel(
                             LocalTime.of(parts[0].toInt(), parts[1].toInt())
                         } catch (e: Exception) { LocalTime.of(8,0) }
                     },
-                    endTime = LocalTime.of(10, 0), // Uproszczenie, bo w DB może nie być endTime
+                    endTime = LocalTime.of(10, 0),
                     availableSubjects = _uiState.value.availableSubjects,
                     isTitleValid = true,
                     isSubjectValid = true
@@ -137,7 +137,6 @@ class TaskAddEditViewModel(
 
     fun saveTask() {
         val state = _uiState.value
-        // Prosta walidacja
         val isTitleValid = state.title.isNotBlank()
 
         if (!isTitleValid) {
@@ -177,8 +176,7 @@ class TaskAddEditViewModel(
                 dueDate = dueDate,
                 endDate = endDate,
                 dueTime = dueTime,
-                isCompleted = false,
-                color = 0xFF68548E.toInt() // Fioletowy
+                isCompleted = false
             )
 
             if (currentTaskId != null && currentTaskId!! > 0) {

@@ -40,10 +40,13 @@ import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
 
+// ✅ Usunięto duplikat klasy GradeItem.
+// Teraz importujemy ją z GradeBubble.kt (lub innego miejsca gdzie jest zdefiniowana)
+
 data class SubjectTypeState(
     val typeName: String,
     val average: Double? = null,
-    val grades: List<GradeItem>
+    val grades: List<GradeItem> // GradeItem musi być dostępny w pakiecie
 )
 
 @Composable
@@ -243,7 +246,7 @@ fun ClassTypeRow(
                         items(typeState.grades) { grade ->
                             GradeBubble(
                                 grade = grade,
-                                onGradeClick = { }
+                                onGradeClick = { } // Możesz tu dodać akcję
                             )
                         }
                     }
@@ -281,7 +284,7 @@ fun ClassTypeRow(
             border = BorderStroke(1.dp, primaryColor),
             color = Color.Transparent,
             modifier = Modifier
-                .align(Alignment.End) // ✅ Kluczowa zmiana
+                .align(Alignment.End)
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
         ) {

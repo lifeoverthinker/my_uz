@@ -1,7 +1,6 @@
 package com.example.my_uz_android.ui.screens.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,20 +15,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.components.EmptyStateMessage
 import com.example.my_uz_android.ui.components.EventCard
 import com.example.my_uz_android.ui.components.FabOption
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.home.components.UpcomingClasses
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.ui.theme.extendedColors
 
@@ -60,7 +56,7 @@ fun HomeScreen(
                     .fillMaxSize()
                     .background(topSectionBackground)
             ) {
-                // ... (Sekcja Górna - Bez zmian) ...
+                // Sekcja Górna
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -86,6 +82,7 @@ fun HomeScreen(
                         )
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Mapa
                             Box(
                                 modifier = Modifier
                                     .size(48.dp)
@@ -102,6 +99,7 @@ fun HomeScreen(
                                 }
                             }
 
+                            // Poczta
                             Box {
                                 Box(
                                     modifier = Modifier
@@ -118,6 +116,8 @@ fun HomeScreen(
                                         )
                                     }
                                 }
+                                // Kropka powiadomień (tymczasowo zawsze widoczna dla przykładu, lub usuń)
+                                /*
                                 Box(
                                     modifier = Modifier
                                         .size(8.dp)
@@ -125,6 +125,7 @@ fun HomeScreen(
                                         .offset(x = (-10).dp, y = 10.dp)
                                         .background(MaterialTheme.colorScheme.error, CircleShape)
                                 )
+                                */
                             }
                         }
                     }
@@ -172,6 +173,7 @@ fun HomeScreen(
                                     classes = uiState.upcomingClasses,
                                     emptyMessage = uiState.classesMessage,
                                     dayLabel = uiState.classesDayLabel,
+                                    classColorMap = uiState.classColorMap,
                                     onClassClick = onClassClick
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -311,7 +313,6 @@ fun HomeScreen(
                 }
             }
 
-            // FAB z kolejnością zgodną z Twoim snippetem (wizualnie od góry do dołu)
             UniversalFab(
                 isExpandable = true,
                 isExpanded = isFabExpanded,

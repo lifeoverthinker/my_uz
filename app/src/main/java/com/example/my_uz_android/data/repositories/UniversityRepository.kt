@@ -10,13 +10,6 @@ import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
-interface UniversityRepository {
-    suspend fun getGroupCodes(): NetworkResult<List<String>>
-    suspend fun getSubgroups(groupCode: String): NetworkResult<List<String>>
-    suspend fun getSchedule(groupCode: String, subgroups: List<String>): NetworkResult<List<ClassEntity>>
-    suspend fun getGroupDetails(groupCode: String): NetworkResult<GroupDetailsDto>
-}
-
 // --- DTO ---
 @Serializable
 data class ClassScheduleDto(
@@ -48,10 +41,9 @@ data class FieldOfStudyDto(
     @SerialName("nazwa") val name: String?
 )
 
-// --- Implementacja ---
-class SupabaseUniversityRepository(private val supabase: Postgrest) : UniversityRepository {
+class UniversityRepository(private val supabase: Postgrest) {
 
-    override suspend fun getGroupCodes(): NetworkResult<List<String>> {
+    suspend fun getGroupCodes(): NetworkResult<List<String>> {
         return try {
             val codes = supabase.from("grupy")
                 .select(columns = Columns.list("kod_grupy"))
@@ -67,7 +59,7 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
         }
     }
 
-    override suspend fun getSubgroups(groupCode: String): NetworkResult<List<String>> {
+    suspend fun getSubgroups(groupCode: String): NetworkResult<List<String>> {
         return try {
             val grupaIdResult = supabase.from("grupy")
                 .select(columns = Columns.list("id")) {
@@ -99,7 +91,7 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
         }
     }
 
-    override suspend fun getGroupDetails(groupCode: String): NetworkResult<GroupDetailsDto> {
+    suspend fun getGroupDetails(groupCode: String): NetworkResult<GroupDetailsDto> {
         return try {
             val details = supabase.from("grupy")
                 .select(columns = Columns.raw("tryb_studiow, kierunki(wydzial, nazwa)")) {
@@ -118,14 +110,13 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
         }
     }
 
-    override suspend fun getSchedule(
+    suspend fun getSchedule(
         groupCode: String,
         subgroups: List<String>
     ): NetworkResult<List<ClassEntity>> {
         return try {
             Log.d("UniversityRepo", "🔍 Pobieram zajęcia dla $groupCode, podgrupy: $subgroups")
 
-            // 1. Pobierz ID grupy
             val grupaIdResult = supabase.from("grupy")
                 .select(columns = Columns.list("id")) {
                     filter { eq("kod_grupy", groupCode) }
@@ -135,9 +126,7 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
             val grupaId = grupaIdResult?.get("id")
                 ?: return NetworkResult.Error("Nie znaleziono grupy w bazie.")
 
-            // 2. Pobierz zajęcia z filtrowaniem podgrup w SQL
             val scheduleDto = if (subgroups.isEmpty()) {
-                // Jeśli nie wybrano podgrup - pokaż WSZYSTKIE (łącznie z ogólnymi)
                 supabase.from("zajecia_grupy")
                     .select(
                         columns = Columns.list(
@@ -147,12 +136,11 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
                     ) {
                         filter {
                             eq("grupa_id", grupaId)
-                            neq("rz", "E") // Bez egzaminów
+                            neq("rz", "E")
                         }
                     }
                     .decodeList<ClassScheduleDto>()
             } else {
-                // Jeśli wybrano podgrupy - filtruj w SQL
                 supabase.from("zajecia_grupy")
                     .select(
                         columns = Columns.list(
@@ -164,7 +152,6 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
                             eq("grupa_id", grupaId)
                             neq("rz", "E")
                             or {
-                                // Ogólne zajęcia (bez podgrupy) LUB wybrane podgrupy
                                 eq("podgrupa", "")
                                 isIn("podgrupa", subgroups)
                             }
@@ -175,7 +162,6 @@ class SupabaseUniversityRepository(private val supabase: Postgrest) : University
 
             Log.d("UniversityRepo", "📦 Pobrano ${scheduleDto.size} zajęć")
 
-            // 3. Mapowanie do ClassEntity
             val entities = scheduleDto
                 .mapNotNull { dto ->
                     try {

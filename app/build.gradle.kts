@@ -33,11 +33,9 @@ android {
         }
 
         // --- 2. Wstrzykujemy klucze do BuildConfig ---
-        // Pobieramy z local.properties, a jeśli brak - wstawiamy pusty ciąg (żeby nie było błędu null)
         val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: ""
         val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: ""
 
-        // Tworzymy pola statyczne w klasie BuildConfig
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
     }
@@ -53,6 +51,9 @@ android {
     }
 
     compileOptions {
+        // --- KLUCZOWA ZMIANA: Włączenie desugaringu ---
+        isCoreLibraryDesugaringEnabled = true
+
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -63,7 +64,6 @@ android {
 
     buildFeatures {
         compose = true
-        // WAŻNE: Musi być true, żeby klasa BuildConfig powstała
         buildConfig = true
     }
 
@@ -75,6 +75,9 @@ android {
 }
 
 dependencies {
+    // --- KLUCZOWA ZMIANA: Dodanie biblioteki desugaringu ---
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
@@ -107,4 +110,9 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    // Kalendarz (wersja beta naprawia błąd SnapPositionInLayout)
+    implementation("com.kizitonwose.calendar:core:2.6.0-beta01")
+    implementation("com.kizitonwose.calendar:compose:2.6.0-beta01")
 }

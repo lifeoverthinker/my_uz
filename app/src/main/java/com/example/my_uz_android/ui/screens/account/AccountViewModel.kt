@@ -1,10 +1,9 @@
 package com.example.my_uz_android.ui.screens.account
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.SettingsEntity
-import com.example.my_uz_android.data.repositories.ClassRepository
+import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.util.NetworkResult
@@ -13,238 +12,212 @@ import kotlinx.coroutines.launch
 
 class AccountViewModel(
     private val settingsRepository: SettingsRepository,
-    private val universityRepository: UniversityRepository,
-    private val classRepository: ClassRepository
+    private val universityRepository: UniversityRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AccountUiState())
-    val uiState: StateFlow<AccountUiState> = _uiState.asStateFlow()
+    // --- Dane Użytkownika ---
+    private val _userName = MutableStateFlow("")
+    val userName: StateFlow<String> = _userName.asStateFlow()
 
-    private val _settings = MutableStateFlow<SettingsEntity?>(null)
-    val settings: StateFlow<SettingsEntity?> = _settings.asStateFlow()
+    private val _userSurname = MutableStateFlow("")
+    val userSurname: StateFlow<String> = _userSurname.asStateFlow()
 
-    private val _isSettingsLoaded = MutableStateFlow(false)
-    val isSettingsLoaded: StateFlow<Boolean> = _isSettingsLoaded.asStateFlow()
+    private val _selectedGender = MutableStateFlow<UserGender?>(null)
+    val selectedGender: StateFlow<UserGender?> = _selectedGender.asStateFlow()
 
+    // --- Dane Studiów ---
+    private val _isAnonymous = MutableStateFlow(false)
+    val isAnonymous: StateFlow<Boolean> = _isAnonymous.asStateFlow()
+
+    private val _faculty = MutableStateFlow("")
+    val faculty: StateFlow<String> = _faculty.asStateFlow()
+
+    private val _fieldOfStudy = MutableStateFlow("")
+    val fieldOfStudy: StateFlow<String> = _fieldOfStudy.asStateFlow()
+
+    private val _studyMode = MutableStateFlow("")
+    val studyMode: StateFlow<String> = _studyMode.asStateFlow()
+
+    // --- Wybór Grupy ---
     private val _groupSearchQuery = MutableStateFlow("")
     val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
 
-    private val _filteredGroups = MutableStateFlow<List<String>>(emptyList())
-    val filteredGroups: StateFlow<List<String>> = _filteredGroups.asStateFlow()
+    private val _selectedGroup = MutableStateFlow<String?>(null)
+    val selectedGroup: StateFlow<String?> = _selectedGroup.asStateFlow()
 
     private val _availableSubgroups = MutableStateFlow<List<String>>(emptyList())
     val availableSubgroups: StateFlow<List<String>> = _availableSubgroups.asStateFlow()
 
-    private val _draftSubgroups = MutableStateFlow<List<String>>(emptyList())
-    val draftSubgroups: StateFlow<List<String>> = _draftSubgroups.asStateFlow()
+    private val _selectedSubgroups = MutableStateFlow<Set<String>>(emptySet())
+    val selectedSubgroups: StateFlow<Set<String>> = _selectedSubgroups.asStateFlow()
 
-    private val _draftSelectedGroup = MutableStateFlow<String?>(null)
-    val draftSelectedGroup: StateFlow<String?> = _draftSelectedGroup.asStateFlow()
+    // Pełna lista grup pobrana z serwera
+    private val _allGroups = MutableStateFlow<List<String>>(emptyList())
+
+    // Filtrowanie grup
+    val filteredGroups: StateFlow<List<String>> = combine(
+        _groupSearchQuery,
+        _allGroups
+    ) { query, allGroups ->
+        if (query.isBlank()) {
+            emptyList()
+        } else {
+            allGroups.filter { it.contains(query, ignoreCase = true) }
+                .sorted()
+                .take(5)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _saveMessage = MutableStateFlow<String?>(null)
-    val saveMessage: StateFlow<String?> = _saveMessage.asStateFlow()
+    private val _isSaved = MutableStateFlow(false)
+    val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
 
-    private var allGroupCodes: List<String> = emptyList()
+    private var currentSettingsEntity: SettingsEntity? = null
 
     init {
-        loadSettings()
-        loadGroupCodes()
+        loadCurrentData()
+        loadAllGroups()
     }
 
-    private fun loadSettings() {
+    private fun loadAllGroups() {
         viewModelScope.launch {
-            settingsRepository.getSettingsStream().collect { retrievedSettings ->
-                _settings.value = retrievedSettings
-
-                if (retrievedSettings != null) {
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            selectedGroupCode = retrievedSettings.selectedGroupCode ?: "",
-                            selectedSubgroup = retrievedSettings.selectedSubgroup ?: "",
-                            isDarkMode = retrievedSettings.isDarkMode,
-                            currentSemester = retrievedSettings.currentSemester
-                        )
-                    }
-                    _draftSelectedGroup.value = retrievedSettings.selectedGroupCode
-                    _draftSubgroups.value = retrievedSettings.selectedSubgroup?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+            when (val result = universityRepository.getGroupCodes()) {
+                is NetworkResult.Success -> {
+                    _allGroups.value = result.data ?: emptyList()
                 }
-                _isSettingsLoaded.value = true
+                else -> {
+                    _allGroups.value = emptyList()
+                }
             }
         }
     }
 
-    private fun loadGroupCodes() {
+    private fun loadCurrentData() {
         viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                when (val result = universityRepository.getGroupCodes()) {
-                    is NetworkResult.Success -> {
-                        allGroupCodes = result.data ?: emptyList()
+            _isLoading.value = true
+            settingsRepository.getSettingsStream().collect { settings ->
+                if (settings != null) {
+                    currentSettingsEntity = settings
+
+                    val nameParts = settings.userName.split(" ", limit = 2)
+                    _userName.value = nameParts.getOrElse(0) { "" }
+                    _userSurname.value = nameParts.getOrElse(1) { "" }
+
+                    _isAnonymous.value = settings.isAnonymous
+                    _faculty.value = settings.faculty ?: ""
+                    _fieldOfStudy.value = settings.fieldOfStudy ?: ""
+                    _studyMode.value = settings.studyMode ?: ""
+
+                    _selectedGender.value = when (settings.gender?.lowercase()) {
+                        "studentka" -> UserGender.STUDENTKA
+                        "student" -> UserGender.STUDENT
+                        else -> UserGender.STUDENT
                     }
-                    is NetworkResult.Error -> {
-                        Log.e("AccountViewModel", "Błąd pobierania grup: ${result.message}")
-                        allGroupCodes = emptyList()
+
+                    if (!settings.selectedGroupCode.isNullOrEmpty()) {
+                        _selectedGroup.value = settings.selectedGroupCode
+
+                        if (_groupSearchQuery.value.isEmpty()) {
+                            _groupSearchQuery.value = settings.selectedGroupCode
+                        }
+
+                        loadSubgroupsForGroup(settings.selectedGroupCode)
+
+                        _selectedSubgroups.value = if (!settings.selectedSubgroup.isNullOrEmpty()) {
+                            settings.selectedSubgroup.split(",")
+                                .map { it.trim() }
+                                .filter { it.isNotEmpty() }
+                                .toSet()
+                        } else {
+                            emptySet()
+                        }
                     }
-                    else -> {}
                 }
-            } catch (e: Exception) {
-                Log.e("AccountViewModel", "Error loading group codes", e)
-            } finally {
                 _isLoading.value = false
             }
         }
     }
 
-    fun onSearchQueryChange(query: String) {
+    fun setUserName(name: String) {
+        _userName.value = name
+    }
+
+    fun setUserSurname(surname: String) {
+        _userSurname.value = surname
+    }
+
+    fun setGender(gender: UserGender) {
+        _selectedGender.value = gender
+    }
+
+    fun setGroupSearchQuery(query: String) {
         _groupSearchQuery.value = query
         if (query.isBlank()) {
-            _filteredGroups.value = emptyList()
-        } else {
-            _filteredGroups.value = allGroupCodes
-                .filter { it.contains(query, ignoreCase = true) }
-                .take(10)
+            _selectedGroup.value = null
+            _availableSubgroups.value = emptyList()
+            _selectedSubgroups.value = emptySet()
         }
     }
 
-    fun selectGroup(groupCode: String) {
-        _draftSelectedGroup.value = groupCode
-        _groupSearchQuery.value = groupCode
-        _filteredGroups.value = emptyList()
-        loadSubgroupsForGroup(groupCode)
+    fun selectGroup(group: String) {
+        _selectedGroup.value = group
+        _groupSearchQuery.value = group
+        _selectedSubgroups.value = emptySet()
+        loadSubgroupsForGroup(group)
     }
 
-    private fun loadSubgroupsForGroup(groupCode: String) {
+    private fun loadSubgroupsForGroup(group: String) {
         viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                when (val result = universityRepository.getSubgroups(groupCode)) {
-                    is NetworkResult.Success -> {
-                        _availableSubgroups.value = result.data ?: emptyList()
-                    }
-                    is NetworkResult.Error -> {
-                        _availableSubgroups.value = emptyList()
-                        Log.e("AccountViewModel", "Błąd podgrup: ${result.message}")
-                    }
-                    else -> {}
+            when (val result = universityRepository.getSubgroups(group)) {
+                is NetworkResult.Success -> {
+                    _availableSubgroups.value = result.data ?: emptyList()
                 }
-            } catch (e: Exception) {
-                _availableSubgroups.value = emptyList()
-            } finally {
-                _isLoading.value = false
+                else -> {
+                    _availableSubgroups.value = emptyList()
+                }
             }
         }
     }
 
     fun toggleSubgroup(subgroup: String) {
-        val current = _draftSubgroups.value.toMutableList()
+        val current = _selectedSubgroups.value.toMutableSet()
         if (current.contains(subgroup)) {
             current.remove(subgroup)
         } else {
             current.add(subgroup)
         }
-        _draftSubgroups.value = current
+        _selectedSubgroups.value = current
     }
 
-    fun updateSemester(newSemester: Int) {
+    fun saveChanges(onSuccess: () -> Unit) {
         viewModelScope.launch {
-            val current = _settings.value ?: return@launch
-            val updated = current.copy(currentSemester = newSemester)
-            settingsRepository.insertSettings(updated)
+            _isLoading.value = true
+
+            val fullName = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
+            val genderString = if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
+
+            val subgroupsString = _selectedSubgroups.value.joinToString(", ")
+
+            val newSettings = currentSettingsEntity?.copy(
+                userName = fullName,
+                gender = genderString,
+                selectedGroupCode = _selectedGroup.value,
+                selectedSubgroup = subgroupsString
+            ) ?: SettingsEntity(
+                userName = fullName,
+                gender = genderString,
+                selectedGroupCode = _selectedGroup.value,
+                selectedSubgroup = subgroupsString
+            )
+
+            settingsRepository.insertOrUpdate(newSettings)
+
+            _isLoading.value = false
+            _isSaved.value = true
+            onSuccess()
+            _isSaved.value = false
         }
     }
-
-    fun saveChanges() {
-        val groupCode = _draftSelectedGroup.value ?: return
-        val subgroups = _draftSubgroups.value
-
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-
-                // 1. Pobierz Plan
-                refreshSchedule(groupCode, subgroups)
-
-                // 2. Pobierz Szczegóły Grupy (Wydział, Kierunek) - ✅ DODANE
-                var faculty: String? = null
-                var fieldOfStudy: String? = null
-                var studyMode: String? = null
-
-                when (val detailsResult = universityRepository.getGroupDetails(groupCode)) {
-                    is NetworkResult.Success -> {
-                        detailsResult.data?.let { details ->
-                            studyMode = details.studyMode
-                            details.fieldInfo?.let { info ->
-                                faculty = info.faculty
-                                fieldOfStudy = info.name
-                            }
-                        }
-                    }
-                    is NetworkResult.Error -> {
-                        Log.e("AccountViewModel", "Błąd pobierania szczegółów: ${detailsResult.message}")
-                    }
-                    else -> {}
-                }
-
-                // 3. Zapisz wszystko w ustawieniach
-                val currentSettings = _settings.value ?: SettingsEntity()
-                val newSettings = currentSettings.copy(
-                    selectedGroupCode = groupCode,
-                    selectedSubgroup = subgroups.joinToString(","),
-                    isDarkMode = _uiState.value.isDarkMode,
-                    currentSemester = _settings.value?.currentSemester ?: 1,
-                    // ✅ Aktualizacja danych uczelnianych
-                    faculty = faculty,
-                    fieldOfStudy = fieldOfStudy,
-                    studyMode = studyMode
-                )
-
-                settingsRepository.insertSettings(newSettings)
-                _saveMessage.value = "✅ Zapisano! Plan i dane zostały zaktualizowane."
-            } catch (e: Exception) {
-                _saveMessage.value = "❌ Błąd: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    private suspend fun refreshSchedule(groupCode: String, subgroups: List<String>) {
-        val result = universityRepository.getSchedule(groupCode, subgroups)
-
-        when (result) {
-            is NetworkResult.Success -> {
-                val schedule = result.data ?: emptyList()
-                classRepository.deleteAllClasses()
-                classRepository.insertClasses(schedule)
-            }
-            is NetworkResult.Error -> {
-                throw Exception(result.message ?: "Nie udało się pobrać planu")
-            }
-            else -> {}
-        }
-    }
-
-    fun clearSaveMessage() {
-        _saveMessage.value = null
-    }
-
-    fun toggleDarkMode(enabled: Boolean) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isDarkMode = enabled) }
-            val current = settings.value
-            if (current != null) {
-                settingsRepository.insertSettings(current.copy(isDarkMode = enabled))
-            }
-        }
-    }
-
-    data class AccountUiState(
-        val selectedGroupCode: String = "",
-        val selectedSubgroup: String = "",
-        val isDarkMode: Boolean = false,
-        val currentSemester: Int = 1
-    )
 }

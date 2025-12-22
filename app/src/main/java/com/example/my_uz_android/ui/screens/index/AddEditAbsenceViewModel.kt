@@ -1,5 +1,6 @@
 package com.example.my_uz_android.ui.screens.index
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.AbsenceEntity
@@ -18,6 +19,7 @@ data class AddEditAbsenceUiState(
 )
 
 class AddEditAbsenceViewModel(
+    savedStateHandle: SavedStateHandle, // ✅ Dodano, aby Factory nie wyrzucało błędu
     private val absenceRepository: AbsenceRepository,
     private val classRepository: ClassRepository
 ) : ViewModel() {
@@ -29,13 +31,18 @@ class AddEditAbsenceViewModel(
 
     init {
         loadAvailableSubjects()
+
+        // ✅ Dodano automatyczne ładowanie, jeśli ID zostało przekazane w nawigacji
+        val absenceId = savedStateHandle.get<Int>("absenceId")
+        if (absenceId != null && absenceId != -1 && absenceId != 0) {
+            loadAbsence(absenceId)
+        }
     }
 
     fun initNewAbsence(subject: String?, type: String?) {
         _uiState.update {
             it.copy(
                 id = 0,
-                // Jeśli nie przekazano wstępnych danych, ustawiamy na null, aby zablokować przycisk
                 subjectName = subject,
                 classType = type,
                 description = "",

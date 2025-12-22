@@ -8,11 +8,11 @@ class TasksRepository(private val tasksDao: TasksDao) {
 
     fun getAllTasks(): Flow<List<TaskEntity>> = tasksDao.getAllTasks()
 
-    fun getTasksStream(): Flow<List<TaskEntity>> = tasksDao.getAllTasks()  // DODANE
+    fun getTasksStream(): Flow<List<TaskEntity>> = tasksDao.getAllTasks()
 
     fun getTaskByIdStream(id: Int): Flow<TaskEntity?> = tasksDao.getTaskById(id)
 
-    suspend fun getTask(id: Int): TaskEntity? = tasksDao.getTaskByIdSuspend(id)  // DODANE
+    suspend fun getTask(id: Int): TaskEntity? = tasksDao.getTaskByIdSuspend(id)
 
     suspend fun getTaskById(id: Int): TaskEntity? = tasksDao.getTaskByIdSuspend(id)
 
