@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -104,6 +105,16 @@ class HomeViewModel(
         val (displayedClasses, dayLabel, emptyMessage) = if (isPlanSelected) {
             val todaysClasses = classes
                 .filter { it.date == todayString }
+                // Filtrujemy zajęcia, które już się zakończyły (isAfter now)
+                .filter { classItem ->
+                    try {
+                        val endTime = LocalTime.parse(classItem.endTime)
+                        val endDateTime = LocalDateTime.of(today, endTime)
+                        endDateTime.isAfter(now)
+                    } catch (e: Exception) {
+                        true // W razie błędu parsowania, pokazujemy
+                    }
+                }
                 .sortedBy { it.startTime }
 
             val tomorrowsClasses = classes

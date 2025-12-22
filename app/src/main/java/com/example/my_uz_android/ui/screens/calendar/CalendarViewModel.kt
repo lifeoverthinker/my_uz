@@ -46,7 +46,7 @@ class CalendarViewModel(
                 favoritesRepository.getAllFavoritesStream(),
                 settingsRepository.getSettingsStream()
             ) { favorites, settings ->
-                // Parsowanie kolorów
+                // Parsowanie kolorów z JSONa zapisanego w ustawieniach
                 val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
                 val classColorMap: Map<String, Int> = try {
                     gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
@@ -56,7 +56,7 @@ class CalendarViewModel(
 
                 _uiState.value.copy(
                     favorites = favorites,
-                    classColorMap = classColorMap
+                    classColorMap = classColorMap // Aktualizacja mapy w stanie
                 )
             }.collectLatest { newState ->
                 _uiState.value = newState

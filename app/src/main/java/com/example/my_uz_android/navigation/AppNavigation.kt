@@ -57,7 +57,9 @@ fun AppNavigation(
     val items = listOf(Screen.Main, Screen.Calendar, Screen.Index, Screen.Account)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val showBottomBar = items.any { it.route == currentRoute }
+
+    // POKAZYWANIE NAWIGACJI DOLNEJ: Także dla ekranu "tasks"
+    val showBottomBar = items.any { it.route == currentRoute } || currentRoute == "tasks"
 
     val navBackgroundColor = MaterialTheme.extendedColors.navBackground
     val navBorderColor = MaterialTheme.extendedColors.navBorder
@@ -91,7 +93,9 @@ fun AppNavigation(
                     ) {
                         val currentDestination = navBackStackEntry?.destination
                         items.forEach { screen ->
-                            val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+                            // PODŚWIETLANIE IKONY KALENDARZA GDY JESTEŚMY W TASKS
+                            val isCalendarActive = screen.route == "calendar" && currentRoute == "tasks"
+                            val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true || isCalendarActive
 
                             NavigationBarItem(
                                 icon = {
@@ -170,16 +174,18 @@ fun AppNavigation(
                 com.example.my_uz_android.ui.screens.calendar.CalendarScreen(
                     onSearchClick = { navController.navigate("schedule_search") },
                     onTasksClick = { navController.navigate("tasks") },
-                    onAccountClick = { navController.navigate(Screen.Account.route) }
+                    onAccountClick = { navController.navigate(Screen.Account.route) },
+                    onClassClick = { classId -> navController.navigate("class_details/$classId") }
                 )
             }
 
-            // --- NOWA TRASA DLA TERMINARZA (ZADAŃ) DOSTĘPNA Z DRAWERA ---
             composable("tasks") {
                 TasksScreen(
                     onAddTaskClick = { navController.navigate("add_task") },
                     onTaskClick = { task -> navController.navigate("task_details/${task.id}") },
-                    onSearchClick = { navController.navigate("schedule_search") }
+                    onSearchClick = { navController.navigate("schedule_search") },
+                    onCalendarClick = { navController.navigate(Screen.Calendar.route) },
+                    onAccountClick = { navController.navigate(Screen.Account.route) }
                 )
             }
 
@@ -220,6 +226,10 @@ fun AppNavigation(
                     onAboutClick = { navController.navigate("about_app") }
                 )
             }
+
+            // ... (reszta tras: personal_data, edit_personal_data, settings, class_details itd.)
+            // Zakładam, że są one tutaj dalej, jeśli nie, skopiuj je z poprzedniej wersji pliku.
+            // Dla przejrzystości pokazuję tylko kluczowe trasy Calendar/Tasks.
 
             composable("personal_data") {
                 PersonalDataScreen(
@@ -281,6 +291,8 @@ fun AppNavigation(
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
+
+            // ... (reszta tras dla ocen i nieobecności)
 
             composable(
                 route = "add_grade?subject={subject}&classType={classType}",
@@ -389,17 +401,5 @@ fun AppNavigation(
                 ScheduleSearchScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
-    }
-}
-
-@Composable
-fun PlaceholderScreen(text: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
     }
 }
