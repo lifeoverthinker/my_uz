@@ -9,7 +9,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 
-// 1. Definicja pełnej rodziny czcionek Inter (Wszystkie pliki .ttf)
+// 1. Definicja pełnej rodziny czcionek Inter
 val InterFontFamily = FontFamily(
     Font(R.font.inter_thin, FontWeight.Thin),
     Font(R.font.inter_extralight, FontWeight.ExtraLight),
@@ -24,10 +24,10 @@ val InterFontFamily = FontFamily(
 )
 
 // 2. Pełna typografia Material 3 wykorzystująca InterFontFamily
-val AppTypography = Typography(
+val AppTypography = Typography( // ✅ ZMIANA: Nazwa AppTypography, aby nie kolidować z klasą Typography
     displayLarge = TextStyle(
         fontFamily = InterFontFamily,
-        fontWeight = FontWeight.Normal, // Zmieniono na Normal, bo 400 to Normal
+        fontWeight = FontWeight.Normal,
         fontSize = 57.sp,
         lineHeight = 64.sp,
         letterSpacing = (-0.25).sp
@@ -76,7 +76,7 @@ val AppTypography = Typography(
     ),
     titleMedium = TextStyle(
         fontFamily = InterFontFamily,
-        fontWeight = FontWeight.Medium, // W500 to Medium
+        fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.15.sp

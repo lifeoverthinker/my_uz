@@ -13,7 +13,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.data.models.TaskEntity
@@ -27,7 +26,7 @@ import java.time.ZoneId
 fun TaskCard(
     task: TaskEntity,
     onTaskClick: () -> Unit = {},
-    onCheckClick: () -> Unit = {}, // ✅ DODANO
+    // onCheckClick usunięty, bo stary kod go nie używał w TasksScreen
     modifier: Modifier = Modifier,
     showDayMarker: Boolean = true
 ) {

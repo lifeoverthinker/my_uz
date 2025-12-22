@@ -9,20 +9,23 @@ data class SettingsEntity(
     val id: Int = 0,
     val isAnonymous: Boolean = false,
     val userName: String = "Student",
-    val gender: String? = null, // "STUDENT" lub "STUDENTKA"
+    // Usunięto albumNumber zgodnie z życzeniem
+    val gender: String? = null,
 
     // Uczelnia
     val selectedGroupCode: String? = null,
-    val selectedSubgroup: String? = null, // np. "L1,P2"
+    val selectedSubgroup: String? = null,
     val faculty: String? = null,
     val fieldOfStudy: String? = null,
-    val studyMode: String? = null, // np. "stacjonarne"
+    val studyMode: String? = null,
 
-    // ✅ NOWE: Globalny licznik semestru
     val currentSemester: Int = 1,
 
     // App State
     val isFirstRun: Boolean = true,
     val isDarkMode: Boolean = false,
-    val notificationsEnabled: Boolean = true
+    val notificationsEnabled: Boolean = true,
+    val offlineModeEnabled: Boolean = false,
+
+    val classColorsJson: String = "{}"
 )

@@ -1,5 +1,6 @@
 package com.example.my_uz_android.ui.screens.home.components
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -10,24 +11,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
-import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.ui.theme.getClassAccentColor
+import kotlin.math.abs
 
 @Composable
 fun UpcomingClasses(
     classes: List<ClassEntity>,
     emptyMessage: String?,
     dayLabel: String?,
+    classColorMap: Map<String, Int>, // ✅ Dodano brakujący parametr
     modifier: Modifier = Modifier,
     onClassClick: (Int) -> Unit
 ) {
     val classCardColor = MaterialTheme.extendedColors.classCardBackground
+    val isDark = isSystemInDarkTheme() // Potrzebne do wyboru wariantu koloru (light/dark) z palety
 
     Column(
         modifier = modifier
@@ -91,44 +95,24 @@ fun UpcomingClasses(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(classes) { classItem ->
+                    // ✅ Logika synchronizacji kolorów:
+                    // 1. Sprawdź, czy użytkownik wybrał kolor w ustawieniach (classColorMap)
+                    // 2. Jeśli nie, użyj hasha nazwy typu zajęć (fallback), aby kolor był stały
+                    val colorIndex = classColorMap[classItem.classType]
+                        ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
+
+                    // ✅ Pobierz kolor z globalnej palety (tej samej co w Settings i Calendar)
+                    val accentColor = getClassAccentColor(colorIndex, isDark)
+
                     ClassCard(
                         classItem = classItem,
                         backgroundColor = classCardColor,
-                        // ✅ POPRAWKA: Przekazujemy onClick do parametru, a nie do modifiera
+                        accentColor = accentColor, // Przekazujemy wyliczony kolor
                         onClick = { onClassClick(classItem.id) },
                         modifier = Modifier.width(264.dp)
                     )
                 }
             }
-        }
-    }
-}
-
-@Preview(name = "Upcoming Classes - Dzisiaj", showBackground = true)
-@Composable
-private fun PreviewUpcomingClassesToday() {
-    MyUZTheme {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            UpcomingClasses(
-                classes = listOf(
-                    ClassEntity(
-                        id = 1,
-                        subjectName = "Programowanie Mobilne",
-                        classType = "Laboratorium",
-                        startTime = "10:00",
-                        endTime = "11:30",
-                        dayOfWeek = 1,
-                        date = "2025-12-09",
-                        groupCode = "INF4A",
-                        subgroup = "L1",
-                        room = "A-2/112",
-                        teacherName = "Dr Kowalski"
-                    )
-                ),
-                emptyMessage = null,
-                dayLabel = "Dzisiaj",
-                onClassClick = {}
-            )
         }
     }
 }

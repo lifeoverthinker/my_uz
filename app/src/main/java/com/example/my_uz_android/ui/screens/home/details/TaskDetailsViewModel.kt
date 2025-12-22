@@ -75,7 +75,7 @@ class TaskDetailsViewModel(
             viewModelScope.launch {
                 val updatedTask = currentState.task.copy(isCompleted = !currentState.task.isCompleted)
                 tasksRepository.updateTask(updatedTask)
-                // UI zaktualizuje się samo dzięki Flow w loadTask
+                // UI zaktualizuje się automatycznie dzięki Flow w loadTask
             }
         }
     }

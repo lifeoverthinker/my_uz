@@ -18,4 +18,8 @@ interface AbsenceDao {
 
     @Delete
     suspend fun deleteAbsence(absence: AbsenceEntity)
+
+    // ✅ DODANE: Usuwa wszystkie nieobecności (wymagane do importu)
+    @Query("DELETE FROM absences")
+    suspend fun deleteAll()
 }

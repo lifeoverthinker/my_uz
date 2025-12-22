@@ -10,8 +10,8 @@ data class TaskEntity(
     val id: Int = 0,
     val title: String,
     val description: String?,
-    val subjectName: String? = null,  // ← NULLABLE
-    val classType: String? = null,    // ← NULLABLE
+    val subjectName: String? = null,
+    val classType: String? = null,
     val priority: Int = 1,
     val isAllDay: Boolean = false,
     val dueDate: Long = Instant.now().toEpochMilli(),
@@ -21,5 +21,6 @@ data class TaskEntity(
     val isCompleted: Boolean = false,
     val subjectId: Int? = null
 ) {
+    // Helper dla kompatybilności
     val classSubject: String? get() = subjectName
 }

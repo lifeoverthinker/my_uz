@@ -1,4 +1,4 @@
-package com.example.my_uz_android.ui.screens.calendar
+package com.example.my_uz_android.ui.screens.calendar.tasks
 
 import androidx.lifecycle.ViewModel
 import com.example.my_uz_android.data.models.TaskEntity
@@ -15,7 +15,6 @@ class TasksViewModel(
 
     val tasksStream: Flow<List<TaskEntity>> = tasksRepository.getTasksStream()
 
-    // ✅ NOWA METODA - sprawdza czy plan został wybrany
     fun isPlanSelected(): Boolean {
         return runBlocking {
             val settings = settingsRepository.getSettingsStream().first()

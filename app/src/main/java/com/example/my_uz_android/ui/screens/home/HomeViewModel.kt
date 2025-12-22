@@ -10,19 +10,20 @@ import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.TasksRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
-import com.example.my_uz_android.ui.screens.onboarding.UserGender
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 data class HomeUiState(
-    val greeting: String = "Cześć, Gościu 👋",
+    val greeting: String = "Witaj w MyUZ!",
+    val userInitials: String = "",
     val departmentInfo: String = "",
     val upcomingClasses: List<ClassEntity> = emptyList(),
     val upcomingTasks: List<TaskEntity> = emptyList(),
@@ -32,7 +33,9 @@ data class HomeUiState(
     val tasksMessage: String? = null,
     val classesMessage: String? = null,
     val classesDayLabel: String? = null,
-    val isPlanSelected: Boolean = false
+    val isPlanSelected: Boolean = false,
+    val classColorMap: Map<String, Int> = emptyMap(),
+    val isDarkMode: Boolean = false
 )
 
 class HomeViewModel(
@@ -43,6 +46,7 @@ class HomeViewModel(
 ) : ViewModel() {
 
     private val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("pl"))
+    private val gson = Gson()
 
     val uiState: StateFlow<HomeUiState> = combine(
         settingsRepository.getSettingsStream(),
@@ -53,34 +57,64 @@ class HomeViewModel(
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
 
-        // PERSONALIZACJA
-        val userName = settings?.userName ?: "Student"
+        // --- NOWA LOGIKA POWITAŃ ---
         val isAnonymous = settings?.isAnonymous == true
-        val genderStr = settings?.gender
+        val hasGroup = !settings?.selectedGroupCode.isNullOrBlank()
+        val gender = settings?.gender // "STUDENT" lub "STUDENTKA"
 
-        val greeting = if (isAnonymous) {
-            if (genderStr == UserGender.STUDENTKA.name) "Cześć, Studentko 👋" else "Cześć, Studencie 👋"
-        } else {
-            "Cześć, $userName 👋"
+        // 1. Ustalanie Powitania i Inicjałów
+        val (greeting, initials) = when {
+            // SCENARIUSZ 1: TRYB GOŚCIA (Pomiń - brak grupy)
+            isAnonymous && !hasGroup -> {
+                "Witaj w MyUZ!" to ""
+            }
+            // SCENARIUSZ 2: TRYB ANONIMOWY (Anonimowy, ale z grupą)
+            isAnonymous && hasGroup -> {
+                val suffix = if (gender == "STUDENTKA") "Studentko" else "Studencie"
+                "Cześć, $suffix 👋" to "" // Inicjały puste, bo to anonim
+            }
+            // SCENARIUSZ 3: TRYB PEŁNY (Z imieniem)
+            else -> {
+                val rawName = settings?.userName ?: ""
+                val parts = rawName.trim().split(" ").filter { it.isNotBlank() }
+                val firstName = parts.firstOrNull() ?: ""
+                val initialsStr = if (parts.size >= 2) {
+                    "${parts.first().take(1)}${parts.last().take(1)}"
+                } else {
+                    firstName.take(2)
+                }.uppercase()
+                "Cześć, $firstName 👋" to initialsStr
+            }
         }
 
+        // 2. Ustalanie Podtytułu (Wydział lub Uczelnia)
         val faculty = settings?.faculty
-        val departmentInfo = if (!faculty.isNullOrBlank()) {
-            faculty
-        } else {
-            "Uniwersytet Zielonogórski"
+        val departmentInfo = when {
+            // Dla Gościa zawsze Uczelnia
+            isAnonymous && !hasGroup -> "Uniwersytet Zielonogórski"
+            // Dla reszty (Anonim i Student) - nazwa wydziału jeśli jest, w przeciwnym razie Uczelnia
+            !faculty.isNullOrBlank() -> faculty
+            else -> "Uniwersytet Zielonogórski"
         }
 
-        // SPRAWDZENIE CZY PLAN WYBRANY
-        val isPlanSelected = !settings?.selectedGroupCode.isNullOrBlank() && classes.isNotEmpty()
+        val isPlanSelected = hasGroup // Używamy tej samej flagi co wyżej
 
-        // ZAJĘCIA - tylko jeśli plan wybrany
         val todayString = today.toString()
         val tomorrowString = today.plusDays(1).toString()
 
         val (displayedClasses, dayLabel, emptyMessage) = if (isPlanSelected) {
             val todaysClasses = classes
                 .filter { it.date == todayString }
+                // Filtrujemy zajęcia, które już się zakończyły (isAfter now)
+                .filter { classItem ->
+                    try {
+                        val endTime = LocalTime.parse(classItem.endTime)
+                        val endDateTime = LocalDateTime.of(today, endTime)
+                        endDateTime.isAfter(now)
+                    } catch (e: Exception) {
+                        true // W razie błędu parsowania, pokazujemy
+                    }
+                }
                 .sortedBy { it.startTime }
 
             val tomorrowsClasses = classes
@@ -93,15 +127,14 @@ class HomeViewModel(
                 else -> Triple(emptyList(), null, "Brak zajęć w najbliższych dniach")
             }
         } else {
-            Triple(emptyList(), null, "Wybierz plan zajęć w ustawieniach")
+            Triple(emptyList(), null, "Wybierz plan zajęć w profilu")
         }
 
-        // ZADANIA - zawsze wyświetlamy (mogą być dodane ręcznie)
         val finalTasks = tasks
-            .sortedWith(compareBy<TaskEntity> { it.isCompleted }.thenBy { it.dueDate })
-            .take(10)
+            .filter { !it.isCompleted }
+            .sortedBy { it.dueDate }
+            .take(5)
 
-        // WYDARZENIA - mock data
         val mockEvents = listOf(
             EventEntity(
                 id = 1,
@@ -110,19 +143,19 @@ class HomeViewModel(
                 date = "Piątek, 20 maja 2025",
                 location = "Kampus A",
                 timeRange = "18:00 - 02:00"
-            ),
-            EventEntity(
-                id = 2,
-                title = "Targi Pracy IT",
-                description = "Oferty staży i pracy",
-                date = "Niedziela, 1 czerwca 2025",
-                location = "Aula C",
-                timeRange = "10:00 - 15:00"
             )
         )
 
+        val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
+        val classColorMap: Map<String, Int> = try {
+            gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
+        } catch (e: Exception) {
+            emptyMap()
+        }
+
         HomeUiState(
             greeting = greeting,
+            userInitials = initials,
             departmentInfo = departmentInfo,
             upcomingClasses = displayedClasses,
             upcomingTasks = finalTasks,
@@ -130,11 +163,12 @@ class HomeViewModel(
             currentDate = today.format(dateFormatter).replaceFirstChar { it.uppercase() },
             classesMessage = emptyMessage,
             classesDayLabel = dayLabel,
-            tasksMessage = if (finalTasks.isEmpty()) "Brak zadań" else "Zadania",
+            tasksMessage = if (finalTasks.isEmpty()) "Brak zadań" else "Najbliższe zadania",
             isLoading = false,
-            isPlanSelected = isPlanSelected
+            isPlanSelected = isPlanSelected,
+            classColorMap = classColorMap,
+            isDarkMode = settings?.isDarkMode ?: false
         )
-
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),

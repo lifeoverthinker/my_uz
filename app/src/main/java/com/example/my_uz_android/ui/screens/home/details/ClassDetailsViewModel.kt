@@ -8,11 +8,18 @@ import com.example.my_uz_android.data.repositories.ClassRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+data class ClassDetailsUiState(
+    val classEntity: ClassEntity? = null,
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
+
 class ClassDetailsViewModel(
     savedStateHandle: SavedStateHandle,
     private val classRepository: ClassRepository
 ) : ViewModel() {
 
+    // ✅ Pobieranie ID z argumentów nawigacji
     private val classId: Int = checkNotNull(savedStateHandle["classId"])
 
     val uiState: StateFlow<ClassDetailsUiState> =
@@ -24,7 +31,6 @@ class ClassDetailsViewModel(
                         isLoading = false
                     )
                 } else {
-                    // ✅ NAPRAWA: Obsługa null (gdy nie ma danych)
                     ClassDetailsUiState(
                         classEntity = null,
                         isLoading = false,
@@ -52,9 +58,3 @@ class ClassDetailsViewModel(
         }
     }
 }
-
-data class ClassDetailsUiState(
-    val classEntity: ClassEntity? = null,
-    val isLoading: Boolean = false,
-    val error: String? = null
-)
