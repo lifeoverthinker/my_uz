@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -31,7 +32,7 @@ import com.example.my_uz_android.ui.components.ClassCardType
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.example.my_uz_android.ui.theme.InterFontFamily
-import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.ui.theme.getClassColorIndex
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -47,7 +48,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
@@ -110,9 +110,21 @@ fun CalendarScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val density = LocalDensity.current
 
+    // AUTOMATYCZNE PRZEWIJANIE DO AKTUALNEJ GODZINY
     LaunchedEffect(Unit) {
-        scrollState.scrollTo(480 * 3)
+        val now = LocalTime.now(PolandZone)
+        val minutes = now.hour * 60 + now.minute
+
+        // Przewiń do godziny 30 minut przed czasem aktualnym dla lepszego kontekstu
+        // (lub do 0 jeśli jest wcześnie rano)
+        val offsetMinutes = (minutes - 30).coerceAtLeast(0)
+
+        // Konwersja minut (gdzie 1 min = 1dp wysokości) na piksele
+        val scrollOffsetPx = with(density) { offsetMinutes.dp.toPx() }
+
+        scrollState.scrollTo(scrollOffsetPx.toInt())
     }
 
     val visibleMonth = if (isMonthView) {
@@ -349,13 +361,10 @@ fun ScheduledClassItem(
     val classStartDateTime = LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
     val isFuture = now.isBefore(classStartDateTime)
 
-    // ✅ ZMIANA: Pobranie indexu koloru z mapy lub wyliczenie hasha (fallback)
-    // Dzięki temu nowe zajęcia mają deterministyczny kolor, a te zapisane w ustawieniach - kolor użytkownika.
-    val assignedColorIndex = classColorMap[classEntity.classType] ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
+    // UŻYCIE NOWEJ FUNKCJI: Pobierz kolor z mapy lub wygeneruj stały na podstawie nazwy
+    val assignedColorIndex = getClassColorIndex(classEntity.classType, classColorMap)
 
-    // ✅ ZMIANA: Pobranie rzeczywistego koloru z palety na podstawie indeksu
     val colorSet = ClassColorPalette.getOrElse(assignedColorIndex) { ClassColorPalette[0] }
-
     val baseColor = colorSet.lightBg
     val accentColor = colorSet.lightAccent
 
@@ -370,7 +379,7 @@ fun ScheduledClassItem(
             classItem = classEntity,
             type = ClassCardType.CALENDAR,
             backgroundColor = baseColor,
-            accentColor = accentColor, // Przekazujemy kolor akcentu (kropki)
+            accentColor = accentColor,
             showBadge = isFuture,
             onClick = { onClassClick(classEntity.id) },
             modifier = Modifier.fillMaxSize()

@@ -1,6 +1,7 @@
 package com.example.my_uz_android.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import kotlin.math.abs
 
 // --- Podstawowe ---
 val Purple80 = Color(0xFFD0BCFF)
@@ -203,6 +204,15 @@ val ClassColorPalette = listOf(
 )
 
 // Helpery
+
+// NOWOŚĆ: Funkcja do bezpiecznego pobierania indeksu koloru
+// Jeśli user ustawił kolor -> zwraca ustawiony
+// Jeśli nie -> zwraca stały kolor na podstawie nazwy (hash)
+fun getClassColorIndex(classType: String, userColorMap: Map<String, Int>): Int {
+    return userColorMap[classType]
+        ?: (abs(classType.hashCode()) % ClassColorPalette.size)
+}
+
 fun getClassBackgroundColor(index: Int, isDark: Boolean): Color {
     val set = ClassColorPalette.getOrElse(index) { ColorSetLavender }
     return if (isDark) set.darkBg else set.lightBg
