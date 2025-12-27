@@ -21,6 +21,7 @@ import com.example.my_uz_android.ui.theme.extendedColors
 @Composable
 fun CalendarTopAppBar(
     title: String,
+    isExpanded: Boolean = false, // ZMIANA: Nowy parametr stanu
     onNavigationClick: () -> Unit,
     onSearchClick: (() -> Unit)? = null,
     onAddClick: (() -> Unit)? = null,
@@ -41,7 +42,7 @@ fun CalendarTopAppBar(
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f) // Ta sekcja zajmuje tyle miejsca, ile się da, zanim dotknie ikon po prawej
+            modifier = Modifier.weight(1f)
         ) {
             // Przycisk Menu
             Box(
@@ -68,7 +69,7 @@ fun CalendarTopAppBar(
                     .clip(MaterialTheme.shapes.small)
                     .clickable(enabled = onTitleClick != null) { onTitleClick?.invoke() }
                     .padding(4.dp)
-                    .weight(1f, fill = false) // Ważne: Kontener tytułu nie rozpycha się na siłę na pustą przestrzeń
+                    .weight(1f, fill = false)
             ) {
                 Text(
                     text = title,
@@ -81,19 +82,16 @@ fun CalendarTopAppBar(
                     color = contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    // ✅ KLUCZOWA ZMIANA 1:
-                    // Tekst ma priorytet do zmniejszania się (ellipsis), gdy brakuje miejsca.
-                    // fill = false sprawia, że przy krótkim tekście (np. "Maj") strzałka jest blisko napisu.
                     modifier = Modifier.weight(1f, fill = false)
                 )
 
                 if (onTitleClick != null) {
+                    // ZMIANA: Ikona zmienia się w zależności od stanu isExpanded
                     Icon(
-                        painter = painterResource(R.drawable.ic_chevron_down),
-                        contentDescription = null,
-                        // ✅ KLUCZOWA ZMIANA 2:
-                        // requiredSize wymusza, że ikona NIGDY się nie zmniejszy/zgniecie,
-                        // nawet jak tekst będzie bardzo długi.
+                        painter = painterResource(
+                            if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
+                        ),
+                        contentDescription = if (isExpanded) "Zwiń" else "Rozwiń",
                         modifier = Modifier.requiredSize(20.dp),
                         tint = contentColor
                     )
@@ -102,7 +100,6 @@ fun CalendarTopAppBar(
         }
 
         // --- PRAWA SEKCJA (Ikony Search / Add) ---
-        // Ta sekcja ma swój stały rozmiar wynikający z zawartości, nie jest ściskana przez lewą stronę.
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,

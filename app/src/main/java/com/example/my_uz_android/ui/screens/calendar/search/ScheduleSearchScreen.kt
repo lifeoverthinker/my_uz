@@ -58,8 +58,10 @@ fun ScheduleSearchScreen(
                         SearchResultItemCard(
                             item = item,
                             onClick = {
+                                // 1. Załaduj dane do ViewModelu
                                 calendarViewModel.selectPreviewPlan(item.name, item.type)
-                                navController.navigate("calendar") { popUpTo("calendar") { inclusive = true } }
+                                // 2. Zamiast wracać do kalendarza, idź do podglądu
+                                navController.navigate("schedule_preview")
                             },
                             onFavoriteClick = { searchViewModel.toggleFavorite(item) }
                         )
