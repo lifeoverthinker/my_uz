@@ -52,7 +52,7 @@ import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditScreen
 import com.example.my_uz_android.ui.screens.calendar.search.ScheduleSearchScreen
 import com.example.my_uz_android.ui.screens.calendar.search.ScheduleSearchViewModel
 import kotlinx.coroutines.launch
-
+import com.example.my_uz_android.ui.screens.calendar.SchedulePreviewScreen
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
     data object Calendar : Screen("calendar", "Kalendarz", R.drawable.ic_calendar_check)
@@ -186,8 +186,44 @@ fun AppNavigation(
                     onSearchClick = { navController.navigate("schedule_search") },
                     onTasksClick = { navController.navigate("tasks") },
                     onAccountClick = { navController.navigate(Screen.Account.route) },
-                    onClassClick = { classId -> navController.navigate("class_details/$classId") },
+                    onClassClick = { classEntity ->
+                        // Kliknięcie w Moim Planie (zawsze ID > 0)
+                        navController.navigate("class_details/${classEntity.id}")
+                    },
                     viewModel = calendarViewModel
+                )
+            }
+
+            // --- NOWY EKRAN PODGLĄDU (Współdzielony ViewModel) ---
+            composable("schedule_preview") {
+                // Pobieramy instancję ViewModel z grafu Kalendarza, aby mieć dostęp do 'networkClasses'
+                val parentEntry = remember(navController.currentBackStackEntry) {
+                    navController.getBackStackEntry(Screen.Calendar.route)
+                }
+                val calendarViewModel: CalendarViewModel = viewModel(parentEntry, factory = AppViewModelProvider.Factory)
+
+                SchedulePreviewScreen(
+                    navController = navController,
+                    viewModel = calendarViewModel,
+                    onClassClick = { classEntity ->
+                        // Dla podglądu ID jest 0, więc używamy mechanizmu tymczasowego
+                        calendarViewModel.setTemporaryClassForDetails(classEntity)
+                        navController.navigate("class_details/-1")
+                    }
+                )
+            }
+
+            composable("schedule_search") {
+                val parentEntry = remember(navController.currentBackStackEntry) {
+                    navController.getBackStackEntry(Screen.Calendar.route)
+                }
+                val calendarViewModel: CalendarViewModel = viewModel(parentEntry, factory = AppViewModelProvider.Factory)
+                val searchViewModel: ScheduleSearchViewModel = viewModel(factory = AppViewModelProvider.Factory)
+
+                ScheduleSearchScreen(
+                    navController = navController,
+                    searchViewModel = searchViewModel,
+                    calendarViewModel = calendarViewModel
                 )
             }
 
@@ -400,22 +436,6 @@ fun AppNavigation(
                 AddEditAbsenceScreen(
                     absenceId = absenceId,
                     onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            // --- ZAKTUALIZOWANE WYSZUKIWANIE ---
-            composable("schedule_search") {
-                // Pobieramy to samo wejście do Kalendarza, aby użyć tego samego ViewModelu
-                val parentEntry = remember(navController.currentBackStackEntry) {
-                    navController.getBackStackEntry(Screen.Calendar.route)
-                }
-                val calendarViewModel: CalendarViewModel = viewModel(parentEntry, factory = AppViewModelProvider.Factory)
-                val searchViewModel: ScheduleSearchViewModel = viewModel(factory = AppViewModelProvider.Factory)
-
-                ScheduleSearchScreen(
-                    navController = navController,
-                    searchViewModel = searchViewModel,
-                    calendarViewModel = calendarViewModel
                 )
             }
         }

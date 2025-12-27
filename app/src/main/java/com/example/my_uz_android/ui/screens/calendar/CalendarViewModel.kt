@@ -48,16 +48,14 @@ class CalendarViewModel(
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val classes: StateFlow<List<ClassEntity>> = _uiState
-        .map { it.currentSource }
-        .distinctUntilChanged()
-        .flatMapLatest { source ->
-            when (source) {
-                is ScheduleSource.MyPlan -> classRepository.getAllClassesStream()
-                else -> _uiState.map { it.networkClasses }
-            }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Strumień TYLKO dla mojego planu (z bazy danych)
+    val myPlanClasses: StateFlow<List<ClassEntity>> = classRepository.getAllClassesStream()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Strumień dla podglądu (z sieci)
+    val networkClasses: StateFlow<List<ClassEntity>> = _uiState
+        .map { it.networkClasses }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         loadData()
@@ -98,22 +96,13 @@ class CalendarViewModel(
 
     fun refreshScheduleFromServer(groupCode: String, subgroups: List<String>) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             val result = universityRepository.getSchedule(groupCode, subgroups)
-
             if (result is NetworkResult.Success) {
                 classRepository.deleteAllClasses()
                 classRepository.insertClasses(result.data ?: emptyList())
-                _uiState.update { it.copy(error = null) }
-
-                // ✅ WYMUSZENIE AKTUALIZACJI WIDGETU
                 val request = OneTimeWorkRequestBuilder<WidgetWorker>().build()
                 WorkManager.getInstance(application).enqueue(request)
-
-            } else if (result is NetworkResult.Error) {
-                _uiState.update { it.copy(error = result.message) }
             }
-            _uiState.update { it.copy(isLoading = false) }
         }
     }
 
@@ -147,17 +136,38 @@ class CalendarViewModel(
     private fun loadNetworkSchedule(name: String, type: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-
             val result = if (type.equals("teacher", ignoreCase = true)) {
                 universityRepository.getScheduleForTeacher(name)
             } else {
                 universityRepository.getSchedule(name, emptyList())
             }
-
             when (result) {
                 is NetworkResult.Success -> _uiState.update { it.copy(networkClasses = result.data ?: emptyList(), isLoading = false) }
                 is NetworkResult.Error -> _uiState.update { it.copy(error = result.message, isLoading = false) }
                 else -> {}
+            }
+        }
+    }
+
+    fun setTemporaryClassForDetails(classEntity: ClassEntity) {
+        classRepository.setTemporaryClass(classEntity)
+    }
+
+    // POPRAWKA: Używamy metod .delete() i .insert() zamiast .deleteFavorite() i .insertFavorite()
+    fun toggleFavorite(name: String, type: String) {
+        viewModelScope.launch {
+            val currentFavorites = _uiState.value.favorites
+            val existing = currentFavorites.find { it.name == name }
+
+            if (existing != null) {
+                favoritesRepository.delete(existing)
+            } else {
+                val newFav = FavoriteEntity(
+                    resourceId = name,
+                    name = name,
+                    type = type
+                )
+                favoritesRepository.insert(newFav)
             }
         }
     }
