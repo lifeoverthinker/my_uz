@@ -1,10 +1,10 @@
 package com.example.my_uz_android.ui
 
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.lifecycle.ViewModelProvider
 import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.ui.screens.account.AccountViewModel
 import com.example.my_uz_android.ui.screens.account.SettingsViewModel
@@ -22,6 +22,7 @@ import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
 object AppViewModelProvider {
     val Factory = viewModelFactory {
 
+        // ✅ NAPRAWA: Usunięto eventRepository, dodano universityRepository
         initializer {
             HomeViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
@@ -31,6 +32,7 @@ object AppViewModelProvider {
             )
         }
 
+        // ✅ NAPRAWA: Dodano settingsRepository
         initializer {
             TasksViewModel(
                 tasksRepository = myUZApplication().container.tasksRepository,
@@ -110,7 +112,6 @@ object AppViewModelProvider {
             AccountViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
                 universityRepository = myUZApplication().container.universityRepository
-                // Usunięto classRepository, którego brakowało w konstruktorze AccountViewModel
             )
         }
 
@@ -136,7 +137,7 @@ object AppViewModelProvider {
 
         initializer {
             CalendarViewModel(
-                application = myUZApplication(), // DODAJ TO
+                application = myUZApplication(),
                 favoritesRepository = myUZApplication().container.favoritesRepository,
                 classRepository = myUZApplication().container.classRepository,
                 settingsRepository = myUZApplication().container.settingsRepository,
@@ -147,8 +148,8 @@ object AppViewModelProvider {
         initializer {
             ScheduleSearchViewModel(
                 universityRepository = myUZApplication().container.universityRepository,
-                classRepository = myUZApplication().container.classRepository,
-                favoritesRepository = myUZApplication().container.favoritesRepository
+                favoritesRepository = myUZApplication().container.favoritesRepository,
+                classRepository = myUZApplication().container.classRepository
             )
         }
     }
