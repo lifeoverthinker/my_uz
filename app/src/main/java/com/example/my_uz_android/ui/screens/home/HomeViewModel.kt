@@ -57,23 +57,16 @@ class HomeViewModel(
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
 
-        // --- NOWA LOGIKA POWITAŃ ---
         val isAnonymous = settings?.isAnonymous == true
         val hasGroup = !settings?.selectedGroupCode.isNullOrBlank()
-        val gender = settings?.gender // "STUDENT" lub "STUDENTKA"
+        val gender = settings?.gender
 
-        // 1. Ustalanie Powitania i Inicjałów
         val (greeting, initials) = when {
-            // SCENARIUSZ 1: TRYB GOŚCIA (Pomiń - brak grupy)
-            isAnonymous && !hasGroup -> {
-                "Witaj w MyUZ!" to ""
-            }
-            // SCENARIUSZ 2: TRYB ANONIMOWY (Anonimowy, ale z grupą)
+            isAnonymous && !hasGroup -> "Witaj w MyUZ!" to ""
             isAnonymous && hasGroup -> {
                 val suffix = if (gender == "STUDENTKA") "Studentko" else "Studencie"
-                "Cześć, $suffix 👋" to "" // Inicjały puste, bo to anonim
+                "Cześć, $suffix 👋" to ""
             }
-            // SCENARIUSZ 3: TRYB PEŁNY (Z imieniem)
             else -> {
                 val rawName = settings?.userName ?: ""
                 val parts = rawName.trim().split(" ").filter { it.isNotBlank() }
@@ -87,33 +80,26 @@ class HomeViewModel(
             }
         }
 
-        // 2. Ustalanie Podtytułu (Wydział lub Uczelnia)
         val faculty = settings?.faculty
         val departmentInfo = when {
-            // Dla Gościa zawsze Uczelnia
             isAnonymous && !hasGroup -> "Uniwersytet Zielonogórski"
-            // Dla reszty (Anonim i Student) - nazwa wydziału jeśli jest, w przeciwnym razie Uczelnia
             !faculty.isNullOrBlank() -> faculty
             else -> "Uniwersytet Zielonogórski"
         }
 
-        val isPlanSelected = hasGroup // Używamy tej samej flagi co wyżej
-
+        val isPlanSelected = hasGroup
         val todayString = today.toString()
         val tomorrowString = today.plusDays(1).toString()
 
         val (displayedClasses, dayLabel, emptyMessage) = if (isPlanSelected) {
             val todaysClasses = classes
                 .filter { it.date == todayString }
-                // Filtrujemy zajęcia, które już się zakończyły (isAfter now)
                 .filter { classItem ->
                     try {
                         val endTime = LocalTime.parse(classItem.endTime)
                         val endDateTime = LocalDateTime.of(today, endTime)
                         endDateTime.isAfter(now)
-                    } catch (e: Exception) {
-                        true // W razie błędu parsowania, pokazujemy
-                    }
+                    } catch (e: Exception) { true }
                 }
                 .sortedBy { it.startTime }
 
@@ -149,9 +135,7 @@ class HomeViewModel(
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
         val classColorMap: Map<String, Int> = try {
             gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-        } catch (e: Exception) {
-            emptyMap()
-        }
+        } catch (e: Exception) { emptyMap() }
 
         HomeUiState(
             greeting = greeting,

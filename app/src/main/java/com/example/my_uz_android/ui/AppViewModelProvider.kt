@@ -136,9 +136,11 @@ object AppViewModelProvider {
 
         initializer {
             CalendarViewModel(
+                application = myUZApplication(), // DODAJ TO
                 favoritesRepository = myUZApplication().container.favoritesRepository,
                 classRepository = myUZApplication().container.classRepository,
-                settingsRepository = myUZApplication().container.settingsRepository
+                settingsRepository = myUZApplication().container.settingsRepository,
+                universityRepository = myUZApplication().container.universityRepository
             )
         }
 
