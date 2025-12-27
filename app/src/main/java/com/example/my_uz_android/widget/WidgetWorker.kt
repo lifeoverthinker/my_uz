@@ -15,19 +15,17 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-// POPRAWIONO: 'valcontext' -> 'val context'
 class WidgetWorker(
     private val context: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        // Użycie context.applicationContext jest teraz bezpieczne
         val appContainer = (context.applicationContext as MyUZApplication).container
         val classRepository = appContainer.classRepository
         val settingsRepository = appContainer.settingsRepository
 
-        // Pobierz dane (snapshot)
+        // Pobierz aktualny stan bazy i ustawień
         val settings = settingsRepository.getSettingsStream().firstOrNull()
         val allClasses = classRepository.getAllClassesStream().firstOrNull() ?: emptyList()
 
@@ -39,7 +37,7 @@ class WidgetWorker(
 
         val isPlanSelected = !settings?.selectedGroupCode.isNullOrBlank()
 
-        // --- LOGIKA Z HomeViewModel ---
+        // Logika wyboru dnia (identyczna jak w HomeViewModel)
         val (displayedClasses, dayLabel, emptyMessage) = if (isPlanSelected) {
             val todaysClasses = allClasses
                 .filter { it.date == todayString }
@@ -48,9 +46,7 @@ class WidgetWorker(
                         val endTime = LocalTime.parse(classItem.endTime)
                         val endDateTime = LocalDateTime.of(today, endTime)
                         endDateTime.isAfter(now)
-                    } catch (e: Exception) {
-                        true
-                    }
+                    } catch (e: Exception) { true }
                 }
                 .sortedBy { it.startTime }
 
@@ -67,23 +63,18 @@ class WidgetWorker(
             Triple(emptyList(), null, "Skonfiguruj grupę w aplikacji")
         }
 
-        // Mapowanie kolorów
         val gson = Gson()
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
         val classColorMap: Map<String, Int> = try {
             gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-        } catch (e: Exception) {
-            emptyMap()
-        }
+        } catch (e: Exception) { emptyMap() }
 
-        // Formatowanie daty nagłówka
         val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("pl"))
         val dateString = today.format(dateFormatter).replaceFirstChar { it.uppercase() }
 
-        // Ogranicz do 4 najbliższych zajęć dla widgetu
-        val widgetClasses = displayedClasses.take(4)
+        // ✅ USUNIĘTO .take(4) - teraz widget przesyła wszystkie dostępne zajęcia
+        val widgetClasses = displayedClasses
 
-        // Aktualizacja stanu widgetu
         val manager = GlanceAppWidgetManager(context)
         val glanceIds = manager.getGlanceIds(Widget::class.java)
 
@@ -97,9 +88,7 @@ class WidgetWorker(
             }
         }
 
-        // Wymuś odświeżenie UI
         Widget().updateAll(context)
-
         return Result.success()
     }
 }

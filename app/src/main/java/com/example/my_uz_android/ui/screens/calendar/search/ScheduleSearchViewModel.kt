@@ -37,6 +37,7 @@ class ScheduleSearchViewModel(
     val uiState: StateFlow<ScheduleSearchUiState> = _uiState.asStateFlow()
 
     private var allGroups: List<String> = emptyList()
+    private var allTeachers: List<String> = emptyList()
 
     init {
         loadInitialData()
@@ -45,10 +46,19 @@ class ScheduleSearchViewModel(
     private fun loadInitialData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
+
+            // Grupy
             val groupsResult = universityRepository.getGroupCodes()
             if (groupsResult is NetworkResult.Success) {
                 allGroups = groupsResult.data ?: emptyList()
             }
+
+            // Nauczyciele
+            val teachersResult = universityRepository.getTeachers()
+            if (teachersResult is NetworkResult.Success) {
+                allTeachers = teachersResult.data ?: emptyList()
+            }
+
             _uiState.update { it.copy(isLoading = false) }
         }
     }
@@ -64,41 +74,33 @@ class ScheduleSearchViewModel(
 
     private fun search(query: String) {
         viewModelScope.launch {
-            // Pobierz aktualne ulubione, żeby oznaczyć wyniki
             val favorites = favoritesRepository.getAllFavoritesStream().first().map { it.name }
 
-            val filtered = allGroups.filter { it.contains(query, ignoreCase = true) }
-                .map { name ->
-                    SearchResultItem(
-                        name = name,
-                        type = "Group",
-                        isFavorite = favorites.contains(name)
-                    )
-                }
+            val groupResults = allGroups.filter { it.contains(query, ignoreCase = true) }
+                .map { SearchResultItem(it, "group", favorites.contains(it)) }
 
-            _uiState.update { it.copy(searchResults = filtered) }
+            val teacherResults = allTeachers.filter { it.contains(query, ignoreCase = true) }
+                .map { SearchResultItem(it, "teacher", favorites.contains(it)) }
+
+            _uiState.update { it.copy(searchResults = groupResults + teacherResults) }
         }
     }
 
     fun toggleFavorite(item: SearchResultItem) {
         viewModelScope.launch {
-            if (item.isFavorite) {
-                // Usuwanie
-                val favorites = favoritesRepository.getAllFavoritesStream().first()
-                val toDelete = favorites.find { it.name == item.name }
-                if (toDelete != null) {
-                    favoritesRepository.delete(toDelete) // ✅ FIX: Poprawna nazwa metody
-                }
+            val favorites = favoritesRepository.getAllFavoritesStream().first()
+            val existing = favorites.find { it.name == item.name }
+
+            if (existing != null) {
+                favoritesRepository.delete(existing)
             } else {
-                // Dodawanie
                 val favorite = FavoriteEntity(
                     name = item.name,
                     type = item.type,
                     resourceId = item.name
                 )
-                favoritesRepository.insert(favorite) // ✅ FIX: Poprawna nazwa metody
+                favoritesRepository.insert(favorite)
             }
-            // Odśwież wyniki
             search(_uiState.value.searchQuery)
         }
     }

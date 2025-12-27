@@ -16,14 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.CalendarTopAppBar
@@ -32,7 +29,6 @@ import com.example.my_uz_android.ui.components.ClassCardType
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.example.my_uz_android.ui.theme.InterFontFamily
-import com.example.my_uz_android.ui.theme.getClassColorIndex
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -75,23 +71,21 @@ fun CalendarScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val allClasses by viewModel.classes.collectAsState()
-    val classColorMap = uiState.classColorMap // Mapa TypZajec -> IndexKoloru
+    val classColorMap = uiState.classColorMap
 
     val currentDate = remember { LocalDate.now(PolandZone) }
     val currentMonth = remember { YearMonth.now(PolandZone) }
     val startMonth = remember { currentMonth.minusMonths(24) }
     val endMonth = remember { currentMonth.plusMonths(24) }
 
-    val firstDayOfWeek = remember { DayOfWeek.MONDAY }
+    val firstDayOfWeek = DayOfWeek.MONDAY
     val daysOfWeek = remember { daysOfWeek(firstDayOfWeek = firstDayOfWeek) }
 
     var selectedDate by remember { mutableStateOf(currentDate) }
     var isMonthView by remember { mutableStateOf(false) }
 
     val classesForDay = remember(allClasses, selectedDate) {
-        allClasses.filter {
-            it.date == selectedDate.toString()
-        }.sortedBy { it.startTime }
+        allClasses.filter { it.date == selectedDate.toString() }.sortedBy { it.startTime }
     }
 
     val weekState = rememberWeekCalendarState(
@@ -112,19 +106,10 @@ fun CalendarScreen(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    // AUTOMATYCZNE PRZEWIJANIE DO AKTUALNEJ GODZINY
     LaunchedEffect(Unit) {
         val now = LocalTime.now(PolandZone)
-        val minutes = now.hour * 60 + now.minute
-
-        // Przewiń do godziny 30 minut przed czasem aktualnym dla lepszego kontekstu
-        // (lub do 0 jeśli jest wcześnie rano)
-        val offsetMinutes = (minutes - 30).coerceAtLeast(0)
-
-        // Konwersja minut (gdzie 1 min = 1dp wysokości) na piksele
-        val scrollOffsetPx = with(density) { offsetMinutes.dp.toPx() }
-
-        scrollState.scrollTo(scrollOffsetPx.toInt())
+        val offsetMinutes = (now.hour * 60 + now.minute - 60).coerceAtLeast(0)
+        scrollState.scrollTo(with(density) { offsetMinutes.dp.toPx() }.toInt())
     }
 
     val visibleMonth = if (isMonthView) {
@@ -184,7 +169,7 @@ fun CalendarScreen(
                         val today = LocalDate.now(PolandZone)
                         selectedDate = today
                         scope.launch {
-                            if(isMonthView) monthState.animateScrollToMonth(YearMonth.from(today))
+                            if (isMonthView) monthState.animateScrollToMonth(YearMonth.from(today))
                             else weekState.animateScrollToWeek(today)
                         }
                     },
@@ -199,74 +184,87 @@ fun CalendarScreen(
             },
             containerColor = Color.White
         ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .background(Color.White)
-                    .padding(horizontal = 16.dp)
-            ) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Spacer(modifier = Modifier.width(HourColWidth))
-                    Box(modifier = Modifier.weight(1f)) {
-                        DaysOfWeekTitle(daysOfWeek = daysOfWeek)
-                    }
-                }
-
-                AnimatedContent(targetState = isMonthView, label = "CalendarViewTransition") { targetIsMonthView ->
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White)
+                        .padding(horizontal = 16.dp)
+                ) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Spacer(modifier = Modifier.width(HourColWidth))
                         Box(modifier = Modifier.weight(1f)) {
-                            if (targetIsMonthView) {
-                                HorizontalCalendar(
-                                    state = monthState,
-                                    dayContent = { day ->
-                                        CalendarDay(
-                                            date = day.date,
-                                            isDateInMonth = day.position == DayPosition.MonthDate,
-                                            isSelected = selectedDate == day.date,
-                                            onClick = { clickedDate ->
-                                                selectedDate = clickedDate
-                                                isMonthView = false
-                                                scope.launch { weekState.scrollToWeek(clickedDate) }
-                                            }
-                                        )
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            } else {
-                                WeekCalendar(
-                                    state = weekState,
-                                    dayContent = { day ->
-                                        CalendarDay(
-                                            date = day.date,
-                                            isDateInMonth = true,
-                                            isSelected = selectedDate == day.date,
-                                            onClick = { clickedDate -> selectedDate = clickedDate }
-                                        )
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                            DaysOfWeekTitle(daysOfWeek = daysOfWeek)
+                        }
+                    }
+
+                    AnimatedContent(targetState = isMonthView, label = "CalendarViewTransition") { targetIsMonthView ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Spacer(modifier = Modifier.width(HourColWidth))
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (targetIsMonthView) {
+                                    HorizontalCalendar(
+                                        state = monthState,
+                                        dayContent = { day ->
+                                            CalendarDay(
+                                                date = day.date,
+                                                isDateInMonth = day.position == DayPosition.MonthDate,
+                                                isSelected = selectedDate == day.date,
+                                                onClick = { clickedDate ->
+                                                    selectedDate = clickedDate
+                                                    isMonthView = false
+                                                    scope.launch { weekState.scrollToWeek(clickedDate) }
+                                                }
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                } else {
+                                    WeekCalendar(
+                                        state = weekState,
+                                        dayContent = { day ->
+                                            CalendarDay(
+                                                date = day.date,
+                                                isDateInMonth = true,
+                                                isSelected = selectedDate == day.date,
+                                                onClick = { clickedDate -> selectedDate = clickedDate }
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                             }
                         }
                     }
+
+                    Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            repeat(25) { index -> HourRow(hour = index, isLastLine = index == 24) }
+                        }
+
+                        // ✅ WAŻNE: matchParentSize() sprawia, że box ma wysokość całej siatki godzinowej
+                        Box(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
+                            classesForDay.forEach { classEntity ->
+                                ScheduledClassItem(
+                                    classEntity = classEntity,
+                                    selectedDate = selectedDate,
+                                    classColorMap = classColorMap,
+                                    onClassClick = onClassClick
+                                )
+                            }
+                        }
+
+                        if (selectedDate == LocalDate.now(PolandZone)) CurrentTimeIndicator()
+                    }
                 }
 
-                Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        repeat(25) { index -> HourRow(hour = index, isLastLine = index == 24) }
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.5f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = ColorSelectedBg)
                     }
-                    Box(modifier = Modifier.fillMaxWidth().padding(start = HourColWidth)) {
-                        classesForDay.forEach { classEntity ->
-                            ScheduledClassItem(
-                                classEntity = classEntity,
-                                selectedDate = selectedDate,
-                                classColorMap = classColorMap,
-                                onClassClick = onClassClick
-                            )
-                        }
-                    }
-                    if (selectedDate == LocalDate.now(PolandZone)) CurrentTimeIndicator()
                 }
             }
         }
@@ -279,9 +277,14 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
         for (dayOfWeek in daysOfWeek) {
             Text(
                 modifier = Modifier.weight(1f).height(24.dp),
-                text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl")).replaceFirstChar { it.titlecase() }.take(1),
+                text = dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale("pl"))
+                    .replaceFirstChar { it.titlecase() }.take(1),
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelSmall.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 12.sp),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 12.sp
+                ),
                 color = ColorTextGray
             )
         }
@@ -291,24 +294,48 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 @Composable
 fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, onClick: (LocalDate) -> Unit) {
     val isToday = date == LocalDate.now(PolandZone)
-    val textColor = if (isDateInMonth) { if (isSelected) Color.White else if (isToday) Color(0xFF6750A4) else ColorTextDark } else Color(0xFFE0E0E0)
+    val textColor = if (isDateInMonth) {
+        if (isSelected) Color.White else if (isToday) Color(0xFF6750A4) else ColorTextDark
+    } else Color(0xFFE0E0E0)
+
     val circleSize = if (isSelected || isToday) 28.dp else 24.dp
     val circleColor = if (isSelected && isDateInMonth) ColorSelectedBg else Color.Transparent
     val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, ColorSelectedBg, CircleShape) else Modifier
 
-    Box(modifier = Modifier.aspectRatio(1f).padding(2.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+    Box(
+        modifier = Modifier.aspectRatio(1f).padding(2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             Spacer(modifier = Modifier.height(4.dp))
             Box(
-                modifier = Modifier.size(circleSize).clip(CircleShape).background(circleColor).then(borderModifier).clickable(enabled = isDateInMonth) { onClick(date) },
+                modifier = Modifier
+                    .size(circleSize)
+                    .clip(CircleShape)
+                    .background(circleColor)
+                    .then(borderModifier)
+                    .clickable(enabled = isDateInMonth) { onClick(date) },
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = date.dayOfMonth.toString(), style = MaterialTheme.typography.bodyMedium.copy(fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 16.sp), color = textColor, textAlign = TextAlign.Center)
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 16.sp
+                    ),
+                    color = textColor,
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
 }
 
+// ✅ PRZYWRÓCONA WERSJA STARA 1:1: Tekst godziny przesunięty o -8dp w górę z małą poziomą linią
 @Composable
 fun HourRow(hour: Int, isLastLine: Boolean) {
     val rowHeight = if (isLastLine) 1.dp else HourHeight
@@ -316,16 +343,23 @@ fun HourRow(hour: Int, isLastLine: Boolean) {
     Row(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
         Box(modifier = Modifier.width(HourColWidth).fillMaxHeight()) {
             if (!isLastLine && hour != 0) {
+                // Wiersz zawierający godzinę i krótką linię obok niej
                 Row(
                     modifier = Modifier.fillMaxWidth().offset(y = TextVerticalOffset),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = String.format("%02d:00", hour),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, color = ColorTextGray, fontWeight = FontWeight.Medium, fontFamily = InterFontFamily),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 12.sp,
+                            color = ColorTextGray,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = InterFontFamily
+                        ),
                         modifier = Modifier.padding(start = 0.dp),
                         textAlign = TextAlign.Start,
-                        maxLines = 1, softWrap = false
+                        maxLines = 1,
+                        softWrap = false
                     )
                     Spacer(modifier = Modifier.width(5.dp))
                     HorizontalDivider(modifier = Modifier.weight(1f), thickness = 1.dp, color = ColorDivider)
@@ -335,7 +369,11 @@ fun HourRow(hour: Int, isLastLine: Boolean) {
         VerticalDivider(modifier = Modifier.fillMaxHeight(), thickness = 1.dp, color = ColorDivider)
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             if (hour != 0 || isLastLine) {
-                if (hour != 0 && !isLastLine) HorizontalDivider(modifier = Modifier.align(Alignment.TopStart), thickness = 1.dp, color = ColorDivider)
+                if (hour != 0 && !isLastLine) HorizontalDivider(
+                    modifier = Modifier.align(Alignment.TopStart),
+                    thickness = 1.dp,
+                    color = ColorDivider
+                )
             }
         }
     }
@@ -361,12 +399,8 @@ fun ScheduledClassItem(
     val classStartDateTime = LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
     val isFuture = now.isBefore(classStartDateTime)
 
-    // UŻYCIE NOWEJ FUNKCJI: Pobierz kolor z mapy lub wygeneruj stały na podstawie nazwy
-    val assignedColorIndex = getClassColorIndex(classEntity.classType, classColorMap)
-
+    val assignedColorIndex = classColorMap[classEntity.classType] ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
     val colorSet = ClassColorPalette.getOrElse(assignedColorIndex) { ClassColorPalette[0] }
-    val baseColor = colorSet.lightBg
-    val accentColor = colorSet.lightAccent
 
     Box(
         modifier = Modifier
@@ -378,8 +412,8 @@ fun ScheduledClassItem(
         ClassCard(
             classItem = classEntity,
             type = ClassCardType.CALENDAR,
-            backgroundColor = baseColor,
-            accentColor = accentColor,
+            backgroundColor = colorSet.lightBg,
+            accentColor = colorSet.lightAccent,
             showBadge = isFuture,
             onClick = { onClassClick(classEntity.id) },
             modifier = Modifier.fillMaxSize()
@@ -387,64 +421,30 @@ fun ScheduledClassItem(
     }
 }
 
+// ✅ WERSJA SPRAWDZONA: Box (wysokość 12dp) + wyśrodkowanie (CenterStart).
+// Linia (2dp) i Kropka (10dp) będą miały wspólny środek geometryczny na 6.dp wysokości.
 @Composable
 fun CurrentTimeIndicator() {
     var currentTime by remember { mutableStateOf(LocalTime.now(PolandZone)) }
-    LaunchedEffect(Unit) { while(true) { currentTime = LocalTime.now(PolandZone); delay(60_000) } }
+    LaunchedEffect(Unit) { while (true) { currentTime = LocalTime.now(PolandZone); delay(60_000) } }
     val minutesFromMidnight = currentTime.hour * 60 + currentTime.minute
     val topOffset = minutesFromMidnight.dp
-    Box(modifier = Modifier.fillMaxWidth().offset(y = topOffset).height(12.dp), contentAlignment = Alignment.CenterStart) {
-        HorizontalDivider(color = ColorCurrentTime, thickness = 2.dp, modifier = Modifier.fillMaxWidth().padding(start = HourColWidth))
-        Box(modifier = Modifier.padding(start = HourColWidth - 5.dp).size(10.dp).clip(CircleShape).background(ColorCurrentTime))
-    }
-}
 
-@Preview(showBackground = true, heightDp = 800)
-@Composable
-fun CalendarScreenPreview() {
-    val mockClasses = listOf(
-        ClassEntity(
-            id = 1,
-            subjectName = "Systemy Operacyjne",
-            classType = "Wykład",
-            startTime = "08:00",
-            endTime = "09:30",
-            dayOfWeek = 1,
-            date = LocalDate.now().toString(),
-            room = "305 A-2",
-            teacherName = "Dr Inż. Kowalski",
-            groupCode = "32INF",
-            subgroup = "1"
-        ),
-        ClassEntity(
-            id = 2,
-            subjectName = "Bazy Danych",
-            classType = "Laboratorium",
-            startTime = "10:00",
-            endTime = "11:30",
-            dayOfWeek = 1,
-            date = LocalDate.now().toString(),
-            room = "210 A-2",
-            teacherName = "Mgr Nowak",
-            groupCode = "32INF",
-            subgroup = "2"
+    Box(
+        modifier = Modifier.fillMaxWidth().offset(y = topOffset).height(12.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        HorizontalDivider(
+            color = ColorCurrentTime,
+            thickness = 2.dp,
+            modifier = Modifier.fillMaxWidth().padding(start = HourColWidth)
         )
-    )
-
-    val mockColorMap = mapOf(
-        "Wykład" to android.graphics.Color.parseColor("#E8DEF8"),
-        "Laboratorium" to android.graphics.Color.parseColor("#C4E7FF")
-    )
-
-    MaterialTheme {
-        Column(modifier = Modifier.fillMaxSize().background(Color.White)) {
-            CalendarTopAppBar(title = "Październik", onNavigationClick = {}, onSearchClick = {}, onAddClick = {})
-            Box(modifier = Modifier.padding(16.dp)) {
-                Column { repeat(3) { i -> HourRow(hour = 8 + i, isLastLine = false) } }
-                Box(modifier = Modifier.padding(start = HourColWidth)) {
-                    ScheduledClassItem(classEntity = mockClasses[0], selectedDate = LocalDate.now(), classColorMap = mockColorMap, onClassClick = {})
-                }
-            }
-        }
+        Box(
+            modifier = Modifier
+                .padding(start = HourColWidth - 5.dp) // Kropka wystaje w lewo na linię czasu
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(ColorCurrentTime)
+        )
     }
 }
