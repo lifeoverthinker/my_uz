@@ -26,8 +26,6 @@ fun CalendarDrawerContent(
     onMyPlanClick: () -> Unit,
     onTasksClick: () -> Unit,
     onFavoriteClick: (FavoriteEntity) -> Unit,
-    onSearchClick: () -> Unit,
-    onSettingsClick: () -> Unit,
     onCloseDrawer: () -> Unit
 ) {
     Column(
@@ -42,8 +40,19 @@ fun CalendarDrawerContent(
             Text(text = "Menu", style = TextStyle(fontWeight = FontWeight(500), fontSize = 14.sp), color = Color(0xff49454f))
         }
 
-        DrawerNavItem(label = "Kalendarz", iconRes = R.drawable.ic_calendar, isSelected = selectedResourceId == null, onClick = onMyPlanClick)
-        DrawerNavItem(label = "Terminarz", iconRes = R.drawable.ic_calendar_check, isSelected = currentScreen == "tasks", onClick = onTasksClick)
+        DrawerNavItem(
+            label = "Kalendarz",
+            iconRes = R.drawable.ic_calendar_check, // Zmieniono na ic_calendar_check
+            isSelected = selectedResourceId == null && currentScreen != "tasks",
+            onClick = onMyPlanClick
+        )
+
+        DrawerNavItem(
+            label = "Terminarz",
+            iconRes = R.drawable.ic_book_open, // Zmieniono na ic_book_open (najbliższy odpowiednik ic_book)
+            isSelected = currentScreen == "tasks",
+            onClick = onTasksClick
+        )
 
         val groups = favorites.filter { it.type == "group" }
         if (groups.isNotEmpty()) {
@@ -64,11 +73,6 @@ fun CalendarDrawerContent(
                 DrawerNavItem(label = favorite.name, iconRes = R.drawable.ic_user, isSelected = selectedResourceId == favorite.resourceId, onClick = { onFavoriteClick(favorite) })
             }
         }
-
-        Spacer(modifier = Modifier.weight(1f))
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xffe0e0e0))
-        DrawerNavItem(label = "Szukaj planu", iconRes = R.drawable.ic_search, isSelected = false, onClick = onSearchClick)
-        DrawerNavItem(label = "Ustawienia", iconRes = R.drawable.ic_settings, isSelected = false, onClick = onSettingsClick)
     }
 }
 

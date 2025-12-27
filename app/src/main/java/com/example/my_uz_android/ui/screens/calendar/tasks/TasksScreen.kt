@@ -88,14 +88,6 @@ fun TasksScreen(
                     scope.launch { drawerState.close() }
                     onCalendarClick()
                 },
-                onSearchClick = {
-                    scope.launch { drawerState.close() }
-                    onSearchClick()
-                },
-                onSettingsClick = {
-                    scope.launch { drawerState.close() }
-                    onAccountClick()
-                },
                 onCloseDrawer = { scope.launch { drawerState.close() } }
             )
         }

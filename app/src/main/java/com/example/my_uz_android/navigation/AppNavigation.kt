@@ -55,7 +55,7 @@ import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
-    data object Calendar : Screen("calendar", "Kalendarz", R.drawable.ic_calendar)
+    data object Calendar : Screen("calendar", "Kalendarz", R.drawable.ic_calendar_check)
     data object Index : Screen("index", "Indeks", R.drawable.ic_graduation_hat)
     data object Account : Screen("account", "Konto", R.drawable.ic_user)
 }

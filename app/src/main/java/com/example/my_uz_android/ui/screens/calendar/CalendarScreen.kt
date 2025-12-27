@@ -147,14 +147,6 @@ fun CalendarScreen(
                     viewModel.selectFavoritePlan(fav)
                     scope.launch { drawerState.close() }
                 },
-                onSearchClick = {
-                    scope.launch { drawerState.close() }
-                    onSearchClick()
-                },
-                onSettingsClick = {
-                    scope.launch { drawerState.close() }
-                    onAccountClick()
-                },
                 onCloseDrawer = { scope.launch { drawerState.close() } }
             )
         }
