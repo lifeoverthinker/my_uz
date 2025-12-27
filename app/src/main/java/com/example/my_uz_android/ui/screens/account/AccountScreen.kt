@@ -297,8 +297,8 @@ fun StudyCard(
                 StudyDetailRow(label = "Wydział", value = faculty)
                 StudyDetailRow(label = "Grupa", value = group)
 
-                // POPRAWKA: Wyświetlanie podgrup jako tekst po przecinku (jak reszta pól)
-                val subgroupsText = if (subgroups.isNotEmpty()) subgroups.joinToString(", ") else "-"
+                // POPRAWKA: Dodano .sorted(), aby podgrupy były wyświetlane w kolejności alfabetycznej
+                val subgroupsText = if (subgroups.isNotEmpty()) subgroups.sorted().joinToString(", ") else "-"
                 StudyDetailRow(label = "Podgrupy", value = subgroupsText)
 
                 StudyDetailRow(label = "Tryb studiów", value = mode)
