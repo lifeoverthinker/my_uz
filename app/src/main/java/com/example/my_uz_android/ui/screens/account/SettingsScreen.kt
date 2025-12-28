@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.TopAppBar // Import wspólnego komponentu
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,6 +34,7 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
@@ -43,6 +45,9 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Obsługa scrollowania paska (opcjonalna, jeśli chcesz żeby pasek reagował na przewijanie)
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     // --- Stan dla dialogów eksportu/importu ---
     var showExportDialog by remember { mutableStateOf(false) }
@@ -71,7 +76,15 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        topBar = { SettingsTopBar(onBack = onBackClick) }
+        topBar = {
+            // UŻYCIE WSPÓLNEGO KOMPONENTU TOP APP BAR
+            TopAppBar(
+                title = "Ustawienia",
+                navigationIcon = R.drawable.ic_chevron_left,
+                onNavigationClick = onBackClick,
+                scrollBehavior = scrollBehavior
+            )
+        }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             Column(
@@ -221,19 +234,7 @@ fun SettingsScreen(
 
 // --- KOMPONENTY POMOCNICZE UI ---
 
-@Composable
-fun SettingsTopBar(onBack: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onBack) {
-            Icon(painterResource(id = R.drawable.ic_chevron_left), contentDescription = "Wróć", modifier = Modifier.size(24.dp))
-        }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = "Ustawienia", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-    }
-}
+// SettingsTopBar ZOSTAŁ USUNIĘTY (zastąpiony przez TopAppBar)
 
 @Composable
 fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
@@ -363,7 +364,7 @@ fun ClassColorPickerItem(
     }
 }
 
-// --- NOWY KOMPONENT: DIALOG WYBORU DANYCH ---
+// --- KOMPONENT DIALOGU WYBORU DANYCH ---
 
 @Composable
 fun DataTypeSelectionDialog(
@@ -445,7 +446,6 @@ private suspend fun saveBackupToFile(
 ) {
     withContext(Dispatchers.IO) {
         try {
-            // Generujemy JSON tylko dla wybranych typów
             val jsonString = viewModel.createBackupJson(selection)
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 outputStream.write(jsonString.toByteArray())
@@ -468,7 +468,6 @@ private suspend fun readBackupFileToPreview(context: Context, uri: Uri, viewMode
                     while (line != null) { stringBuilder.append(line); line = reader.readLine() }
                 }
             }
-            // Zamiast od razu przywracać, wysyłamy do podglądu w ViewModel
             viewModel.previewBackupFile(stringBuilder.toString())
         } catch (e: Exception) {
             e.printStackTrace()
