@@ -5,19 +5,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.PreviewTopAppBar
 import com.example.my_uz_android.ui.components.SubgroupFilterDialog
 import com.example.my_uz_android.ui.components.TeacherInfoDialog
 import com.example.my_uz_android.ui.screens.calendar.components.ScheduleView
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.compose.weekcalendar.rememberWeekCalendarState
 import com.kizitonwose.calendar.core.atStartOfMonth
@@ -48,10 +43,7 @@ fun SchedulePreviewScreen(
     val isTeacher = type == "teacher"
 
     // --- EKSTRAKCJA DANYCH NAUCZYCIELA ---
-    // Szukamy danych kontaktowych w pobranych zajęciach.
-    // Dzięki poprawce w UniversityRepository, jeśli dane istnieją w tabeli 'nauczyciele', powinny tu być.
     val teacherData = remember(classes) {
-        // Priorytet: zajęcia z mailem > zajęcia z instytutem > pierwsze zajęcia z nazwą
         classes.firstOrNull { !it.teacherEmail.isNullOrBlank() }
             ?: classes.firstOrNull { !it.teacherInstitute.isNullOrBlank() }
             ?: classes.firstOrNull { !it.teacherName.isNullOrBlank() }
@@ -62,8 +54,6 @@ fun SchedulePreviewScreen(
     var showSubgroupFilter by remember { mutableStateOf(false) }
 
     // --- LOGIKA PODGRUP ---
-    // Pobieramy wszystkie unikalne podgrupy z załadowanych zajęć.
-    // Zamieniamy null na "" (pusty string), aby były traktowane jako "Cała grupa".
     val availableSubgroups = remember(classes) {
         classes.map { it.subgroup ?: "" }.distinct().sorted()
     }
@@ -101,25 +91,21 @@ fun SchedulePreviewScreen(
 
     Scaffold(
         topBar = {
-            if (!isTeacher) {
-                GroupPreviewAppBar(
-                    title = "Plan grupy",
-                    subtitle = planName,
-                    isFavorite = isFavorite,
-                    onBackClick = { navController.popBackStack() },
-                    onFilterClick = { showSubgroupFilter = true },
-                    onFavoriteClick = { viewModel.toggleFavorite(planName, "group") }
-                )
-            } else {
-                TeacherPreviewAppBar(
-                    title = "Plan nauczyciela",
-                    subtitle = teacherData?.teacherName ?: planName,
-                    isFavorite = isFavorite,
-                    onBackClick = { navController.popBackStack() },
-                    onInfoClick = { showTeacherInfo = true },
-                    onFavoriteClick = { viewModel.toggleFavorite(planName, "teacher") }
-                )
-            }
+            PreviewTopAppBar(
+                title = if (isTeacher) "Plan nauczyciela" else "Plan grupy",
+                subtitle = if (isTeacher) (teacherData?.teacherName ?: planName) else planName,
+                isFavorite = isFavorite,
+                onBackClick = { navController.popBackStack() },
+                onFavoriteClick = { viewModel.toggleFavorite(planName, if (isTeacher) "teacher" else "group") },
+                actionIcon = if (isTeacher) R.drawable.ic_info_circle else R.drawable.ic_filter_funnel,
+                onActionClick = {
+                    if (isTeacher) {
+                        showTeacherInfo = true
+                    } else {
+                        showSubgroupFilter = true
+                    }
+                }
+            )
         },
         containerColor = MaterialTheme.colorScheme.surface
     ) { innerPadding ->
@@ -174,126 +160,5 @@ fun SchedulePreviewScreen(
                 onSelectionChange = { selectedSubgroups = it }
             )
         }
-    }
-}
-
-// --- KOMPONENTY APPBARA ---
-
-@Composable
-fun GroupPreviewAppBar(
-    title: String,
-    subtitle: String,
-    isFavorite: Boolean,
-    onBackClick: () -> Unit,
-    onFilterClick: () -> Unit,
-    onFavoriteClick: () -> Unit
-) {
-    PreviewAppBarTemplate(
-        title = title,
-        subtitle = subtitle,
-        onBackClick = onBackClick,
-        actions = {
-            IconButton(onClick = onFilterClick) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_filter_funnel),
-                    contentDescription = "Filtr",
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            FavoriteAction(isFavorite, onFavoriteClick)
-        }
-    )
-}
-
-@Composable
-fun TeacherPreviewAppBar(
-    title: String,
-    subtitle: String,
-    isFavorite: Boolean,
-    onBackClick: () -> Unit,
-    onInfoClick: () -> Unit,
-    onFavoriteClick: () -> Unit
-) {
-    PreviewAppBarTemplate(
-        title = title,
-        subtitle = subtitle,
-        onBackClick = onBackClick,
-        actions = {
-            IconButton(onClick = onInfoClick) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_info_circle),
-                    contentDescription = "Info",
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            FavoriteAction(isFavorite, onFavoriteClick)
-        }
-    )
-}
-
-@Composable
-private fun PreviewAppBarTemplate(
-    title: String,
-    subtitle: String,
-    onBackClick: () -> Unit,
-    actions: @Composable RowScope.() -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .height(72.dp)
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onBackClick) {
-            Icon(
-                painter = painterResource(R.drawable.ic_chevron_left),
-                contentDescription = "Wstecz",
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 18.sp,
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = if (subtitle.isEmpty()) "Wybierz plan" else subtitle,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontFamily = InterFontFamily
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            actions()
-        }
-    }
-}
-
-@Composable
-private fun FavoriteAction(isFavorite: Boolean, onFavoriteClick: () -> Unit) {
-    IconButton(onClick = onFavoriteClick) {
-        Icon(
-            painter = painterResource(if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart),
-            contentDescription = "Ulubione",
-            modifier = Modifier.size(24.dp),
-            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
