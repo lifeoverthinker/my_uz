@@ -25,13 +25,20 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
+/**
+ * Specjalny pasek dla Kalendarza (Twój "stary wygląd").
+ * Zaktualizowany o obsługę podtytułu i zmiennej ikony nawigacji, zachowując styl.
+ */
 @Composable
 fun CalendarTopAppBar(
     title: String,
+    subtitle: String? = null, // NOWE: Podtytuł (np. nazwa grupy)
+    navigationIcon: Int = R.drawable.ic_menu, // NOWE: Domyślnie menu, ale można zmienić na strzałkę
     isExpanded: Boolean = false,
     onNavigationClick: () -> Unit,
     onSearchClick: (() -> Unit)? = null,
     onAddClick: (() -> Unit)? = null,
+    onInfoClick: (() -> Unit)? = null, // NOWE: Ikona info (dla nauczycieli)
     onTitleClick: (() -> Unit)? = null
 ) {
     val buttonBackgroundColor = MaterialTheme.extendedColors.homeTopBackground
@@ -45,11 +52,13 @@ fun CalendarTopAppBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // LEWA STRONA: Nawigacja + Tytuł (i podtytuł)
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
+            // Przycisk nawigacji w kółku
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -59,54 +68,94 @@ fun CalendarTopAppBar(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_menu),
-                    contentDescription = "Menu",
+                    painter = painterResource(navigationIcon),
+                    contentDescription = "Nawigacja",
                     modifier = Modifier.size(24.dp),
                     tint = contentColor
                 )
             }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            // Tytuł i Podtytuł
+            Column(
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
                     .clickable(enabled = onTitleClick != null) { onTitleClick?.invoke() }
                     .padding(4.dp)
-                    .weight(1f, fill = false)
+                    .weight(1f, fill = false),
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 24.sp,
-                        lineHeight = 24.sp
-                    ),
-                    color = contentColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-
-                if (onTitleClick != null) {
-                    Icon(
-                        painter = painterResource(
-                            if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
+                // Wiersz tytułu + strzałka (stary wygląd)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 24.sp,
+                            lineHeight = 24.sp
                         ),
-                        contentDescription = if (isExpanded) "Zwiń" else "Rozwiń",
-                        modifier = Modifier.requiredSize(20.dp),
-                        tint = contentColor
+                        color = contentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    if (onTitleClick != null) {
+                        Icon(
+                            painter = painterResource(
+                                if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
+                            ),
+                            contentDescription = if (isExpanded) "Zwiń" else "Rozwiń",
+                            modifier = Modifier.requiredSize(20.dp),
+                            tint = contentColor
+                        )
+                    }
+                }
+
+                // Podtytuł (jeśli jest) - dodany subtelnie pod spodem
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
         }
 
+        // PRAWA STRONA: Ikony akcji
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 8.dp)
         ) {
+            // Ikona INFO (Nowa)
+            if (onInfoClick != null) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(buttonBackgroundColor)
+                        .clickable(onClick = onInfoClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_info_circle),
+                        contentDescription = "Info",
+                        modifier = Modifier.size(24.dp),
+                        tint = contentColor
+                    )
+                }
+            }
+
+            // Ikona Szukaj
             if (onSearchClick != null) {
                 Box(
                     modifier = Modifier
@@ -125,6 +174,7 @@ fun CalendarTopAppBar(
                 }
             }
 
+            // Ikona Dzisiaj
             if (onAddClick != null) {
                 Box(
                     modifier = Modifier
@@ -156,6 +206,7 @@ fun TopAppBar(
     actions: @Composable RowScope.() -> Unit = {},
     isCenterAligned: Boolean = false,
     isNavigationIconFilled: Boolean = false,
+    scrollBehavior: TopAppBarScrollBehavior? = null, // Dodano scrollBehavior
     titleContent: (@Composable () -> Unit)? = null
 ) {
     val navigationIconContent: @Composable () -> Unit = {
@@ -232,6 +283,7 @@ fun TopAppBar(
             title = finalTitleContent,
             navigationIcon = navigationIconContent,
             actions = actions,
+            scrollBehavior = scrollBehavior,
             colors = colors
         )
     } else {
@@ -239,14 +291,12 @@ fun TopAppBar(
             title = finalTitleContent,
             navigationIcon = navigationIconContent,
             actions = actions,
+            scrollBehavior = scrollBehavior,
             colors = colors
         )
     }
 }
 
-/**
- * Nowoczesny wariant paska dla wyszukiwarki
- */
 @Composable
 fun SearchTopAppBar(
     query: String,

@@ -7,6 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.CalendarTopAppBar
@@ -30,11 +31,20 @@ fun CalendarScreen(
     onTasksClick: () -> Unit,
     onAccountClick: () -> Unit,
     onClassClick: (ClassEntity) -> Unit = {},
-    onShowPreview: () -> Unit, // ✅ Dodano parametr nawigacji
+    onShowPreview: () -> Unit,
     viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val myClasses by viewModel.myPlanClasses.collectAsState()
+
+    // Obsługa różnych źródeł danych (Mój plan / Sieć)
+    val displayedClasses by produceState(initialValue = emptyList<ClassEntity>(), key1 = uiState.currentSource) {
+        if (uiState.currentSource is ScheduleSource.MyPlan) {
+            viewModel.myPlanClasses.collect { value = it }
+        } else {
+            viewModel.networkClasses.collect { value = it }
+        }
+    }
+
     val classColorMap = uiState.classColorMap
 
     val currentDate = remember { LocalDate.now(ZoneId.of("Europe/Warsaw")) }
@@ -72,14 +82,29 @@ fun CalendarScreen(
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
     val title = if (visibleMonth.year == YearMonth.now().year) monthName else "$monthName ${visibleMonth.year}"
 
+    // --- LOGIKA STANU (Nowe funkcje na starym wyglądzie) ---
+    val isMyPlan = uiState.currentSource is ScheduleSource.MyPlan
+
+    val isTeacherView = when (val source = uiState.currentSource) {
+        is ScheduleSource.Favorite -> source.type == "teacher"
+        is ScheduleSource.Preview -> source.type == "teacher"
+        else -> false
+    }
+
+    // Podtytuł (np. imię nauczyciela lub nazwa grupy) - null jeśli to "Mój Plan"
+    val subtitleText = if (!isMyPlan) uiState.selectedPlanName else null
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             CalendarDrawerContent(
                 favorites = uiState.favorites,
-                selectedResourceId = null,
+                selectedResourceId = uiState.selectedResourceId,
                 currentScreen = "calendar",
-                onMyPlanClick = { scope.launch { drawerState.close() } },
+                onMyPlanClick = {
+                    if (!isMyPlan) viewModel.selectMyPlan()
+                    scope.launch { drawerState.close() }
+                },
                 onTasksClick = {
                     scope.launch { drawerState.close() }
                     onTasksClick()
@@ -88,7 +113,7 @@ fun CalendarScreen(
                     viewModel.selectFavoritePlan(fav)
                     scope.launch {
                         drawerState.close()
-                        onShowPreview() // ✅ Wywołanie nawigacji po kliknięciu w ulubiony
+                        // Jeśli jesteśmy w trybie podglądu, to tutaj zostajemy, UI się odświeży
                     }
                 },
                 onCloseDrawer = { scope.launch { drawerState.close() } }
@@ -97,10 +122,20 @@ fun CalendarScreen(
     ) {
         Scaffold(
             topBar = {
+                // UŻYCIE STAREGO KOMPONENTU Z NOWYMI PARAMETRAMI
                 CalendarTopAppBar(
                     title = title,
+                    subtitle = subtitleText, // Wyświetli się pod datą
+                    navigationIcon = if (isMyPlan) R.drawable.ic_menu else R.drawable.ic_chevron_left, // Zmiana ikony
                     isExpanded = isMonthView,
-                    onNavigationClick = { scope.launch { drawerState.open() } },
+                    onNavigationClick = {
+                        if (isMyPlan) {
+                            scope.launch { drawerState.open() }
+                        } else {
+                            // Powrót do mojego planu
+                            viewModel.selectMyPlan()
+                        }
+                    },
                     onSearchClick = onSearchClick,
                     onAddClick = {
                         val today = LocalDate.now(ZoneId.of("Europe/Warsaw"))
@@ -110,6 +145,7 @@ fun CalendarScreen(
                             else weekState.animateScrollToWeek(today)
                         }
                     },
+                    onInfoClick = if (isTeacherView) { { /* TODO: Dialog info */ } } else null, // Tylko dla nauczycieli
                     onTitleClick = {
                         isMonthView = !isMonthView
                         scope.launch {
@@ -145,7 +181,7 @@ fun CalendarScreen(
                             else weekState.scrollToWeek(selectedDate)
                         }
                     },
-                    classes = myClasses,
+                    classes = displayedClasses, // Poprawione źródło danych
                     classColorMap = classColorMap,
                     onClassClick = onClassClick,
                     modifier = Modifier.padding(innerPadding),
