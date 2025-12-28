@@ -16,7 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // Import niezbędny do modyfikacji rozmiaru
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
@@ -73,12 +73,9 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = uiState.currentDate,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.W500,
-                                color = iconTextColor,
-                                fontSize = 14.sp,
-                                lineHeight = 16.sp
-                            )
+                            // Type.kt: titleSmall ma 14sp i Medium (W500). Idealne dopasowanie.
+                            style = MaterialTheme.typography.titleSmall,
+                            color = iconTextColor
                         )
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -116,16 +113,6 @@ fun HomeScreen(
                                         )
                                     }
                                 }
-                                // Kropka powiadomień (tymczasowo zawsze widoczna dla przykładu, lub usuń)
-                                /*
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .align(Alignment.TopEnd)
-                                        .offset(x = (-10).dp, y = 10.dp)
-                                        .background(MaterialTheme.colorScheme.error, CircleShape)
-                                )
-                                */
                             }
                         }
                     }
@@ -137,21 +124,17 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = uiState.greeting,
+                            // Type.kt: headlineMedium ma 28sp i Normal. Nadpisujemy na SemiBold.
                             style = MaterialTheme.typography.headlineMedium.copy(
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.W600,
-                                color = iconTextColor,
-                                lineHeight = 36.sp
-                            )
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = iconTextColor
                         )
                         Text(
                             text = uiState.departmentInfo,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = 12.sp,
-                                color = subTextColor,
-                                fontWeight = FontWeight.W400,
-                                lineHeight = 24.sp
-                            )
+                            // Type.kt: bodySmall ma 12sp.
+                            style = MaterialTheme.typography.bodySmall,
+                            color = subTextColor
                         )
                     }
                 }
@@ -211,11 +194,9 @@ fun HomeScreen(
                                     )
                                     Text(
                                         text = "Zadania",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.W500,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                        // Type.kt titleMedium (16sp, Medium). Chcemy 18sp.
+                                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
 
@@ -261,11 +242,8 @@ fun HomeScreen(
                                     )
                                     Text(
                                         text = "Wydarzenia",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.W500,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
 
@@ -301,11 +279,7 @@ fun HomeScreen(
                             ) {
                                 Text(
                                     text = "MyUZ 2025",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        fontWeight = FontWeight.W500
-                                    )
+                                    style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline)
                                 )
                             }
                         }
