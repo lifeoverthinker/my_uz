@@ -4,7 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items // ✅ Ten import jest kluczowy dla list
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,16 +20,14 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // Import sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.DatePicker
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
 import java.time.ZoneId
@@ -147,8 +145,7 @@ fun AddEditAbsenceContent(
                 ) {
                     Text(
                         stringResource(R.string.btn_save),
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 }
             }
@@ -159,7 +156,7 @@ fun AddEditAbsenceContent(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
-                // 1. TYTUŁ (Statyczny "Nieobecność")
+                // 1. TYTUŁ
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -171,20 +168,13 @@ fun AddEditAbsenceContent(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Nieobecność",
-                        style = TextStyle(
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 28.sp,
-                            lineHeight = 36.sp,
-                            color = textColor
-                        ),
+                        style = MaterialTheme.typography.headlineMedium.copy(color = textColor),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = dividerColor)
-                // ❌ USUNIĘTO: Spacer(modifier = Modifier.height(16.dp)) - to on powodował dodatkowy odstęp
 
                 // 2. DATA
                 AbsenceCommonRow(iconRes = R.drawable.ic_calendar, iconTint = iconTint) {
@@ -196,7 +186,7 @@ fun AddEditAbsenceContent(
                     ) {
                         Text(
                             text = formatDateLong(uiState.date),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                            style = MaterialTheme.typography.bodyLarge,
                             color = textColor
                         )
                     }
@@ -216,7 +206,7 @@ fun AddEditAbsenceContent(
                     ) {
                         Text(
                             text = uiState.subjectName ?: "Wybierz przedmiot",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                            style = MaterialTheme.typography.bodyLarge,
                             color = if (uiState.subjectName == null) subTextColor else textColor
                         )
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
@@ -241,7 +231,7 @@ fun AddEditAbsenceContent(
                         val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć"
                         Text(
                             text = typeText,
-                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                            style = MaterialTheme.typography.bodyLarge,
                             color = if (!isTypeSelectionEnabled) subTextColor.copy(alpha = 0.4f) else if (uiState.classType == null) subTextColor else textColor
                         )
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))
@@ -256,20 +246,13 @@ fun AddEditAbsenceContent(
                         BasicTextField(
                             value = uiState.description,
                             onValueChange = onDescriptionChange,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                fontFamily = InterFontFamily,
-                                color = textColor,
-                                lineHeight = 24.sp
-                            ),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { innerTextField ->
                                 if (uiState.description.isEmpty()) {
                                     Text(
                                         text = "Dodaj opis (opcjonalnie)",
-                                        style = MaterialTheme.typography.bodyLarge.copy(
-                                            fontFamily = InterFontFamily,
-                                            color = subTextColor
-                                        )
+                                        style = MaterialTheme.typography.bodyLarge.copy(color = subTextColor)
                                     )
                                 }
                                 innerTextField()
@@ -307,7 +290,7 @@ fun AddEditAbsenceContent(
                         item {
                             Text(
                                 text = "Wybierz przedmiot",
-                                style = MaterialTheme.typography.titleLarge.copy(fontFamily = InterFontFamily),
+                                style = MaterialTheme.typography.titleLarge,
                                 color = textColor,
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                             )
@@ -329,7 +312,7 @@ fun AddEditAbsenceContent(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     text = subject,
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                                    style = MaterialTheme.typography.bodyLarge,
                                     color = textColor
                                 )
                             }
@@ -352,7 +335,7 @@ fun AddEditAbsenceContent(
                         item {
                             Text(
                                 text = "Wybierz rodzaj zajęć",
-                                style = MaterialTheme.typography.titleLarge.copy(fontFamily = InterFontFamily),
+                                style = MaterialTheme.typography.titleLarge,
                                 color = textColor,
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                             )
@@ -372,7 +355,7 @@ fun AddEditAbsenceContent(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     text = ClassTypeUtils.getFullName(type),
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                                    style = MaterialTheme.typography.bodyLarge,
                                     color = textColor
                                 )
                             }

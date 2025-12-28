@@ -22,20 +22,17 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // Import sp (potrzebne do .sp)
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.DatePicker
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -145,9 +142,9 @@ fun AddEditGradeContent(
                     shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(containerColor = primaryColor, contentColor = MaterialTheme.colorScheme.onPrimary),
                     contentPadding = PaddingValues(horizontal = 24.dp),
-                    modifier = Modifier.height(40.dp) // ✅ ZMIANA: 40dp (smukły)
+                    modifier = Modifier.height(40.dp)
                 ) {
-                    Text(stringResource(R.string.btn_save), fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.btn_save), style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                 }
             }
 
@@ -171,13 +168,14 @@ fun AddEditGradeContent(
                         BasicTextField(
                             value = uiState.description,
                             onValueChange = onDescriptionChange,
-                            textStyle = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Normal, fontSize = 28.sp, lineHeight = 36.sp, color = textColor),
+                            // Używamy headlineMedium z theme
+                            textStyle = MaterialTheme.typography.headlineMedium.copy(color = textColor),
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { innerTextField ->
                                 if (uiState.description.isEmpty()) {
                                     Text(
                                         text = "Dodaj tytuł",
-                                        style = TextStyle(fontFamily = InterFontFamily, fontSize = 28.sp, color = textColor.copy(alpha = 0.4f))
+                                        style = MaterialTheme.typography.headlineMedium.copy(color = textColor.copy(alpha = 0.4f))
                                     )
                                 }
                                 innerTextField()
@@ -207,7 +205,11 @@ fun AddEditGradeContent(
                             modifier = Modifier.height(32.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp)) {
-                                Text(text = title, style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 13.sp, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor))
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor
+                                )
                             }
                         }
                     }
@@ -226,7 +228,7 @@ fun AddEditGradeContent(
                     ) {
                         Text(
                             text = formatDateLong(uiState.date),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                            style = MaterialTheme.typography.bodyLarge,
                             color = textColor
                         )
                     }
@@ -243,7 +245,7 @@ fun AddEditGradeContent(
                     ) {
                         Text(
                             text = uiState.subjectName ?: "Wybierz przedmiot",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                            style = MaterialTheme.typography.bodyLarge,
                             color = if (uiState.subjectName == null) subTextColor else textColor
                         )
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
@@ -262,7 +264,7 @@ fun AddEditGradeContent(
                         val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć"
                         Text(
                             text = typeText,
-                            style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                            style = MaterialTheme.typography.bodyLarge,
                             color = if (!isTypeSelectionEnabled) subTextColor.copy(alpha = 0.4f) else if (uiState.classType == null) subTextColor else textColor
                         )
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))
@@ -283,7 +285,11 @@ fun AddEditGradeContent(
                             GradeType.CUSTOM -> uiState.customGradeValue.ifBlank { "Wpisz wartość" }
                             GradeType.ACTIVITY -> "Aktywność +"
                         }
-                        Text(text = gradeText, style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = if (uiState.gradeValue == null && uiState.gradeType != GradeType.ACTIVITY) subTextColor else textColor)
+                        Text(
+                            text = gradeText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (uiState.gradeValue == null && uiState.gradeType != GradeType.ACTIVITY) subTextColor else textColor
+                        )
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
                     }
                 }
@@ -295,7 +301,7 @@ fun AddEditGradeContent(
                     OutlinedTextField(
                         value = uiState.weight,
                         onValueChange = onWeightChange,
-                        label = { Text("Waga", fontFamily = InterFontFamily) },
+                        label = { Text("Waga") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textColor, unfocusedTextColor = textColor),
@@ -311,20 +317,13 @@ fun AddEditGradeContent(
                         BasicTextField(
                             value = uiState.comment,
                             onValueChange = onCommentChange,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                fontFamily = InterFontFamily,
-                                color = textColor,
-                                lineHeight = 24.sp
-                            ),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { innerTextField ->
                                 if (uiState.comment.isEmpty()) {
                                     Text(
                                         text = "Dodaj opis",
-                                        style = MaterialTheme.typography.bodyLarge.copy(
-                                            fontFamily = InterFontFamily,
-                                            color = subTextColor
-                                        )
+                                        style = MaterialTheme.typography.bodyLarge.copy(color = subTextColor)
                                     )
                                 }
                                 innerTextField()
@@ -359,7 +358,7 @@ fun AddEditGradeContent(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
                 ) {
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item { Text(text = "Wybierz przedmiot", style = MaterialTheme.typography.titleLarge.copy(fontFamily = InterFontFamily), color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
+                        item { Text(text = "Wybierz przedmiot", style = MaterialTheme.typography.titleLarge, color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
                         items(uiState.availableSubjects.size) { index ->
                             val (subject, _) = uiState.availableSubjects[index]
                             Row(
@@ -371,7 +370,7 @@ fun AddEditGradeContent(
                             ) {
                                 RadioButton(selected = uiState.subjectName == subject, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(subject, style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
+                                Text(subject, style = MaterialTheme.typography.bodyLarge, color = textColor)
                             }
                         }
                     }
@@ -385,7 +384,7 @@ fun AddEditGradeContent(
             Dialog(onDismissRequest = { showTypeModal = false }) {
                 Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item { Text(text = "Wybierz rodzaj zajęć", style = MaterialTheme.typography.titleLarge.copy(fontFamily = InterFontFamily), color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
+                        item { Text(text = "Wybierz rodzaj zajęć", style = MaterialTheme.typography.titleLarge, color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
                         items(availableTypes.size) { index ->
                             val type = availableTypes[index]
                             Row(
@@ -397,7 +396,7 @@ fun AddEditGradeContent(
                             ) {
                                 RadioButton(selected = uiState.classType == type, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(ClassTypeUtils.getFullName(type), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
+                                Text(ClassTypeUtils.getFullName(type), style = MaterialTheme.typography.bodyLarge, color = textColor)
                             }
                         }
                     }
@@ -409,19 +408,19 @@ fun AddEditGradeContent(
             Dialog(onDismissRequest = { showGradeModal = false }) {
                 Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item { Text(text = "Wybierz ocenę", style = MaterialTheme.typography.titleLarge.copy(fontFamily = InterFontFamily), color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
+                        item { Text(text = "Wybierz ocenę", style = MaterialTheme.typography.titleLarge, color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
                         items(standardGrades) { grade ->
                             Row(modifier = Modifier.fillMaxWidth().clickable { onGradeTypeChange(GradeType.STANDARD); onGradeValueChange(grade); showGradeModal = false }.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(selected = uiState.gradeValue == grade && uiState.gradeType == GradeType.STANDARD, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text(if (grade % 1.0 == 0.0) grade.toInt().toString() else grade.toString(), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
+                                Text(if (grade % 1.0 == 0.0) grade.toInt().toString() else grade.toString(), style = MaterialTheme.typography.bodyLarge, color = textColor)
                             }
                         }
                         item {
                             Row(modifier = Modifier.fillMaxWidth().clickable { onGradeTypeChange(GradeType.ACTIVITY); onCustomGradeChange("+"); showGradeModal = false }.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(selected = uiState.gradeType == GradeType.ACTIVITY, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
-                                Text("Aktywność +", style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
+                                Text("Aktywność +", style = MaterialTheme.typography.bodyLarge, color = textColor)
                             }
                         }
                     }

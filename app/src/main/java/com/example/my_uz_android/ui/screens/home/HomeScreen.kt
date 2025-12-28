@@ -3,9 +3,9 @@ package com.example.my_uz_android.ui.screens.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyRow // ✅ DODANO
+import androidx.compose.foundation.lazy.items // ✅ DODANO
+import androidx.compose.foundation.lazy.itemsIndexed // ✅ DODANO
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -13,10 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Import niezbędny do modyfikacji rozmiaru
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
@@ -50,54 +51,85 @@ fun HomeScreen(
         val buttonBgColor = MaterialTheme.extendedColors.buttonBackground
         val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
+        // Używamy Scaffold, aby FAB był w standardowym miejscu (prawy dolny róg)
+        Scaffold(
+            floatingActionButton = {
+                UniversalFab(
+                    isExpandable = true,
+                    isExpanded = isFabExpanded,
+                    onMainFabClick = { isFabExpanded = !isFabExpanded },
+                    options = listOf(
+                        FabOption("Dodaj ocenę", R.drawable.ic_trophy) {
+                            isFabExpanded = false
+                            onAddGradeClick()
+                        },
+                        FabOption("Dodaj nieobecność", R.drawable.ic_calendar_minus) {
+                            isFabExpanded = false
+                            onAddAbsenceClick()
+                        },
+                        FabOption("Dodaj zadanie", R.drawable.ic_book_open) {
+                            isFabExpanded = false
+                            onAddTaskClick()
+                        }
+                    )
+                )
+            },
+            // Tło Scaffold transparentne, bo zarządzamy nim w Boxie niżej
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(topSectionBackground)
+                    .background(MaterialTheme.colorScheme.surface)
+                    // Ważne: paddingValues.calculateBottomPadding() zapewnia miejsce na FAB
+                    .padding(bottom = paddingValues.calculateBottomPadding())
             ) {
-                // Sekcja Górna
-                Column(
+                // Tło nagłówka
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(300.dp)
                         .background(topSectionBackground)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(top = 8.dp)
-                            .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                )
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // --- NAGŁÓWEK ---
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = uiState.currentDate,
-                            // Type.kt: titleSmall ma 14sp i Medium (W500). Idealne dopasowanie.
-                            style = MaterialTheme.typography.titleSmall,
-                            color = iconTextColor
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(top = 8.dp)
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = uiState.currentDate,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = iconTextColor
+                            )
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Mapa
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(buttonBgColor, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                IconButton(onClick = { /* Mapa */ }) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_map),
-                                        contentDescription = "Mapa",
-                                        tint = iconTextColor,
-                                        modifier = Modifier.size(24.dp)
-                                    )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(buttonBgColor, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    IconButton(onClick = { /* Mapa */ }) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_map),
+                                            contentDescription = "Mapa",
+                                            tint = iconTextColor,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
                                 }
-                            }
 
-                            // Poczta
-                            Box {
                                 Box(
                                     modifier = Modifier
                                         .size(48.dp)
@@ -115,197 +147,175 @@ fun HomeScreen(
                                 }
                             }
                         }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = uiState.greeting,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = iconTextColor
+                            )
+                            Text(
+                                text = uiState.departmentInfo,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = subTextColor
+                            )
+                        }
                     }
 
-                    Column(
+                    // --- TREŚĆ ---
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
+                            .weight(1f)
+                            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+                        color = MaterialTheme.colorScheme.surface
                     ) {
-                        Text(
-                            text = uiState.greeting,
-                            // Type.kt: headlineMedium ma 28sp i Normal. Nadpisujemy na SemiBold.
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = iconTextColor
-                        )
-                        Text(
-                            text = uiState.departmentInfo,
-                            // Type.kt: bodySmall ma 12sp.
-                            style = MaterialTheme.typography.bodySmall,
-                            color = subTextColor
-                        )
-                    }
-                }
+                        LazyColumn(
+                            contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            if (uiState.isPlanSelected) {
+                                item {
+                                    UpcomingClasses(
+                                        classes = uiState.upcomingClasses,
+                                        emptyMessage = uiState.classesMessage,
+                                        dayLabel = uiState.classesDayLabel,
+                                        classColorMap = uiState.classColorMap,
+                                        onClassClick = onClassClick
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
+                            } else {
+                                item {
+                                    EmptyStateMessage(
+                                        title = "Wybierz plan zajęć",
+                                        message = "Przejdź do ustawień konta, aby wybrać grupę i podgrupę zajęć",
+                                        iconRes = R.drawable.ic_calendar_check,
+                                        actionText = "Przejdź do ustawień",
+                                        onActionClick = onAccountClick,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(24.dp))
+                                }
+                            }
 
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    LazyColumn(
-                        contentPadding = PaddingValues(top = 24.dp, bottom = 100.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        if (uiState.isPlanSelected) {
                             item {
-                                UpcomingClasses(
-                                    classes = uiState.upcomingClasses,
-                                    emptyMessage = uiState.classesMessage,
-                                    dayLabel = uiState.classesDayLabel,
-                                    classColorMap = uiState.classColorMap,
-                                    onClassClick = onClassClick
-                                )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_book_open),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = "Zadania",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    if (uiState.upcomingTasks.isEmpty()) {
+                                        Text(
+                                            text = "Brak zadań",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    } else {
+                                        LazyRow(
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            itemsIndexed(uiState.upcomingTasks) { _, task ->
+                                                TaskCard(
+                                                    task = task,
+                                                    onTaskClick = { onTaskClick(task.id) },
+                                                    modifier = Modifier.width(264.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
-                        } else {
+
                             item {
-                                EmptyStateMessage(
-                                    title = "Wybierz plan zajęć",
-                                    message = "Przejdź do ustawień konta, aby wybrać grupę i podgrupę zajęć",
-                                    iconRes = R.drawable.ic_calendar_check,
-                                    actionText = "Przejdź do ustawień",
-                                    onActionClick = onAccountClick,
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-                                Spacer(modifier = Modifier.height(24.dp))
-                            }
-                        }
-
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_book_open),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = "Zadania",
-                                        // Type.kt titleMedium (16sp, Medium). Chcemy 18sp.
-                                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-
-                                if (uiState.upcomingTasks.isEmpty()) {
-                                    Text(
-                                        text = "Brak zadań",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                } else {
-                                    LazyRow(
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        itemsIndexed(uiState.upcomingTasks) { _, task ->
-                                            TaskCard(
-                                                task = task,
-                                                onTaskClick = { onTaskClick(task.id) },
-                                                modifier = Modifier.width(264.dp)
-                                            )
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_marker_pin),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = "Wydarzenia",
+                                            style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    if (uiState.upcomingEvents.isEmpty()) {
+                                        Text(
+                                            text = "Brak wydarzeń",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    } else {
+                                        LazyRow(
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            items(uiState.upcomingEvents) { event ->
+                                                EventCard(
+                                                    event = event,
+                                                    onClick = { onEventClick(event.id) },
+                                                    modifier = Modifier.width(264.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
 
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                        .padding(top = 24.dp),
+                                    contentAlignment = Alignment.CenterStart
                                 ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_marker_pin),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(20.dp)
-                                    )
                                     Text(
-                                        text = "Wydarzenia",
-                                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        text = "MyUZ 2025",
+                                        style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline)
                                     )
                                 }
-
-                                if (uiState.upcomingEvents.isEmpty()) {
-                                    Text(
-                                        text = "Brak wydarzeń",
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                } else {
-                                    LazyRow(
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        items(uiState.upcomingEvents) { event ->
-                                            EventCard(
-                                                event = event,
-                                                onClick = { onEventClick(event.id) },
-                                                modifier = Modifier.width(264.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .padding(top = 24.dp),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                Text(
-                                    text = "MyUZ 2025",
-                                    style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline)
-                                )
                             }
                         }
                     }
                 }
             }
-
-            UniversalFab(
-                isExpandable = true,
-                isExpanded = isFabExpanded,
-                onMainFabClick = { isFabExpanded = !isFabExpanded },
-                options = listOf(
-                    FabOption("Dodaj ocenę", R.drawable.ic_trophy) {
-                        isFabExpanded = false
-                        onAddGradeClick()
-                    },
-                    FabOption("Dodaj nieobecność", R.drawable.ic_calendar_minus) {
-                        isFabExpanded = false
-                        onAddAbsenceClick()
-                    },
-                    FabOption("Dodaj zadanie", R.drawable.ic_book_open) {
-                        isFabExpanded = false
-                        onAddTaskClick()
-                    }
-                )
-            )
         }
     }
 }

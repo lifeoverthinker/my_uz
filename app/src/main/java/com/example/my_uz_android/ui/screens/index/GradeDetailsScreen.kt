@@ -2,7 +2,6 @@ package com.example.my_uz_android.ui.screens.index
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -14,15 +13,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // Import sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.*
@@ -114,11 +111,11 @@ fun GradeDetailsContent(
                                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Duplikuj (Wkrótce)", fontFamily = InterFontFamily, color = textColor) },
+                                    text = { Text("Duplikuj (Wkrótce)", color = textColor) },
                                     onClick = { showMenu = false }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Usuń", fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
+                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         showMenu = false
                                         showDeleteDialog = true
@@ -159,19 +156,14 @@ fun GradeDetailsContent(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = grade.description ?: "Ocena",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 28.sp,
-                                lineHeight = 36.sp,
+                                style = MaterialTheme.typography.headlineMedium,
                                 color = textColor,
                                 modifier = Modifier.padding(bottom = 4.dp)
                             )
 
                             Text(
                                 text = formatDate(grade.date),
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                                 color = subTextColor
                             )
                         }
@@ -246,8 +238,8 @@ fun GradeDetailsContent(
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Usuń ocenę", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold) },
-                text = { Text("Czy na pewno chcesz usunąć tę ocenę?", fontFamily = InterFontFamily) },
+                title = { Text("Usuń ocenę", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)) },
+                text = { Text("Czy na pewno chcesz usunąć tę ocenę?", style = MaterialTheme.typography.bodyMedium) },
                 confirmButton = {
                     TextButton(onClick = {
                         onDeleteGrade()
@@ -308,21 +300,15 @@ private fun DetailSectionGrade(
         Column(modifier = Modifier.padding(top = 4.dp)) {
             Text(
                 text = label,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 color = labelColor,
-                letterSpacing = 0.5.sp,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
 
             Text(
                 text = text,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                color = textColor,
-                lineHeight = 22.sp
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = textColor
             )
         }
     }

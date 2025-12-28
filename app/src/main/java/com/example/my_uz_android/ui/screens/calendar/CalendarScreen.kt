@@ -38,11 +38,10 @@ fun CalendarScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // --- 1. Rozróżnienie źródła danych (Mój Plan vs Ulubione/Inne) ---
+    // --- 1. Źródło danych (Mój Plan vs Inne) ---
     val source = uiState.currentSource
     val isMyPlan = source is ScheduleSource.MyPlan
 
-    // Pobieramy surową listę zajęć z odpowiedniego strumienia
     val rawClasses by produceState(initialValue = emptyList<ClassEntity>(), key1 = source) {
         if (isMyPlan) {
             viewModel.myPlanClasses.collect { value = it }
@@ -51,7 +50,7 @@ fun CalendarScreen(
         }
     }
 
-    // --- 2. Logika dla Ulubionych/Podglądu (Filtr, Info, Tytuły) ---
+    // --- 2. Filtrowanie i Info ---
     val planName = uiState.selectedPlanName
     val isTeacher = if (!isMyPlan) {
         (source as? ScheduleSource.Favorite)?.type == "teacher" || (source as? ScheduleSource.Preview)?.type == "teacher"
@@ -59,7 +58,6 @@ fun CalendarScreen(
 
     val isFavorite = if (!isMyPlan) uiState.favorites.any { it.name == planName } else false
 
-    // Dane do dialogów (ekstrakcja z zajęć)
     val teacherData = remember(rawClasses) {
         if (isTeacher) {
             rawClasses.firstOrNull { !it.teacherEmail.isNullOrBlank() }
@@ -68,7 +66,6 @@ fun CalendarScreen(
         } else null
     }
 
-    // Logika filtrowania podgrup (tylko dla planów grup w trybie podglądu)
     val availableSubgroups = remember(rawClasses, isMyPlan) {
         if (!isMyPlan && !isTeacher) rawClasses.map { it.subgroup ?: "" }.distinct().sorted() else emptyList()
     }
@@ -76,7 +73,6 @@ fun CalendarScreen(
     var selectedSubgroups by remember(planName) { mutableStateOf<Set<String>?>(null) }
     val currentSelectedSubgroups = selectedSubgroups ?: availableSubgroups.toSet()
 
-    // Ostateczna lista do wyświetlenia (przefiltrowana)
     val displayedClasses = remember(rawClasses, isMyPlan, isTeacher, currentSelectedSubgroups) {
         if (isMyPlan || isTeacher) {
             rawClasses
@@ -85,7 +81,7 @@ fun CalendarScreen(
         }
     }
 
-    // --- 3. Stany Kalendarza ---
+    // --- 3. Konfiguracja Kalendarza ---
     val currentDate = remember { LocalDate.now(ZoneId.of("Europe/Warsaw")) }
     val currentMonth = remember { YearMonth.now(ZoneId.of("Europe/Warsaw")) }
     val startMonth = remember { currentMonth.minusMonths(24) }
@@ -116,11 +112,14 @@ fun CalendarScreen(
         val weekDays = weekState.firstVisibleWeek.days
         if (weekDays.isNotEmpty()) weekDays.first().date.let { YearMonth.from(it) } else currentMonth
     }
+
     val monthName = visibleMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
+
+    // Jeśli rok jest obecny, pokazujemy tylko miesiąc, jeśli inny - dodajemy rok
     val calendarTitle = if (visibleMonth.year == YearMonth.now().year) monthName else "$monthName ${visibleMonth.year}"
 
-    // --- 4. Stany Dialogów ---
+    // --- 4. Dialogi ---
     var showTeacherInfo by remember { mutableStateOf(false) }
     var showSubgroupFilter by remember { mutableStateOf(false) }
 
@@ -155,6 +154,7 @@ fun CalendarScreen(
                         isExpanded = isMonthView,
                         onNavigationClick = { scope.launch { drawerState.open() } },
                         onSearchClick = onSearchClick,
+                        // Akcja "Dziś" (kliknięcie plusa/ikony kalendarza w TopBar)
                         onAddClick = {
                             val today = LocalDate.now(ZoneId.of("Europe/Warsaw"))
                             selectedDate = today
@@ -185,7 +185,7 @@ fun CalendarScreen(
                     )
                 }
             },
-            // ZMIANA: Użycie koloru z motywu zamiast Color.White
+            // ZMIANA: Standardowy kolor tła (Theme.kt)
             containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
             if (uiState.isLoading) {
@@ -216,7 +216,7 @@ fun CalendarScreen(
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
                     modifier = Modifier.padding(innerPadding),
-                    showHeader = !isMyPlan
+                    showHeader = !isMyPlan // Nagłówek tylko w trybie podglądu (bo Mój Plan ma go w TopBar)
                 )
             }
         }

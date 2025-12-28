@@ -9,18 +9,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.my_uz_android.ui.theme.InterFontFamily // Zakładam, że masz to zdefiniowane w Type.kt
 
 @Composable
 fun IndexTabs(
@@ -28,26 +27,23 @@ fun IndexTabs(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Odpowiednik: Container(width: 328...) - szerokość będzie kontrolowana przez parenta (IndexScreen)
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Tab 0: Oceny
         IndexTabItem(
             text = "Oceny",
             isSelected = selectedTabIndex == 0,
             onClick = { onTabSelected(0) },
-            modifier = Modifier.weight(1f) // Odpowiednik Expanded
+            modifier = Modifier.weight(1f)
         )
 
-        // Tab 1: Nieobecności
         IndexTabItem(
             text = "Nieobecności",
             isSelected = selectedTabIndex == 1,
             onClick = { onTabSelected(1) },
-            modifier = Modifier.weight(1f) // Odpowiednik Expanded
+            modifier = Modifier.weight(1f)
         )
     }
 }
@@ -59,10 +55,10 @@ fun IndexTabItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Style zdefiniowane na podstawie Twojego kodu Flutter
-    val backgroundColor = if (isSelected) Color(0xFFE9DEF8) else Color.Transparent
-    val textColor = if (isSelected) Color(0xFF4B4358) else Color(0xFF49454E)
-    val borderColor = if (isSelected) Color.Transparent else Color(0xFF7A757F)
+    // Używamy kolorów systemowych z Theme.kt
+    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
+    val textColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val borderColor = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outline
     val borderWidth = if (isSelected) 0.dp else 1.dp
 
     Box(
@@ -76,14 +72,11 @@ fun IndexTabItem(
     ) {
         Text(
             text = text,
-            style = TextStyle(
-                color = textColor,
-                fontSize = 12.sp,
-                fontFamily = InterFontFamily, // Użycie Twojej czcionki Inter
-                fontWeight = FontWeight.W400,
-                letterSpacing = 0.4.sp,
-                lineHeight = 16.sp // height 1.33 przy font 12 ~= 16sp
+            // bodySmall w Type.kt: 12sp, Normal. Nadpisujemy kolorem.
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
             ),
+            color = textColor,
             textAlign = TextAlign.Center
         )
     }
