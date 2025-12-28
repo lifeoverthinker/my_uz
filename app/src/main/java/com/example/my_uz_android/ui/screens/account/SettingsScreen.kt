@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.TopAppBar // Import wspólnego komponentu
+import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,22 +46,17 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Obsługa scrollowania paska (opcjonalna, jeśli chcesz żeby pasek reagował na przewijanie)
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    // --- Stan dla dialogów eksportu/importu ---
     var showExportDialog by remember { mutableStateOf(false) }
-    // Domyślnie zaznaczamy wszystko
     var exportSelection by remember { mutableStateOf(BackupDataType.values().toSet()) }
 
-    // Launcher Eksportu: Po wybraniu pliku uruchamia zapis z wybranymi typami danych
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         uri?.let { scope.launch { saveBackupToFile(context, it, viewModel, exportSelection) } }
     }
 
-    // Launcher Importu: Po wybraniu pliku wczytuje go do podglądu (preview)
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -77,7 +72,6 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            // UŻYCIE WSPÓLNEGO KOMPONENTU TOP APP BAR
             TopAppBar(
                 title = "Ustawienia",
                 navigationIcon = R.drawable.ic_chevron_left,
@@ -139,7 +133,6 @@ fun SettingsScreen(
                         title = "Eksportuj dane",
                         subtitle = "Wybierz dane do zapisu w pliku JSON",
                         onClick = {
-                            // Reset wyboru i pokazanie dialogu
                             exportSelection = BackupDataType.values().toSet()
                             showExportDialog = true
                         }
@@ -154,7 +147,6 @@ fun SettingsScreen(
                     )
                 }
 
-                // PRZYCISK ZAPISZ (Jako potwierdzenie dla użytkownika)
                 Button(
                     onClick = {
                         Toast.makeText(context, "Ustawienia zostały zapisane", Toast.LENGTH_SHORT).show()
@@ -175,7 +167,6 @@ fun SettingsScreen(
                 )
             }
 
-            // Loader
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
@@ -187,9 +178,6 @@ fun SettingsScreen(
         }
     }
 
-    // --- DIALOGI SELEKCJI DANYCH ---
-
-    // 1. Dialog Eksportu
     if (showExportDialog) {
         DataTypeSelectionDialog(
             title = "Eksportuj dane",
@@ -204,9 +192,7 @@ fun SettingsScreen(
         )
     }
 
-    // 2. Dialog Importu (pokazywany, gdy ViewModel przetworzy plik)
     if (uiState.showImportDialog && uiState.backupPreview != null) {
-        // Obliczamy, jakie dane są dostępne w pliku
         val availableTypes = remember(uiState.backupPreview) {
             val preview = uiState.backupPreview!!
             val types = mutableSetOf<BackupDataType>()
@@ -222,8 +208,8 @@ fun SettingsScreen(
         DataTypeSelectionDialog(
             title = "Importuj dane",
             confirmText = "Przywróć wybrane",
-            initialSelection = availableTypes, // Domyślnie zaznaczamy to, co jest w pliku
-            availableTypes = availableTypes, // Przekazujemy, aby wyszarzyć puste
+            initialSelection = availableTypes,
+            availableTypes = availableTypes,
             onDismiss = { viewModel.cancelImport() },
             onConfirm = { selection ->
                 viewModel.confirmImport(selection)
@@ -231,10 +217,6 @@ fun SettingsScreen(
         )
     }
 }
-
-// --- KOMPONENTY POMOCNICZE UI ---
-
-// SettingsTopBar ZOSTAŁ USUNIĘTY (zastąpiony przez TopAppBar)
 
 @Composable
 fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
@@ -364,8 +346,6 @@ fun ClassColorPickerItem(
     }
 }
 
-// --- KOMPONENT DIALOGU WYBORU DANYCH ---
-
 @Composable
 fun DataTypeSelectionDialog(
     title: String,
@@ -435,8 +415,6 @@ fun DataTypeSelectionDialog(
         }
     )
 }
-
-// --- FUNKCJE POMOCNICZE I/O ---
 
 private suspend fun saveBackupToFile(
     context: Context,
