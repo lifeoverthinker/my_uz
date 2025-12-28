@@ -1,16 +1,23 @@
 package com.example.my_uz_android.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -21,7 +28,7 @@ import com.example.my_uz_android.ui.theme.extendedColors
 @Composable
 fun CalendarTopAppBar(
     title: String,
-    isExpanded: Boolean = false, // ZMIANA: Nowy parametr stanu
+    isExpanded: Boolean = false,
     onNavigationClick: () -> Unit,
     onSearchClick: (() -> Unit)? = null,
     onAddClick: (() -> Unit)? = null,
@@ -38,13 +45,11 @@ fun CalendarTopAppBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // --- LEWA SEKCJA (Menu + Tytuł) ---
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
-            // Przycisk Menu
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -61,7 +66,6 @@ fun CalendarTopAppBar(
                 )
             }
 
-            // --- KONTENER TYTUŁU ---
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -86,7 +90,6 @@ fun CalendarTopAppBar(
                 )
 
                 if (onTitleClick != null) {
-                    // ZMIANA: Ikona zmienia się w zależności od stanu isExpanded
                     Icon(
                         painter = painterResource(
                             if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
@@ -99,7 +102,6 @@ fun CalendarTopAppBar(
             }
         }
 
-        // --- PRAWA SEKCJA (Ikony Search / Add) ---
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -239,5 +241,79 @@ fun TopAppBar(
             actions = actions,
             colors = colors
         )
+    }
+}
+
+/**
+ * Nowoczesny wariant paska dla wyszukiwarki
+ */
+@Composable
+fun SearchTopAppBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onBackClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .statusBarsPadding()
+                .height(64.dp)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_chevron_left),
+                    contentDescription = "Wstecz",
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                if (query.isEmpty()) {
+                    Text(
+                        "Szukaj planu...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+                )
+            }
+
+            AnimatedVisibility(
+                visible = query.isNotEmpty(),
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_x_close),
+                        contentDescription = "Wyczyść",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
     }
 }
