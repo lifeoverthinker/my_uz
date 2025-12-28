@@ -12,6 +12,16 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// Enum definiujący typy danych do backupu
+enum class BackupDataType(val displayName: String) {
+    SETTINGS("Ustawienia aplikacji"),
+    CLASSES("Plan zajęć"),
+    TASKS("Zadania"),
+    GRADES("Oceny"),
+    ABSENCES("Nieobecności"),
+    EVENTS("Wydarzenia")
+}
+
 data class BackupData(
     val settings: SettingsEntity?,
     val classes: List<ClassEntity>,
@@ -28,7 +38,10 @@ data class SettingsUiState(
     val uniqueClassTypes: List<String> = emptyList(),
     val classColorMap: Map<String, Int> = emptyMap(),
     val isLoading: Boolean = false,
-    val importMessage: String? = null
+    val importMessage: String? = null,
+    // Pola do obsługi selektywnego importu
+    val backupPreview: BackupData? = null,
+    val showImportDialog: Boolean = false
 )
 
 class SettingsViewModel(
@@ -57,8 +70,11 @@ class SettingsViewModel(
                 NetworkResult.Error("Błąd sieci")
             }
 
+            // TUTAJ ZMIANA: Filtrujemy nulle i puste ciągi, aby nie pokazywać "całej grupy" jako opcji
             val groups = if (groupsResult is NetworkResult.Success) {
-                groupsResult.data ?: emptyList()
+                (groupsResult.data ?: emptyList())
+                    .filter { !it.isNullOrBlank() && it != "null" } // Usuwa puste opcje i ewentualne stringi "null"
+                    .sorted() // Opcjonalnie: sortuje grupy alfabetycznie
             } else {
                 emptyList()
             }
@@ -126,53 +142,122 @@ class SettingsViewModel(
         updateSettings(current.copy(selectedGroupCode = groupCode, selectedSubgroup = ""))
     }
 
-    suspend fun createBackupJson(): String {
+    // --- LOGIKA EKSPORTU ---
+
+    suspend fun createBackupJson(selectedTypes: Set<BackupDataType>): String {
         return withContext(Dispatchers.IO) {
-            val settings = settingsRepository.getSettingsStream().first()
-            val classes = classRepository.getAllClassesStream().first()
-            val tasks = tasksRepository.getAllTasks().first()
-            val grades = gradesRepository.getAllGradesStream().first()
-            val absences = absenceRepository.getAllAbsencesStream().first()
-            val events = eventRepository.getAllEvents().first()
+            val settings = if (selectedTypes.contains(BackupDataType.SETTINGS))
+                settingsRepository.getSettingsStream().first() else null
+
+            val classes = if (selectedTypes.contains(BackupDataType.CLASSES))
+                classRepository.getAllClassesStream().first() else emptyList()
+
+            val tasks = if (selectedTypes.contains(BackupDataType.TASKS))
+                tasksRepository.getAllTasks().first() else emptyList()
+
+            val grades = if (selectedTypes.contains(BackupDataType.GRADES))
+                gradesRepository.getAllGradesStream().first() else emptyList()
+
+            val absences = if (selectedTypes.contains(BackupDataType.ABSENCES))
+                absenceRepository.getAllAbsencesStream().first() else emptyList()
+
+            val events = if (selectedTypes.contains(BackupDataType.EVENTS))
+                eventRepository.getAllEvents().first() else emptyList()
 
             val backupData = BackupData(settings, classes, tasks, grades, absences, events)
             Gson().toJson(backupData)
         }
     }
 
-    fun restoreBackup(jsonString: String) {
+    // --- LOGIKA IMPORTU ---
+
+    fun previewBackupFile(jsonString: String) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, importMessage = null) }
             try {
                 val backupData = Gson().fromJson(jsonString, BackupData::class.java)
-
-                settingsRepository.clearSettings()
-                classRepository.deleteAllClasses()
-                tasksRepository.deleteAllTasks()
-                gradesRepository.deleteAllGrades()
-                absenceRepository.deleteAllAbsences()
-                eventRepository.deleteAllEvents()
-
-                val settings = backupData.settings
-                if (settings != null) settingsRepository.insertSettings(settings)
-
-                classRepository.insertClasses(backupData.classes)
-                backupData.tasks.forEach { tasksRepository.insertTask(it) }
-                backupData.grades.forEach { gradesRepository.insertGrade(it) }
-                backupData.absences.forEach { absenceRepository.insertAbsence(it) }
-                backupData.events.forEach { eventRepository.insertEvent(it) }
-
                 withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(isLoading = false, importMessage = "Przywrócono kopię zapasową!") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            backupPreview = backupData,
+                            showImportDialog = true
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(isLoading = false, importMessage = "Błąd importu: ${e.message}") }
+                    _uiState.update {
+                        it.copy(isLoading = false, importMessage = "Błąd odczytu pliku: ${e.message}")
+                    }
                 }
             }
         }
     }
 
-    fun clearMessage() { _uiState.update { it.copy(importMessage = null) } }
+    fun confirmImport(selectedTypes: Set<BackupDataType>) {
+        val backupData = uiState.value.backupPreview ?: return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.update { it.copy(isLoading = true, showImportDialog = false) }
+            try {
+                // Importujemy tylko wybrane sekcje
+                if (selectedTypes.contains(BackupDataType.SETTINGS) && backupData.settings != null) {
+                    settingsRepository.clearSettings()
+                    settingsRepository.insertSettings(backupData.settings)
+                }
+
+                if (selectedTypes.contains(BackupDataType.CLASSES) && backupData.classes.isNotEmpty()) {
+                    classRepository.deleteAllClasses()
+                    classRepository.insertClasses(backupData.classes)
+                }
+
+                if (selectedTypes.contains(BackupDataType.TASKS)) {
+                    tasksRepository.deleteAllTasks()
+                    backupData.tasks.forEach { tasksRepository.insertTask(it) }
+                }
+
+                if (selectedTypes.contains(BackupDataType.GRADES)) {
+                    gradesRepository.deleteAllGrades()
+                    backupData.grades.forEach { gradesRepository.insertGrade(it) }
+                }
+
+                if (selectedTypes.contains(BackupDataType.ABSENCES)) {
+                    absenceRepository.deleteAllAbsences()
+                    backupData.absences.forEach { absenceRepository.insertAbsence(it) }
+                }
+
+                if (selectedTypes.contains(BackupDataType.EVENTS)) {
+                    eventRepository.deleteAllEvents()
+                    backupData.events.forEach { eventRepository.insertEvent(it) }
+                }
+
+                withContext(Dispatchers.Main) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            importMessage = "Pomyślnie zaimportowano wybrane dane!",
+                            backupPreview = null
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    _uiState.update {
+                        it.copy(isLoading = false, importMessage = "Błąd zapisu: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    fun cancelImport() {
+        _uiState.update { it.copy(showImportDialog = false, backupPreview = null) }
+    }
+
+    fun clearMessage() {
+        _uiState.update { it.copy(importMessage = null) }
+    }
 }
