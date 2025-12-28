@@ -17,13 +17,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // Import sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -38,8 +37,6 @@ fun TaskDetailsScreen(
     viewModel: TaskDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    // Pobieramy taska tylko jeśli stan to Success
     val task = (uiState as? TaskDetailsUiState.Success)?.task
 
     TaskDetailsContent(
@@ -47,15 +44,9 @@ fun TaskDetailsScreen(
         isLoading = uiState is TaskDetailsUiState.Loading,
         onNavigateBack = onNavigateBack,
         onEditTask = onEditTask,
-        onDeleteTask = {
-            viewModel.deleteTask(onSuccess = onNavigateBack)
-        },
-        onDuplicateTask = {
-            viewModel.duplicateTask(onSuccess = onNavigateBack)
-        },
-        onToggleCompletion = {
-            viewModel.toggleTaskCompletion()
-        }
+        onDeleteTask = { viewModel.deleteTask(onSuccess = onNavigateBack) },
+        onDuplicateTask = { viewModel.duplicateTask(onSuccess = onNavigateBack) },
+        onToggleCompletion = { viewModel.toggleTaskCompletion() }
     )
 }
 
@@ -77,7 +68,6 @@ fun TaskDetailsContent(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // Wzór z GradeDetailsScreen: Surface z zaokrąglonymi rogami u góry
     Surface(
         color = surfaceColor,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
@@ -129,17 +119,15 @@ fun TaskDetailsContent(
                                 onDismissRequest = { showMenu = false },
                                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                             ) {
-                                // ZMIANA: Usunięto leadingIcon
                                 DropdownMenuItem(
-                                    text = { Text("Duplikuj", fontFamily = InterFontFamily, color = textColor) },
+                                    text = { Text("Duplikuj", color = textColor) },
                                     onClick = {
                                         showMenu = false
                                         onDuplicateTask()
                                     }
                                 )
-                                // ZMIANA: Usunięto leadingIcon
                                 DropdownMenuItem(
-                                    text = { Text("Usuń", fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
+                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         showMenu = false
                                         showDeleteDialog = true
@@ -180,10 +168,8 @@ fun TaskDetailsContent(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = task.title,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 28.sp,
-                                lineHeight = 36.sp,
+                                // headlineMedium: 28sp, Normal
+                                style = MaterialTheme.typography.headlineMedium,
                                 color = textColor,
                                 modifier = Modifier.padding(bottom = 4.dp),
                                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
@@ -191,9 +177,8 @@ fun TaskDetailsContent(
 
                             Text(
                                 text = formatTaskDate(task.dueDate),
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
+                                // bodyLarge: 16sp. Chcemy Medium.
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                                 color = subTextColor
                             )
                         }
@@ -201,7 +186,7 @@ fun TaskDetailsContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // --- STATUS (Klikalny wiersz) ---
+                    // --- STATUS ---
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -226,26 +211,18 @@ fun TaskDetailsContent(
                         Column(modifier = Modifier.padding(top = 4.dp)) {
                             Text(
                                 text = "STATUS",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = subTextColor,
-                                letterSpacing = 0.5.sp,
                                 modifier = Modifier.padding(bottom = 2.dp)
                             )
 
                             Text(
                                 text = if (task.isCompleted) "Ukończone" else "Do zrobienia",
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
-                                color = if (task.isCompleted) MaterialTheme.colorScheme.primary else textColor,
-                                lineHeight = 22.sp
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                color = if (task.isCompleted) MaterialTheme.colorScheme.primary else textColor
                             )
                         }
                     }
-
-                    // --- SZCZEGÓŁY ---
 
                     if (!task.subjectName.isNullOrEmpty()) {
                         DetailSectionTask(
@@ -269,7 +246,6 @@ fun TaskDetailsContent(
                         )
                     }
 
-                    // Termin ze szczegółami
                     val timeString = if (task.isAllDay) "Cały dzień" else {
                         val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
                             .withZone(ZoneId.systemDefault())
@@ -306,8 +282,8 @@ fun TaskDetailsContent(
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Usuń zadanie", fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold) },
-                text = { Text("Czy na pewno chcesz usunąć to zadanie?", fontFamily = InterFontFamily) },
+                title = { Text("Usuń zadanie", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)) },
+                text = { Text("Czy na pewno chcesz usunąć to zadanie?", style = MaterialTheme.typography.bodyMedium) },
                 confirmButton = {
                     TextButton(onClick = {
                         onDeleteTask()
@@ -325,8 +301,6 @@ fun TaskDetailsContent(
         }
     }
 }
-
-// --- Helpery ---
 
 @Composable
 private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
@@ -370,21 +344,17 @@ private fun DetailSectionTask(
         Column(modifier = Modifier.padding(top = 4.dp)) {
             Text(
                 text = label,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
+                // labelSmall: 11sp, Medium
+                style = MaterialTheme.typography.labelSmall,
                 color = labelColor,
-                letterSpacing = 0.5.sp,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
 
             Text(
                 text = text,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                color = textColor,
-                lineHeight = 22.sp
+                // bodyLarge: 16sp, Normal -> Medium
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = textColor
             )
         }
     }

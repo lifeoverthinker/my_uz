@@ -19,11 +19,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // Import sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
 @Composable
@@ -107,15 +106,12 @@ fun EventDetailsScreen(
                         Column {
                             Text(
                                 text = event.title,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 28.sp,
-                                lineHeight = 36.sp,
+                                // headlineMedium: 28sp, Normal
+                                style = MaterialTheme.typography.headlineMedium,
                                 color = textColor,
                                 modifier = Modifier.padding(bottom = 4.dp)
                             )
 
-                            // DATA + GODZINA W JEDNEJ LINII (jak w ClassDetails)
                             val dateTimeText = if (event.timeRange.isNotEmpty()) {
                                 "${event.date}, ${event.timeRange}"
                             } else {
@@ -124,9 +120,7 @@ fun EventDetailsScreen(
 
                             Text(
                                 text = dateTimeText,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 16.sp,
+                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                                 color = subTextColor
                             )
                         }
@@ -134,7 +128,6 @@ fun EventDetailsScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Lokalizacja
                     if (event.location.isNotEmpty()) {
                         DetailSection(
                             label = "LOKALIZACJA",
@@ -146,7 +139,6 @@ fun EventDetailsScreen(
                         )
                     }
 
-                    // Opis
                     if (event.description.isNotEmpty()) {
                         DetailSection(
                             label = "OPIS",
@@ -164,7 +156,7 @@ fun EventDetailsScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = "Nie znaleziono wydarzenia",
-                        fontFamily = InterFontFamily,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = subTextColor
                     )
                 }
@@ -214,21 +206,15 @@ private fun DetailSection(
         Column(modifier = Modifier.padding(top = 4.dp)) {
             Text(
                 text = label,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
+                style = MaterialTheme.typography.labelSmall,
                 color = labelColor,
-                letterSpacing = 0.5.sp,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
 
             Text(
                 text = text,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                color = textColor,
-                lineHeight = 22.sp
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = textColor
             )
         }
     }
