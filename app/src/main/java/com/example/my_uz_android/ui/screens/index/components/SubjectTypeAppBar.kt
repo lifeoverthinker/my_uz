@@ -20,13 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // Import sp
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.theme.InterFontFamily
 
 @Composable
 fun SubjectTypeAppBar(
@@ -35,7 +33,7 @@ fun SubjectTypeAppBar(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val iconTint = MaterialTheme.colorScheme.onSurface // Dark Mode friendly
+    val iconTint = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(
@@ -45,7 +43,6 @@ fun SubjectTypeAppBar(
             .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Przycisk Wstecz
         Box(
             modifier = Modifier
                 .size(48.dp)
@@ -63,33 +60,23 @@ fun SubjectTypeAppBar(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Tytuły
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = subjectName,
-                style = TextStyle(
-                    color = iconTint,
-                    fontSize = 20.sp,
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    lineHeight = 28.sp
-                ),
+                // titleMedium: 16sp, Medium. Ale tu chcemy 20sp.
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp),
+                color = iconTint,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = className,
-                style = TextStyle(
-                    color = subTextColor,
-                    fontSize = 12.sp,
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Normal,
-                    lineHeight = 16.sp,
-                    letterSpacing = 0.40.sp
-                )
+                // bodySmall: 12sp.
+                style = MaterialTheme.typography.bodySmall,
+                color = subTextColor
             )
         }
     }

@@ -15,28 +15,27 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 
-// --- Modele Stanu ---
+// --- Modele Stanu (lokalne dla ViewModelu, mapowane później na UI) ---
 data class ClassTypeState(
     val name: String,
-    val average: Double,
+    val average: Double?,
     val grades: List<GradeItem>
 )
 
 data class SubjectState(
     val code: String,
     val name: String,
-    val average: Double,
+    val average: Double?,
     val types: List<ClassTypeState>
 )
 
 data class GradesUiState(
     val subjects: List<SubjectState> = emptyList(),
-    val average: Double = 0.0,
+    val average: Double? = null,
     val isLoading: Boolean = false,
     val allGrades: List<GradeEntity> = emptyList()
 )
 
-// --- ViewModel ---
 class GradesViewModel(
     private val gradesRepository: GradesRepository,
     private val classRepository: ClassRepository,
@@ -47,7 +46,7 @@ class GradesViewModel(
         gradesRepository.getAllGradesStream(),
         classRepository.getAllClassesStream()
     ) { grades, classes ->
-        // 1. Grupujemy przedmioty z planu zajęć
+        // 1. Grupujemy przedmioty z planu zajęć (żeby widzieć przedmioty bez ocen)
         val subjectsFromSchedule = classes
             .groupBy { it.subjectName }
             .map { (subjectName, subjectClasses) ->
@@ -67,7 +66,7 @@ class GradesViewModel(
             val types = classTypes.map { typeName ->
                 val typeGrades = subjectGrades.filter { it.classType == typeName }
 
-                // Mapujemy oceny na GradeItem
+                // Mapujemy oceny na GradeItem (do wyświetlenia w bąbelkach)
                 val gradeItems = typeGrades.map { grade ->
                     GradeItem(
                         id = grade.id,
@@ -84,9 +83,7 @@ class GradesViewModel(
 
                 val typeAverage = if (numericGrades.isNotEmpty()) {
                     numericGrades.average()
-                } else {
-                    0.0
-                }
+                } else null
 
                 ClassTypeState(
                     name = typeName,
@@ -100,10 +97,8 @@ class GradesViewModel(
             val subjectAverage = if (numericSubjectGrades.isNotEmpty()) {
                 val sum = numericSubjectGrades.sumOf { it.grade * it.weight }
                 val weightSum = numericSubjectGrades.sumOf { it.weight }
-                if (weightSum > 0) sum / weightSum else 0.0
-            } else {
-                0.0
-            }
+                if (weightSum > 0) sum / weightSum else null
+            } else null
 
             SubjectState(
                 code = subjectName.take(3).uppercase(),
@@ -118,10 +113,8 @@ class GradesViewModel(
         val overallAverage = if (allNumericGrades.isNotEmpty()) {
             val sum = allNumericGrades.sumOf { it.grade * it.weight }
             val weightSum = allNumericGrades.sumOf { it.weight }
-            if (weightSum > 0) sum / weightSum else 0.0
-        } else {
-            0.0
-        }
+            if (weightSum > 0) sum / weightSum else null
+        } else null
 
         GradesUiState(
             subjects = subjects,

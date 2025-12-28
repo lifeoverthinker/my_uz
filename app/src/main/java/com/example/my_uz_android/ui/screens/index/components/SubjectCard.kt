@@ -13,39 +13,31 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.my_uz_android.ui.theme.InterFontFamily
+import androidx.compose.ui.unit.sp // Import sp
 
 @Composable
 fun SubjectCard(
     subjectName: String,
     subjectCode: String,
-    average: Double? = null, // Jeśli null, wyświetli "-"
+    average: Double? = null,
     onClick: () -> Unit = {}
 ) {
-    // Tło i cień z Figmy
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp, // Przybliżenie cieni
-                shape = RoundedCornerShape(8.dp),
-                clip = false
-            )
             .clickable { onClick() },
-        color = Color(0xFFF8F1FA), // Kolor: F8F1FA
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shadowElevation = 2.dp,
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
@@ -55,84 +47,58 @@ fun SubjectCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            // --- Lewa strona: Nazwa i Kod ---
             Column(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = subjectName,
-                    style = TextStyle(
-                        color = Color(0xFF1D1B20),
-                        fontSize = 16.sp,
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.W500,
-                        lineHeight = 24.sp,
-                        letterSpacing = 0.15.sp
-                    )
+                    // bodyLarge: 16sp. Medium.
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = subjectCode,
-                    style = TextStyle(
-                        color = Color(0xFF1D1B20),
-                        fontSize = 14.sp,
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.W400,
-                        lineHeight = 20.sp,
-                        letterSpacing = 0.25.sp
-                    )
+                    // bodyMedium: 14sp.
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            // --- Prawa strona: Średnia i Ikona ---
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Kolumna ze średnią
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Wartość średniej (lub myślnik, jeśli average == null)
                     Box(
                         modifier = Modifier.width(45.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            // Używamy formatowania do wyświetlenia średniej z jednym miejscem po przecinku
                             text = average?.let { String.format("%.1f", it) } ?: "-",
                             textAlign = TextAlign.Center,
-                            style = TextStyle(
-                                color = Color(0xFF1D1B20),
-                                fontSize = 22.sp,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.W400,
-                                lineHeight = 28.sp
-                            )
+                            // titleLarge: 22sp.
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
-                    // Napis "średnia"
                     Box(
                         modifier = Modifier.width(45.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "średnia",
-                            style = TextStyle(
-                                color = Color(0xFF1D1B20),
-                                fontSize = 12.sp,
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.W400,
-                                lineHeight = 16.sp,
-                                letterSpacing = 0.4.sp
-                            )
+                            // bodySmall: 12sp.
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
 
-                // Ikona rozwijania
                 Box(
                     modifier = Modifier.size(24.dp),
                     contentAlignment = Alignment.Center
@@ -140,7 +106,7 @@ fun SubjectCard(
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = "Rozwiń",
-                        tint = Color(0xFF1D1B20)
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -148,7 +114,6 @@ fun SubjectCard(
     }
 }
 
-// Przykład użycia komponentu z wartością średniej "5.0"
 @Preview
 @Composable
 fun PreviewSubjectCardWithAverage() {
@@ -156,7 +121,7 @@ fun PreviewSubjectCardWithAverage() {
         SubjectCard(
             subjectName = "Bazy danych",
             subjectCode = "BD-2025",
-            average = 5.0 // Średnia 5.0
+            average = 5.0
         )
     }
 }

@@ -45,7 +45,6 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     var showExportDialog by remember { mutableStateOf(false) }
@@ -154,7 +153,7 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Zapisz ustawienia", fontWeight = FontWeight.Bold)
+                    Text("Zapisz ustawienia", style = MaterialTheme.typography.labelLarge)
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -178,6 +177,7 @@ fun SettingsScreen(
         }
     }
 
+    // --- Dialogi ---
     if (showExportDialog) {
         DataTypeSelectionDialog(
             title = "Eksportuj dane",
@@ -211,29 +211,31 @@ fun SettingsScreen(
             initialSelection = availableTypes,
             availableTypes = availableTypes,
             onDismiss = { viewModel.cancelImport() },
-            onConfirm = { selection ->
-                viewModel.confirmImport(selection)
-            }
+            onConfirm = { selection -> viewModel.confirmImport(selection) }
         )
     }
 }
 
+// --- SUGGESTION 3: Nowoczesny nagłówek sekcji ---
 @Composable
 fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
+    // Używamy Surface z kolorem surfaceContainer (lekko szary/fioletowy w M3)
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(
-            modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                .padding(8.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            // Tytuł wewnątrz karty
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 8.dp, start = 8.dp)
+            )
             content()
         }
     }
@@ -251,12 +253,21 @@ fun SettingsSwitchItem(
         modifier = Modifier.fillMaxWidth().padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(painterResource(id = iconRes), contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurface)
+        Icon(
+            painterResource(id = iconRes),
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.onSurface
+        )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
             if (subtitle != null) {
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
         Switch(checked = isChecked, onCheckedChange = onCheckedChange)
@@ -272,7 +283,10 @@ fun SettingsActionItem(
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -286,14 +300,22 @@ fun SettingsActionItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
                 color = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
             )
             if (subtitle != null) {
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
-        Icon(painterResource(id = R.drawable.ic_chevron_right), contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(
+            painterResource(id = R.drawable.ic_chevron_right),
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -303,13 +325,10 @@ fun ClassColorPickerItem(
     selectedColorIndex: Int,
     onColorSelected: (Int) -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(8.dp)
-    ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
         Text(
             text = classType,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
             modifier = Modifier.padding(bottom = 8.dp),
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -359,7 +378,7 @@ fun DataTypeSelectionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold) },
+        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
             Column {
                 Text(
@@ -373,11 +392,7 @@ fun DataTypeSelectionDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(enabled = isAvailable) {
-                                selection = if (selection.contains(type)) {
-                                    selection - type
-                                } else {
-                                    selection + type
-                                }
+                                selection = if (selection.contains(type)) selection - type else selection + type
                             }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -405,13 +420,11 @@ fun DataTypeSelectionDialog(
                 onClick = { onConfirm(selection) },
                 enabled = selection.isNotEmpty()
             ) {
-                Text(confirmText, fontWeight = FontWeight.Bold)
+                Text(confirmText, style = MaterialTheme.typography.labelLarge)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Anuluj")
-            }
+            TextButton(onClick = onDismiss) { Text("Anuluj") }
         }
     )
 }

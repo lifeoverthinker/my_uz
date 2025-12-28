@@ -22,16 +22,13 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.AbsenceEntity
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
 import java.time.ZoneId
@@ -92,7 +89,7 @@ fun AbsencesScreen(
                 title = { Text("Limit nieobecności") },
                 text = {
                     Column {
-                        Text("Dla: ${ClassTypeUtils.getFullName(limitEditType)}")
+                        Text("Dla: ${ClassTypeUtils.getFullName(limitEditType)}", style = MaterialTheme.typography.bodyMedium)
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = limitEditValue,
@@ -153,14 +150,8 @@ fun AbsenceCard(
         ) {
             Text(
                 text = subjectData.subjectName,
-                style = TextStyle(
-                    color = contentColor,
-                    fontSize = 16.sp,
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.W500,
-                    letterSpacing = 0.15.sp,
-                    lineHeight = 24.sp
-                ),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+                color = contentColor,
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 16.dp),
@@ -229,10 +220,7 @@ fun AbsenceTypeSection(
         ) {
             Text(
                 text = fullTypeName,
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
-                )
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
             )
 
             Surface(
@@ -303,14 +291,7 @@ fun AbsenceTypeSection(
                     )
                     Text(
                         text = "Dodaj nieobecność",
-                        style = TextStyle(
-                            color = primaryColor,
-                            fontSize = 12.sp,
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.W500,
-                            letterSpacing = 0.4.sp,
-                            lineHeight = 16.sp
-                        )
+                        style = MaterialTheme.typography.labelMedium.copy(color = primaryColor)
                     )
                 }
             }
@@ -369,7 +350,8 @@ fun AbsenceDateItem(
                 Icon(
                     painter = painterResource(R.drawable.ic_trash),
                     contentDescription = "Usuń",
-                    tint = Color.Black,
+                    // ZMIANA: Używamy koloru z motywu (error lub onSurfaceVariant)
+                    tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(20.dp)
                 )
             }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,15 +24,17 @@ fun GradesScreen(
     viewModel: GradesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Lokalne zarządzanie stanem rozwinięcia kart - proste i skuteczne
     val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
 
     if (uiState.isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     } else if (uiState.subjects.isEmpty()) {
         EmptyStateMessage(
-            message = "Brak przedmiotów w indeksie",
+            message = "Brak przedmiotów w indeksie.\nUpewnij się, że wybrałeś plan zajęć w ustawieniach.",
             modifier = Modifier.padding(16.dp)
         )
     } else {
@@ -39,13 +42,14 @@ fun GradesScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
+            // Odstęp na dole dla FABa z IndexScreen
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 AverageCard(
                     label = "Średnia z bieżącego semestru",
-                    average = if (uiState.average > 0) uiState.average else null
+                    average = uiState.average
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -53,10 +57,11 @@ fun GradesScreen(
             items(uiState.subjects) { subject ->
                 val isExpanded = expandedStates[subject.name] ?: false
 
+                // Mapowanie modelu z ViewModel na model komponentu UI
                 val mappedClassTypes = subject.types.map { type ->
                     SubjectTypeState(
                         typeName = type.name,
-                        average = if (type.average > 0) type.average else null,
+                        average = type.average,
                         grades = type.grades
                     )
                 }
@@ -64,7 +69,7 @@ fun GradesScreen(
                 ExpandableSubjectCard(
                     subjectName = subject.name,
                     subjectCode = subject.code,
-                    overallAverage = if (subject.average > 0) subject.average else null,
+                    overallAverage = subject.average,
                     classTypes = mappedClassTypes,
                     isExpanded = isExpanded,
                     onExpandClick = { expandedStates[subject.name] = !isExpanded },

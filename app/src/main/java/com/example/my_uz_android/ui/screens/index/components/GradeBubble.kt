@@ -10,12 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.my_uz_android.ui.theme.InterFontFamily
 
 data class GradeItem(
     val id: Int,
@@ -28,24 +24,23 @@ fun GradeBubble(
     onGradeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Używamy secondaryContainer (jasny fiolet w light mode)
+    val backgroundColor = MaterialTheme.colorScheme.secondaryContainer
+    val textColor = MaterialTheme.colorScheme.onSecondaryContainer
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFFE9DEF8))
+            .background(backgroundColor)
             .clickable { onGradeClick() }
             .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = grade.value,
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                letterSpacing = 0.4.sp,
-                color = Color(0xFF4B4358)
-            )
+            // bodySmall: 12sp.
+            style = MaterialTheme.typography.bodySmall,
+            color = textColor
         )
     }
 }

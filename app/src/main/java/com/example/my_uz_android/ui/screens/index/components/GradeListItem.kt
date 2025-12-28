@@ -15,7 +15,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.data.models.GradeEntity
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -27,7 +26,6 @@ fun GradeListItem(
     modifier: Modifier = Modifier
 ) {
     val textColor = MaterialTheme.colorScheme.onSurface
-    val primaryColor = MaterialTheme.colorScheme.primary
     val containerColor = MaterialTheme.colorScheme.primaryContainer
     val onContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
 
@@ -38,7 +36,7 @@ fun GradeListItem(
                 .clickable { onClick() }
                 .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween // Rozrzucamy elementy równo
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             // KOLUMNA 1: Ocena w kółku
             Box(
@@ -52,12 +50,9 @@ fun GradeListItem(
                         if (grade.grade % 1.0 == 0.0) grade.grade.toInt().toString()
                         else grade.grade.toString()
                     },
-                    style = MaterialTheme.typography.labelLarge.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp,
-                        color = onContainerColor
-                    ),
+                    // labelLarge: 14sp, Medium.
+                    style = MaterialTheme.typography.labelLarge,
+                    color = onContainerColor,
                     textAlign = TextAlign.Center
                 )
             }
@@ -65,30 +60,23 @@ fun GradeListItem(
             // KOLUMNA 2: Opis (Środek)
             Text(
                 text = grade.description ?: "Aktywność",
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 14.sp,
-                    color = textColor
-                ),
+                // bodyMedium: 14sp, Normal.
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f) // Zajmuje dostępną przestrzeń
+                modifier = Modifier.weight(1f)
             )
 
             // KOLUMNA 3: Data (Prawa)
             Text(
                 text = formatDate(grade.date),
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 12.sp,
-                    color = textColor.copy(alpha = 0.7f)
-                ),
+                // bodySmall: 12sp.
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End
             )
         }
 
-        // Divider
         HorizontalDivider(
             color = MaterialTheme.colorScheme.outlineVariant,
             thickness = 1.dp
