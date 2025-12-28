@@ -88,7 +88,9 @@ fun SettingsScreen(
                 if (uiState.uniqueClassTypes.isNotEmpty()) {
                     SettingsSection(title = "Kolory zajęć") {
                         uiState.uniqueClassTypes.forEach { classType ->
-                            val colorIndex = uiState.classColorMap[classType] ?: 0
+                            val colorIndex = uiState.classColorMap[classType]
+                                ?: kotlin.math.abs(classType.hashCode()) % ClassColorPalette.size // Domyślny, stały kolor
+
                             ClassColorPickerItem(
                                 classType = classType,
                                 selectedColorIndex = colorIndex,
@@ -128,7 +130,19 @@ fun SettingsScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(40.dp))
+                // NOWY PRZYCISK ZAPISZ
+                Button(
+                    onClick = {
+                        // Ponieważ zmiany są zapisywane reaktywnie, ten przycisk służy jako potwierdzenie dla użytkownika
+                        Toast.makeText(context, "Ustawienia zostały zapisane", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Zapisz ustawienia", fontWeight = FontWeight.Bold)
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
                     text = "MyUZ v1.0.0",
