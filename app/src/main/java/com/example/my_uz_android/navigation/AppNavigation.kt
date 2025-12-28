@@ -187,8 +187,10 @@ fun AppNavigation(
                     onTasksClick = { navController.navigate("tasks") },
                     onAccountClick = { navController.navigate(Screen.Account.route) },
                     onClassClick = { classEntity ->
-                        // Kliknięcie w Moim Planie (zawsze ID > 0)
                         navController.navigate("class_details/${classEntity.id}")
+                    },
+                    onShowPreview = { // ✅ Nowa lambda obsługująca nawigację z Drawera
+                        navController.navigate("schedule_preview")
                     },
                     viewModel = calendarViewModel
                 )
