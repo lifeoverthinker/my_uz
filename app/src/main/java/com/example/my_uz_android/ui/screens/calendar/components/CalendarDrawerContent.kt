@@ -15,222 +15,159 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.FavoriteEntity
-import com.example.my_uz_android.data.models.ScheduleType
-import com.example.my_uz_android.ui.theme.InterFontFamily
+
+// Definicje kolorów z Twojego schematu
+private val ColorSurface = Color(0xffffffff)
+private val ColorSelectedContainer = Color(0xffe8def8)
+private val ColorOnSurfaceVariant = Color(0xff49454f)
+private val ColorOnSecondaryContainer = Color(0xff4a4459)
+private val ColorOutline = Color(0xff787579)
 
 @Composable
 fun CalendarDrawerContent(
     favorites: List<FavoriteEntity>,
-    selectedResourceId: String?,
-    currentScreen: String = "calendar", // "calendar" lub "tasks"
+    selectedResourceId: String?, // ID aktualnie wybranego planu (lub null dla "Mój Plan")
+    currentScreen: String, // "calendar" lub "tasks"
     onMyPlanClick: () -> Unit,
     onTasksClick: () -> Unit,
     onFavoriteClick: (FavoriteEntity) -> Unit,
-    onSearchClick: () -> Unit,
-    onSettingsClick: () -> Unit,
     onCloseDrawer: () -> Unit
 ) {
-    val backgroundColor = MaterialTheme.colorScheme.surface
-    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
-    val secondaryContainer = MaterialTheme.colorScheme.secondaryContainer
-    val onSecondaryContainer = MaterialTheme.colorScheme.onSecondaryContainer
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    val scrollState = rememberScrollState()
+    val groupFavorites = favorites.filter { it.type == "group" }
+    val teacherFavorites = favorites.filter { it.type == "teacher" }
 
-    ModalDrawerSheet(
-        drawerContainerColor = backgroundColor,
-        drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp),
-        modifier = Modifier.width(320.dp)
+    Column(
+        modifier = Modifier
+            .width(300.dp) // Lekko poszerzone dla bezpieczeństwa, w Twoim kodzie było 288dp + padding
+            .fillMaxHeight()
+            .background(ColorSurface, RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp))
+            .padding(12.dp)
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.Start,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
-                .padding(12.dp)
-        ) {
-            SectionHeader(text = "Menu", textColor = onSurfaceVariant)
+        // --- Sekcja: Menu ---
+        DrawerSectionHeader(text = "Menu")
 
-            DrawerItem(
-                label = "Mój Plan",
-                iconRes = R.drawable.ic_home,
-                // Zaznaczone tylko gdy jesteśmy w kalendarzu i brak wybranego zasobu (plan domyślny)
-                selected = currentScreen == "calendar" && selectedResourceId == null,
-                onClick = {
-                    onMyPlanClick()
-                    onCloseDrawer()
-                },
-                activeColor = secondaryContainer,
-                activeContentColor = onSecondaryContainer,
-                inactiveContentColor = onSurfaceVariant
-            )
+        // Item: Kalendarz (Mój Plan)
+        DrawerItem(
+            label = "Kalendarz",
+            iconRes = R.drawable.ic_calendar,
+            isSelected = currentScreen == "calendar" && selectedResourceId == null,
+            onClick = onMyPlanClick
+        )
 
-            DrawerItem(
-                label = "Terminarz",
-                iconRes = R.drawable.ic_calendar_check,
-                // Zaznaczone gdy jesteśmy w tasks
-                selected = currentScreen == "tasks",
-                onClick = {
-                    onTasksClick()
-                    onCloseDrawer()
-                },
-                activeColor = secondaryContainer,
-                activeContentColor = onSecondaryContainer,
-                inactiveContentColor = onSurfaceVariant
-            )
+        // Item: Terminarz (Zadania)
+        DrawerItem(
+            label = "Terminarz",
+            iconRes = R.drawable.ic_check_square_broken,
+            isSelected = currentScreen == "tasks",
+            onClick = onTasksClick
+        )
 
-            DrawerItem(
-                label = "Wyszukaj plan",
-                iconRes = R.drawable.ic_search,
-                selected = false,
-                onClick = {
-                    onSearchClick()
-                    onCloseDrawer()
-                },
-                activeColor = secondaryContainer,
-                activeContentColor = onSecondaryContainer,
-                inactiveContentColor = onSurfaceVariant
-            )
+        DrawerDivider()
 
-            DrawerDivider(color = dividerColor)
-
-            val groupFavorites = favorites.filter { it.type == ScheduleType.GROUP.name }
-            if (groupFavorites.isNotEmpty()) {
-                SectionHeader(text = "Grupy", textColor = onSurfaceVariant)
-                groupFavorites.forEach { fav ->
-                    DrawerItem(
-                        label = fav.name,
-                        iconRes = R.drawable.ic_users,
-                        // Zaznaczone gdy Kalendarz i ID się zgadza
-                        selected = currentScreen == "calendar" && selectedResourceId == fav.resourceId,
-                        onClick = {
-                            onFavoriteClick(fav)
-                            onCloseDrawer()
-                        },
-                        activeColor = secondaryContainer,
-                        activeContentColor = onSecondaryContainer,
-                        inactiveContentColor = onSurfaceVariant
-                    )
-                }
-                DrawerDivider(color = dividerColor)
+        // --- Sekcja: Grupy ---
+        if (groupFavorites.isNotEmpty()) {
+            DrawerSectionHeader(text = "Grupy")
+            groupFavorites.forEach { fav ->
+                DrawerItem(
+                    label = fav.name,
+                    iconRes = R.drawable.ic_users,
+                    isSelected = selectedResourceId == fav.resourceId,
+                    onClick = { onFavoriteClick(fav) }
+                )
             }
+            DrawerDivider()
+        }
 
-            val teacherFavorites = favorites.filter { it.type == ScheduleType.TEACHER.name }
-            if (teacherFavorites.isNotEmpty()) {
-                SectionHeader(text = "Nauczyciele", textColor = onSurfaceVariant)
-                teacherFavorites.forEach { fav ->
-                    DrawerItem(
-                        label = fav.name,
-                        iconRes = R.drawable.ic_user,
-                        selected = currentScreen == "calendar" && selectedResourceId == fav.resourceId,
-                        onClick = {
-                            onFavoriteClick(fav)
-                            onCloseDrawer()
-                        },
-                        activeColor = secondaryContainer,
-                        activeContentColor = onSecondaryContainer,
-                        inactiveContentColor = onSurfaceVariant
-                    )
-                }
-                DrawerDivider(color = dividerColor)
+        // --- Sekcja: Nauczyciele ---
+        if (teacherFavorites.isNotEmpty()) {
+            DrawerSectionHeader(text = "Nauczyciele")
+            teacherFavorites.forEach { fav ->
+                DrawerItem(
+                    label = fav.name,
+                    iconRes = R.drawable.ic_user, // lub ic_stand / ic_graduation_hat
+                    isSelected = selectedResourceId == fav.resourceId,
+                    onClick = { onFavoriteClick(fav) }
+                )
             }
-
-            SectionHeader(text = "Inne", textColor = onSurfaceVariant)
-
-            DrawerItem(
-                label = "Ustawienia",
-                iconRes = R.drawable.ic_settings,
-                selected = false,
-                onClick = {
-                    onSettingsClick()
-                    onCloseDrawer()
-                },
-                activeColor = secondaryContainer,
-                activeContentColor = onSecondaryContainer,
-                inactiveContentColor = onSurfaceVariant
-            )
+            // Opcjonalny divider jeśli coś byłoby dalej
         }
     }
 }
 
 @Composable
-private fun SectionHeader(text: String, textColor: Color) {
+fun DrawerSectionHeader(text: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 18.dp)
+            .padding(horizontal = 16.dp, vertical = 18.dp),
     ) {
         Text(
+            style = TextStyle(fontWeight = FontWeight(500), fontSize = 14.sp, lineHeight = 20.sp),
             text = text,
-            style = TextStyle(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight(500),
-                fontSize = 14.sp,
-                lineHeight = 20.sp
-            ),
-            color = textColor
+            color = ColorOnSurfaceVariant,
         )
     }
 }
 
 @Composable
-private fun DrawerItem(
+fun DrawerItem(
     label: String,
     iconRes: Int,
-    selected: Boolean,
-    onClick: () -> Unit,
-    activeColor: Color,
-    activeContentColor: Color,
-    inactiveContentColor: Color
+    isSelected: Boolean,
+    onClick: () -> Unit
 ) {
-    val backgroundColor = if (selected) activeColor else Color.Transparent
-    val contentColor = if (selected) activeContentColor else inactiveContentColor
-    val fontWeight = if (selected) FontWeight(600) else FontWeight(500)
+    val backgroundColor = if (isSelected) ColorSelectedContainer else Color.Transparent
+    val contentColor = if (isSelected) ColorOnSecondaryContainer else ColorOnSurfaceVariant
+    val fontWeight = if (isSelected) FontWeight(600) else FontWeight(500)
 
     Box(
         modifier = Modifier
             .height(56.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(100.dp))
+            .clip(RoundedCornerShape(100.dp)) // Kształt pigułki dla zaznaczenia
             .background(backgroundColor)
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
     ) {
         Row(
             modifier = Modifier
                 .padding(start = 16.dp, top = 16.dp, end = 24.dp, bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Icon
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = contentColor
             )
+            // Label
             Text(
-                text = label,
                 modifier = Modifier.weight(1f),
-                style = TextStyle(
-                    fontFamily = InterFontFamily,
-                    fontWeight = fontWeight,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
-                ),
-                color = contentColor
+                style = TextStyle(fontWeight = fontWeight, fontSize = 14.sp, lineHeight = 20.sp),
+                text = label,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
 
 @Composable
-private fun DrawerDivider(color: Color) {
-    Box(
+fun DrawerDivider() {
+    HorizontalDivider(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        HorizontalDivider(color = color)
-    }
+            .padding(horizontal = 16.dp, vertical = 8.dp), // Dodano lekki padding pionowy dla oddechu
+        color = Color.LightGray.copy(alpha = 0.5f) // Subtelny separator
+    )
 }

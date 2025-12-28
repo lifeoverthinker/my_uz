@@ -129,21 +129,21 @@ fun TaskDetailsContent(
                                 onDismissRequest = { showMenu = false },
                                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                             ) {
+                                // ZMIANA: Usunięto leadingIcon
                                 DropdownMenuItem(
                                     text = { Text("Duplikuj", fontFamily = InterFontFamily, color = textColor) },
                                     onClick = {
                                         showMenu = false
                                         onDuplicateTask()
-                                    },
-                                    leadingIcon = { Icon(painterResource(R.drawable.ic_plus), null, tint = textColor) }
+                                    }
                                 )
+                                // ZMIANA: Usunięto leadingIcon
                                 DropdownMenuItem(
                                     text = { Text("Usuń", fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         showMenu = false
                                         showDeleteDialog = true
-                                    },
-                                    leadingIcon = { Icon(painterResource(R.drawable.ic_trash), null, tint = MaterialTheme.colorScheme.error) }
+                                    }
                                 )
                             }
                         }
@@ -212,7 +212,6 @@ fun TaskDetailsContent(
                     ) {
                         DetailIconBox {
                             Icon(
-                                // ✅ NAPRAWA: Używamy ikon, które na pewno masz w projekcie
                                 painter = painterResource(
                                     if (task.isCompleted) R.drawable.ic_check_square_broken else R.drawable.ic_square
                                 ),

@@ -5,13 +5,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -22,6 +26,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.my_uz_android.R
+import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.screens.account.AboutAppScreen
 import com.example.my_uz_android.ui.screens.account.AccountScreen
 import com.example.my_uz_android.ui.screens.account.EditPersonalDataScreen
@@ -38,13 +43,19 @@ import com.example.my_uz_android.ui.screens.index.IndexScreen
 import com.example.my_uz_android.ui.screens.index.SubjectGradesScreen
 import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.ui.screens.calendar.CalendarScreen
+import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
+import com.example.my_uz_android.ui.screens.calendar.ScheduleSource
+import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
 import com.example.my_uz_android.ui.screens.calendar.tasks.TasksScreen
 import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditScreen
 import com.example.my_uz_android.ui.screens.calendar.search.ScheduleSearchScreen
-
+import com.example.my_uz_android.ui.screens.calendar.search.ScheduleSearchViewModel
+import kotlinx.coroutines.launch
+import com.example.my_uz_android.ui.screens.calendar.SchedulePreviewScreen
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
-    data object Calendar : Screen("calendar", "Kalendarz", R.drawable.ic_calendar)
+    data object Calendar : Screen("calendar", "Kalendarz", R.drawable.ic_calendar_check)
     data object Index : Screen("index", "Indeks", R.drawable.ic_graduation_hat)
     data object Account : Screen("account", "Konto", R.drawable.ic_user)
 }
@@ -168,12 +179,53 @@ fun AppNavigation(
                 )
             }
 
+            // --- ZAKTUALIZOWANY KALENDARZ ---
             composable(Screen.Calendar.route) {
-                com.example.my_uz_android.ui.screens.calendar.CalendarScreen(
+                val calendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                CalendarScreen(
                     onSearchClick = { navController.navigate("schedule_search") },
                     onTasksClick = { navController.navigate("tasks") },
                     onAccountClick = { navController.navigate(Screen.Account.route) },
-                    onClassClick = { classId -> navController.navigate("class_details/$classId") }
+                    onClassClick = { classEntity ->
+                        navController.navigate("class_details/${classEntity.id}")
+                    },
+                    onShowPreview = { // ✅ Nowa lambda obsługująca nawigację z Drawera
+                        navController.navigate("schedule_preview")
+                    },
+                    viewModel = calendarViewModel
+                )
+            }
+
+            // --- NOWY EKRAN PODGLĄDU (Współdzielony ViewModel) ---
+            composable("schedule_preview") {
+                // Pobieramy instancję ViewModel z grafu Kalendarza, aby mieć dostęp do 'networkClasses'
+                val parentEntry = remember(navController.currentBackStackEntry) {
+                    navController.getBackStackEntry(Screen.Calendar.route)
+                }
+                val calendarViewModel: CalendarViewModel = viewModel(parentEntry, factory = AppViewModelProvider.Factory)
+
+                SchedulePreviewScreen(
+                    navController = navController,
+                    viewModel = calendarViewModel,
+                    onClassClick = { classEntity ->
+                        // Dla podglądu ID jest 0, więc używamy mechanizmu tymczasowego
+                        calendarViewModel.setTemporaryClassForDetails(classEntity)
+                        navController.navigate("class_details/-1")
+                    }
+                )
+            }
+
+            composable("schedule_search") {
+                val parentEntry = remember(navController.currentBackStackEntry) {
+                    navController.getBackStackEntry(Screen.Calendar.route)
+                }
+                val calendarViewModel: CalendarViewModel = viewModel(parentEntry, factory = AppViewModelProvider.Factory)
+                val searchViewModel: ScheduleSearchViewModel = viewModel(factory = AppViewModelProvider.Factory)
+
+                ScheduleSearchScreen(
+                    navController = navController,
+                    searchViewModel = searchViewModel,
+                    calendarViewModel = calendarViewModel
                 )
             }
 
@@ -225,7 +277,6 @@ fun AppNavigation(
                 )
             }
 
-            // POPRAWIONE: PersonalDataScreen teraz przyjmuje onNavigateBack
             composable("personal_data") {
                 PersonalDataScreen(
                     onNavigateBack = { navController.popBackStack() },
@@ -388,10 +439,6 @@ fun AppNavigation(
                     absenceId = absenceId,
                     onNavigateBack = { navController.popBackStack() }
                 )
-            }
-
-            composable("schedule_search") {
-                ScheduleSearchScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
     }

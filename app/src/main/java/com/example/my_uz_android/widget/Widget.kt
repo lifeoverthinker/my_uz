@@ -15,11 +15,11 @@ import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.*
-import androidx.glance.preview.ExperimentalGlancePreviewApi
-import androidx.glance.preview.Preview
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -67,13 +67,7 @@ class Widget : GlanceAppWidget() {
             gson.fromJson(colorMapJson, object : TypeToken<Map<String, Int>>() {}.type)
         } else emptyMap()
 
-        WidgetContentLayout(
-            date = date,
-            dayLabel = dayLabel,
-            message = message,
-            classes = classes,
-            colorMap = colorMap
-        )
+        WidgetContentLayout(date, dayLabel, message, classes, colorMap)
     }
 
     @Composable
@@ -84,7 +78,6 @@ class Widget : GlanceAppWidget() {
         classes: List<ClassEntity>,
         colorMap: Map<String, Int>
     ) {
-        // Tło całego widgetu
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
@@ -92,46 +85,28 @@ class Widget : GlanceAppWidget() {
                 .padding(12.dp)
                 .clickable(actionStartActivity<MainActivity>())
         ) {
-            // --- NAGŁÓWEK ---
-            Row(
-                modifier = GlanceModifier.fillMaxWidth().padding(bottom = 8.dp),
-                verticalAlignment = Alignment.Vertical.CenterVertically
-            ) {
-                Column {
+            // Nagłówek
+            Column(modifier = GlanceModifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Text(
+                    text = date,
+                    style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                )
+                if (dayLabel.isNotEmpty()) {
                     Text(
-                        text = date,
-                        style = TextStyle(
-                            color = GlanceTheme.colors.onSurface,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        text = "Plan na: $dayLabel",
+                        style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp)
                     )
-                    if (dayLabel.isNotEmpty()) {
-                        Text(
-                            text = "Najbliższe zajęcia: $dayLabel",
-                            style = TextStyle(
-                                color = GlanceTheme.colors.onSurfaceVariant,
-                                fontSize = 12.sp
-                            )
-                        )
-                    }
                 }
             }
 
-            // --- LISTA ZAJĘĆ ---
+            // ✅ Użycie LazyColumn pozwala na przewijanie, jeśli zajęć jest dużo
             if (classes.isEmpty()) {
-                Box(
-                    modifier = GlanceModifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = message.ifEmpty { "Brak danych" },
-                        style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
-                    )
+                Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = message.ifEmpty { "Brak danych" }, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant))
                 }
             } else {
-                Column(modifier = GlanceModifier.fillMaxWidth()) {
-                    classes.forEach { classItem ->
+                LazyColumn(modifier = GlanceModifier.fillMaxWidth()) {
+                    items(classes) { classItem ->
                         ClassItem(classItem, colorMap)
                         Spacer(modifier = GlanceModifier.height(8.dp))
                     }
@@ -142,134 +117,31 @@ class Widget : GlanceAppWidget() {
 
     @Composable
     private fun ClassItem(classItem: ClassEntity, colorMap: Map<String, Int>) {
-        val colorIndex = colorMap[classItem.classType]
-            ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
-
+        val colorIndex = colorMap[classItem.classType] ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
         val colorSet = ClassColorPalette.getOrElse(colorIndex) { ClassColorPalette[0] }
-
-        val context = LocalContext.current
-        val isDark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val isDark = (LocalContext.current.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
         val accentColor = if (isDark) colorSet.darkAccent else colorSet.lightAccent
         val bgColor = if (isDark) colorSet.darkBg else colorSet.lightBg
         val textColor = if (isDark) Color.White else Color.Black
 
         Row(
-            modifier = GlanceModifier
-                .fillMaxWidth()
-                .background(ColorProvider(bgColor))
-                .padding(8.dp),
+            modifier = GlanceModifier.fillMaxWidth().background(ColorProvider(bgColor)).padding(8.dp),
             verticalAlignment = Alignment.Vertical.CenterVertically
         ) {
-            Box(
-                modifier = GlanceModifier
-                    .width(4.dp)
-                    .height(32.dp)
-                    .background(ColorProvider(accentColor))
-            ) {}
-
+            Box(modifier = GlanceModifier.width(4.dp).height(32.dp).background(ColorProvider(accentColor))) {}
             Spacer(modifier = GlanceModifier.width(8.dp))
-
             Column(modifier = GlanceModifier.defaultWeight()) {
-                Text(
-                    text = classItem.subjectName,
-                    style = TextStyle(
-                        color = ColorProvider(textColor),
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp
-                    ),
-                    maxLines = 1
-                )
+                Text(text = classItem.subjectName, style = TextStyle(color = ColorProvider(textColor), fontWeight = FontWeight.Medium, fontSize = 13.sp), maxLines = 1)
                 Row(verticalAlignment = Alignment.Vertical.CenterVertically) {
-                    Text(
-                        text = "${classItem.startTime} - ${classItem.endTime}",
-                        style = TextStyle(
-                            color = ColorProvider(accentColor),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    )
+                    Text(text = "${classItem.startTime} - ${classItem.endTime}", style = TextStyle(color = ColorProvider(accentColor), fontSize = 11.sp, fontWeight = FontWeight.Bold))
                     Spacer(modifier = GlanceModifier.width(8.dp))
                     if (classItem.room != null) {
-                        Text(
-                            text = classItem.room,
-                            style = TextStyle(
-                                color = GlanceTheme.colors.onSurfaceVariant,
-                                fontSize = 11.sp
-                            )
-                        )
+                        Text(text = classItem.room ?: "", style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 11.sp))
                     }
                 }
             }
-
-            Text(
-                text = classItem.classType.take(1).uppercase(),
-                style = TextStyle(
-                    color = ColorProvider(accentColor),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
-                )
-            )
+            Text(text = classItem.classType.take(1).uppercase(), style = TextStyle(color = ColorProvider(accentColor), fontWeight = FontWeight.Bold, fontSize = 12.sp))
         }
-    }
-}
-
-// ==========================================
-// SEKCJJA PODGLĄDU (PREVIEW)
-// ==========================================
-
-private val sampleClasses = listOf(
-    ClassEntity(
-        id = 1, date = "2024-05-20", startTime = "08:15", endTime = "09:45",
-        subjectName = "Matematyka Dyskretna", classType = "Wykład", room = "A-12/101",
-        dayOfWeek = 1, groupCode = "GRP1", subgroup = null
-    ),
-    ClassEntity(
-        id = 2, date = "2024-05-20", startTime = "10:00", endTime = "11:30",
-        subjectName = "Programowanie Obiektowe", classType = "Laboratorium", room = "A-2/308",
-        dayOfWeek = 1, groupCode = "GRP1", subgroup = null
-    ),
-    ClassEntity(
-        id = 3, date = "2024-05-20", startTime = "11:45", endTime = "13:15",
-        subjectName = "Bazy Danych", classType = "Projekt", room = null,
-        dayOfWeek = 1, groupCode = "GRP1", subgroup = null
-    )
-)
-
-private val sampleColorMap = mapOf(
-    "Wykład" to 0,
-    "Laboratorium" to 2,
-    "Projekt" to 4
-)
-
-@OptIn(ExperimentalGlancePreviewApi::class)
-@Preview(widthDp = 280, heightDp = 200)
-@Composable
-fun MyUZWidgetLightPreview() {
-    val widget = Widget()
-    GlanceTheme {
-        widget.WidgetContentLayout(
-            date = "Poniedziałek, 20 Maja",
-            dayLabel = "Dzisiaj",
-            message = "",
-            classes = sampleClasses,
-            colorMap = sampleColorMap
-        )
-    }
-}
-
-@OptIn(ExperimentalGlancePreviewApi::class)
-@Preview(widthDp = 280, heightDp = 200)
-@Composable
-fun MyUZWidgetDarkPreview() {
-    val widget = Widget()
-    GlanceTheme {
-        widget.WidgetContentLayout(
-            date = "Poniedziałek, 20 Maja",
-            dayLabel = "Dzisiaj",
-            message = "",
-            classes = sampleClasses,
-            colorMap = sampleColorMap
-        )
     }
 }

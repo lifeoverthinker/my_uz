@@ -1,10 +1,10 @@
 package com.example.my_uz_android.ui
 
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.lifecycle.ViewModelProvider
 import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.ui.screens.account.AccountViewModel
 import com.example.my_uz_android.ui.screens.account.SettingsViewModel
@@ -22,15 +22,18 @@ import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
 object AppViewModelProvider {
     val Factory = viewModelFactory {
 
+        // HomeViewModel: Usunięto eventRepository (bo konstruktor go nie ma), dodano universityRepository (bo konstruktor go ma)
         initializer {
             HomeViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
                 classRepository = myUZApplication().container.classRepository,
                 tasksRepository = myUZApplication().container.tasksRepository,
+                // eventRepository = myUZApplication().container.eventRepository, // Błąd: HomeViewModel nie ma tego parametru
                 universityRepository = myUZApplication().container.universityRepository
             )
         }
 
+        // TasksViewModel: Dodano settingsRepository (bo konstruktor go ma)
         initializer {
             TasksViewModel(
                 tasksRepository = myUZApplication().container.tasksRepository,
@@ -106,14 +109,15 @@ object AppViewModelProvider {
             )
         }
 
+        // AccountViewModel: Usunięto classRepository (bo konstruktor go nie ma)
         initializer {
             AccountViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
                 universityRepository = myUZApplication().container.universityRepository
-                // Usunięto classRepository, którego brakowało w konstruktorze AccountViewModel
             )
         }
 
+        // SettingsViewModel: Dodano wszystkie brakujące repozytoria
         initializer {
             SettingsViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
@@ -134,18 +138,22 @@ object AppViewModelProvider {
             )
         }
 
+        // CalendarViewModel: OK
         initializer {
             CalendarViewModel(
+                application = myUZApplication(),
                 favoritesRepository = myUZApplication().container.favoritesRepository,
                 classRepository = myUZApplication().container.classRepository,
-                settingsRepository = myUZApplication().container.settingsRepository
+                settingsRepository = myUZApplication().container.settingsRepository,
+                universityRepository = myUZApplication().container.universityRepository
             )
         }
 
+        // ScheduleSearchViewModel: Usunięto classRepository (bo konstruktor go nie ma)
         initializer {
             ScheduleSearchViewModel(
                 universityRepository = myUZApplication().container.universityRepository,
-                classRepository = myUZApplication().container.classRepository,
+                // classRepository = myUZApplication().container.classRepository, // Błąd: ScheduleSearchViewModel nie ma tego parametru
                 favoritesRepository = myUZApplication().container.favoritesRepository
             )
         }
