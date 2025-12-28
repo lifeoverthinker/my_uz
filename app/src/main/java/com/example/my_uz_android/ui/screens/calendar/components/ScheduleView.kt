@@ -19,12 +19,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // ✅ DODANO BRAKUJĄCY IMPORT
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.components.ClassCardType
 import com.example.my_uz_android.ui.theme.ClassColorPalette
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
@@ -32,7 +31,6 @@ import com.kizitonwose.calendar.compose.weekcalendar.WeekCalendarState
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.daysOfWeek
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.time.*
 import java.time.format.TextStyle
 import java.util.Locale
@@ -40,15 +38,7 @@ import kotlin.math.abs
 
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
-
-// Zmniejszona szerokość kolumny, aby usunąć nadmiar pustego miejsca po lewej
 private val HourColWidth = 56.dp
-
-private val ColorSelectedBg = Color(0xFF6750A4)
-private val ColorTextDark = Color(0xFF4A4A4A)
-private val ColorTextGray = Color(0xFF787579)
-private val ColorDivider = Color(0xFFE0E0E0)
-private val ColorCurrentTime = Color(0xFFEA4335)
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -81,8 +71,8 @@ fun ScheduleView(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
-            .padding(horizontal = 16.dp) // Ogólny padding strony 16dp
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp)
     ) {
         // --- NAGŁÓWEK ---
         if (showHeader) {
@@ -105,12 +95,12 @@ fun ScheduleView(
             ) {
                 Text(
                     text = monthTitle,
+                    // Type.kt titleMedium (16sp, Medium) -> podbijamy rozmiar do 18sp
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = InterFontFamily,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp,
-                        color = Color(0xFF1D1B20)
-                    )
+                        fontSize = 18.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -188,15 +178,12 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
         for (dayOfWeek in daysOfWeek) {
             Text(
                 modifier = Modifier.weight(1f).height(24.dp),
-                text = dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale("pl"))
+                text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl"))
                     .replaceFirstChar { it.titlecase() }.take(1),
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp
-                ),
-                color = ColorTextGray
+                // Type.kt: labelSmall ma Medium i 11sp. Tu podbijamy do 12sp.
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -205,13 +192,17 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 @Composable
 fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, onClick: (LocalDate) -> Unit) {
     val isToday = date == LocalDate.now(PolandZone)
+    val primaryColor = MaterialTheme.colorScheme.primary
+
     val textColor = if (isDateInMonth) {
-        if (isSelected) Color.White else if (isToday) Color(0xFF6750A4) else ColorTextDark
-    } else Color(0xFFE0E0E0)
+        if (isSelected) MaterialTheme.colorScheme.onPrimary
+        else if (isToday) primaryColor
+        else MaterialTheme.colorScheme.onSurface
+    } else MaterialTheme.colorScheme.outlineVariant
 
     val circleSize = if (isSelected || isToday) 28.dp else 24.dp
-    val circleColor = if (isSelected && isDateInMonth) ColorSelectedBg else Color.Transparent
-    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, ColorSelectedBg, CircleShape) else Modifier
+    val circleColor = if (isSelected && isDateInMonth) primaryColor else Color.Transparent
+    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, primaryColor, CircleShape) else Modifier
 
     Box(
         modifier = Modifier.aspectRatio(1f).padding(2.dp),
@@ -233,8 +224,8 @@ fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, on
             ) {
                 Text(
                     text = date.dayOfMonth.toString(),
+                    // bodyMedium ma Normal 14sp. Nadpisujemy na Medium 16sp
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Medium,
                         fontSize = 16.sp
                     ),
@@ -249,57 +240,47 @@ fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, on
 @Composable
 fun HourRow(hour: Int) {
     val rowHeight = HourHeight
-    // Wyśrodkowanie tekstu w pionie względem linii
     val textYOffset = (-8).dp
-
-    // Konfiguracja layoutu:
-    // 1. Linia pionowa jest na `HourColWidth` (np. 56dp).
-    // 2. Linia pozioma zaczyna się 8dp wcześniej (48dp).
-    // 3. Tekst kończy się 8dp przed linią poziomą (40dp).
     val verticalLinePos = HourColWidth
     val horizontalLineStart = HourColWidth - 8.dp
-    val textMaxWidth = horizontalLineStart - 8.dp // Zostawiamy 8dp odstępu między tekstem a linią
+
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
     Box(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
-
-        // 1. Linia Pozioma (Pomiń dla godziny 0)
         if (hour != 0) {
             HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = horizontalLineStart) // Kreska "odstaje" w lewo o 8dp
+                    .padding(start = horizontalLineStart)
                     .align(Alignment.TopStart),
                 thickness = 1.dp,
-                color = ColorDivider
+                color = dividerColor
             )
         }
 
-        // 2. Linia Pionowa
         VerticalDivider(
             modifier = Modifier
                 .fillMaxHeight()
                 .width(1.dp)
                 .padding(start = verticalLinePos),
             thickness = 1.dp,
-            color = ColorDivider
+            color = dividerColor
         )
 
-        // 3. Tekst Godziny
         if (hour != 0) {
             Text(
                 text = String.format("%02d:00", hour),
+                // labelSmall (11sp, Medium). Nadpisujemy kolor.
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontSize = 12.sp,
-                    color = ColorTextGray,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = InterFontFamily
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 modifier = Modifier
-                    .width(horizontalLineStart) // Kontener tekstu sięga do początku linii poziomej
-                    .padding(end = 8.dp) // Wymuszamy 8dp odstępu od linii poziomej
+                    .width(horizontalLineStart)
+                    .padding(end = 8.dp)
                     .offset(y = textYOffset)
                     .align(Alignment.TopStart),
-                textAlign = TextAlign.Start, // Wyrównanie do lewej (bez dodatkowego paddingu z lewej)
+                textAlign = TextAlign.Start,
                 maxLines = 1,
                 softWrap = false
             )
@@ -356,12 +337,14 @@ fun CurrentTimeIndicator() {
     val minutesFromMidnight = currentTime.hour * 60 + currentTime.minute
     val topOffset = minutesFromMidnight.dp
 
+    val indicatorColor = MaterialTheme.colorScheme.error
+
     Box(
         modifier = Modifier.fillMaxWidth().offset(y = topOffset).height(12.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         HorizontalDivider(
-            color = ColorCurrentTime,
+            color = indicatorColor,
             thickness = 2.dp,
             modifier = Modifier.fillMaxWidth().padding(start = HourColWidth)
         )
@@ -370,7 +353,7 @@ fun CurrentTimeIndicator() {
                 .padding(start = HourColWidth - 5.dp)
                 .size(10.dp)
                 .clip(CircleShape)
-                .background(ColorCurrentTime)
+                .background(indicatorColor)
         )
     }
 }

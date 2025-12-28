@@ -22,16 +22,13 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.DatePicker
 import com.example.my_uz_android.ui.components.TimePicker
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
 import java.time.LocalDate
@@ -152,7 +149,8 @@ fun TaskAddEditContent(
                     contentPadding = PaddingValues(horizontal = 24.dp),
                     modifier = Modifier.height(40.dp)
                 ) {
-                    Text(stringResource(R.string.btn_save), fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
+                    // labelLarge (14sp Medium)
+                    Text(stringResource(R.string.btn_save), style = MaterialTheme.typography.labelLarge)
                 }
             }
 
@@ -161,13 +159,21 @@ fun TaskAddEditContent(
                     Box(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Box(modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
+                        // ZMIANA: Użycie headlineMedium (28sp Normal) z Type.kt
+                        val titleStyle = MaterialTheme.typography.headlineMedium.copy(color = textColor)
+
                         BasicTextField(
                             value = uiState.title,
                             onValueChange = onTitleChange,
-                            textStyle = TextStyle(fontFamily = InterFontFamily, fontSize = 28.sp, color = textColor),
+                            textStyle = titleStyle,
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { innerTextField ->
-                                if (uiState.title.isEmpty()) Text(stringResource(R.string.task_title_placeholder), style = TextStyle(fontFamily = InterFontFamily, fontSize = 28.sp, color = textColor.copy(0.4f)))
+                                if (uiState.title.isEmpty()) {
+                                    Text(
+                                        stringResource(R.string.task_title_placeholder),
+                                        style = titleStyle.copy(color = textColor.copy(0.4f))
+                                    )
+                                }
                                 innerTextField()
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -190,7 +196,12 @@ fun TaskAddEditContent(
                             modifier = Modifier.height(32.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp)) {
-                                Text(title, style = TextStyle(fontFamily = InterFontFamily, fontSize = 13.sp, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor))
+                                Text(
+                                    title,
+                                    // labelMedium (12sp Medium), używamy onPrimary gdy zaznaczone
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor
+                                )
                             }
                         }
                     }
@@ -202,7 +213,7 @@ fun TaskAddEditContent(
                 CommonRow(iconRes = R.drawable.ic_clock, iconTint = iconTint) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.task_all_day), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
+                            Text(stringResource(R.string.task_all_day), style = MaterialTheme.typography.bodyLarge, color = textColor)
                             Switch(checked = uiState.isAllDay, onCheckedChange = onIsAllDayChange)
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -225,7 +236,7 @@ fun TaskAddEditContent(
                         ) {
                             Text(
                                 text = uiState.classSubject ?: stringResource(R.string.task_subject_label),
-                                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                                style = MaterialTheme.typography.bodyLarge,
                                 color = if (uiState.classSubject == null) subTextColor else textColor
                             )
                             Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
@@ -252,7 +263,7 @@ fun TaskAddEditContent(
                             val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: stringResource(R.string.task_type_label)
                             Text(
                                 text = typeText,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily),
+                                style = MaterialTheme.typography.bodyLarge,
                                 color = if (!isTypeSelectionEnabled) subTextColor.copy(0.4f) else if (uiState.classType == null) subTextColor else textColor
                             )
                             Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(0.4f), modifier = Modifier.size(24.dp))
@@ -270,10 +281,10 @@ fun TaskAddEditContent(
                         BasicTextField(
                             value = uiState.description,
                             onValueChange = onDescriptionChange,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = textColor),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { inner ->
-                                if (uiState.description.isEmpty()) Text(stringResource(R.string.task_description_placeholder), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily, color = subTextColor))
+                                if (uiState.description.isEmpty()) Text(stringResource(R.string.task_description_placeholder), style = MaterialTheme.typography.bodyLarge.copy(color = subTextColor))
                                 inner()
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -318,11 +329,11 @@ fun TaskAddEditContent(
 private fun SimpleDateTimeRow(date: LocalDate, time: LocalTime?, onDateClick: () -> Unit, onTimeClick: () -> Unit, textColor: Color) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(modifier = Modifier.weight(1f).clickable(onClick = onDateClick).padding(vertical = 12.dp)) {
-            Text(text = date.toString(), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
+            Text(text = date.toString(), style = MaterialTheme.typography.bodyLarge, color = textColor)
         }
         if (time != null) {
             Box(modifier = Modifier.weight(0.6f).clickable(onClick = onTimeClick).padding(vertical = 12.dp), contentAlignment = Alignment.CenterEnd) {
-                Text(text = String.format("%02d:%02d", time.hour, time.minute), style = MaterialTheme.typography.bodyLarge.copy(fontFamily = InterFontFamily), color = textColor)
+                Text(text = String.format("%02d:%02d", time.hour, time.minute), style = MaterialTheme.typography.bodyLarge, color = textColor)
             }
         }
     }
