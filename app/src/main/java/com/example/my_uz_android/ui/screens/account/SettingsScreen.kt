@@ -44,16 +44,23 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // --- Stan dla dialogów eksportu/importu ---
+    var showExportDialog by remember { mutableStateOf(false) }
+    // Domyślnie zaznaczamy wszystko
+    var exportSelection by remember { mutableStateOf(BackupDataType.values().toSet()) }
+
+    // Launcher Eksportu: Po wybraniu pliku uruchamia zapis z wybranymi typami danych
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
-        uri?.let { scope.launch { saveBackupToFile(context, it, viewModel) } }
+        uri?.let { scope.launch { saveBackupToFile(context, it, viewModel, exportSelection) } }
     }
 
+    // Launcher Importu: Po wybraniu pliku wczytuje go do podglądu (preview)
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        uri?.let { scope.launch { readBackupFromFile(context, it, viewModel) } }
+        uri?.let { scope.launch { readBackupFileToPreview(context, it, viewModel) } }
     }
 
     LaunchedEffect(uiState.importMessage) {
@@ -89,7 +96,7 @@ fun SettingsScreen(
                     SettingsSection(title = "Kolory zajęć") {
                         uiState.uniqueClassTypes.forEach { classType ->
                             val colorIndex = uiState.classColorMap[classType]
-                                ?: kotlin.math.abs(classType.hashCode()) % ClassColorPalette.size // Domyślny, stały kolor
+                                ?: kotlin.math.abs(classType.hashCode()) % ClassColorPalette.size
 
                             ClassColorPickerItem(
                                 classType = classType,
@@ -117,23 +124,26 @@ fun SettingsScreen(
                     SettingsActionItem(
                         iconRes = R.drawable.ic_share,
                         title = "Eksportuj dane",
-                        subtitle = "Zapisz kopię zapasową do pliku JSON",
-                        onClick = { exportLauncher.launch("myuz_backup_${System.currentTimeMillis()}.json") }
+                        subtitle = "Wybierz dane do zapisu w pliku JSON",
+                        onClick = {
+                            // Reset wyboru i pokazanie dialogu
+                            exportSelection = BackupDataType.values().toSet()
+                            showExportDialog = true
+                        }
                     )
 
                     SettingsActionItem(
                         iconRes = R.drawable.ic_info_circle,
                         title = "Importuj dane",
-                        subtitle = "Przywróć dane z pliku JSON (nadpisuje!)",
+                        subtitle = "Wczytaj kopię zapasową z pliku",
                         isDestructive = true,
                         onClick = { importLauncher.launch("application/json") }
                     )
                 }
 
-                // NOWY PRZYCISK ZAPISZ
+                // PRZYCISK ZAPISZ (Jako potwierdzenie dla użytkownika)
                 Button(
                     onClick = {
-                        // Ponieważ zmiany są zapisywane reaktywnie, ten przycisk służy jako potwierdzenie dla użytkownika
                         Toast.makeText(context, "Ustawienia zostały zapisane", Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -152,6 +162,7 @@ fun SettingsScreen(
                 )
             }
 
+            // Loader
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
@@ -162,9 +173,53 @@ fun SettingsScreen(
             }
         }
     }
+
+    // --- DIALOGI SELEKCJI DANYCH ---
+
+    // 1. Dialog Eksportu
+    if (showExportDialog) {
+        DataTypeSelectionDialog(
+            title = "Eksportuj dane",
+            confirmText = "Zapisz do pliku",
+            initialSelection = exportSelection,
+            onDismiss = { showExportDialog = false },
+            onConfirm = { selection ->
+                exportSelection = selection
+                showExportDialog = false
+                exportLauncher.launch("myuz_backup_${System.currentTimeMillis()}.json")
+            }
+        )
+    }
+
+    // 2. Dialog Importu (pokazywany, gdy ViewModel przetworzy plik)
+    if (uiState.showImportDialog && uiState.backupPreview != null) {
+        // Obliczamy, jakie dane są dostępne w pliku
+        val availableTypes = remember(uiState.backupPreview) {
+            val preview = uiState.backupPreview!!
+            val types = mutableSetOf<BackupDataType>()
+            if (preview.settings != null) types.add(BackupDataType.SETTINGS)
+            if (preview.classes.isNotEmpty()) types.add(BackupDataType.CLASSES)
+            if (preview.tasks.isNotEmpty()) types.add(BackupDataType.TASKS)
+            if (preview.grades.isNotEmpty()) types.add(BackupDataType.GRADES)
+            if (preview.absences.isNotEmpty()) types.add(BackupDataType.ABSENCES)
+            if (preview.events.isNotEmpty()) types.add(BackupDataType.EVENTS)
+            types
+        }
+
+        DataTypeSelectionDialog(
+            title = "Importuj dane",
+            confirmText = "Przywróć wybrane",
+            initialSelection = availableTypes, // Domyślnie zaznaczamy to, co jest w pliku
+            availableTypes = availableTypes, // Przekazujemy, aby wyszarzyć puste
+            onDismiss = { viewModel.cancelImport() },
+            onConfirm = { selection ->
+                viewModel.confirmImport(selection)
+            }
+        )
+    }
 }
 
-// --- KOMPONENTY POMOCNICZE ---
+// --- KOMPONENTY POMOCNICZE UI ---
 
 @Composable
 fun SettingsTopBar(onBack: () -> Unit) {
@@ -308,16 +363,94 @@ fun ClassColorPickerItem(
     }
 }
 
-// --- Funkcje I/O ---
+// --- NOWY KOMPONENT: DIALOG WYBORU DANYCH ---
 
-private suspend fun saveBackupToFile(context: Context, uri: Uri, viewModel: SettingsViewModel) {
+@Composable
+fun DataTypeSelectionDialog(
+    title: String,
+    confirmText: String,
+    initialSelection: Set<BackupDataType>,
+    availableTypes: Set<BackupDataType> = BackupDataType.values().toSet(),
+    onDismiss: () -> Unit,
+    onConfirm: (Set<BackupDataType>) -> Unit
+) {
+    var selection by remember { mutableStateOf(initialSelection) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text(
+                    text = "Wybierz elementy:",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                BackupDataType.values().forEach { type ->
+                    val isAvailable = availableTypes.contains(type)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = isAvailable) {
+                                selection = if (selection.contains(type)) {
+                                    selection - type
+                                } else {
+                                    selection + type
+                                }
+                            }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = selection.contains(type),
+                            onCheckedChange = { isChecked ->
+                                selection = if (isChecked) selection + type else selection - type
+                            },
+                            enabled = isAvailable
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = type.displayName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isAvailable) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(selection) },
+                enabled = selection.isNotEmpty()
+            ) {
+                Text(confirmText, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Anuluj")
+            }
+        }
+    )
+}
+
+// --- FUNKCJE POMOCNICZE I/O ---
+
+private suspend fun saveBackupToFile(
+    context: Context,
+    uri: Uri,
+    viewModel: SettingsViewModel,
+    selection: Set<BackupDataType>
+) {
     withContext(Dispatchers.IO) {
         try {
-            val jsonString = viewModel.createBackupJson()
+            // Generujemy JSON tylko dla wybranych typów
+            val jsonString = viewModel.createBackupJson(selection)
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 outputStream.write(jsonString.toByteArray())
             }
-            withContext(Dispatchers.Main) { Toast.makeText(context, "Zapisano backup!", Toast.LENGTH_SHORT).show() }
+            withContext(Dispatchers.Main) { Toast.makeText(context, "Zapisano wybrane dane!", Toast.LENGTH_SHORT).show() }
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) { Toast.makeText(context, "Błąd: ${e.message}", Toast.LENGTH_LONG).show() }
@@ -325,7 +458,7 @@ private suspend fun saveBackupToFile(context: Context, uri: Uri, viewModel: Sett
     }
 }
 
-private suspend fun readBackupFromFile(context: Context, uri: Uri, viewModel: SettingsViewModel) {
+private suspend fun readBackupFileToPreview(context: Context, uri: Uri, viewModel: SettingsViewModel) {
     withContext(Dispatchers.IO) {
         try {
             val stringBuilder = StringBuilder()
@@ -335,7 +468,8 @@ private suspend fun readBackupFromFile(context: Context, uri: Uri, viewModel: Se
                     while (line != null) { stringBuilder.append(line); line = reader.readLine() }
                 }
             }
-            viewModel.restoreBackup(stringBuilder.toString())
+            // Zamiast od razu przywracać, wysyłamy do podglądu w ViewModel
+            viewModel.previewBackupFile(stringBuilder.toString())
         } catch (e: Exception) {
             e.printStackTrace()
         }

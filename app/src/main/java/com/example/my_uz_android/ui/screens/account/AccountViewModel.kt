@@ -63,8 +63,7 @@ class AccountViewModel(
             emptyList()
         } else {
             allGroups.filter { it.contains(query, ignoreCase = true) }
-                .sorted()
-                .take(5)
+                .take(5) // Sortowanie jest już zrobione przy pobieraniu
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -85,7 +84,11 @@ class AccountViewModel(
         viewModelScope.launch {
             when (val result = universityRepository.getGroupCodes()) {
                 is NetworkResult.Success -> {
-                    _allGroups.value = result.data ?: emptyList()
+                    // TUTAJ ZMIANA: Filtrujemy nulle i puste ciągi
+                    val groups = (result.data ?: emptyList())
+                        .filter { !it.isNullOrBlank() && it != "null" }
+                        .sorted()
+                    _allGroups.value = groups
                 }
                 else -> {
                     _allGroups.value = emptyList()
@@ -172,7 +175,10 @@ class AccountViewModel(
         viewModelScope.launch {
             when (val result = universityRepository.getSubgroups(group)) {
                 is NetworkResult.Success -> {
-                    _availableSubgroups.value = result.data ?: emptyList()
+                    // Tutaj też opcjonalnie możemy przefiltrować podgrupy, jeśli API zwraca śmieci
+                    _availableSubgroups.value = (result.data ?: emptyList())
+                        .filter { !it.isNullOrBlank() && it != "null" }
+                        .sorted()
                 }
                 else -> {
                     _availableSubgroups.value = emptyList()
