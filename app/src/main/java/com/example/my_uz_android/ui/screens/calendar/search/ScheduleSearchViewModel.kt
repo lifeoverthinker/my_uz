@@ -3,16 +3,20 @@ package com.example.my_uz_android.ui.screens.calendar.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.FavoriteEntity
-import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.FavoritesRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.util.NetworkResult
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.Locale
+
+data class SearchResultItem(
+    val name: String,
+    val type: String, // "group" lub "teacher"
+    val isFavorite: Boolean = false
+)
 
 data class ScheduleSearchUiState(
     val searchQuery: String = "",
@@ -21,75 +25,84 @@ data class ScheduleSearchUiState(
     val error: String? = null
 )
 
-data class SearchResultItem(
-    val name: String,
-    val type: String,
-    val isFavorite: Boolean = false
-)
-
 class ScheduleSearchViewModel(
     private val universityRepository: UniversityRepository,
-    private val classRepository: ClassRepository,
     private val favoritesRepository: FavoritesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScheduleSearchUiState())
     val uiState: StateFlow<ScheduleSearchUiState> = _uiState.asStateFlow()
 
-    private var allGroups: List<String> = emptyList()
-    private var allTeachers: List<String> = emptyList()
+    private var searchJob: Job? = null
 
-    init {
-        loadInitialData()
-    }
-
-    private fun loadInitialData() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
-            // Grupy
-            val groupsResult = universityRepository.getGroupCodes()
-            if (groupsResult is NetworkResult.Success) {
-                allGroups = groupsResult.data ?: emptyList()
-            }
-
-            // Nauczyciele
-            val teachersResult = universityRepository.getTeachers()
-            if (teachersResult is NetworkResult.Success) {
-                allTeachers = teachersResult.data ?: emptyList()
-            }
-
-            _uiState.update { it.copy(isLoading = false) }
-        }
-    }
-
+    /**
+     * Wywoływane przy każdej zmianie tekstu w wyszukiwarce
+     */
     fun onQueryChange(newQuery: String) {
         _uiState.update { it.copy(searchQuery = newQuery) }
+
+        searchJob?.cancel()
         if (newQuery.length >= 2) {
-            search(newQuery)
+            searchJob = viewModelScope.launch {
+                delay(300) // Czekamy chwilę, aby nie wysyłać zapytań przy każdym kliknięciu klawisza
+                performSearch(newQuery)
+            }
         } else {
-            _uiState.update { it.copy(searchResults = emptyList()) }
+            _uiState.update { it.copy(searchResults = emptyList(), isLoading = false) }
         }
     }
 
-    private fun search(query: String) {
-        viewModelScope.launch {
-            val favorites = favoritesRepository.getAllFavoritesStream().first().map { it.name }
+    /**
+     * Główna logika wyszukiwania korzystająca z ILIKE w bazie danych
+     */
+    private suspend fun performSearch(query: String) {
+        _uiState.update { it.copy(isLoading = true) }
 
-            val groupResults = allGroups.filter { it.contains(query, ignoreCase = true) }
-                .map { SearchResultItem(it, "group", favorites.contains(it)) }
+        // Wykonujemy zapytania do bazy danych (Supabase)
+        val groupsResult = universityRepository.searchGroups(query)
+        val teachersResult = universityRepository.searchTeachers(query)
 
-            val teacherResults = allTeachers.filter { it.contains(query, ignoreCase = true) }
-                .map { SearchResultItem(it, "teacher", favorites.contains(it)) }
+        // Pobieramy aktualne ulubione z bazy lokalnej (Room)
+        val favorites = favoritesRepository.getAllFavoritesStream().firstOrNull() ?: emptyList()
 
-            _uiState.update { it.copy(searchResults = groupResults + teacherResults) }
-        }
+        // Mapujemy wyniki grup
+        val groupItems = if (groupsResult is NetworkResult.Success) {
+            groupsResult.data?.map { name ->
+                SearchResultItem(
+                    name = name,
+                    type = "group",
+                    isFavorite = favorites.any { it.name == name && it.type == "group" }
+                )
+            } ?: emptyList()
+        } else emptyList()
+
+        // Mapujemy wyniki nauczycieli
+        val teacherItems = if (teachersResult is NetworkResult.Success) {
+            teachersResult.data?.map { name ->
+                SearchResultItem(
+                    name = name,
+                    type = "teacher",
+                    isFavorite = favorites.any { it.name == name && it.type == "teacher" }
+                )
+            } ?: emptyList()
+        } else emptyList()
+
+        // Łączymy wyniki i sortujemy alfabetycznie
+        val combinedResults = (groupItems + teacherItems).sortedBy { it.name }
+
+        _uiState.update { it.copy(
+            searchResults = combinedResults,
+            isLoading = false
+        ) }
     }
 
+    /**
+     * Dodawanie/Usuwanie z ulubionych
+     */
     fun toggleFavorite(item: SearchResultItem) {
         viewModelScope.launch {
-            val favorites = favoritesRepository.getAllFavoritesStream().first()
-            val existing = favorites.find { it.name == item.name }
+            val favorites = favoritesRepository.getAllFavoritesStream().firstOrNull() ?: emptyList()
+            val existing = favorites.find { it.name == item.name && it.type == item.type }
 
             if (existing != null) {
                 favoritesRepository.delete(existing)
@@ -97,11 +110,29 @@ class ScheduleSearchViewModel(
                 val favorite = FavoriteEntity(
                     name = item.name,
                     type = item.type,
-                    resourceId = item.name
+                    resourceId = item.name // resourceId używane do pobierania planu
                 )
                 favoritesRepository.insert(favorite)
             }
-            search(_uiState.value.searchQuery)
+
+            // Odświeżamy listę wyników, aby zaktualizować stan ikonek serca
+            val currentQuery = _uiState.value.searchQuery
+            if (currentQuery.length >= 2) {
+                performSearch(currentQuery)
+            }
         }
+    }
+
+    /**
+     * Pomocnicza funkcja do normalizacji tekstu (opcjonalnie używana lokalnie)
+     */
+    private fun normalizeText(input: String): String {
+        val original = charArrayOf('ą', 'ć', 'ę', 'ł', 'ń', 'ó', 'ś', 'ź', 'ż', 'Ą', 'Ć', 'Ę', 'Ł', 'Ń', 'Ó', 'Ś', 'Ź', 'Ż')
+        val normalized = charArrayOf('a', 'c', 'e', 'l', 'n', 'o', 's', 'z', 'z', 'a', 'c', 'e', 'l', 'n', 'o', 's', 'z', 'z')
+        var result = input
+        for (i in original.indices) {
+            result = result.replace(original[i], normalized[i])
+        }
+        return result.lowercase(Locale.getDefault())
     }
 }
