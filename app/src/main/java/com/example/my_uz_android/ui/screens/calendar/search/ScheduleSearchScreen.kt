@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +23,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleSearchScreen(
     navController: NavController,
@@ -32,6 +34,7 @@ fun ScheduleSearchScreen(
 
     Scaffold(
         topBar = {
+            // Używamy Twojego customowego TopAppBar
             TopAppBar(
                 title = "Szukaj planu",
                 navigationIcon = R.drawable.ic_chevron_left,
@@ -39,28 +42,57 @@ fun ScheduleSearchScreen(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+        ) {
             OutlinedTextField(
                 value = uiState.searchQuery,
                 onValueChange = { searchViewModel.onQueryChange(it) },
                 label = { Text("Wpisz grupę lub nazwisko") },
                 modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(painterResource(R.drawable.ic_search), null, Modifier.size(24.dp)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                trailingIcon = {
+                    if (uiState.searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchViewModel.onQueryChange("") }) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_x_close),
+                                contentDescription = "Wyczyść",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                },
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true
             )
+
             Spacer(modifier = Modifier.height(16.dp))
+
             if (uiState.isLoading) {
-                Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     items(uiState.searchResults) { item ->
                         SearchResultItemCard(
                             item = item,
                             onClick = {
-                                // 1. Załaduj dane do ViewModelu
+                                // 1. Wybieramy plan w ViewModelu kalendarza
                                 calendarViewModel.selectPreviewPlan(item.name, item.type)
-                                // 2. Zamiast wracać do kalendarza, idź do podglądu
+                                // 2. Przechodzimy do ekranu podglądu
                                 navController.navigate("schedule_preview")
                             },
                             onFavoriteClick = { searchViewModel.toggleFavorite(item) }
@@ -73,18 +105,47 @@ fun ScheduleSearchScreen(
 }
 
 @Composable
-fun SearchResultItemCard(item: SearchResultItem, onClick: () -> Unit, onFavoriteClick: () -> Unit) {
+fun SearchResultItemCard(
+    item: SearchResultItem,
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable(onClick = onClick).padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(item.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-            Text(if (item.type == "group") "Grupa" else "Nauczyciel", style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = item.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = if (item.type == "group") "Grupa" else "Nauczyciel",
+                style = MaterialTheme.typography.bodySmall
+            )
         }
         IconButton(onClick = onFavoriteClick) {
-            if (item.isFavorite) Icon(Icons.Filled.Favorite, null, Modifier.size(24.dp), tint = Color(0xFF6750A4))
-            else Icon(painterResource(R.drawable.ic_heart), null, Modifier.size(24.dp), tint = Color(0xFF49454F))
+            if (item.isFavorite) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = "Usuń z ulubionych",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color(0xFF6750A4)
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_heart),
+                    contentDescription = "Dodaj do ulubionych",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color(0xFF49454F)
+                )
+            }
         }
     }
 }
