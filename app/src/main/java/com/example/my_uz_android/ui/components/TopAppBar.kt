@@ -26,19 +26,18 @@ import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
 /**
- * Specjalny pasek dla Kalendarza (Twój "stary wygląd").
- * Zaktualizowany o obsługę podtytułu i zmiennej ikony nawigacji, zachowując styl.
+ * Pasek Kalendarza (Główny ekran) - Styl z okrągłymi przyciskami
  */
 @Composable
 fun CalendarTopAppBar(
     title: String,
-    subtitle: String? = null, // NOWE: Podtytuł (np. nazwa grupy)
-    navigationIcon: Int = R.drawable.ic_menu, // NOWE: Domyślnie menu, ale można zmienić na strzałkę
+    subtitle: String? = null,
+    navigationIcon: Int = R.drawable.ic_menu,
     isExpanded: Boolean = false,
     onNavigationClick: () -> Unit,
     onSearchClick: (() -> Unit)? = null,
     onAddClick: (() -> Unit)? = null,
-    onInfoClick: (() -> Unit)? = null, // NOWE: Ikona info (dla nauczycieli)
+    onInfoClick: (() -> Unit)? = null,
     onTitleClick: (() -> Unit)? = null
 ) {
     val buttonBackgroundColor = MaterialTheme.extendedColors.homeTopBackground
@@ -47,18 +46,18 @@ fun CalendarTopAppBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .statusBarsPadding(),
+            .statusBarsPadding() // Najpierw padding systemowy
+            .padding(horizontal = 16.dp, vertical = 8.dp), // Potem nasz padding
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // LEWA STRONA: Nawigacja + Tytuł (i podtytuł)
+        // LEWA STRONA: Nawigacja + Tytuł
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
-            // Przycisk nawigacji w kółku
+            // Przycisk nawigacji w kółku (48dp)
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -75,7 +74,7 @@ fun CalendarTopAppBar(
                 )
             }
 
-            // Tytuł i Podtytuł
+            // Tytuł
             Column(
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
@@ -84,7 +83,6 @@ fun CalendarTopAppBar(
                     .weight(1f, fill = false),
                 verticalArrangement = Arrangement.Center
             ) {
-                // Wiersz tytułu + strzałka (stary wygląd)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -113,8 +111,6 @@ fun CalendarTopAppBar(
                         )
                     }
                 }
-
-                // Podtytuł (jeśli jest) - dodany subtelnie pod spodem
                 if (!subtitle.isNullOrBlank()) {
                     Text(
                         text = subtitle,
@@ -136,7 +132,6 @@ fun CalendarTopAppBar(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 8.dp)
         ) {
-            // Ikona INFO (Nowa)
             if (onInfoClick != null) {
                 Box(
                     modifier = Modifier
@@ -155,7 +150,6 @@ fun CalendarTopAppBar(
                 }
             }
 
-            // Ikona Szukaj
             if (onSearchClick != null) {
                 Box(
                     modifier = Modifier
@@ -174,7 +168,6 @@ fun CalendarTopAppBar(
                 }
             }
 
-            // Ikona Dzisiaj
             if (onAddClick != null) {
                 Box(
                     modifier = Modifier
@@ -196,6 +189,126 @@ fun CalendarTopAppBar(
     }
 }
 
+/**
+ * Pasek dla Podglądu Planu (Grupa/Nauczyciel)
+ * Styl identyczny jak CalendarTopAppBar (kółka), ale z innymi akcjami (Serce, Filtr/Info).
+ */
+@Composable
+fun PreviewTopAppBar(
+    title: String,
+    subtitle: String,
+    onBackClick: () -> Unit,
+    onActionClick: () -> Unit,
+    actionIcon: Int,
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit
+) {
+    val buttonBackgroundColor = MaterialTheme.extendedColors.homeTopBackground
+    val contentColor = MaterialTheme.colorScheme.onSurface
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding() // Padding systemowy
+            .padding(horizontal = 16.dp, vertical = 8.dp), // Padding taki sam jak w CalendarTopAppBar
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // LEWA STRONA: Strzałka + Opisy
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp), // Odstęp taki sam jak w CalendarTopAppBar
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            // Strzałka w kółku (48dp)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(buttonBackgroundColor)
+                    .clickable(onClick = onBackClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_left),
+                    contentDescription = "Wstecz",
+                    modifier = Modifier.size(24.dp),
+                    tint = contentColor
+                )
+            }
+
+            // Teksty
+            Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp,
+                        lineHeight = 24.sp
+                    ),
+                    color = contentColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle.ifBlank { "Szczegóły" },
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // PRAWA STRONA: Akcja + Serduszko
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 8.dp)
+        ) {
+            // Przycisk Akcji (Info lub Filtr) w kółku (48dp)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(buttonBackgroundColor)
+                    .clickable(onClick = onActionClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(actionIcon),
+                    contentDescription = "Akcja",
+                    modifier = Modifier.size(24.dp),
+                    tint = contentColor
+                )
+            }
+
+            // Przycisk Ulubione w kółku (48dp)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(buttonBackgroundColor)
+                    .clickable(onClick = onFavoriteClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart),
+                    contentDescription = "Ulubione",
+                    modifier = Modifier.size(24.dp),
+                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else contentColor
+                )
+            }
+        }
+    }
+}
+
+// --- STANDARDOWE PASKI (Material3) ---
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(
@@ -206,7 +319,7 @@ fun TopAppBar(
     actions: @Composable RowScope.() -> Unit = {},
     isCenterAligned: Boolean = false,
     isNavigationIconFilled: Boolean = false,
-    scrollBehavior: TopAppBarScrollBehavior? = null, // Dodano scrollBehavior
+    scrollBehavior: TopAppBarScrollBehavior? = null,
     titleContent: (@Composable () -> Unit)? = null
 ) {
     val navigationIconContent: @Composable () -> Unit = {
