@@ -67,24 +67,29 @@ class ScheduleSearchViewModel(
 
         // Mapujemy wyniki grup
         val groupItems = if (groupsResult is NetworkResult.Success) {
-            groupsResult.data?.map { name ->
-                SearchResultItem(
-                    name = name,
-                    type = "group",
-                    isFavorite = favorites.any { it.name == name && it.type == "group" }
-                )
-            } ?: emptyList()
+            (groupsResult.data ?: emptyList())
+                // TUTAJ ZMIANA: Filtrujemy śmieciowe dane (null, "", "null") z wyników wyszukiwania
+                .filter { !it.isNullOrBlank() && it != "null" }
+                .map { name ->
+                    SearchResultItem(
+                        name = name,
+                        type = "group",
+                        isFavorite = favorites.any { it.name == name && it.type == "group" }
+                    )
+                }
         } else emptyList()
 
         // Mapujemy wyniki nauczycieli
         val teacherItems = if (teachersResult is NetworkResult.Success) {
-            teachersResult.data?.map { name ->
-                SearchResultItem(
-                    name = name,
-                    type = "teacher",
-                    isFavorite = favorites.any { it.name == name && it.type == "teacher" }
-                )
-            } ?: emptyList()
+            (teachersResult.data ?: emptyList())
+                .filter { !it.isNullOrBlank() && it != "null" } // Dla pewności też tutaj
+                .map { name ->
+                    SearchResultItem(
+                        name = name,
+                        type = "teacher",
+                        isFavorite = favorites.any { it.name == name && it.type == "teacher" }
+                    )
+                }
         } else emptyList()
 
         // Łączymy wyniki i sortujemy alfabetycznie
