@@ -42,23 +42,19 @@ fun SchedulePreviewScreen(
     }
     val isTeacher = type == "teacher"
 
-    // --- EKSTRAKCJA DANYCH NAUCZYCIELA ---
     val teacherData = remember(classes) {
         classes.firstOrNull { !it.teacherEmail.isNullOrBlank() }
             ?: classes.firstOrNull { !it.teacherInstitute.isNullOrBlank() }
             ?: classes.firstOrNull { !it.teacherName.isNullOrBlank() }
     }
 
-    // --- STANY DIALOGÓW ---
     var showTeacherInfo by remember { mutableStateOf(false) }
     var showSubgroupFilter by remember { mutableStateOf(false) }
 
-    // --- LOGIKA PODGRUP ---
     val availableSubgroups = remember(classes) {
         classes.map { it.subgroup ?: "" }.distinct().sorted()
     }
 
-    // Domyślnie zaznaczamy wszystkie
     var selectedSubgroups by remember(availableSubgroups) {
         mutableStateOf(availableSubgroups.toSet())
     }
@@ -67,7 +63,6 @@ fun SchedulePreviewScreen(
         classes.filter { selectedSubgroups.contains(it.subgroup ?: "") }
     }
 
-    // --- STAN KALENDARZA ---
     val currentDate = remember { LocalDate.now(ZoneId.of("Europe/Warsaw")) }
     val currentMonth = remember { YearMonth.now(ZoneId.of("Europe/Warsaw")) }
     val startMonth = remember { currentMonth.minusMonths(24) }
@@ -92,21 +87,15 @@ fun SchedulePreviewScreen(
 
     Scaffold(
         topBar = {
-            // Używamy komponentu zaimportowanego z TopAppBar.kt
             PreviewTopAppBar(
                 title = if (isTeacher) "Plan nauczyciela" else "Plan grupy",
                 subtitle = if (isTeacher) (teacherData?.teacherName ?: planName) else planName,
                 isFavorite = isFavorite,
                 onBackClick = { navController.popBackStack() },
                 onFavoriteClick = { viewModel.toggleFavorite(planName, if (isTeacher) "teacher" else "group") },
-                // Jeśli to nauczyciel -> Info, jeśli grupa -> Filtr
                 actionIcon = if (isTeacher) R.drawable.ic_info_circle else R.drawable.ic_filter_funnel,
                 onActionClick = {
-                    if (isTeacher) {
-                        showTeacherInfo = true
-                    } else {
-                        showSubgroupFilter = true
-                    }
+                    if (isTeacher) showTeacherInfo = true else showSubgroupFilter = true
                 }
             )
         },
@@ -140,12 +129,11 @@ fun SchedulePreviewScreen(
                     classes = filteredClasses,
                     classColorMap = classColorMap,
                     onClassClick = onClassClick,
-                    showHeader = true // Pokaż nagłówek miesiąca (bo w PreviewTopAppBar go nie ma w tytule)
+                    showHeader = true
                 )
             }
         }
 
-        // --- MODALE ---
         if (showTeacherInfo) {
             TeacherInfoDialog(
                 onDismiss = { showTeacherInfo = false },

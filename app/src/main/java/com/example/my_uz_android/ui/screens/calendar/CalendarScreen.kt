@@ -5,7 +5,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
@@ -73,16 +72,14 @@ fun CalendarScreen(
     val availableSubgroups = remember(rawClasses, isMyPlan) {
         if (!isMyPlan && !isTeacher) rawClasses.map { it.subgroup ?: "" }.distinct().sorted() else emptyList()
     }
-    // Domyślnie zaznaczamy wszystkie przy zmianie planu
-    var selectedSubgroups by remember(planName) { mutableStateOf<Set<String>?>(null) }
 
-    // Jeśli selectedSubgroups jest null (nowy plan), zainicjuj wszystkimi. W przeciwnym razie użyj wyboru.
+    var selectedSubgroups by remember(planName) { mutableStateOf<Set<String>?>(null) }
     val currentSelectedSubgroups = selectedSubgroups ?: availableSubgroups.toSet()
 
     // Ostateczna lista do wyświetlenia (przefiltrowana)
     val displayedClasses = remember(rawClasses, isMyPlan, isTeacher, currentSelectedSubgroups) {
         if (isMyPlan || isTeacher) {
-            rawClasses // Mój plan ma filtry w ustawieniach, nauczyciel nie ma podgrup
+            rawClasses
         } else {
             rawClasses.filter { currentSelectedSubgroups.contains(it.subgroup ?: "") }
         }
@@ -113,7 +110,6 @@ fun CalendarScreen(
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    // Tytuł kalendarza (Miesiąc Rok)
     val visibleMonth = if (isMonthView) {
         monthState.firstVisibleMonth.yearMonth
     } else {
@@ -154,7 +150,6 @@ fun CalendarScreen(
         Scaffold(
             topBar = {
                 if (isMyPlan) {
-                    // --- WARIANT 1: Mój Plan (Standardowy Kalendarz) ---
                     CalendarTopAppBar(
                         title = calendarTitle,
                         isExpanded = isMonthView,
@@ -177,14 +172,12 @@ fun CalendarScreen(
                         }
                     )
                 } else {
-                    // --- WARIANT 2: Plan Inny (Podgląd/Ulubione) ---
                     PreviewTopAppBar(
                         title = if (isTeacher) "Plan nauczyciela" else "Plan grupy",
                         subtitle = if (isTeacher) (teacherData?.teacherName ?: planName) else planName,
                         isFavorite = isFavorite,
-                        onBackClick = { viewModel.selectMyPlan() }, // Powrót do "Mój Plan"
+                        onBackClick = { viewModel.selectMyPlan() },
                         onFavoriteClick = { viewModel.toggleFavorite(planName, if (isTeacher) "teacher" else "group") },
-                        // Ikona akcji: Info dla nauczyciela, Filtr dla grupy
                         actionIcon = if (isTeacher) R.drawable.ic_info_circle else R.drawable.ic_filter_funnel,
                         onActionClick = {
                             if (isTeacher) showTeacherInfo = true else showSubgroupFilter = true
@@ -192,7 +185,8 @@ fun CalendarScreen(
                     )
                 }
             },
-            containerColor = Color.White
+            // ZMIANA: Użycie koloru z motywu zamiast Color.White
+            containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -222,12 +216,11 @@ fun CalendarScreen(
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
                     modifier = Modifier.padding(innerPadding),
-                    showHeader = !isMyPlan // Pokaż nagłówek miesiąca tylko w trybie podglądu
+                    showHeader = !isMyPlan
                 )
             }
         }
 
-        // --- Obsługa Dialogów (dla trybu Ulubione/Preview) ---
         if (showTeacherInfo) {
             TeacherInfoDialog(
                 onDismiss = { showTeacherInfo = false },
