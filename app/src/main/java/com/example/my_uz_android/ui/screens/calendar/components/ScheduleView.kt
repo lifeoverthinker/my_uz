@@ -40,8 +40,9 @@ import kotlin.math.abs
 
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
-private val HourColWidth = 60.dp
-private val TextVerticalOffset = (-8).dp
+
+// Zmniejszona szerokość kolumny, aby usunąć nadmiar pustego miejsca po lewej
+private val HourColWidth = 56.dp
 
 private val ColorSelectedBg = Color(0xFF6750A4)
 private val ColorTextDark = Color(0xFF4A4A4A)
@@ -62,7 +63,7 @@ fun ScheduleView(
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
     modifier: Modifier = Modifier,
-    showHeader: Boolean = false // Parametr decydujący o wyświetlaniu nagłówka wewnątrz
+    showHeader: Boolean = false
 ) {
     val classesForDay = remember(classes, selectedDate) {
         classes.filter { it.date == selectedDate.toString() }.sortedBy { it.startTime }
@@ -81,9 +82,9 @@ fun ScheduleView(
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp) // Ogólny padding strony 16dp
     ) {
-        // --- NAGŁÓWEK TYLKO DLA PLANÓW GRUP/NAUCZYCIELI ---
+        // --- NAGŁÓWEK ---
         if (showHeader) {
             val visibleMonth = if (isMonthView) {
                 calendarState.firstVisibleMonth.yearMonth
@@ -108,13 +109,14 @@ fun ScheduleView(
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 18.sp,
-                        color = Color(0xFF1D1B20) // Wyrazisty ciemny kolor
+                        color = Color(0xFF1D1B20)
                     )
                 )
             }
         }
-        // --------------------------------------------------
+        // ----------------
 
+        // Nagłówek dni tygodnia
         Row(modifier = Modifier.fillMaxWidth()) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
@@ -158,10 +160,12 @@ fun ScheduleView(
         }
 
         Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            // Rysowanie siatki godzin (0 do 23)
             Column(modifier = Modifier.fillMaxWidth()) {
-                repeat(25) { index -> HourRow(hour = index, isLastLine = index == 24) }
+                repeat(24) { index -> HourRow(hour = index) }
             }
 
+            // Zajęcia
             Box(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
                 classesForDay.forEach { classEntity ->
                     ScheduledClassItem(
@@ -178,7 +182,6 @@ fun ScheduleView(
     }
 }
 
-// ... (Pozostałe funkcje pomocnicze: DaysOfWeekTitle, CalendarDay, HourRow, ScheduledClassItem, CurrentTimeIndicator pozostają bez zmian)
 @Composable
 fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
     Row(modifier = Modifier.fillMaxWidth()) {
@@ -244,42 +247,62 @@ fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, on
 }
 
 @Composable
-fun HourRow(hour: Int, isLastLine: Boolean) {
-    val rowHeight = if (isLastLine) 1.dp else HourHeight
-    Row(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
-        Box(modifier = Modifier.width(HourColWidth).fillMaxHeight()) {
-            if (!isLastLine && hour != 0) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().offset(y = TextVerticalOffset),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = String.format("%02d:00", hour),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 12.sp,
-                            color = ColorTextGray,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = InterFontFamily
-                        ),
-                        modifier = Modifier.padding(start = 0.dp),
-                        textAlign = TextAlign.Start,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 1.dp, color = ColorDivider)
-                }
-            }
+fun HourRow(hour: Int) {
+    val rowHeight = HourHeight
+    // Wyśrodkowanie tekstu w pionie względem linii
+    val textYOffset = (-8).dp
+
+    // Konfiguracja layoutu:
+    // 1. Linia pionowa jest na `HourColWidth` (np. 56dp).
+    // 2. Linia pozioma zaczyna się 8dp wcześniej (48dp).
+    // 3. Tekst kończy się 8dp przed linią poziomą (40dp).
+    val verticalLinePos = HourColWidth
+    val horizontalLineStart = HourColWidth - 8.dp
+    val textMaxWidth = horizontalLineStart - 8.dp // Zostawiamy 8dp odstępu między tekstem a linią
+
+    Box(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
+
+        // 1. Linia Pozioma (Pomiń dla godziny 0)
+        if (hour != 0) {
+            HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = horizontalLineStart) // Kreska "odstaje" w lewo o 8dp
+                    .align(Alignment.TopStart),
+                thickness = 1.dp,
+                color = ColorDivider
+            )
         }
-        VerticalDivider(modifier = Modifier.fillMaxHeight(), thickness = 1.dp, color = ColorDivider)
-        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            if (hour != 0 || isLastLine) {
-                if (hour != 0 && !isLastLine) HorizontalDivider(
-                    modifier = Modifier.align(Alignment.TopStart),
-                    thickness = 1.dp,
-                    color = ColorDivider
-                )
-            }
+
+        // 2. Linia Pionowa
+        VerticalDivider(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(1.dp)
+                .padding(start = verticalLinePos),
+            thickness = 1.dp,
+            color = ColorDivider
+        )
+
+        // 3. Tekst Godziny
+        if (hour != 0) {
+            Text(
+                text = String.format("%02d:00", hour),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 12.sp,
+                    color = ColorTextGray,
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = InterFontFamily
+                ),
+                modifier = Modifier
+                    .width(horizontalLineStart) // Kontener tekstu sięga do początku linii poziomej
+                    .padding(end = 8.dp) // Wymuszamy 8dp odstępu od linii poziomej
+                    .offset(y = textYOffset)
+                    .align(Alignment.TopStart),
+                textAlign = TextAlign.Start, // Wyrównanie do lewej (bez dodatkowego paddingu z lewej)
+                maxLines = 1,
+                softWrap = false
+            )
         }
     }
 }
