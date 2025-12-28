@@ -222,7 +222,7 @@ fun CalendarScreen(
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
                     modifier = Modifier.padding(innerPadding),
-                    showHeader = !isMyPlan // Pokaż nagłówek miesiąca tylko w trybie podglądu (bo tam nie ma go w pasku)
+                    showHeader = !isMyPlan // Pokaż nagłówek miesiąca tylko w trybie podglądu
                 )
             }
         }
@@ -244,7 +244,6 @@ fun CalendarScreen(
                 onDismiss = { showSubgroupFilter = false },
                 onSelectionChange = {
                     selectedSubgroups = it
-                    // Tutaj nie trzeba odświeżać remember, bo 'selectedSubgroups' jest stanem
                 }
             )
         }

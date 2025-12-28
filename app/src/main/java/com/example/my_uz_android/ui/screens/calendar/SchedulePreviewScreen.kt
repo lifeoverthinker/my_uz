@@ -58,6 +58,7 @@ fun SchedulePreviewScreen(
         classes.map { it.subgroup ?: "" }.distinct().sorted()
     }
 
+    // Domyślnie zaznaczamy wszystkie
     var selectedSubgroups by remember(availableSubgroups) {
         mutableStateOf(availableSubgroups.toSet())
     }
@@ -91,12 +92,14 @@ fun SchedulePreviewScreen(
 
     Scaffold(
         topBar = {
+            // Używamy komponentu zaimportowanego z TopAppBar.kt
             PreviewTopAppBar(
                 title = if (isTeacher) "Plan nauczyciela" else "Plan grupy",
                 subtitle = if (isTeacher) (teacherData?.teacherName ?: planName) else planName,
                 isFavorite = isFavorite,
                 onBackClick = { navController.popBackStack() },
                 onFavoriteClick = { viewModel.toggleFavorite(planName, if (isTeacher) "teacher" else "group") },
+                // Jeśli to nauczyciel -> Info, jeśli grupa -> Filtr
                 actionIcon = if (isTeacher) R.drawable.ic_info_circle else R.drawable.ic_filter_funnel,
                 onActionClick = {
                     if (isTeacher) {
@@ -137,7 +140,7 @@ fun SchedulePreviewScreen(
                     classes = filteredClasses,
                     classColorMap = classColorMap,
                     onClassClick = onClassClick,
-                    showHeader = true
+                    showHeader = true // Pokaż nagłówek miesiąca (bo w PreviewTopAppBar go nie ma w tytule)
                 )
             }
         }
