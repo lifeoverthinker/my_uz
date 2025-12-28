@@ -17,6 +17,8 @@ data class ClassEntity(
     val groupCode: String,
     val subgroup: String?,
     val teacherName: String? = null,
+    val teacherEmail: String? = null,      // Rzeczywisty email z bazy
+    val teacherInstitute: String? = null,  // Rzeczywisty instytut z bazy
     val room: String? = null,
     val colorHex: String? = "#3D84FF"
 )
