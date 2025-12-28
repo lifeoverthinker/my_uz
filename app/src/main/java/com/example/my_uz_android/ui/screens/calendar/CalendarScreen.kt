@@ -30,6 +30,7 @@ fun CalendarScreen(
     onTasksClick: () -> Unit,
     onAccountClick: () -> Unit,
     onClassClick: (ClassEntity) -> Unit = {},
+    onShowPreview: () -> Unit, // ✅ Dodano parametr nawigacji
     viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -85,7 +86,10 @@ fun CalendarScreen(
                 },
                 onFavoriteClick = { fav ->
                     viewModel.selectFavoritePlan(fav)
-                    scope.launch { drawerState.close() }
+                    scope.launch {
+                        drawerState.close()
+                        onShowPreview() // ✅ Wywołanie nawigacji po kliknięciu w ulubiony
+                    }
                 },
                 onCloseDrawer = { scope.launch { drawerState.close() } }
             )
@@ -95,7 +99,7 @@ fun CalendarScreen(
             topBar = {
                 CalendarTopAppBar(
                     title = title,
-                    isExpanded = isMonthView, // ZMIANA: Przekazujemy stan widoku
+                    isExpanded = isMonthView,
                     onNavigationClick = { scope.launch { drawerState.open() } },
                     onSearchClick = onSearchClick,
                     onAddClick = {
