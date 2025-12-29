@@ -12,13 +12,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.data.models.EventEntity
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
 @Composable
@@ -29,9 +26,8 @@ fun EventCard(
 ) {
     val cardBackgroundColor = MaterialTheme.extendedColors.eventCardBackground
 
-    // Używamy kolorów z motywu zamiast sztywnych wartości (jak w ClassCard)
-    val titleColor = MaterialTheme.colorScheme.onSurface
-    val detailsColor = MaterialTheme.colorScheme.onSurfaceVariant
+    // Jeden kolor dla tytułu i opisu (jak w ClassCard)
+    val titleColor = Color(0xFF1D192B)
 
     Column(
         modifier = modifier
@@ -44,12 +40,7 @@ fun EventCard(
     ) {
         Text(
             text = event.title,
-            style = TextStyle(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                letterSpacing = 0.1.sp,
+            style = MaterialTheme.typography.titleSmall.copy(
                 color = titleColor
             ),
             maxLines = 1,
@@ -58,13 +49,8 @@ fun EventCard(
 
         Text(
             text = event.description,
-            style = TextStyle(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                letterSpacing = 0.4.sp,
-                color = detailsColor
+            style = MaterialTheme.typography.bodySmall.copy(
+                color = titleColor
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis

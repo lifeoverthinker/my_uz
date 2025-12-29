@@ -1,6 +1,5 @@
 package com.example.my_uz_android.ui.screens.home.components
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -26,11 +25,11 @@ fun UpcomingClasses(
     emptyMessage: String?,
     dayLabel: String?,
     classColorMap: Map<String, Int>,
+    isDarkMode: Boolean, // POPRAWKA: Dodajemy parametr zamiast isSystemInDarkTheme()
     modifier: Modifier = Modifier,
     onClassClick: (Int) -> Unit
 ) {
     val classCardColor = MaterialTheme.extendedColors.classCardBackground
-    val isDark = isSystemInDarkTheme()
 
     Column(
         modifier = modifier
@@ -38,7 +37,6 @@ fun UpcomingClasses(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Nagłówek
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -91,7 +89,9 @@ fun UpcomingClasses(
                 items(classes) { classItem ->
                     val colorIndex = classColorMap[classItem.classType]
                         ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
-                    val accentColor = getClassAccentColor(colorIndex, isDark)
+
+                    // Używamy przekazanego isDarkMode dla akcentu zajęć
+                    val accentColor = getClassAccentColor(colorIndex, isDarkMode)
 
                     ClassCard(
                         classItem = classItem,

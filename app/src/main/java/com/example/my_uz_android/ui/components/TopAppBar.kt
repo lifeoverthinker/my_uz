@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -25,9 +26,6 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
-/**
- * Pasek Kalendarza (Główny ekran) - Styl z okrągłymi przyciskami
- */
 @Composable
 fun CalendarTopAppBar(
     title: String,
@@ -40,24 +38,24 @@ fun CalendarTopAppBar(
     onInfoClick: (() -> Unit)? = null,
     onTitleClick: (() -> Unit)? = null
 ) {
-    val buttonBackgroundColor = MaterialTheme.extendedColors.homeTopBackground
-    val contentColor = MaterialTheme.colorScheme.onSurface
+    val buttonBackgroundColor = MaterialTheme.extendedColors.buttonBackground
+    val titleColor = MaterialTheme.colorScheme.onSurface
+    // ZMIANA: Pobieramy kolor ikony z motywu (będzie jasny w dark mode)
+    val buttonIconColor = MaterialTheme.extendedColors.iconText
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding() // Najpierw padding systemowy
-            .padding(horizontal = 16.dp, vertical = 8.dp), // Potem nasz padding
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // LEWA STRONA: Nawigacja + Tytuł
         Row(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
-            // Przycisk nawigacji w kółku (48dp)
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -70,11 +68,10 @@ fun CalendarTopAppBar(
                     painter = painterResource(navigationIcon),
                     contentDescription = "Nawigacja",
                     modifier = Modifier.size(24.dp),
-                    tint = contentColor
+                    tint = buttonIconColor // Dynamiczny kolor
                 )
             }
 
-            // Tytuł
             Column(
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
@@ -83,31 +80,22 @@ fun CalendarTopAppBar(
                     .weight(1f, fill = false),
                 verticalArrangement = Arrangement.Center
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 24.sp,
-                            lineHeight = 24.sp
-                        ),
-                        color = contentColor,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 22.sp),
+                        color = titleColor,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-
                     if (onTitleClick != null) {
+                        Spacer(Modifier.width(4.dp))
                         Icon(
-                            painter = painterResource(
-                                if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
-                            ),
-                            contentDescription = if (isExpanded) "Zwiń" else "Rozwiń",
-                            modifier = Modifier.requiredSize(20.dp),
-                            tint = contentColor
+                            painter = painterResource(if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = titleColor
                         )
                     }
                 }
@@ -126,7 +114,6 @@ fun CalendarTopAppBar(
             }
         }
 
-        // PRAWA STRONA: Ikony akcji
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -145,7 +132,7 @@ fun CalendarTopAppBar(
                         painter = painterResource(R.drawable.ic_info_circle),
                         contentDescription = "Info",
                         modifier = Modifier.size(24.dp),
-                        tint = contentColor
+                        tint = buttonIconColor
                     )
                 }
             }
@@ -163,7 +150,7 @@ fun CalendarTopAppBar(
                         painter = painterResource(R.drawable.ic_search),
                         contentDescription = "Szukaj",
                         modifier = Modifier.size(24.dp),
-                        tint = contentColor
+                        tint = buttonIconColor
                     )
                 }
             }
@@ -181,7 +168,7 @@ fun CalendarTopAppBar(
                         painter = painterResource(R.drawable.ic_calendar),
                         contentDescription = "Dzisiaj",
                         modifier = Modifier.size(24.dp),
-                        tint = contentColor
+                        tint = buttonIconColor
                     )
                 }
             }
@@ -189,10 +176,6 @@ fun CalendarTopAppBar(
     }
 }
 
-/**
- * Pasek dla Podglądu Planu (Grupa/Nauczyciel)
- * Styl identyczny jak CalendarTopAppBar (kółka), ale z innymi akcjami (Serce, Filtr/Info).
- */
 @Composable
 fun PreviewTopAppBar(
     title: String,
@@ -203,24 +186,23 @@ fun PreviewTopAppBar(
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit
 ) {
-    val buttonBackgroundColor = MaterialTheme.extendedColors.homeTopBackground
-    val contentColor = MaterialTheme.colorScheme.onSurface
+    val buttonBackgroundColor = MaterialTheme.extendedColors.buttonBackground
+    val titleColor = MaterialTheme.colorScheme.onSurface
+    val buttonIconColor = MaterialTheme.extendedColors.iconText // Dynamiczny kolor
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding() // Padding systemowy
-            .padding(horizontal = 16.dp, vertical = 8.dp), // Padding taki sam jak w CalendarTopAppBar
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // LEWA STRONA: Strzałka + Opisy
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp), // Odstęp taki sam jak w CalendarTopAppBar
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
-            // Strzałka w kółku (48dp)
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -233,11 +215,10 @@ fun PreviewTopAppBar(
                     painter = painterResource(R.drawable.ic_chevron_left),
                     contentDescription = "Wstecz",
                     modifier = Modifier.size(24.dp),
-                    tint = contentColor
+                    tint = buttonIconColor
                 )
             }
 
-            // Teksty
             Column(verticalArrangement = Arrangement.Center) {
                 Text(
                     text = title,
@@ -247,7 +228,7 @@ fun PreviewTopAppBar(
                         fontSize = 18.sp,
                         lineHeight = 24.sp
                     ),
-                    color = contentColor,
+                    color = titleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -264,13 +245,11 @@ fun PreviewTopAppBar(
             }
         }
 
-        // PRAWA STRONA: Akcja + Serduszko
         Row(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 8.dp)
         ) {
-            // Przycisk Akcji (Info lub Filtr) w kółku (48dp)
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -283,11 +262,10 @@ fun PreviewTopAppBar(
                     painter = painterResource(actionIcon),
                     contentDescription = "Akcja",
                     modifier = Modifier.size(24.dp),
-                    tint = contentColor
+                    tint = buttonIconColor
                 )
             }
 
-            // Przycisk Ulubione w kółku (48dp)
             Box(
                 modifier = Modifier
                     .size(48.dp)
@@ -300,15 +278,14 @@ fun PreviewTopAppBar(
                     painter = painterResource(if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart),
                     contentDescription = "Ulubione",
                     modifier = Modifier.size(24.dp),
-                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else contentColor
+                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else buttonIconColor
                 )
             }
         }
     }
 }
 
-// --- STANDARDOWE PASKI (Material3) ---
-
+// Reszta (SearchTopAppBar, TopAppBar) bez zmian, tylko upewnij się że navigationIcon używa tintu z motywu
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(
@@ -329,7 +306,7 @@ fun TopAppBar(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.extendedColors.homeTopBackground)
+                        .background(MaterialTheme.extendedColors.buttonBackground)
                         .clickable(onClick = onNavigationClick),
                     contentAlignment = Alignment.Center
                 ) {
@@ -337,7 +314,7 @@ fun TopAppBar(
                         painter = painterResource(id = navigationIcon),
                         contentDescription = "Nawigacja",
                         modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = MaterialTheme.extendedColors.iconText // Dynamiczny
                     )
                 }
             } else {
@@ -352,6 +329,8 @@ fun TopAppBar(
             }
         }
     }
+
+    // ... reszta funkcji TopAppBar bez zmian (używa navigationIconContent)
 
     val defaultTitleContent: @Composable () -> Unit = {
         Column(horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start) {

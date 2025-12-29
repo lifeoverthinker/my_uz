@@ -232,6 +232,10 @@ fun StudyCard(
     mode: String,
     isAnonymous: Boolean
 ) {
+    // Wymuszenie ciemnych kolorów tekstu, ponieważ tło (classCardBackground) jest teraz jasne/pastelowe w Dark Mode
+    val contentColor = Color(0xFF1D192B)
+    val labelColor = Color(0xFF494949)
+
     Card(
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
@@ -248,14 +252,14 @@ fun StudyCard(
                     Icon(
                         painter = painterResource(R.drawable.ic_info_circle),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = labelColor,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Zaloguj się lub uzupełnij dane, aby widzieć informacje o studiach.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = labelColor
                     )
                 }
             } else {
@@ -263,24 +267,29 @@ fun StudyCard(
                     text = fieldOfStudy,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = contentColor
                     )
                 )
 
-                StudyDetailRow(label = "Wydział", value = faculty)
-                StudyDetailRow(label = "Grupa", value = group)
+                StudyDetailRow(label = "Wydział", value = faculty, labelColor = labelColor, valueColor = contentColor)
+                StudyDetailRow(label = "Grupa", value = group, labelColor = labelColor, valueColor = contentColor)
 
                 val subgroupsText = if (subgroups.isNotEmpty()) subgroups.sorted().joinToString(", ") else "-"
-                StudyDetailRow(label = "Podgrupy", value = subgroupsText)
+                StudyDetailRow(label = "Podgrupy", value = subgroupsText, labelColor = labelColor, valueColor = contentColor)
 
-                StudyDetailRow(label = "Tryb studiów", value = mode)
+                StudyDetailRow(label = "Tryb studiów", value = mode, labelColor = labelColor, valueColor = contentColor)
             }
         }
     }
 }
 
 @Composable
-fun StudyDetailRow(label: String, value: String) {
+fun StudyDetailRow(
+    label: String,
+    value: String,
+    labelColor: Color = MaterialTheme.colorScheme.outline,
+    valueColor: Color = MaterialTheme.colorScheme.onBackground
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -289,13 +298,13 @@ fun StudyDetailRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline,
+            color = labelColor,
             modifier = Modifier.padding(end = 16.dp)
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = valueColor,
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.End
         )
