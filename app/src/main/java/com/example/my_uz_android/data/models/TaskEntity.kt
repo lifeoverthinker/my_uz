@@ -2,8 +2,10 @@ package com.example.my_uz_android.data.models
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 import java.time.Instant
 
+@Serializable // Dodano dla Supabase
 @Entity(tableName = "tasks")
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true)
