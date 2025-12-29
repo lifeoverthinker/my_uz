@@ -8,7 +8,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -37,14 +36,15 @@ fun TimePicker(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface, // Białe tło z theme
-            tonalElevation = 0.dp, // Brak fioletowej poświaty
+            color = MaterialTheme.colorScheme.surface, // Kolor z Twojego Theme
+            tonalElevation = 0.dp,
             modifier = Modifier.wrapContentSize()
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Kolory są mapowane na Twój Theme.kt automatycznie, ale dla pewności zostawiamy explicit mapping
                 androidx.compose.material3.TimePicker(
                     state = timeState,
                     colors = TimePickerDefaults.colors(
@@ -73,7 +73,8 @@ fun TimePicker(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Anuluj", fontFamily = InterFontFamily)
+                        // Używamy stylu z Theme (labelLarge ma InterFont)
+                        Text("Anuluj", style = MaterialTheme.typography.labelLarge)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     TextButton(
@@ -81,7 +82,7 @@ fun TimePicker(
                             onTimeSelected(timeState.hour, timeState.minute)
                         }
                     ) {
-                        Text("OK", fontFamily = InterFontFamily)
+                        Text("OK", style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }

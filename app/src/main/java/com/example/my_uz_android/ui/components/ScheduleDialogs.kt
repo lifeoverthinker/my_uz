@@ -19,7 +19,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.theme.InterFontFamily
 
 @Composable
 fun SubgroupFilterDialog(
@@ -37,19 +36,18 @@ fun SubgroupFilterDialog(
                 Text(
                     text = "Wybierz podgrupy do wyświetlenia na planie.",
                     style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = InterFontFamily,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                // Wyświetlamy listę, nawet jeśli zawiera tylko "Cała grupa" (pusty string)
                 if (subgroups.isEmpty()) {
-                    // Ten tekst pokaże się TYLKO, gdy lista jest absolutnie pusta (brak zajęć)
-                    Text("Brak zdefiniowanych podgrup w pobranym planie.", fontFamily = InterFontFamily)
+                    Text(
+                        text = "Brak zdefiniowanych podgrup w pobranym planie.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxHeight(0.4f).fillMaxWidth()) {
                         items(subgroups) { subgroup ->
                             val isSelected = selectedSubgroups.contains(subgroup)
-                            // Normalizacja nazwy do wyświetlenia
                             val displayName = if (subgroup.isBlank()) "Cała grupa" else subgroup
 
                             Row(
@@ -66,8 +64,7 @@ fun SubgroupFilterDialog(
                                 Spacer(Modifier.width(12.dp))
                                 Text(
                                     text = displayName,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontFamily = InterFontFamily
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
                             }
                         }
@@ -78,7 +75,7 @@ fun SubgroupFilterDialog(
         confirmButtonText = "Gotowe",
         dismissButton = {
             TextButton(onClick = { onSelectionChange(subgroups.toSet()) }) {
-                Text("Wszystkie", fontFamily = InterFontFamily)
+                Text("Wszystkie", style = MaterialTheme.typography.labelLarge)
             }
         }
     )
@@ -99,8 +96,6 @@ fun TeacherInfoDialog(
         content = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 DialogInfoSection(label = "Dane nauczyciela", value = fullName)
-
-                // Wyświetl tylko jeśli są dane, inaczej informacja o braku
                 val deptDisplay = if (department.isNotBlank()) department else "Brak informacji o jednostce"
                 DialogInfoSection(label = "Instytut / Katedra", value = deptDisplay)
 
@@ -130,7 +125,6 @@ fun TeacherInfoDialog(
                             Text(
                                 text = emailDisplay,
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontFamily = InterFontFamily,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -166,15 +160,13 @@ private fun BaseScheduleDialog(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
             )
         },
         text = content,
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(confirmButtonText, fontWeight = FontWeight.Bold, fontFamily = InterFontFamily)
+                Text(confirmButtonText, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
             }
         },
         dismissButton = dismissButton,
@@ -188,8 +180,7 @@ private fun DialogLabel(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
-        fontFamily = InterFontFamily
+        color = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -200,7 +191,6 @@ private fun DialogInfoSection(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyLarge,
-            fontFamily = InterFontFamily,
             color = MaterialTheme.colorScheme.onSurface,
             lineHeight = 24.sp
         )

@@ -39,6 +39,7 @@ import com.example.my_uz_android.ui.theme.InterFontFamily
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import android.content.res.Configuration
 
 enum class ClassCardType {
     HOME,
@@ -57,7 +58,7 @@ fun ClassCard(
 ) {
     val titleColor = Color(0xFF1D192B)
     val detailsColor = Color(0xFF494949)
-    val avatarTextColor = Color(0xFFFFFBFE) // Biały tekst na kolorowym badge'u
+    val avatarTextColor = Color(0xFFFFFBFE)
 
     val isPast = remember(classItem) {
         try {
@@ -71,7 +72,6 @@ fun ClassCard(
         }
     }
 
-    // Aplikuj alpha tylko dla kalendarza (wyszarzenie przeszłych)
     val contentAlpha = if (isPast && type == ClassCardType.CALENDAR) 0.6f else 1f
 
     Card(
@@ -181,8 +181,8 @@ fun ClassCard(
                             )
                         }
                     }
+
                     ClassCardType.CALENDAR -> {
-                        // Mała kropka w kalendarzu
                         Box(
                             modifier = Modifier
                                 .size(8.dp)
@@ -193,5 +193,150 @@ fun ClassCard(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "ClassCard • HOME")
+@Composable
+private fun ClassCardHomePreview() {
+    MaterialTheme {
+        ClassCard(
+            classItem = sampleClassEntity(
+                subjectName = "Matematyka",
+                classType = "W",
+                date = LocalDate.now().toString(),
+                startTime = "08:00",
+                endTime = "09:30",
+                room = "A-101"
+            ),
+            type = ClassCardType.HOME,
+            showBadge = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "ClassCard • CALENDAR (przyszłość)")
+@Composable
+private fun ClassCardCalendarUpcomingPreview() {
+    MaterialTheme {
+        ClassCard(
+            classItem = sampleClassEntity(
+                subjectName = "Fizyka",
+                classType = "L",
+                date = LocalDate.now().plusDays(1).toString(),
+                startTime = "12:00",
+                endTime = "13:30",
+                room = "B-203"
+            ),
+            type = ClassCardType.CALENDAR,
+            showBadge = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "ClassCard • CALENDAR (przeszłość)")
+@Composable
+private fun ClassCardCalendarPastPreview() {
+    MaterialTheme {
+        ClassCard(
+            classItem = sampleClassEntity(
+                subjectName = "Chemia",
+                classType = "C",
+                date = LocalDate.now().minusDays(1).toString(),
+                startTime = "10:00",
+                endTime = "11:30",
+                room = "C-105"
+            ),
+            type = ClassCardType.CALENDAR,
+            showBadge = true
+        )
+    }
+}
+
+private fun sampleClassEntity(
+    subjectName: String,
+    classType: String,
+    date: String,
+    startTime: String,
+    endTime: String,
+    room: String?
+): ClassEntity = ClassEntity(
+    subjectName = subjectName,
+    classType = classType,
+    date = date,
+    startTime = startTime,
+    endTime = endTime,
+    room = room,
+    dayOfWeek = runCatching { LocalDate.parse(date).dayOfWeek.value }.getOrDefault(0),
+    groupCode = "",
+    subgroup = null
+)
+
+@Preview(
+    showBackground = true,
+    name = "ClassCard • HOME (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+private fun ClassCardHomeDarkPreview() {
+    MaterialTheme {
+        ClassCard(
+            classItem = sampleClassEntity(
+                subjectName = "Matematyka",
+                classType = "W",
+                date = LocalDate.now().toString(),
+                startTime = "08:00",
+                endTime = "09:30",
+                room = "A-101"
+            ),
+            type = ClassCardType.HOME,
+            showBadge = true
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "ClassCard • CALENDAR (przyszłość) (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+private fun ClassCardCalendarUpcomingDarkPreview() {
+    MaterialTheme {
+        ClassCard(
+            classItem = sampleClassEntity(
+                subjectName = "Fizyka",
+                classType = "L",
+                date = LocalDate.now().plusDays(1).toString(),
+                startTime = "12:00",
+                endTime = "13:30",
+                room = "B-203"
+            ),
+            type = ClassCardType.CALENDAR,
+            showBadge = true
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "ClassCard • CALENDAR (przeszłość) (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+private fun ClassCardCalendarPastDarkPreview() {
+    MaterialTheme {
+        ClassCard(
+            classItem = sampleClassEntity(
+                subjectName = "Chemia",
+                classType = "C",
+                date = LocalDate.now().minusDays(1).toString(),
+                startTime = "10:00",
+                endTime = "11:30",
+                room = "C-105"
+            ),
+            type = ClassCardType.CALENDAR,
+            showBadge = true
+        )
     }
 }

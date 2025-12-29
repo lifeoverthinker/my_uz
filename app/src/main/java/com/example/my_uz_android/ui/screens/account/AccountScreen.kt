@@ -16,11 +16,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,11 +65,7 @@ fun AccountScreen(
             ) {
                 Text(
                     text = "Konto",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 24.sp
-                    ),
+                    style = MaterialTheme.typography.headlineSmall,
                     color = textColor
                 )
             }
@@ -161,13 +155,8 @@ fun AccountOptionItem(
                     )
                     Text(
                         text = label,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            fontSize = 16.sp,
-                            letterSpacing = 0.5.sp,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
                 Icon(
@@ -211,12 +200,8 @@ fun ProfileSection(userName: String, userTitle: String, isAnonymous: Boolean) {
             } else {
                 Text(
                     text = getInitials(userName),
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 22.sp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
             }
         }
@@ -224,21 +209,13 @@ fun ProfileSection(userName: String, userTitle: String, isAnonymous: Boolean) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = if (isAnonymous) "Użytkownik Gość" else userName,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp,
-                    letterSpacing = 0.15.sp,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = if (isAnonymous) "Konto gościa" else userTitle,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp,
-                    letterSpacing = 0.1.sp,
                     color = MaterialTheme.colorScheme.outline
                 )
             )
@@ -255,6 +232,10 @@ fun StudyCard(
     mode: String,
     isAnonymous: Boolean
 ) {
+    // Wymuszenie ciemnych kolorów tekstu, ponieważ tło (classCardBackground) jest teraz jasne/pastelowe w Dark Mode
+    val contentColor = Color(0xFF1D192B)
+    val labelColor = Color(0xFF494949)
+
     Card(
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
@@ -271,44 +252,44 @@ fun StudyCard(
                     Icon(
                         painter = painterResource(R.drawable.ic_info_circle),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = labelColor,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Zaloguj się lub uzupełnij dane, aby widzieć informacje o studiach.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = labelColor
                     )
                 }
             } else {
                 Text(
                     text = fieldOfStudy,
                     style = MaterialTheme.typography.bodyLarge.copy(
-                        fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Medium,
-                        fontSize = 14.sp,
-                        letterSpacing = 0.1.sp,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = contentColor
                     )
                 )
 
-                // Sekcja szczegółów
-                StudyDetailRow(label = "Wydział", value = faculty)
-                StudyDetailRow(label = "Grupa", value = group)
+                StudyDetailRow(label = "Wydział", value = faculty, labelColor = labelColor, valueColor = contentColor)
+                StudyDetailRow(label = "Grupa", value = group, labelColor = labelColor, valueColor = contentColor)
 
-                // POPRAWKA: Dodano .sorted(), aby podgrupy były wyświetlane w kolejności alfabetycznej
                 val subgroupsText = if (subgroups.isNotEmpty()) subgroups.sorted().joinToString(", ") else "-"
-                StudyDetailRow(label = "Podgrupy", value = subgroupsText)
+                StudyDetailRow(label = "Podgrupy", value = subgroupsText, labelColor = labelColor, valueColor = contentColor)
 
-                StudyDetailRow(label = "Tryb studiów", value = mode)
+                StudyDetailRow(label = "Tryb studiów", value = mode, labelColor = labelColor, valueColor = contentColor)
             }
         }
     }
 }
 
 @Composable
-fun StudyDetailRow(label: String, value: String) {
+fun StudyDetailRow(
+    label: String,
+    value: String,
+    labelColor: Color = MaterialTheme.colorScheme.outline,
+    valueColor: Color = MaterialTheme.colorScheme.onBackground
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -316,24 +297,14 @@ fun StudyDetailRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                letterSpacing = 0.4.sp,
-                color = MaterialTheme.colorScheme.outline
-            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = labelColor,
             modifier = Modifier.padding(end = 16.dp)
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                letterSpacing = 0.4.sp,
-                color = MaterialTheme.colorScheme.onBackground
-            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = valueColor,
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.End
         )
@@ -344,13 +315,8 @@ fun StudyDetailRow(label: String, value: String) {
 fun SectionTitle(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.bodyLarge.copy(
-            fontFamily = InterFontFamily,
-            fontWeight = FontWeight.Medium,
-            fontSize = 16.sp,
-            letterSpacing = 0.15.sp,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+        color = MaterialTheme.colorScheme.onBackground
     )
 }
 

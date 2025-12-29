@@ -19,12 +19,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // ✅ DODANO BRAKUJĄCY IMPORT
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.components.ClassCardType
 import com.example.my_uz_android.ui.theme.ClassColorPalette
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
@@ -32,7 +31,6 @@ import com.kizitonwose.calendar.compose.weekcalendar.WeekCalendarState
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.daysOfWeek
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.time.*
 import java.time.format.TextStyle
 import java.util.Locale
@@ -40,14 +38,7 @@ import kotlin.math.abs
 
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
-private val HourColWidth = 60.dp
-private val TextVerticalOffset = (-8).dp
-
-private val ColorSelectedBg = Color(0xFF6750A4)
-private val ColorTextDark = Color(0xFF4A4A4A)
-private val ColorTextGray = Color(0xFF787579)
-private val ColorDivider = Color(0xFFE0E0E0)
-private val ColorCurrentTime = Color(0xFFEA4335)
+private val HourColWidth = 56.dp
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -62,7 +53,7 @@ fun ScheduleView(
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
     modifier: Modifier = Modifier,
-    showHeader: Boolean = false // Parametr decydujący o wyświetlaniu nagłówka wewnątrz
+    showHeader: Boolean = false
 ) {
     val classesForDay = remember(classes, selectedDate) {
         classes.filter { it.date == selectedDate.toString() }.sortedBy { it.startTime }
@@ -80,10 +71,10 @@ fun ScheduleView(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp)
     ) {
-        // --- NAGŁÓWEK TYLKO DLA PLANÓW GRUP/NAUCZYCIELI ---
+        // --- NAGŁÓWEK ---
         if (showHeader) {
             val visibleMonth = if (isMonthView) {
                 calendarState.firstVisibleMonth.yearMonth
@@ -104,17 +95,18 @@ fun ScheduleView(
             ) {
                 Text(
                     text = monthTitle,
+                    // Type.kt titleMedium (16sp, Medium) -> podbijamy rozmiar do 18sp
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = InterFontFamily,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp,
-                        color = Color(0xFF1D1B20) // Wyrazisty ciemny kolor
-                    )
+                        fontSize = 18.sp
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
-        // --------------------------------------------------
+        // ----------------
 
+        // Nagłówek dni tygodnia
         Row(modifier = Modifier.fillMaxWidth()) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
@@ -158,10 +150,12 @@ fun ScheduleView(
         }
 
         Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            // Rysowanie siatki godzin (0 do 23)
             Column(modifier = Modifier.fillMaxWidth()) {
-                repeat(25) { index -> HourRow(hour = index, isLastLine = index == 24) }
+                repeat(24) { index -> HourRow(hour = index) }
             }
 
+            // Zajęcia
             Box(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
                 classesForDay.forEach { classEntity ->
                     ScheduledClassItem(
@@ -178,22 +172,18 @@ fun ScheduleView(
     }
 }
 
-// ... (Pozostałe funkcje pomocnicze: DaysOfWeekTitle, CalendarDay, HourRow, ScheduledClassItem, CurrentTimeIndicator pozostają bez zmian)
 @Composable
 fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
     Row(modifier = Modifier.fillMaxWidth()) {
         for (dayOfWeek in daysOfWeek) {
             Text(
                 modifier = Modifier.weight(1f).height(24.dp),
-                text = dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale("pl"))
+                text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl"))
                     .replaceFirstChar { it.titlecase() }.take(1),
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp
-                ),
-                color = ColorTextGray
+                // Type.kt: labelSmall ma Medium i 11sp. Tu podbijamy do 12sp.
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -202,13 +192,17 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 @Composable
 fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, onClick: (LocalDate) -> Unit) {
     val isToday = date == LocalDate.now(PolandZone)
+    val primaryColor = MaterialTheme.colorScheme.primary
+
     val textColor = if (isDateInMonth) {
-        if (isSelected) Color.White else if (isToday) Color(0xFF6750A4) else ColorTextDark
-    } else Color(0xFFE0E0E0)
+        if (isSelected) MaterialTheme.colorScheme.onPrimary
+        else if (isToday) primaryColor
+        else MaterialTheme.colorScheme.onSurface
+    } else MaterialTheme.colorScheme.outlineVariant
 
     val circleSize = if (isSelected || isToday) 28.dp else 24.dp
-    val circleColor = if (isSelected && isDateInMonth) ColorSelectedBg else Color.Transparent
-    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, ColorSelectedBg, CircleShape) else Modifier
+    val circleColor = if (isSelected && isDateInMonth) primaryColor else Color.Transparent
+    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, primaryColor, CircleShape) else Modifier
 
     Box(
         modifier = Modifier.aspectRatio(1f).padding(2.dp),
@@ -230,8 +224,8 @@ fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, on
             ) {
                 Text(
                     text = date.dayOfMonth.toString(),
+                    // bodyMedium ma Normal 14sp. Nadpisujemy na Medium 16sp
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Medium,
                         fontSize = 16.sp
                     ),
@@ -244,42 +238,52 @@ fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, on
 }
 
 @Composable
-fun HourRow(hour: Int, isLastLine: Boolean) {
-    val rowHeight = if (isLastLine) 1.dp else HourHeight
-    Row(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
-        Box(modifier = Modifier.width(HourColWidth).fillMaxHeight()) {
-            if (!isLastLine && hour != 0) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().offset(y = TextVerticalOffset),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = String.format("%02d:00", hour),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 12.sp,
-                            color = ColorTextGray,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = InterFontFamily
-                        ),
-                        modifier = Modifier.padding(start = 0.dp),
-                        textAlign = TextAlign.Start,
-                        maxLines = 1,
-                        softWrap = false
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 1.dp, color = ColorDivider)
-                }
-            }
+fun HourRow(hour: Int) {
+    val rowHeight = HourHeight
+    val textYOffset = (-8).dp
+    val verticalLinePos = HourColWidth
+    val horizontalLineStart = HourColWidth - 8.dp
+
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+
+    Box(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
+        if (hour != 0) {
+            HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = horizontalLineStart)
+                    .align(Alignment.TopStart),
+                thickness = 1.dp,
+                color = dividerColor
+            )
         }
-        VerticalDivider(modifier = Modifier.fillMaxHeight(), thickness = 1.dp, color = ColorDivider)
-        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            if (hour != 0 || isLastLine) {
-                if (hour != 0 && !isLastLine) HorizontalDivider(
-                    modifier = Modifier.align(Alignment.TopStart),
-                    thickness = 1.dp,
-                    color = ColorDivider
-                )
-            }
+
+        VerticalDivider(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(1.dp)
+                .padding(start = verticalLinePos),
+            thickness = 1.dp,
+            color = dividerColor
+        )
+
+        if (hour != 0) {
+            Text(
+                text = String.format("%02d:00", hour),
+                // labelSmall (11sp, Medium). Nadpisujemy kolor.
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                modifier = Modifier
+                    .width(horizontalLineStart)
+                    .padding(end = 8.dp)
+                    .offset(y = textYOffset)
+                    .align(Alignment.TopStart),
+                textAlign = TextAlign.Start,
+                maxLines = 1,
+                softWrap = false
+            )
         }
     }
 }
@@ -333,12 +337,14 @@ fun CurrentTimeIndicator() {
     val minutesFromMidnight = currentTime.hour * 60 + currentTime.minute
     val topOffset = minutesFromMidnight.dp
 
+    val indicatorColor = MaterialTheme.colorScheme.error
+
     Box(
         modifier = Modifier.fillMaxWidth().offset(y = topOffset).height(12.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         HorizontalDivider(
-            color = ColorCurrentTime,
+            color = indicatorColor,
             thickness = 2.dp,
             modifier = Modifier.fillMaxWidth().padding(start = HourColWidth)
         )
@@ -347,7 +353,7 @@ fun CurrentTimeIndicator() {
                 .padding(start = HourColWidth - 5.dp)
                 .size(10.dp)
                 .clip(CircleShape)
-                .background(ColorCurrentTime)
+                .background(indicatorColor)
         )
     }
 }

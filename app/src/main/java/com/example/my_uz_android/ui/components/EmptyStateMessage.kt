@@ -34,7 +34,6 @@ fun EmptyStateMessage(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(32.dp)
         ) {
-            // Ikona
             if (iconRes != null) {
                 Icon(
                     painter = painterResource(id = iconRes),
@@ -51,20 +50,17 @@ fun EmptyStateMessage(
                 )
             }
 
-            // Tytuł (opcjonalny)
             if (title != null) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontWeight = FontWeight.Bold
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
                 )
             }
 
-            // Wiadomość
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
@@ -72,7 +68,6 @@ fun EmptyStateMessage(
                 textAlign = TextAlign.Center
             )
 
-            // Przycisk akcji (opcjonalny)
             if (actionText != null && onActionClick != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -80,12 +75,12 @@ fun EmptyStateMessage(
                     modifier = Modifier.height(48.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
-                    )
+                    ),
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Text(
                         text = actionText,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
                     )
                 }
             }

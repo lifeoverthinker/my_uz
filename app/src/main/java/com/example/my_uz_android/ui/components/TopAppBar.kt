@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -28,20 +29,25 @@ import com.example.my_uz_android.ui.theme.extendedColors
 @Composable
 fun CalendarTopAppBar(
     title: String,
+    subtitle: String? = null,
+    navigationIcon: Int = R.drawable.ic_menu,
     isExpanded: Boolean = false,
     onNavigationClick: () -> Unit,
     onSearchClick: (() -> Unit)? = null,
     onAddClick: (() -> Unit)? = null,
+    onInfoClick: (() -> Unit)? = null,
     onTitleClick: (() -> Unit)? = null
 ) {
-    val buttonBackgroundColor = MaterialTheme.extendedColors.homeTopBackground
-    val contentColor = MaterialTheme.colorScheme.onSurface
+    val buttonBackgroundColor = MaterialTheme.extendedColors.buttonBackground
+    val titleColor = MaterialTheme.colorScheme.onSurface
+    // ZMIANA: Pobieramy kolor ikony z motywu (będzie jasny w dark mode)
+    val buttonIconColor = MaterialTheme.extendedColors.iconText
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -59,44 +65,50 @@ fun CalendarTopAppBar(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_menu),
-                    contentDescription = "Menu",
+                    painter = painterResource(navigationIcon),
+                    contentDescription = "Nawigacja",
                     modifier = Modifier.size(24.dp),
-                    tint = contentColor
+                    tint = buttonIconColor // Dynamiczny kolor
                 )
             }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Column(
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
                     .clickable(enabled = onTitleClick != null) { onTitleClick?.invoke() }
                     .padding(4.dp)
-                    .weight(1f, fill = false)
+                    .weight(1f, fill = false),
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 24.sp,
-                        lineHeight = 24.sp
-                    ),
-                    color = contentColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-
-                if (onTitleClick != null) {
-                    Icon(
-                        painter = painterResource(
-                            if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 22.sp),
+                        color = titleColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (onTitleClick != null) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            painter = painterResource(if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = titleColor
+                        )
+                    }
+                }
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary
                         ),
-                        contentDescription = if (isExpanded) "Zwiń" else "Rozwiń",
-                        modifier = Modifier.requiredSize(20.dp),
-                        tint = contentColor
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -107,6 +119,24 @@ fun CalendarTopAppBar(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 8.dp)
         ) {
+            if (onInfoClick != null) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(buttonBackgroundColor)
+                        .clickable(onClick = onInfoClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_info_circle),
+                        contentDescription = "Info",
+                        modifier = Modifier.size(24.dp),
+                        tint = buttonIconColor
+                    )
+                }
+            }
+
             if (onSearchClick != null) {
                 Box(
                     modifier = Modifier
@@ -120,7 +150,7 @@ fun CalendarTopAppBar(
                         painter = painterResource(R.drawable.ic_search),
                         contentDescription = "Szukaj",
                         modifier = Modifier.size(24.dp),
-                        tint = contentColor
+                        tint = buttonIconColor
                     )
                 }
             }
@@ -138,7 +168,7 @@ fun CalendarTopAppBar(
                         painter = painterResource(R.drawable.ic_calendar),
                         contentDescription = "Dzisiaj",
                         modifier = Modifier.size(24.dp),
-                        tint = contentColor
+                        tint = buttonIconColor
                     )
                 }
             }
@@ -146,6 +176,116 @@ fun CalendarTopAppBar(
     }
 }
 
+@Composable
+fun PreviewTopAppBar(
+    title: String,
+    subtitle: String,
+    onBackClick: () -> Unit,
+    onActionClick: () -> Unit,
+    actionIcon: Int,
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit
+) {
+    val buttonBackgroundColor = MaterialTheme.extendedColors.buttonBackground
+    val titleColor = MaterialTheme.colorScheme.onSurface
+    val buttonIconColor = MaterialTheme.extendedColors.iconText // Dynamiczny kolor
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(buttonBackgroundColor)
+                    .clickable(onClick = onBackClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_left),
+                    contentDescription = "Wstecz",
+                    modifier = Modifier.size(24.dp),
+                    tint = buttonIconColor
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp,
+                        lineHeight = 24.sp
+                    ),
+                    color = titleColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle.ifBlank { "Szczegóły" },
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(buttonBackgroundColor)
+                    .clickable(onClick = onActionClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(actionIcon),
+                    contentDescription = "Akcja",
+                    modifier = Modifier.size(24.dp),
+                    tint = buttonIconColor
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(buttonBackgroundColor)
+                    .clickable(onClick = onFavoriteClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart),
+                    contentDescription = "Ulubione",
+                    modifier = Modifier.size(24.dp),
+                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else buttonIconColor
+                )
+            }
+        }
+    }
+}
+
+// Reszta (SearchTopAppBar, TopAppBar) bez zmian, tylko upewnij się że navigationIcon używa tintu z motywu
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(
@@ -156,6 +296,7 @@ fun TopAppBar(
     actions: @Composable RowScope.() -> Unit = {},
     isCenterAligned: Boolean = false,
     isNavigationIconFilled: Boolean = false,
+    scrollBehavior: TopAppBarScrollBehavior? = null,
     titleContent: (@Composable () -> Unit)? = null
 ) {
     val navigationIconContent: @Composable () -> Unit = {
@@ -165,7 +306,7 @@ fun TopAppBar(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.extendedColors.homeTopBackground)
+                        .background(MaterialTheme.extendedColors.buttonBackground)
                         .clickable(onClick = onNavigationClick),
                     contentAlignment = Alignment.Center
                 ) {
@@ -173,7 +314,7 @@ fun TopAppBar(
                         painter = painterResource(id = navigationIcon),
                         contentDescription = "Nawigacja",
                         modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = MaterialTheme.extendedColors.iconText // Dynamiczny
                     )
                 }
             } else {
@@ -188,6 +329,8 @@ fun TopAppBar(
             }
         }
     }
+
+    // ... reszta funkcji TopAppBar bez zmian (używa navigationIconContent)
 
     val defaultTitleContent: @Composable () -> Unit = {
         Column(horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start) {
@@ -232,6 +375,7 @@ fun TopAppBar(
             title = finalTitleContent,
             navigationIcon = navigationIconContent,
             actions = actions,
+            scrollBehavior = scrollBehavior,
             colors = colors
         )
     } else {
@@ -239,14 +383,12 @@ fun TopAppBar(
             title = finalTitleContent,
             navigationIcon = navigationIconContent,
             actions = actions,
+            scrollBehavior = scrollBehavior,
             colors = colors
         )
     }
 }
 
-/**
- * Nowoczesny wariant paska dla wyszukiwarki
- */
 @Composable
 fun SearchTopAppBar(
     query: String,

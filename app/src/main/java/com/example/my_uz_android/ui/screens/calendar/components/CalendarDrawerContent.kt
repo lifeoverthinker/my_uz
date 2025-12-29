@@ -13,26 +13,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.FavoriteEntity
-
-// Definicje kolorów z Twojego schematu
-private val ColorSurface = Color(0xffffffff)
-private val ColorSelectedContainer = Color(0xffe8def8)
-private val ColorOnSurfaceVariant = Color(0xff49454f)
-private val ColorOnSecondaryContainer = Color(0xff4a4459)
-private val ColorOutline = Color(0xff787579)
 
 @Composable
 fun CalendarDrawerContent(
     favorites: List<FavoriteEntity>,
-    selectedResourceId: String?, // ID aktualnie wybranego planu (lub null dla "Mój Plan")
-    currentScreen: String, // "calendar" lub "tasks"
+    selectedResourceId: String?,
+    currentScreen: String,
     onMyPlanClick: () -> Unit,
     onTasksClick: () -> Unit,
     onFavoriteClick: (FavoriteEntity) -> Unit,
@@ -42,11 +33,14 @@ fun CalendarDrawerContent(
     val groupFavorites = favorites.filter { it.type == "group" }
     val teacherFavorites = favorites.filter { it.type == "teacher" }
 
+    // Kolory pobierane z motywu
+    val backgroundColor = MaterialTheme.colorScheme.surface
+
     Column(
         modifier = Modifier
-            .width(300.dp) // Lekko poszerzone dla bezpieczeństwa, w Twoim kodzie było 288dp + padding
+            .width(300.dp)
             .fillMaxHeight()
-            .background(ColorSurface, RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp))
+            .background(backgroundColor, RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp))
             .padding(12.dp)
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.Start,
@@ -54,7 +48,6 @@ fun CalendarDrawerContent(
         // --- Sekcja: Menu ---
         DrawerSectionHeader(text = "Menu")
 
-        // Item: Kalendarz (Mój Plan)
         DrawerItem(
             label = "Kalendarz",
             iconRes = R.drawable.ic_calendar,
@@ -62,10 +55,9 @@ fun CalendarDrawerContent(
             onClick = onMyPlanClick
         )
 
-        // Item: Terminarz (Zadania)
         DrawerItem(
             label = "Terminarz",
-            iconRes = R.drawable.ic_check_square_broken,
+            iconRes = R.drawable.ic_book_open,
             isSelected = currentScreen == "tasks",
             onClick = onTasksClick
         )
@@ -92,12 +84,11 @@ fun CalendarDrawerContent(
             teacherFavorites.forEach { fav ->
                 DrawerItem(
                     label = fav.name,
-                    iconRes = R.drawable.ic_user, // lub ic_stand / ic_graduation_hat
+                    iconRes = R.drawable.ic_user,
                     isSelected = selectedResourceId == fav.resourceId,
                     onClick = { onFavoriteClick(fav) }
                 )
             }
-            // Opcjonalny divider jeśli coś byłoby dalej
         }
     }
 }
@@ -110,9 +101,10 @@ fun DrawerSectionHeader(text: String) {
             .padding(horizontal = 16.dp, vertical = 18.dp),
     ) {
         Text(
-            style = TextStyle(fontWeight = FontWeight(500), fontSize = 14.sp, lineHeight = 20.sp),
+            // Type.kt: titleSmall ma Medium i 14.sp (pasuje idealnie)
+            style = MaterialTheme.typography.titleSmall,
             text = text,
-            color = ColorOnSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -124,15 +116,16 @@ fun DrawerItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isSelected) ColorSelectedContainer else Color.Transparent
-    val contentColor = if (isSelected) ColorOnSecondaryContainer else ColorOnSurfaceVariant
-    val fontWeight = if (isSelected) FontWeight(600) else FontWeight(500)
+    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
+    val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    // titleSmall ma domyślnie Medium (500), dla zaznaczonego chcemy SemiBold (600)
+    val fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
 
     Box(
         modifier = Modifier
             .height(56.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(100.dp)) // Kształt pigułki dla zaznaczenia
+            .clip(RoundedCornerShape(100.dp))
             .background(backgroundColor)
             .clickable(onClick = onClick),
     ) {
@@ -142,17 +135,16 @@ fun DrawerItem(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Icon
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = contentColor
             )
-            // Label
             Text(
                 modifier = Modifier.weight(1f),
-                style = TextStyle(fontWeight = fontWeight, fontSize = 14.sp, lineHeight = 20.sp),
+                // Używamy titleSmall z Type.kt jako bazę
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = fontWeight),
                 text = label,
                 color = contentColor,
                 maxLines = 1,
@@ -167,7 +159,7 @@ fun DrawerDivider() {
     HorizontalDivider(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp), // Dodano lekki padding pionowy dla oddechu
-        color = Color.LightGray.copy(alpha = 0.5f) // Subtelny separator
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     )
 }

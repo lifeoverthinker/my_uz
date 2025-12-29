@@ -12,10 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -65,8 +63,8 @@ fun PersonalDataScreen(
                 )
                 Text(
                     text = "$userName $userSurname",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Normal
+                    style = MaterialTheme.typography.headlineSmall
+                    // Usunięto fontWeight, headlineSmall ma domyślnie Normal w Type.kt
                 )
                 Text(
                     text = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student",

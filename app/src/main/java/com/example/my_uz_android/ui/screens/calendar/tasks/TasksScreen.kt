@@ -14,9 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
@@ -26,7 +24,6 @@ import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -92,72 +89,73 @@ fun TasksScreen(
             )
         }
     ) {
-        Box(modifier = modifier.fillMaxSize()) {
-            Scaffold(
-                containerColor = backgroundColor,
-                topBar = {
-                    CalendarTopAppBar(
-                        title = "Terminarz",
-                        onNavigationClick = { scope.launch { drawerState.open() } },
-                        onSearchClick = null,
-                        onAddClick = null,
-                        onTitleClick = null
-                    )
+        // ZMIANA: Usunięto zewnętrzny Box. Scaffold zarządza teraz FABem.
+        Scaffold(
+            containerColor = backgroundColor,
+            topBar = {
+                CalendarTopAppBar(
+                    title = "Terminarz",
+                    onNavigationClick = { scope.launch { drawerState.open() } },
+                    onSearchClick = null,
+                    onAddClick = null,
+                    onTitleClick = null
+                )
+            },
+            floatingActionButton = {
+                // FAB umieszczony w standardowym slocie Scaffold = idealna koordynata
+                UniversalFab(
+                    isExpandable = false,
+                    isExpanded = false,
+                    onMainFabClick = onAddTaskClick,
+                    options = emptyList()
+                )
+            }
+        ) { innerPadding ->
+            if (tasks.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Image(
+                            painter = painterResource(id = R.drawable.time_rafiki),
+                            contentDescription = null,
+                            modifier = Modifier.size(220.dp)
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = stringResource(R.string.tasks_empty_title),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
                 }
-            ) { innerPadding ->
-                if (tasks.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Image(
-                                painter = painterResource(id = R.drawable.time_rafiki),
-                                contentDescription = null,
-                                modifier = Modifier.size(220.dp)
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Text(
-                                text = stringResource(R.string.tasks_empty_title),
-                                fontFamily = InterFontFamily,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    groupedByMonth.forEach { (yearMonth, tasksInMonth) ->
+                        stickyHeader {
+                            MonthHeaderSticky(yearMonth = yearMonth, backgroundColor = backgroundColor)
+                        }
+                        val tasksByDay = tasksInMonth.groupBy {
+                            Instant.ofEpochMilli(it.dueDate).atZone(ZoneId.systemDefault()).toLocalDate()
+                        }
+                        items(
+                            items = tasksByDay.toList(),
+                            key = { (date, _) -> date.toEpochDay() }
+                        ) { (date, dailyTasks) ->
+                            DayScheduleRow(date = date, tasks = dailyTasks, onTaskClick = onTaskClick)
                         }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
-                        groupedByMonth.forEach { (yearMonth, tasksInMonth) ->
-                            stickyHeader {
-                                MonthHeaderSticky(yearMonth = yearMonth, backgroundColor = backgroundColor)
-                            }
-                            val tasksByDay = tasksInMonth.groupBy {
-                                Instant.ofEpochMilli(it.dueDate).atZone(ZoneId.systemDefault()).toLocalDate()
-                            }
-                            items(
-                                items = tasksByDay.toList(),
-                                key = { (date, _) -> date.toEpochDay() }
-                            ) { (date, dailyTasks) ->
-                                DayScheduleRow(date = date, tasks = dailyTasks, onTaskClick = onTaskClick)
-                            }
-                        }
-                        item { Spacer(modifier = Modifier.height(80.dp)) }
-                    }
+                    // Dodatkowy odstęp na dole, aby FAB nie zasłaniał ostatniego elementu
+                    item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
             }
-
-            UniversalFab(
-                isExpandable = false,
-                isExpanded = false,
-                onMainFabClick = onAddTaskClick,
-                options = emptyList()
-            )
         }
     }
 }
@@ -176,11 +174,7 @@ fun MonthHeaderSticky(yearMonth: YearMonth, backgroundColor: Color) {
     ) {
         Text(
             text = "$monthName $year",
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontFamily = InterFontFamily,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp
-            ),
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -199,7 +193,6 @@ fun DayScheduleRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // NIE ZMIENIAĆ PADDINGU: Tylko poziomy 16dp, bez wcięć dla daty
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Top
     ) {
@@ -210,19 +203,12 @@ fun DayScheduleRow(
         ) {
             Text(
                 text = dayOfWeek,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = dayOfMonth,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
             )
         }
 
