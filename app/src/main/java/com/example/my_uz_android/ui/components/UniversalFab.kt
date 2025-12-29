@@ -19,13 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.theme.InterFontFamily
 
 data class FabOption(
     val label: String,
@@ -46,11 +44,12 @@ fun UniversalFab(
     val surfaceColor = MaterialTheme.colorScheme.surface
     val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
 
-    // Kolory kontenera opcji (zgodne ze snippetem: Primary Container)
     val optionContainerColor = MaterialTheme.colorScheme.primaryContainer
     val onOptionContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
 
-    // Animacje
+    // ✅ POPRAWKA: Używamy 'scrim' z Twojego Theme.kt dla poprawnego trybu nocnego.
+    val overlayColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)
+
     val rotation by animateFloatAsState(
         targetValue = if (isExpanded) 45f else 0f,
         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
@@ -58,7 +57,7 @@ fun UniversalFab(
     )
 
     val cornerRadius by animateDpAsState(
-        targetValue = if (isExpanded) 28.dp else 16.dp, // 28dp to pełne koło dla 56dp
+        targetValue = if (isExpanded) 28.dp else 16.dp,
         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
         label = "cornerRadius"
     )
@@ -78,14 +77,13 @@ fun UniversalFab(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .navigationBarsPadding() // ✅ Gwarancja równej wysokości na wszystkich ekranach
+            .navigationBarsPadding()
     ) {
-        // Overlay
         if (isExpandable && isExpanded) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White.copy(alpha = 0.8f)) // Lekko przezroczyste tło
+                    .background(overlayColor)
                     .clickable(
                         indication = null,
                         interactionSource = remember { MutableInteractionSource() }
@@ -95,7 +93,6 @@ fun UniversalFab(
             )
         }
 
-        // Kontener FAB i Opcji
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -103,9 +100,7 @@ fun UniversalFab(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // OPCJE (Renderowane tylko gdy expanded)
             if (isExpandable && isExpanded) {
-                // Wyświetlamy opcje. Snippet sugerował pigułki z tekstem.
                 options.forEach { option ->
                     AnimatedVisibility(
                         visible = true,
@@ -114,7 +109,7 @@ fun UniversalFab(
                     ) {
                         Surface(
                             onClick = option.onClick,
-                            shape = RoundedCornerShape(28.dp), // Pigułka
+                            shape = RoundedCornerShape(28.dp),
                             color = optionContainerColor,
                             shadowElevation = 4.dp,
                             modifier = Modifier.height(56.dp)
@@ -122,27 +117,13 @@ fun UniversalFab(
                             Row(
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.End // Tekst do prawej (wg snippetu)
+                                horizontalArrangement = Arrangement.End
                             ) {
-                                // Ikonka (opcjonalna w snippecie, ale UXowo dobra)
-                                /*
-                                Icon(
-                                    painter = painterResource(id = option.iconRes),
-                                    contentDescription = null,
-                                    tint = onOptionContainerColor,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                */
-
-                                // Tekst
+                                // ✅ Używamy stylu z Twojego AppTypography (Type.kt)
                                 Text(
                                     text = option.label,
                                     style = MaterialTheme.typography.titleMedium.copy(
-                                        fontFamily = InterFontFamily,
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 16.sp,
-                                        letterSpacing = 0.15.sp
+                                        fontWeight = FontWeight.Medium
                                     ),
                                     color = onOptionContainerColor
                                 )
@@ -152,7 +133,6 @@ fun UniversalFab(
                 }
             }
 
-            // GŁÓWNY FAB
             FloatingActionButton(
                 onClick = onMainFabClick,
                 containerColor = fabColor,

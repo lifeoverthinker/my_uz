@@ -3,9 +3,9 @@ package com.example.my_uz_android.ui.screens.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow // ✅ DODANO
-import androidx.compose.foundation.lazy.items // ✅ DODANO
-import androidx.compose.foundation.lazy.itemsIndexed // ✅ DODANO
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -45,13 +45,16 @@ fun HomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     var isFabExpanded by remember { mutableStateOf(false) }
 
-    MyUZTheme {
+    MyUZTheme(darkTheme = uiState.isDarkMode) {
         val topSectionBackground = MaterialTheme.extendedColors.homeTopBackground
-        val iconTextColor = MaterialTheme.extendedColors.iconText
         val buttonBgColor = MaterialTheme.extendedColors.buttonBackground
-        val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-        // Używamy Scaffold, aby FAB był w standardowym miejscu (prawy dolny róg)
+        val headerContentColor = MaterialTheme.colorScheme.onSurface
+        val subHeaderContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+        // ZMIANA: Dynamiczny kolor ikony (jasny w dark, ciemny w light)
+        val buttonIconColor = MaterialTheme.extendedColors.iconText
+
         Scaffold(
             floatingActionButton = {
                 UniversalFab(
@@ -74,7 +77,6 @@ fun HomeScreen(
                     )
                 )
             },
-            // Tło Scaffold transparentne, bo zarządzamy nim w Boxie niżej
             containerColor = Color.Transparent
         ) { paddingValues ->
 
@@ -82,7 +84,6 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface)
-                    // Ważne: paddingValues.calculateBottomPadding() zapewnia miejsce na FAB
                     .padding(bottom = paddingValues.calculateBottomPadding())
             ) {
                 // Tło nagłówka
@@ -110,7 +111,7 @@ fun HomeScreen(
                             Text(
                                 text = uiState.currentDate,
                                 style = MaterialTheme.typography.titleSmall,
-                                color = iconTextColor
+                                color = headerContentColor
                             )
 
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -124,7 +125,7 @@ fun HomeScreen(
                                         Icon(
                                             painter = painterResource(id = R.drawable.ic_map),
                                             contentDescription = "Mapa",
-                                            tint = iconTextColor,
+                                            tint = buttonIconColor, // Dynamiczny
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
@@ -140,7 +141,7 @@ fun HomeScreen(
                                         Icon(
                                             painter = painterResource(id = R.drawable.ic_mail),
                                             contentDescription = "Poczta",
-                                            tint = iconTextColor,
+                                            tint = buttonIconColor, // Dynamiczny
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
@@ -158,12 +159,12 @@ fun HomeScreen(
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.SemiBold
                                 ),
-                                color = iconTextColor
+                                color = headerContentColor
                             )
                             Text(
                                 text = uiState.departmentInfo,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = subTextColor
+                                color = subHeaderContentColor
                             )
                         }
                     }
@@ -187,6 +188,7 @@ fun HomeScreen(
                                         emptyMessage = uiState.classesMessage,
                                         dayLabel = uiState.classesDayLabel,
                                         classColorMap = uiState.classColorMap,
+                                        isDarkMode = uiState.isDarkMode,
                                         onClassClick = onClassClick
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))

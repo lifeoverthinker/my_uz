@@ -5,7 +5,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.my_uz_android.ui.theme.InterFontFamily
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -18,7 +17,6 @@ fun DatePicker(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Konwersja czasu lokalnego na UTC Midnight dla poprawnego wyświetlania w DatePicker
     val initialUtcTime = remember(date) {
         val localDate = Instant.ofEpochMilli(date)
             .atZone(ZoneId.systemDefault())
@@ -36,12 +34,13 @@ fun DatePicker(
                     dateState.selectedDateMillis?.let { onDateSelected(it) }
                 }
             ) {
-                Text("OK", fontFamily = InterFontFamily)
+                // Używamy stylu z Theme (labelLarge ma InterFont)
+                Text("OK", style = MaterialTheme.typography.labelLarge)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj", fontFamily = InterFontFamily)
+                Text("Anuluj", style = MaterialTheme.typography.labelLarge)
             }
         },
         shape = RoundedCornerShape(28.dp),
@@ -53,8 +52,7 @@ fun DatePicker(
         androidx.compose.material3.DatePicker(
             state = dateState,
             colors = DatePickerDefaults.colors(
-                // Usunięto headerHeadlineContentColor, który powodował błąd
-                titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant, // Używamy titleContentColor zamiast headerHeadline
+                titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 headlineContentColor = MaterialTheme.colorScheme.onSurface,
                 weekdayContentColor = MaterialTheme.colorScheme.onSurface,
                 subheadContentColor = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -17,12 +17,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Import sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.theme.extendedColors // IMPORT KONIECZNY
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -159,7 +159,8 @@ fun TaskDetailsContent(
                                 modifier = Modifier
                                     .size(18.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                                    // ZMIANA: Używamy taskCardBackground (pastelowy niebieski), zamiast primaryContainer
+                                    .background(MaterialTheme.extendedColors.taskCardBackground)
                             )
                         }
 
@@ -168,7 +169,6 @@ fun TaskDetailsContent(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = task.title,
-                                // headlineMedium: 28sp, Normal
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = textColor,
                                 modifier = Modifier.padding(bottom = 4.dp),
@@ -177,7 +177,6 @@ fun TaskDetailsContent(
 
                             Text(
                                 text = formatTaskDate(task.dueDate),
-                                // bodyLarge: 16sp. Chcemy Medium.
                                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                                 color = subTextColor
                             )
@@ -344,7 +343,6 @@ private fun DetailSectionTask(
         Column(modifier = Modifier.padding(top = 4.dp)) {
             Text(
                 text = label,
-                // labelSmall: 11sp, Medium
                 style = MaterialTheme.typography.labelSmall,
                 color = labelColor,
                 modifier = Modifier.padding(bottom = 2.dp)
@@ -352,7 +350,6 @@ private fun DetailSectionTask(
 
             Text(
                 text = text,
-                // bodyLarge: 16sp, Normal -> Medium
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 color = textColor
             )
