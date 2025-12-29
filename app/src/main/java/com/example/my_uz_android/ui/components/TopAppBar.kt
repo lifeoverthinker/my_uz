@@ -36,11 +36,13 @@ fun CalendarTopAppBar(
     onSearchClick: (() -> Unit)? = null,
     onAddClick: (() -> Unit)? = null,
     onInfoClick: (() -> Unit)? = null,
-    onTitleClick: (() -> Unit)? = null
+    onTitleClick: (() -> Unit)? = null,
+    // [NOWE] Parametry do obsługi udostępniania
+    onShareClick: (() -> Unit)? = null,
+    isShareLoading: Boolean = false
 ) {
     val buttonBackgroundColor = MaterialTheme.extendedColors.buttonBackground
     val titleColor = MaterialTheme.colorScheme.onSurface
-    // ZMIANA: Pobieramy kolor ikony z motywu (będzie jasny w dark mode)
     val buttonIconColor = MaterialTheme.extendedColors.iconText
 
     Row(
@@ -68,7 +70,7 @@ fun CalendarTopAppBar(
                     painter = painterResource(navigationIcon),
                     contentDescription = "Nawigacja",
                     modifier = Modifier.size(24.dp),
-                    tint = buttonIconColor // Dynamiczny kolor
+                    tint = buttonIconColor
                 )
             }
 
@@ -119,6 +121,35 @@ fun CalendarTopAppBar(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 8.dp)
         ) {
+            // [NOWE] Przycisk Udostępniania
+            if (onShareClick != null) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(buttonBackgroundColor)
+                        .clickable(enabled = !isShareLoading, onClick = onShareClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isShareLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = buttonIconColor,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            // Używam ic_share zgodnie z prośbą.
+                            // Upewnij się, że masz ten zasób, w przeciwnym razie użyj systemowej ikony
+                            painter = painterResource(R.drawable.ic_share),
+                            contentDescription = "Udostępnij",
+                            modifier = Modifier.size(24.dp),
+                            tint = buttonIconColor
+                        )
+                    }
+                }
+            }
+
             if (onInfoClick != null) {
                 Box(
                     modifier = Modifier
@@ -188,7 +219,7 @@ fun PreviewTopAppBar(
 ) {
     val buttonBackgroundColor = MaterialTheme.extendedColors.buttonBackground
     val titleColor = MaterialTheme.colorScheme.onSurface
-    val buttonIconColor = MaterialTheme.extendedColors.iconText // Dynamiczny kolor
+    val buttonIconColor = MaterialTheme.extendedColors.iconText
 
     Row(
         modifier = Modifier
@@ -285,7 +316,6 @@ fun PreviewTopAppBar(
     }
 }
 
-// Reszta (SearchTopAppBar, TopAppBar) bez zmian, tylko upewnij się że navigationIcon używa tintu z motywu
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(
@@ -329,8 +359,6 @@ fun TopAppBar(
             }
         }
     }
-
-    // ... reszta funkcji TopAppBar bez zmian (używa navigationIconContent)
 
     val defaultTitleContent: @Composable () -> Unit = {
         Column(horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start) {

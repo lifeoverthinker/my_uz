@@ -37,8 +37,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         ClassRepository(database.classDao())
     }
 
+    // ZMIANA: Przekazujemy 'supabase' do konstruktora
     override val tasksRepository: TasksRepository by lazy {
-        TasksRepository(database.tasksDao())
+        TasksRepository(database.tasksDao(), supabase)
     }
 
     override val gradesRepository: GradesRepository by lazy {
