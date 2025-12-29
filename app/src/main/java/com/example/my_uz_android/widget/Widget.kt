@@ -117,31 +117,72 @@ class Widget : GlanceAppWidget() {
 
     @Composable
     private fun ClassItem(classItem: ClassEntity, colorMap: Map<String, Int>) {
-        val colorIndex = colorMap[classItem.classType] ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
+        val colorIndex = colorMap[classItem.classType]
+            ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
         val colorSet = ClassColorPalette.getOrElse(colorIndex) { ClassColorPalette[0] }
-        val isDark = (LocalContext.current.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val isDark =
+            (LocalContext.current.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
         val accentColor = if (isDark) colorSet.darkAccent else colorSet.lightAccent
         val bgColor = if (isDark) colorSet.darkBg else colorSet.lightBg
         val textColor = if (isDark) Color.White else Color.Black
 
         Row(
-            modifier = GlanceModifier.fillMaxWidth().background(ColorProvider(bgColor)).padding(8.dp),
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .background(ColorProvider(bgColor))
+                .padding(8.dp),
             verticalAlignment = Alignment.Vertical.CenterVertically
         ) {
-            Box(modifier = GlanceModifier.width(4.dp).height(32.dp).background(ColorProvider(accentColor))) {}
+            // Pasek boczny
+            Box(
+                modifier = GlanceModifier.width(3.dp).fillMaxHeight()
+                    .background(ColorProvider(accentColor))
+            ) {}
             Spacer(modifier = GlanceModifier.width(8.dp))
+
+            // ✅ Nowy układ poziomy: Przedmiot i dane w jednej kolumnie, ale bardzo ciasno
             Column(modifier = GlanceModifier.defaultWeight()) {
-                Text(text = classItem.subjectName, style = TextStyle(color = ColorProvider(textColor), fontWeight = FontWeight.Medium, fontSize = 13.sp), maxLines = 1)
+                Text(
+                    text = classItem.subjectName,
+                    style = TextStyle(
+                        color = ColorProvider(textColor),
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp
+                    ),
+                    maxLines = 1
+                )
+                // Godzina i sala obok siebie w jednej linii
                 Row(verticalAlignment = Alignment.Vertical.CenterVertically) {
-                    Text(text = "${classItem.startTime} - ${classItem.endTime}", style = TextStyle(color = ColorProvider(accentColor), fontSize = 11.sp, fontWeight = FontWeight.Bold))
-                    Spacer(modifier = GlanceModifier.width(8.dp))
-                    if (classItem.room != null) {
-                        Text(text = classItem.room ?: "", style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 11.sp))
+                    Text(
+                        text = classItem.startTime,
+                        style = TextStyle(
+                            color = ColorProvider(accentColor),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    if (!classItem.room.isNullOrBlank()) {
+                        Text(
+                            text = " • ${classItem.room}",
+                            style = TextStyle(
+                                color = GlanceTheme.colors.onSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                        )
                     }
                 }
             }
-            Text(text = classItem.classType.take(1).uppercase(), style = TextStyle(color = ColorProvider(accentColor), fontWeight = FontWeight.Bold, fontSize = 12.sp))
+
+            // Litera typu zajęć (L, C, W)
+            Text(
+                text = classItem.classType.take(1).uppercase(),
+                style = TextStyle(
+                    color = ColorProvider(accentColor),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+            )
         }
     }
 }

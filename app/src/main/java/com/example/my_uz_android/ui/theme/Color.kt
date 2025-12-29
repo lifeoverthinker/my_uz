@@ -92,12 +92,15 @@ val md_theme_dark_surfaceContainer = Color(0xFF212121)
 val md_theme_dark_surfaceContainerHigh = Color(0xFF2B2B2B)
 val md_theme_dark_surfaceContainerHighest = Color(0xFF363636)
 
-// --- NOWE KOLORY KART ---
+// --- KOLORY KART (Zostawiamy Pastele w Dark Mode - bo ładne) ---
 val card_class_light = Color(0xFFE8DEF8)
-val card_class_dark = Color(0xFF4B4358)
+val card_class_dark = Color(0xFFE8DEF8)
 
 val card_event_light = Color(0xFFDAF5D7)
-val card_event_dark = Color(0xFF2D4F31)
+val card_event_dark = Color(0xFFDAF5D7)
+
+val card_task_light = Color(0xFFD7E3FF)
+val card_task_dark = Color(0xFFD7E3FF)
 
 // Custom colors
 val custom_red_light = Color(0xFF904a43)
@@ -110,12 +113,12 @@ val custom_green_dark = Color(0xFFa2d399)
 val custom_orange_dark = Color(0xFFffb599)
 val custom_blue_dark = Color(0xFFa2c9fe)
 
-// Home Screen Colors
+// --- HEADER I TŁA ---
 val home_top_background_light = Color(0xFFF7F2F9)
-val home_top_background_dark = Color(0xFF000000)
+val home_top_background_dark = Color(0xFF25232A) // Ciemny grafit/fiolet (lepszy kontrast)
 
 val home_header_light = Color(0xFFF7F2F9)
-val home_header_dark = Color(0xFF000000)
+val home_header_dark = Color(0xFF25232A)
 
 val home_content_light = Color(0xFFFFFFFF)
 val home_content_dark = Color(0xFF121212)
@@ -131,14 +134,15 @@ val nav_dark_border = Color(0xFF49454e)
 val nav_dark_active = Color(0xFFd3bcfd)
 val nav_dark_inactive = Color(0xFFcac4d0)
 
-val button_background_light = Color(0xFFE8DEF8)
-val button_background_dark = Color(0xFF4B4358)
+// --- PRZYCISKI (Styl jak w TabBar dla Dark Mode) ---
+val button_background_light = Color(0xFFE8DEF8) // Jasny fiolet (Light)
+val button_background_dark = Color(0xFF4B4358) // Ciemny fiolet (Dark)
 
-val icon_text_light = Color(0xFF000000)
-val icon_text_dark = Color(0xFFE7E0E8)
+// --- TEKST IKON ---
+val icon_text_light = Color(0xFF1D192B) // Ciemny tekst w Light
+val icon_text_dark = Color(0xFFE8DEF8) // Jasny tekst w Dark (na ciemnym przycisku)
 
-// --- PALETA KOLORÓW ZAJĘĆ (PASTELE) ---
-
+// --- PALETA KOLORÓW Zajęć (PASTELE) ---
 data class ClassColorSet(
     val lightBg: Color,
     val darkBg: Color,
@@ -146,7 +150,6 @@ data class ClassColorSet(
     val darkAccent: Color
 )
 
-// 1. Lavender
 val ColorSetLavender = ClassColorSet(
     lightBg = Color(0xFFE8DEF8),
     darkBg = Color(0xFF4A4458),
@@ -154,7 +157,6 @@ val ColorSetLavender = ClassColorSet(
     darkAccent = Color(0xFFD0BCFF)
 )
 
-// 2. Pink
 val ColorSetPink = ClassColorSet(
     lightBg = Color(0xFFFFD8E4),
     darkBg = Color(0xFF633B48),
@@ -162,7 +164,6 @@ val ColorSetPink = ClassColorSet(
     darkAccent = Color(0xFFEFB8C8)
 )
 
-// 3. Green
 val ColorSetGreen = ClassColorSet(
     lightBg = Color(0xFFDAF5D7),
     darkBg = Color(0xFF2E4E30),
@@ -170,7 +171,6 @@ val ColorSetGreen = ClassColorSet(
     darkAccent = Color(0xFFA5D6A7)
 )
 
-// 4. Blue
 val ColorSetBlue = ClassColorSet(
     lightBg = Color(0xFFD7E3FF),
     darkBg = Color(0xFF32476E),
@@ -178,7 +178,6 @@ val ColorSetBlue = ClassColorSet(
     darkAccent = Color(0xFF90CAF9)
 )
 
-// 5. Orange
 val ColorSetOrange = ClassColorSet(
     lightBg = Color(0xFFFFDBCF),
     darkBg = Color(0xFF5E4035),
@@ -186,7 +185,6 @@ val ColorSetOrange = ClassColorSet(
     darkAccent = Color(0xFFFFCC80)
 )
 
-// 6. Yellow
 val ColorSetYellow = ClassColorSet(
     lightBg = Color(0xFFF3E2A9),
     darkBg = Color(0xFF5C5326),
@@ -203,14 +201,8 @@ val ClassColorPalette = listOf(
     ColorSetYellow
 )
 
-// Helpery
-
-// NOWOŚĆ: Funkcja do bezpiecznego pobierania indeksu koloru
-// Jeśli user ustawił kolor -> zwraca ustawiony
-// Jeśli nie -> zwraca stały kolor na podstawie nazwy (hash)
 fun getClassColorIndex(classType: String, userColorMap: Map<String, Int>): Int {
-    return userColorMap[classType]
-        ?: (abs(classType.hashCode()) % ClassColorPalette.size)
+    return userColorMap[classType] ?: (abs(classType.hashCode()) % ClassColorPalette.size)
 }
 
 fun getClassBackgroundColor(index: Int, isDark: Boolean): Color {

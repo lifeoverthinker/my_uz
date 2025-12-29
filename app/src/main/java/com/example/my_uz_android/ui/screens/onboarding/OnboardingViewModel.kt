@@ -61,7 +61,7 @@ class OnboardingViewModel(
             emptyList()
         } else {
             allGroups.filter { it.contains(query, ignoreCase = true) }
-                .sorted()
+                .sorted() // Sortowanie alfabetyczne
                 .take(5)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -74,7 +74,11 @@ class OnboardingViewModel(
         viewModelScope.launch {
             when (val result = universityRepository.getGroupCodes()) {
                 is NetworkResult.Success -> {
-                    _allGroups.value = result.data ?: emptyList()
+                    // POPRAWKA: Filtrowanie pustych wartości i "null" oraz sortowanie
+                    val groups = (result.data ?: emptyList())
+                        .filter { !it.isNullOrBlank() && it != "null" }
+                        .sorted()
+                    _allGroups.value = groups
                 }
                 else -> {
                     _allGroups.value = emptyList()
@@ -130,7 +134,11 @@ class OnboardingViewModel(
             _isLoading.value = true
             when (val result = universityRepository.getSubgroups(group)) {
                 is NetworkResult.Success -> {
-                    _availableSubgroups.value = result.data ?: emptyList()
+                    // POPRAWKA: Filtrowanie podgrup (żeby nie pokazywało pustej opcji)
+                    val subgroups = (result.data ?: emptyList())
+                        .filter { !it.isNullOrBlank() && it != "null" }
+                        .sorted()
+                    _availableSubgroups.value = subgroups
                 }
                 else -> {
                     _availableSubgroups.value = emptyList()
@@ -150,7 +158,7 @@ class OnboardingViewModel(
         _selectedSubgroups.value = current
     }
 
-    // PRZYWRÓCONO: Funkcja Skip (Pomiń)
+    // Funkcja Skip (Pomiń) - zachowana oryginalna logika
     fun skipOnboarding(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -175,11 +183,12 @@ class OnboardingViewModel(
         }
     }
 
+    // Funkcja Zapisu - zachowana oryginalna logika (pobieranie szczegółów grupy)
     fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
 
-            // PRZYWRÓCONO: Pobieranie szczegółów grupy (Wydział, Kierunek, Tryb)
+            // Pobieranie szczegółów grupy (Wydział, Kierunek, Tryb)
             var fetchedFaculty: String? = null
             var fetchedFieldOfStudy: String? = null
             var fetchedStudyMode: String? = null
@@ -217,11 +226,6 @@ class OnboardingViewModel(
             )
 
             settingsRepository.insertOrUpdate(newSettings)
-
-            // Opcjonalnie: pobieranie planu zajęć
-            // if (!groupCode.isNullOrEmpty()) {
-            //     classRepository.fetchAndSaveSchedule(groupCode, _selectedSubgroups.value.toList())
-            // }
 
             _isLoading.value = false
             onSuccess()

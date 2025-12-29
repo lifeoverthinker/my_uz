@@ -6,14 +6,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.sp // Import sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.FabOption
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.index.components.IndexTabs
-import com.example.my_uz_android.ui.theme.InterFontFamily
 
 @Composable
 fun IndexScreen(
@@ -36,10 +35,7 @@ fun IndexScreen(
             ) {
                 Text(
                     text = "Indeks",
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 32.sp,
-                    lineHeight = 40.sp,
+                    style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )

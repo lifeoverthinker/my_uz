@@ -92,8 +92,8 @@ fun SearchListItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+                // bodyLarge w Type.kt ma Normal. Nadpisujemy na Medium.
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
@@ -110,7 +110,6 @@ fun SearchListItem(
                 ),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                // Po polubieniu używamy koloru primary (fioletowy z Twojego theme)
                 tint = if (item.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
         }

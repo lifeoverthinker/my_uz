@@ -5,28 +5,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.my_uz_android.ui.theme.InterFontFamily
+import androidx.compose.ui.unit.sp // Potrzebne do nadpisania rozmiaru
 
 @Composable
 fun AverageCard(
-    label: String, // np. "Średnia z bieżącego semestru" lub "Średnia ocen"
+    label: String,
     average: Double?,
     modifier: Modifier = Modifier
 ) {
-    val cardColor = Color(0xFF68548E)
-    val textColor = Color.White
+    val cardColor = MaterialTheme.colorScheme.primary
+    val textColor = MaterialTheme.colorScheme.onPrimary
 
-    // Wartość średniej do wyświetlenia (zaokrąglamy do jednego miejsca po przecinku lub '-')
     val displayAverage = average?.let { String.format("%.1f", it) } ?: "-"
 
     Surface(
@@ -44,25 +41,16 @@ fun AverageCard(
             Text(
                 text = label,
                 modifier = Modifier.weight(1f),
-                style = TextStyle(
-                    color = textColor,
-                    fontSize = 14.sp,
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.W500,
-                    lineHeight = 20.sp,
-                    letterSpacing = 0.10.sp
-                )
+                // titleSmall: 14sp, Medium.
+                style = MaterialTheme.typography.titleSmall,
+                color = textColor
             )
 
             Text(
                 text = displayAverage,
-                style = TextStyle(
-                    color = textColor,
-                    fontSize = 22.sp,
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.W400,
-                    lineHeight = 28.sp
-                )
+                // titleLarge: 22sp, Normal. Idealnie pasuje do rozmiaru średniej.
+                style = MaterialTheme.typography.titleLarge,
+                color = textColor
             )
         }
     }

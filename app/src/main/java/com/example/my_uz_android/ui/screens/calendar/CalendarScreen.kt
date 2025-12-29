@@ -5,11 +5,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.CalendarTopAppBar
+import com.example.my_uz_android.ui.components.PreviewTopAppBar
+import com.example.my_uz_android.ui.components.SubgroupFilterDialog
+import com.example.my_uz_android.ui.components.TeacherInfoDialog
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
 import com.example.my_uz_android.ui.screens.calendar.components.ScheduleView
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -30,13 +33,55 @@ fun CalendarScreen(
     onTasksClick: () -> Unit,
     onAccountClick: () -> Unit,
     onClassClick: (ClassEntity) -> Unit = {},
-    onShowPreview: () -> Unit, // ✅ Dodano parametr nawigacji
+    onShowPreview: () -> Unit,
     viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val myClasses by viewModel.myPlanClasses.collectAsState()
-    val classColorMap = uiState.classColorMap
 
+    // --- 1. Źródło danych (Mój Plan vs Inne) ---
+    val source = uiState.currentSource
+    val isMyPlan = source is ScheduleSource.MyPlan
+
+    val rawClasses by produceState(initialValue = emptyList<ClassEntity>(), key1 = source) {
+        if (isMyPlan) {
+            viewModel.myPlanClasses.collect { value = it }
+        } else {
+            viewModel.networkClasses.collect { value = it }
+        }
+    }
+
+    // --- 2. Filtrowanie i Info ---
+    val planName = uiState.selectedPlanName
+    val isTeacher = if (!isMyPlan) {
+        (source as? ScheduleSource.Favorite)?.type == "teacher" || (source as? ScheduleSource.Preview)?.type == "teacher"
+    } else false
+
+    val isFavorite = if (!isMyPlan) uiState.favorites.any { it.name == planName } else false
+
+    val teacherData = remember(rawClasses) {
+        if (isTeacher) {
+            rawClasses.firstOrNull { !it.teacherEmail.isNullOrBlank() }
+                ?: rawClasses.firstOrNull { !it.teacherInstitute.isNullOrBlank() }
+                ?: rawClasses.firstOrNull { !it.teacherName.isNullOrBlank() }
+        } else null
+    }
+
+    val availableSubgroups = remember(rawClasses, isMyPlan) {
+        if (!isMyPlan && !isTeacher) rawClasses.map { it.subgroup ?: "" }.distinct().sorted() else emptyList()
+    }
+
+    var selectedSubgroups by remember(planName) { mutableStateOf<Set<String>?>(null) }
+    val currentSelectedSubgroups = selectedSubgroups ?: availableSubgroups.toSet()
+
+    val displayedClasses = remember(rawClasses, isMyPlan, isTeacher, currentSelectedSubgroups) {
+        if (isMyPlan || isTeacher) {
+            rawClasses
+        } else {
+            rawClasses.filter { currentSelectedSubgroups.contains(it.subgroup ?: "") }
+        }
+    }
+
+    // --- 3. Konfiguracja Kalendarza ---
     val currentDate = remember { LocalDate.now(ZoneId.of("Europe/Warsaw")) }
     val currentMonth = remember { YearMonth.now(ZoneId.of("Europe/Warsaw")) }
     val startMonth = remember { currentMonth.minusMonths(24) }
@@ -51,7 +96,6 @@ fun CalendarScreen(
         endDate = endMonth.atEndOfMonth(),
         firstDayOfWeek = firstDayOfWeek,
     )
-
     val monthState = rememberCalendarState(
         startMonth = startMonth,
         endMonth = endMonth,
@@ -68,28 +112,35 @@ fun CalendarScreen(
         val weekDays = weekState.firstVisibleWeek.days
         if (weekDays.isNotEmpty()) weekDays.first().date.let { YearMonth.from(it) } else currentMonth
     }
+
     val monthName = visibleMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
-    val title = if (visibleMonth.year == YearMonth.now().year) monthName else "$monthName ${visibleMonth.year}"
+
+    // Jeśli rok jest obecny, pokazujemy tylko miesiąc, jeśli inny - dodajemy rok
+    val calendarTitle = if (visibleMonth.year == YearMonth.now().year) monthName else "$monthName ${visibleMonth.year}"
+
+    // --- 4. Dialogi ---
+    var showTeacherInfo by remember { mutableStateOf(false) }
+    var showSubgroupFilter by remember { mutableStateOf(false) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             CalendarDrawerContent(
                 favorites = uiState.favorites,
-                selectedResourceId = null,
+                selectedResourceId = uiState.selectedResourceId,
                 currentScreen = "calendar",
-                onMyPlanClick = { scope.launch { drawerState.close() } },
+                onMyPlanClick = {
+                    if (!isMyPlan) viewModel.selectMyPlan()
+                    scope.launch { drawerState.close() }
+                },
                 onTasksClick = {
                     scope.launch { drawerState.close() }
                     onTasksClick()
                 },
                 onFavoriteClick = { fav ->
                     viewModel.selectFavoritePlan(fav)
-                    scope.launch {
-                        drawerState.close()
-                        onShowPreview() // ✅ Wywołanie nawigacji po kliknięciu w ulubiony
-                    }
+                    scope.launch { drawerState.close() }
                 },
                 onCloseDrawer = { scope.launch { drawerState.close() } }
             )
@@ -97,29 +148,45 @@ fun CalendarScreen(
     ) {
         Scaffold(
             topBar = {
-                CalendarTopAppBar(
-                    title = title,
-                    isExpanded = isMonthView,
-                    onNavigationClick = { scope.launch { drawerState.open() } },
-                    onSearchClick = onSearchClick,
-                    onAddClick = {
-                        val today = LocalDate.now(ZoneId.of("Europe/Warsaw"))
-                        selectedDate = today
-                        scope.launch {
-                            if (isMonthView) monthState.animateScrollToMonth(YearMonth.from(today))
-                            else weekState.animateScrollToWeek(today)
+                if (isMyPlan) {
+                    CalendarTopAppBar(
+                        title = calendarTitle,
+                        isExpanded = isMonthView,
+                        onNavigationClick = { scope.launch { drawerState.open() } },
+                        onSearchClick = onSearchClick,
+                        // Akcja "Dziś" (kliknięcie plusa/ikony kalendarza w TopBar)
+                        onAddClick = {
+                            val today = LocalDate.now(ZoneId.of("Europe/Warsaw"))
+                            selectedDate = today
+                            scope.launch {
+                                if (isMonthView) monthState.animateScrollToMonth(YearMonth.from(today))
+                                else weekState.animateScrollToWeek(today)
+                            }
+                        },
+                        onTitleClick = {
+                            isMonthView = !isMonthView
+                            scope.launch {
+                                if (isMonthView) monthState.scrollToMonth(YearMonth.from(selectedDate))
+                                else weekState.scrollToWeek(selectedDate)
+                            }
                         }
-                    },
-                    onTitleClick = {
-                        isMonthView = !isMonthView
-                        scope.launch {
-                            if (isMonthView) monthState.scrollToMonth(YearMonth.from(selectedDate))
-                            else weekState.scrollToWeek(selectedDate)
+                    )
+                } else {
+                    PreviewTopAppBar(
+                        title = if (isTeacher) "Plan nauczyciela" else "Plan grupy",
+                        subtitle = if (isTeacher) (teacherData?.teacherName ?: planName) else planName,
+                        isFavorite = isFavorite,
+                        onBackClick = { viewModel.selectMyPlan() },
+                        onFavoriteClick = { viewModel.toggleFavorite(planName, if (isTeacher) "teacher" else "group") },
+                        actionIcon = if (isTeacher) R.drawable.ic_info_circle else R.drawable.ic_filter_funnel,
+                        onActionClick = {
+                            if (isTeacher) showTeacherInfo = true else showSubgroupFilter = true
                         }
-                    }
-                )
+                    )
+                }
             },
-            containerColor = Color.White
+            // ZMIANA: Standardowy kolor tła (Theme.kt)
+            containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
@@ -145,13 +212,33 @@ fun CalendarScreen(
                             else weekState.scrollToWeek(selectedDate)
                         }
                     },
-                    classes = myClasses,
-                    classColorMap = classColorMap,
+                    classes = displayedClasses,
+                    classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
                     modifier = Modifier.padding(innerPadding),
-                    showHeader = false
+                    showHeader = !isMyPlan // Nagłówek tylko w trybie podglądu (bo Mój Plan ma go w TopBar)
                 )
             }
+        }
+
+        if (showTeacherInfo) {
+            TeacherInfoDialog(
+                onDismiss = { showTeacherInfo = false },
+                fullName = teacherData?.teacherName ?: planName,
+                department = teacherData?.teacherInstitute ?: "",
+                email = teacherData?.teacherEmail ?: ""
+            )
+        }
+
+        if (showSubgroupFilter) {
+            SubgroupFilterDialog(
+                subgroups = availableSubgroups,
+                selectedSubgroups = currentSelectedSubgroups,
+                onDismiss = { showSubgroupFilter = false },
+                onSelectionChange = {
+                    selectedSubgroups = it
+                }
+            )
         }
     }
 }
