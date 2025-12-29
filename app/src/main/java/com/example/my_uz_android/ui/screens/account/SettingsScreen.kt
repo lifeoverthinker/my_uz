@@ -28,6 +28,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.ClassColorPalette
+import com.example.my_uz_android.util.ClassTypeUtils // [Dodano import]
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -105,7 +106,8 @@ fun SettingsScreen(
                                 ?: kotlin.math.abs(classType.hashCode()) % ClassColorPalette.size
 
                             ClassColorPickerItem(
-                                classType = classType,
+                                // [ZMIANA] Użycie getFullName do wyświetlania pełnej nazwy
+                                classType = ClassTypeUtils.getFullName(classType),
                                 selectedColorIndex = colorIndex,
                                 onColorSelected = { newIndex ->
                                     viewModel.updateClassColor(classType, newIndex)
@@ -216,10 +218,10 @@ fun SettingsScreen(
     }
 }
 
-// --- SUGGESTION 3: Nowoczesny nagłówek sekcji ---
+// --- Komponenty pomocnicze ---
+
 @Composable
 fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    // Używamy Surface z kolorem surfaceContainer (lekko szary/fioletowy w M3)
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(16.dp),
@@ -229,7 +231,6 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Tytuł wewnątrz karty
             Text(
                 text = title.uppercase(),
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
