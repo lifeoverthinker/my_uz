@@ -22,7 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.theme.extendedColors // IMPORT KONIECZNY
+import com.example.my_uz_android.ui.theme.extendedColors
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -120,14 +120,26 @@ fun TaskDetailsContent(
                                 modifier = Modifier.background(MaterialTheme.colorScheme.surface)
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Duplikuj", color = textColor) },
+                                    text = {
+                                        Text(
+                                            "Duplikuj",
+                                            color = textColor,
+                                            style = MaterialTheme.typography.bodyLarge // ✅ Poprawiona typografia
+                                        )
+                                    },
                                     onClick = {
                                         showMenu = false
                                         onDuplicateTask()
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
+                                    text = {
+                                        Text(
+                                            "Usuń",
+                                            color = MaterialTheme.colorScheme.error,
+                                            style = MaterialTheme.typography.bodyLarge // ✅ Poprawiona typografia
+                                        )
+                                    },
                                     onClick = {
                                         showMenu = false
                                         showDeleteDialog = true
@@ -159,7 +171,6 @@ fun TaskDetailsContent(
                                 modifier = Modifier
                                     .size(18.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    // ZMIANA: Używamy taskCardBackground (pastelowy niebieski), zamiast primaryContainer
                                     .background(MaterialTheme.extendedColors.taskCardBackground)
                             )
                         }
@@ -281,21 +292,25 @@ fun TaskDetailsContent(
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Usuń zadanie", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)) },
+                title = { Text("Usuń zadanie", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)) }, // Ujednolicone title
                 text = { Text("Czy na pewno chcesz usunąć to zadanie?", style = MaterialTheme.typography.bodyMedium) },
                 confirmButton = {
                     TextButton(onClick = {
                         onDeleteTask()
                         showDeleteDialog = false
                     }) {
-                        Text("Usuń", color = MaterialTheme.colorScheme.error)
+                        // ✅ POPRAWKA: Użycie stylu labelLarge dla spójności z DatePicker
+                        Text("Usuń", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelLarge)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("Anuluj")
+                        // ✅ POPRAWKA: Użycie stylu labelLarge
+                        Text("Anuluj", style = MaterialTheme.typography.labelLarge)
                     }
-                }
+                },
+                shape = RoundedCornerShape(28.dp), // ✅ Dodano zaokrąglenie zgodne z innymi dialogami
+                containerColor = MaterialTheme.colorScheme.surface
             )
         }
     }
