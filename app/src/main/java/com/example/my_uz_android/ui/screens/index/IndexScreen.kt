@@ -3,6 +3,7 @@ package com.example.my_uz_android.ui.screens.index
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable // ✅ Ważny import
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,7 +21,8 @@ fun IndexScreen(
     onAddAbsenceClick: (String?, String?) -> Unit,
     onEditAbsenceClick: (Int) -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    // ✅ ZMIANA: używamy rememberSaveable, aby stan przetrwał nawigację
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -71,6 +73,8 @@ fun IndexScreen(
                     onAddGradeClick = onAddGradeClick
                 )
                 1 -> {
+                    // Pamiętaj, że ViewModel jest tworzony/pobierany tutaj.
+                    // Jeśli chcesz, aby dane się odświeżyły po powrocie, ViewModel powinien obserwować Flow z bazy (co robi w Twoim kodzie).
                     val absencesViewModel: AbsencesViewModel = viewModel(factory = AppViewModelProvider.Factory)
                     AbsencesScreen(
                         viewModel = absencesViewModel,

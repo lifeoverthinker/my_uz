@@ -10,6 +10,7 @@ import com.example.my_uz_android.data.repositories.SettingsRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+// Enum i UiState muszą być tutaj (lub w osobnych plikach, ale dla spójności daję tutaj)
 enum class GradeType {
     STANDARD,
     CUSTOM,
@@ -30,7 +31,7 @@ data class AddEditGradeUiState(
 )
 
 class AddEditGradeViewModel(
-    savedStateHandle: SavedStateHandle, // ✅ Dodano
+    savedStateHandle: SavedStateHandle,
     private val gradesRepository: GradesRepository,
     private val classRepository: ClassRepository,
     private val settingsRepository: SettingsRepository
@@ -39,6 +40,10 @@ class AddEditGradeViewModel(
     private val _uiState = MutableStateFlow(AddEditGradeUiState())
     val uiState: StateFlow<AddEditGradeUiState> = _uiState.asStateFlow()
 
+    // ✅ Flaga zapisu
+    private val _isSaved = MutableStateFlow(false)
+    val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
+
     private var currentSemesterFromSettings: Int = 1
     private var loadedGradeId: Int? = null
 
@@ -46,10 +51,13 @@ class AddEditGradeViewModel(
         loadAvailableSubjects()
         loadCurrentSemester()
 
-        // ✅ Dodano: Automatyczne ładowanie, jeśli ID przyszło z nawigacji
         val gradeId = savedStateHandle.get<Int>("gradeId")
         if (gradeId != null && gradeId != 0 && gradeId != -1) {
             loadGrade(gradeId)
+        } else {
+            val preSubject = savedStateHandle.get<String>("subject")
+            val preType = savedStateHandle.get<String>("classType")
+            initNewGrade(preSubject, preType)
         }
     }
 
@@ -58,6 +66,7 @@ class AddEditGradeViewModel(
         loadedGradeId = gradeId
 
         viewModelScope.launch {
+            // Używamy first() na strumieniu, bo getGradeByIdStream zwraca Flow
             val grade = gradesRepository.getGradeByIdStream(gradeId).first()
             if (grade != null) {
                 val type = if (grade.grade == -1.0) GradeType.ACTIVITY else GradeType.STANDARD
@@ -148,7 +157,7 @@ class AddEditGradeViewModel(
         _uiState.update { it.copy(date = date) }
     }
 
-    fun saveGrade(onSuccess: () -> Unit) {
+    fun saveGrade(onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             val state = _uiState.value
 
@@ -180,7 +189,23 @@ class AddEditGradeViewModel(
             } else {
                 gradesRepository.insertGrade(entity)
             }
+            // Sygnał zapisu (flaga + opcjonalny callback dla wstecznej kompatybilności)
+            _isSaved.value = true
             onSuccess()
+        }
+    }
+
+    // Brak metody deleteGrade w Twoim oryginalnym kodzie, dodaję ją:
+    fun deleteGrade(onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            if (loadedGradeId != null && loadedGradeId != 0) {
+                val grade = gradesRepository.getGradeByIdStream(loadedGradeId!!).first()
+                if (grade != null) {
+                    gradesRepository.deleteGrade(grade)
+                    _isSaved.value = true
+                    onSuccess()
+                }
+            }
         }
     }
 }

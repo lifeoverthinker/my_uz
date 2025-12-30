@@ -25,7 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Import sp (potrzebne do .sp)
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
@@ -47,25 +47,30 @@ fun AddEditGradeScreen(
     viewModel: AddEditGradeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isSaved by viewModel.isSaved.collectAsState()
     val context = LocalContext.current
+
+    LaunchedEffect(isSaved) {
+        if (isSaved) {
+            Toast.makeText(context, "Zapisano zmiany", Toast.LENGTH_SHORT).show()
+            onNavigateBack()
+        }
+    }
 
     LaunchedEffect(gradeId, prefilledSubject, prefilledClassType) {
         if (gradeId != null && gradeId != 0) {
             viewModel.loadGrade(gradeId)
         } else {
-            viewModel.initNewGrade(prefilledSubject, prefilledClassType)
+            if (uiState.subjectName == null) {
+                viewModel.initNewGrade(prefilledSubject, prefilledClassType)
+            }
         }
     }
 
     AddEditGradeContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
-        onSaveGrade = {
-            viewModel.saveGrade {
-                Toast.makeText(context, "Zapisano zmiany", Toast.LENGTH_SHORT).show()
-                onNavigateBack()
-            }
-        },
+        onSaveGrade = viewModel::saveGrade,
         onSubjectChange = viewModel::updateSubjectName,
         onClassTypeChange = viewModel::updateClassType,
         onGradeTypeChange = viewModel::updateGradeType,
@@ -96,46 +101,32 @@ fun AddEditGradeContent(
     onDateChange: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
+    val surfaceColor = MaterialTheme.colorScheme.surface
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
 
-    val quickTitles = listOf(
-        "Kolokwium", "Egzamin", "Kartkówka", "Wejściówka", "Projekt", "Aktywność"
-    )
-
+    val quickTitles = listOf("Kolokwium", "Egzamin", "Kartkówka", "Wejściówka", "Projekt", "Aktywność")
     var showSubjectModal by remember { mutableStateOf(false) }
     var showTypeModal by remember { mutableStateOf(false) }
     var showGradeModal by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
-
     val standardGrades = listOf(2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0)
     val isTypeSelectionEnabled = !uiState.subjectName.isNullOrEmpty()
 
-    Surface(
-        color = surfaceColor,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = modifier.fillMaxSize().statusBarsPadding()
-    ) {
+    Surface(color = surfaceColor, modifier = modifier.fillMaxSize().statusBarsPadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             // HEADER
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier.size(48.dp).clip(CircleShape).clickable { onNavigateBack() },
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.size(40.dp).clip(CircleShape).clickable { onNavigateBack() }, contentAlignment = Alignment.Center) {
                     Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
                 }
-
                 Button(
                     onClick = onSaveGrade,
                     enabled = uiState.subjectName != null,
@@ -148,35 +139,19 @@ fun AddEditGradeContent(
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // 1. TYTUŁ (Duży na górze)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 8.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Box(modifier = Modifier.size(48.dp)) // Spacer
+            Column(modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
+                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp), verticalAlignment = Alignment.Top) {
+                    Box(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Box(modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
                         BasicTextField(
                             value = uiState.description,
                             onValueChange = onDescriptionChange,
-                            // Używamy headlineMedium z theme
                             textStyle = MaterialTheme.typography.headlineMedium.copy(color = textColor),
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { innerTextField ->
                                 if (uiState.description.isEmpty()) {
-                                    Text(
-                                        text = "Dodaj tytuł",
-                                        style = MaterialTheme.typography.headlineMedium.copy(color = textColor.copy(alpha = 0.4f))
-                                    )
+                                    Text(text = "Dodaj tytuł", style = MaterialTheme.typography.headlineMedium.copy(color = textColor.copy(alpha = 0.4f)))
                                 }
                                 innerTextField()
                             },
@@ -184,17 +159,11 @@ fun AddEditGradeContent(
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = dividerColor)
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // QUICK CHIPS
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 76.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                LazyRow(contentPadding = PaddingValues(horizontal = 76.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(quickTitles) { title ->
                         val isSelected = uiState.description == title
                         Surface(
@@ -205,98 +174,50 @@ fun AddEditGradeContent(
                             modifier = Modifier.height(32.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp)) {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor
-                                )
+                                Text(text = title, style = MaterialTheme.typography.labelMedium, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor)
                             }
                         }
                     }
                 }
-
                 Spacer(modifier = Modifier.height(24.dp))
                 HorizontalDivider(color = dividerColor)
 
-                // 2. DATA
                 CommonRowGrade(iconRes = R.drawable.ic_calendar, iconTint = iconTint) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showDatePicker = true }
-                            .padding(vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = formatDateLong(uiState.date),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = textColor
-                        )
+                    Box(modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }.padding(vertical = 12.dp)) {
+                        Text(text = formatDateLong(uiState.date), style = MaterialTheme.typography.bodyLarge, color = textColor)
                     }
                 }
-
                 HorizontalDivider(color = dividerColor)
 
-                // 3. PRZEDMIOT
                 CommonRowGrade(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { showSubjectModal = true }.padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = uiState.subjectName ?: "Wybierz przedmiot",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (uiState.subjectName == null) subTextColor else textColor
-                        )
+                    Row(modifier = Modifier.fillMaxWidth().clickable { showSubjectModal = true }.padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = uiState.subjectName ?: "Wybierz przedmiot", style = MaterialTheme.typography.bodyLarge, color = if (uiState.subjectName == null) subTextColor else textColor)
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
                     }
                 }
-
                 HorizontalDivider(color = dividerColor)
 
-                // 4. RODZAJ ZAJĘĆ
                 CommonRowGrade(iconRes = R.drawable.ic_graduation_hat, iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(alpha = 0.4f)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable(enabled = isTypeSelectionEnabled) { showTypeModal = true }.padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć"
-                        Text(
-                            text = typeText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (!isTypeSelectionEnabled) subTextColor.copy(alpha = 0.4f) else if (uiState.classType == null) subTextColor else textColor
-                        )
+                    Row(modifier = Modifier.fillMaxWidth().clickable(enabled = isTypeSelectionEnabled) { showTypeModal = true }.padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć", style = MaterialTheme.typography.bodyLarge, color = if (!isTypeSelectionEnabled) subTextColor.copy(alpha = 0.4f) else if (uiState.classType == null) subTextColor else textColor)
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))
                     }
                 }
-
                 HorizontalDivider(color = dividerColor)
 
-                // 5. OCENA
                 CommonRowGrade(iconRes = R.drawable.ic_trophy, iconTint = iconTint) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { showGradeModal = true }.padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth().clickable { showGradeModal = true }.padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         val gradeText = when (uiState.gradeType) {
                             GradeType.STANDARD -> uiState.gradeValue?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: "Wybierz ocenę"
                             GradeType.CUSTOM -> uiState.customGradeValue.ifBlank { "Wpisz wartość" }
                             GradeType.ACTIVITY -> "Aktywność +"
                         }
-                        Text(
-                            text = gradeText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (uiState.gradeValue == null && uiState.gradeType != GradeType.ACTIVITY) subTextColor else textColor
-                        )
+                        Text(text = gradeText, style = MaterialTheme.typography.bodyLarge, color = if (uiState.gradeValue == null && uiState.gradeType != GradeType.ACTIVITY) subTextColor else textColor)
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
                     }
                 }
-
                 HorizontalDivider(color = dividerColor)
 
-                // 6. WAGA
                 CommonRowGrade(iconRes = R.drawable.ic_scales, iconTint = iconTint) {
                     OutlinedTextField(
                         value = uiState.weight,
@@ -308,10 +229,8 @@ fun AddEditGradeContent(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-
                 HorizontalDivider(color = dividerColor)
 
-                // 7. DODATKOWY OPIS
                 CommonRowGrade(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
                     Box(modifier = Modifier.padding(vertical = 12.dp)) {
                         BasicTextField(
@@ -320,36 +239,27 @@ fun AddEditGradeContent(
                             textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { innerTextField ->
-                                if (uiState.comment.isEmpty()) {
-                                    Text(
-                                        text = "Dodaj opis",
-                                        style = MaterialTheme.typography.bodyLarge.copy(color = subTextColor)
-                                    )
-                                }
+                                if (uiState.comment.isEmpty()) Text(text = "Dodaj opis", style = MaterialTheme.typography.bodyLarge.copy(color = subTextColor))
                                 innerTextField()
                             },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
-
                 HorizontalDivider(color = dividerColor)
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
 
-        // --- Dialogi ---
         if (showDatePicker) {
             DatePicker(
                 date = uiState.date,
-                onDateSelected = { millis ->
-                    onDateChange(millis)
-                    showDatePicker = false
-                },
+                onDateSelected = { millis -> onDateChange(millis); showDatePicker = false },
                 onDismiss = { showDatePicker = false }
             )
         }
 
+        // ... (Reszta dialogów bez zmian, są poprawne w Twoim kodzie) ...
         if (showSubjectModal) {
             Dialog(onDismissRequest = { showSubjectModal = false }) {
                 Surface(

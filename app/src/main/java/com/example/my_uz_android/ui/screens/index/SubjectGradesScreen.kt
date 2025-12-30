@@ -53,7 +53,7 @@ fun SubjectGradesScreen(
         floatingActionButton = {
             UniversalFab(
                 onMainFabClick = onAddGradeClick,
-                iconRes = R.drawable.ic_plus, // Naprawiono błąd z brakującym parametrem
+                iconRes = R.drawable.ic_plus,
                 isExpandable = false,
                 isExpanded = false,
                 options = emptyList()
