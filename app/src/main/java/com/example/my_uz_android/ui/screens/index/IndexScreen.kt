@@ -6,11 +6,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Import sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.FabOption
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.index.components.IndexTabs
 
@@ -19,11 +17,10 @@ fun IndexScreen(
     onGradeDetailsClick: (Int) -> Unit,
     onNavigateToClassTypeGrades: (String, String) -> Unit,
     onAddGradeClick: (String?, String?) -> Unit,
-    onAddAbsenceClick: (String?, String?) -> Unit, // Callback nawigacji
-    onEditAbsenceClick: (Int) -> Unit // Callback nawigacji
+    onAddAbsenceClick: (String?, String?) -> Unit,
+    onEditAbsenceClick: (Int) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(0) }
-    var isFabExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -47,41 +44,18 @@ fun IndexScreen(
             }
         },
         floatingActionButton = {
-            val fabOptions = when (selectedTab) {
-                0 -> listOf(
-                    FabOption(
-                        label = "Dodaj ocenę",
-                        iconRes = R.drawable.ic_trophy,
-                        onClick = {
-                            isFabExpanded = false
-                            onAddGradeClick(null, null)
-                        }
-                    )
-                )
-                1 -> listOf(
-                    FabOption(
-                        label = "Dodaj nieobecność",
-                        iconRes = R.drawable.ic_calendar_minus,
-                        onClick = {
-                            isFabExpanded = false
-                            onAddAbsenceClick(null, null) // Wywołanie nawigacji
-                        }
-                    )
-                )
-                else -> emptyList()
-            }
-
+            // Prosty FAB z plusem
             UniversalFab(
-                isExpandable = fabOptions.size > 1,
-                isExpanded = isFabExpanded,
+                isExpandable = false,
+                isExpanded = false,
+                iconRes = R.drawable.ic_plus,
                 onMainFabClick = {
-                    if (fabOptions.size > 1) {
-                        isFabExpanded = !isFabExpanded
-                    } else {
-                        fabOptions.firstOrNull()?.onClick?.invoke()
+                    when (selectedTab) {
+                        0 -> onAddGradeClick(null, null)
+                        1 -> onAddAbsenceClick(null, null)
                     }
                 },
-                options = fabOptions
+                options = emptyList()
             )
         }
     ) { paddingValues ->

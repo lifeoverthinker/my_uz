@@ -10,12 +10,12 @@ import com.example.my_uz_android.data.models.FavoriteEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.FavoritesRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
+import com.example.my_uz_android.data.repositories.TasksRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.util.NetworkResult
 import com.example.my_uz_android.widget.WidgetWorker
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -33,7 +33,9 @@ data class CalendarUiState(
     val classColorMap: Map<String, Int> = emptyMap(),
     val currentSource: ScheduleSource = ScheduleSource.MyPlan,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isShareLoading: Boolean = false,
+    val sharedCode: String? = null
 )
 
 class CalendarViewModel(
@@ -41,18 +43,17 @@ class CalendarViewModel(
     private val favoritesRepository: FavoritesRepository,
     private val classRepository: ClassRepository,
     private val settingsRepository: SettingsRepository,
-    private val universityRepository: UniversityRepository
+    private val universityRepository: UniversityRepository,
+    private val tasksRepository: TasksRepository? = null // Opcjonalny, jeśli używany
 ) : AndroidViewModel(application) {
 
     private val gson = Gson()
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
-    // Strumień TYLKO dla mojego planu (z bazy danych)
     val myPlanClasses: StateFlow<List<ClassEntity>> = classRepository.getAllClassesStream()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Strumień dla podglądu (z sieci)
     val networkClasses: StateFlow<List<ClassEntity>> = _uiState
         .map { it.networkClasses }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -71,12 +72,16 @@ class CalendarViewModel(
                 val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
                 val classColorMap: Map<String, Int> = try {
                     gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-                } catch (e: Exception) { emptyMap() }
+                } catch (e: Exception) {
+                    emptyMap()
+                }
 
-                _uiState.update { it.copy(
-                    favorites = favs,
-                    classColorMap = classColorMap
-                ) }
+                _uiState.update {
+                    it.copy(
+                        favorites = favs,
+                        classColorMap = classColorMap
+                    )
+                }
             }.collect()
         }
     }
@@ -85,7 +90,8 @@ class CalendarViewModel(
         viewModelScope.launch {
             settingsRepository.getSettingsStream().collect { settings ->
                 val groupCode = settings?.selectedGroupCode
-                val subgroups = settings?.selectedSubgroup?.split(",")?.map { it.trim() } ?: emptyList()
+                val subgroups =
+                    settings?.selectedSubgroup?.split(",")?.map { it.trim() } ?: emptyList()
 
                 if (!groupCode.isNullOrBlank()) {
                     refreshScheduleFromServer(groupCode, subgroups)
@@ -107,29 +113,39 @@ class CalendarViewModel(
     }
 
     fun selectMyPlan() {
-        _uiState.update { it.copy(
-            currentSource = ScheduleSource.MyPlan,
-            selectedResourceId = null,
-            selectedPlanName = "Mój Plan",
-            networkClasses = emptyList()
-        ) }
+        _uiState.update {
+            it.copy(
+                currentSource = ScheduleSource.MyPlan,
+                selectedResourceId = null,
+                selectedPlanName = "Mój Plan",
+                networkClasses = emptyList()
+            )
+        }
     }
 
     fun selectFavoritePlan(favorite: FavoriteEntity) {
-        _uiState.update { it.copy(
-            currentSource = ScheduleSource.Favorite(favorite.resourceId, favorite.name, favorite.type),
-            selectedResourceId = favorite.resourceId,
-            selectedPlanName = favorite.name
-        ) }
+        _uiState.update {
+            it.copy(
+                currentSource = ScheduleSource.Favorite(
+                    favorite.resourceId,
+                    favorite.name,
+                    favorite.type
+                ),
+                selectedResourceId = favorite.resourceId,
+                selectedPlanName = favorite.name
+            )
+        }
         loadNetworkSchedule(favorite.name, favorite.type)
     }
 
     fun selectPreviewPlan(name: String, type: String) {
-        _uiState.update { it.copy(
-            currentSource = ScheduleSource.Preview(name, name, type),
-            selectedResourceId = name,
-            selectedPlanName = name
-        ) }
+        _uiState.update {
+            it.copy(
+                currentSource = ScheduleSource.Preview(name, name, type),
+                selectedResourceId = name,
+                selectedPlanName = name
+            )
+        }
         loadNetworkSchedule(name, type)
     }
 
@@ -142,8 +158,17 @@ class CalendarViewModel(
                 universityRepository.getSchedule(name, emptyList())
             }
             when (result) {
-                is NetworkResult.Success -> _uiState.update { it.copy(networkClasses = result.data ?: emptyList(), isLoading = false) }
-                is NetworkResult.Error -> _uiState.update { it.copy(error = result.message, isLoading = false) }
+                is NetworkResult.Success -> _uiState.update {
+                    it.copy(
+                        networkClasses = result.data ?: emptyList(), isLoading = false
+                    )
+                }
+                is NetworkResult.Error -> _uiState.update {
+                    it.copy(
+                        error = result.message,
+                        isLoading = false
+                    )
+                }
                 else -> {}
             }
         }
@@ -153,7 +178,6 @@ class CalendarViewModel(
         classRepository.setTemporaryClass(classEntity)
     }
 
-    // POPRAWKA: Używamy metod .delete() i .insert() zamiast .deleteFavorite() i .insertFavorite()
     fun toggleFavorite(name: String, type: String) {
         viewModelScope.launch {
             val currentFavorites = _uiState.value.favorites
@@ -170,5 +194,27 @@ class CalendarViewModel(
                 favoritesRepository.insert(newFav)
             }
         }
+    }
+
+    fun shareCalendarTasks() {
+        viewModelScope.launch {
+            if (tasksRepository == null) return@launch
+            _uiState.update { it.copy(isShareLoading = true, error = null) }
+            try {
+                val tasks = tasksRepository.getAllTasks().first()
+                if (tasks.isNotEmpty()) {
+                    val code = tasksRepository.shareTasks(tasks)
+                    _uiState.update { it.copy(isShareLoading = false, sharedCode = code) }
+                } else {
+                    _uiState.update { it.copy(isShareLoading = false, error = "Brak zadań") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isShareLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    fun clearSharedCode() {
+        _uiState.update { it.copy(sharedCode = null) }
     }
 }

@@ -4,17 +4,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.TopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -29,18 +30,24 @@ fun PersonalDataScreen(
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val selectedSubgroups by viewModel.selectedSubgroups.collectAsState()
 
+    val sortedSubgroups = selectedSubgroups.sorted()
+
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Dane osobowe") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
-                    }
-                },
+                title = "Dane osobowe",
+                navigationIcon = R.drawable.ic_chevron_left,
+                onNavigationClick = onNavigateBack,
+                isNavigationIconFilled = true,
                 actions = {
                     IconButton(onClick = onNavigateToEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edytuj")
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_edit),
+                            contentDescription = "Edytuj",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
             )
@@ -51,65 +58,44 @@ fun PersonalDataScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Sekcja: Imię, Nazwisko, Płeć
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = "Imię i nazwisko",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
+            PersonalDataGroup(title = "Profil studenta") {
+                DataItem(label = "Imię i nazwisko", value = "$userName $userSurname")
+
+                // ✅ DIVIDER JAK W DRAWERZE
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
-                Text(
-                    text = "$userName $userSurname",
-                    style = MaterialTheme.typography.headlineSmall
-                    // Usunięto fontWeight, headlineSmall ma domyślnie Normal w Type.kt
-                )
-                Text(
-                    text = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                DataItem(
+                    label = "Płeć / Forma zwrotu",
+                    value = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student"
                 )
             }
 
-            HorizontalDivider()
+            PersonalDataGroup(title = "Przynależność") {
+                DataItem(label = "Grupa dziekańska", value = selectedGroup ?: "Nie wybrano")
 
-            // Sekcja: Grupa
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = "Grupa dziekańska",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = selectedGroup ?: "Brak danych",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-
-            // Sekcja: Podgrupy - osobne kafelki
-            if (selectedSubgroups.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Podgrupy",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        selectedSubgroups.forEach { subgroup ->
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            ) {
-                                Text(
-                                    text = subgroup,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    color = MaterialTheme.colorScheme.onSurface
+                if (sortedSubgroups.isNotEmpty()) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Wybrane podgrupy",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            sortedSubgroups.forEach { subgroup ->
+                                SuggestionChip(
+                                    onClick = { },
+                                    label = { Text(subgroup, style = MaterialTheme.typography.bodySmall) },
+                                    shape = RoundedCornerShape(12.dp)
                                 )
                             }
                         }
@@ -117,5 +103,33 @@ fun PersonalDataScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun PersonalDataGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+        )
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 1.dp,
+            modifier = Modifier.fillMaxWidth(),
+            content = { Column(content = content) }
+        )
+    }
+}
+
+@Composable
+fun DataItem(label: String, value: String) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = value, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
     }
 }
