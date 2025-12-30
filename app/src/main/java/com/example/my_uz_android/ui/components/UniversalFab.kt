@@ -1,6 +1,8 @@
 package com.example.my_uz_android.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -25,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
+import com.example.my_uz_android.ui.theme.extendedColors
 
 data class FabOption(
     val label: String,
@@ -41,24 +44,34 @@ fun UniversalFab(
     options: List<FabOption> = emptyList(),
     iconRes: Int = R.drawable.ic_plus
 ) {
-    // --- STYL Z FIGMY (Zmieniony/Light) ---
-    // Kolory menu (opcje)
+    // --- STAŁE KOLORY DLA MENU (OPCJE) ---
     val menuContainerColor = Color(0xFFEADDFF)
     val menuContentColor = Color(0xFF4F378A)
+    val menuShape = RoundedCornerShape(16.dp)
 
-    // Kolory głównego FABa
-    // Jeśli rozwijany (Home) i otwarty -> fioletowy (0xFF6750A4),
-    // Jeśli zwinięty lub zwykły (inne ekrany) -> jasny fiolet (0xFFEADDFF)
-    val fabContainerColor = if (isExpandable && isExpanded) Color(0xFF6750A4) else Color(0xFFEADDFF)
+    // --- ANIMACJA STANU GŁÓWNEGO FABA ---
+    // Logika: Jeśli jest rozwinięty (tylko na Home), ma inny styl.
+    // W przeciwnym razie (zwinięty Home LUB inne ekrany) ma styl domyślny (jasny, 16dp).
 
-    // Kolor ikony głównego FABa
-    // Jeśli rozwijany i otwarty -> biały (kontrast na ciemnym fiolecie) - zakładam standard M3
-    // Jeśli zwinięty (inne ekrany) -> ciemny fiolet (0xFF4F378A) - zgodnie ze specyfikacją "dla pozostałych ekranów"
-    val fabContentColor = if (isExpandable && isExpanded) Color.White else Color(0xFF4F378A)
+    val targetCornerRadius = if (isExpandable && isExpanded) 28.dp else 16.dp
+    val currentCornerRadius by animateDpAsState(
+        targetValue = targetCornerRadius,
+        label = "FabCornerAnimation"
+    )
 
-    // Kształt z Figmy: 16.dp (dla zwiniętego) / 28.dp (dla rozwiniętego - opcjonalnie, w Twoim kodzie jest 28dp dla rozwiniętego FABa)
-    val fabShape = if (isExpandable && isExpanded) RoundedCornerShape(28.dp) else RoundedCornerShape(16.dp)
-    val menuShape = RoundedCornerShape(16.dp) // Kształt opcji menu
+    val targetContainerColor = if (isExpandable && isExpanded) Color(0xFF6750A4) else Color(0xFFEADDFF)
+    val currentContainerColor by animateColorAsState(
+        targetValue = targetContainerColor,
+        label = "FabContainerColorAnimation"
+    )
+
+    // Kolor ikony: Biały gdy rozwinięty, Ciemny (z Theme lub Hex) gdy zwinięty
+    val collapsedIconColor = MaterialTheme.extendedColors.iconText // Używamy koloru z motywu (np. 0xFF1D192B) dla spójności z innymi przyciskami
+    val targetContentColor = if (isExpandable && isExpanded) Color.White else collapsedIconColor
+    val currentContentColor by animateColorAsState(
+        targetValue = targetContentColor,
+        label = "FabContentColorAnimation"
+    )
 
     val rotation by animateFloatAsState(
         targetValue = if (isExpanded) 45f else 0f,
@@ -81,7 +94,6 @@ fun UniversalFab(
                 horizontalAlignment = Alignment.End
             ) {
                 options.forEach { option ->
-                    // Pojedynczy segment menu (zgodnie z kodem Figmy)
                     Box(
                         modifier = Modifier
                             .height(56.dp)
@@ -96,7 +108,7 @@ fun UniversalFab(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Ikona
+                            // Ikona opcji
                             Box(modifier = Modifier.size(24.dp)) {
                                 Icon(
                                     painter = painterResource(id = option.iconRes),
@@ -126,8 +138,9 @@ fun UniversalFab(
         Box(
             modifier = Modifier
                 .size(56.dp)
-                .clip(fabShape)
-                .background(fabContainerColor)
+                // Najpierw clip (kształt), potem background (kolor)
+                .clip(RoundedCornerShape(currentCornerRadius))
+                .background(currentContainerColor)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -135,31 +148,29 @@ fun UniversalFab(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // State-layer (padding 16.dp wewnątrz Boxa 56dp)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Ikona (Box 24dp wewnątrz)
                 Box(modifier = Modifier.size(24.dp)) {
                     if (isExpandable) {
-                        // Ikona Plusa (obracana) - używamy Twojego ic_plus
+                        // Ikona Plusa (obracana)
                         Icon(
                             painter = painterResource(R.drawable.ic_plus),
                             contentDescription = if (isExpanded) "Zamknij" else "Otwórz",
-                            tint = fabContentColor,
+                            tint = currentContentColor,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .rotate(rotation)
                         )
                     } else {
-                        // Zwykła ikona (np. plus na innych ekranach)
+                        // Zwykła ikona (statyczna)
                         Icon(
                             painter = painterResource(id = iconRes),
                             contentDescription = "Akcja",
-                            tint = fabContentColor,
+                            tint = currentContentColor,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
