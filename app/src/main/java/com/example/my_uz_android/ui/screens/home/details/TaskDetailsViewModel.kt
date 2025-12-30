@@ -30,7 +30,8 @@ class TaskDetailsViewModel(
 
     private fun loadTask() {
         viewModelScope.launch {
-            tasksRepository.getTaskByIdStream(taskId)
+            // POPRAWKA: Użycie getTaskById zamiast getTaskByIdStream
+            tasksRepository.getTaskById(taskId)
                 .catch { e ->
                     _uiState.value = TaskDetailsUiState.Error(e.message ?: "Błąd ładowania zadania")
                 }
@@ -75,7 +76,6 @@ class TaskDetailsViewModel(
             viewModelScope.launch {
                 val updatedTask = currentState.task.copy(isCompleted = !currentState.task.isCompleted)
                 tasksRepository.updateTask(updatedTask)
-                // UI zaktualizuje się automatycznie dzięki Flow w loadTask
             }
         }
     }

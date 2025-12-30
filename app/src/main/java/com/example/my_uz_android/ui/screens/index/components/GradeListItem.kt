@@ -4,16 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.data.models.GradeEntity
 import java.time.Instant
 import java.time.ZoneId
@@ -50,27 +51,25 @@ fun GradeListItem(
                         if (grade.grade % 1.0 == 0.0) grade.grade.toInt().toString()
                         else grade.grade.toString()
                     },
-                    // labelLarge: 14sp, Medium.
                     style = MaterialTheme.typography.labelLarge,
                     color = onContainerColor,
                     textAlign = TextAlign.Center
                 )
             }
 
+            Spacer(modifier = Modifier.width(16.dp))
+
             // KOLUMNA 2: Opis (Środek)
             Text(
-                text = grade.description ?: "Aktywność",
-                // bodyMedium: 14sp, Normal.
+                text = if (grade.description.isNullOrBlank()) "Ocena" else grade.description!!,
                 style = MaterialTheme.typography.bodyMedium,
                 color = textColor,
-                textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
             )
 
             // KOLUMNA 3: Data (Prawa)
             Text(
                 text = formatDate(grade.date),
-                // bodySmall: 12sp.
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End

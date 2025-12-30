@@ -22,7 +22,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Import sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
@@ -44,31 +43,34 @@ fun AddEditAbsenceScreen(
     viewModel: AddEditAbsenceViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isSaved by viewModel.isSaved.collectAsState()
     val context = LocalContext.current
+
+    // ✅ Obsługa powrotu po zapisie
+    LaunchedEffect(isSaved) {
+        if (isSaved) {
+            Toast.makeText(context, "Operacja zakończona pomyślnie", Toast.LENGTH_SHORT).show()
+            onNavigateBack()
+        }
+    }
 
     LaunchedEffect(absenceId, prefilledSubject, prefilledClassType) {
         if (absenceId != null && absenceId != 0) {
             viewModel.loadAbsence(absenceId)
         } else {
-            viewModel.initNewAbsence(prefilledSubject, prefilledClassType)
+            // Jeśli nie ma ID, ale są prefilled, ViewModel to obsłuży w init,
+            // ale wywołanie tutaj upewnia się, że stan jest zresetowany
+            if (uiState.id == 0 && uiState.subjectName == null) {
+                viewModel.initNewAbsence(prefilledSubject, prefilledClassType)
+            }
         }
     }
 
     AddEditAbsenceContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
-        onSaveAbsence = {
-            viewModel.saveAbsence {
-                Toast.makeText(context, "Zapisano nieobecność", Toast.LENGTH_SHORT).show()
-                onNavigateBack()
-            }
-        },
-        onDeleteAbsence = {
-            viewModel.deleteAbsence {
-                Toast.makeText(context, "Usunięto nieobecność", Toast.LENGTH_SHORT).show()
-                onNavigateBack()
-            }
-        },
+        onSaveAbsence = viewModel::saveAbsence,
+        onDeleteAbsence = viewModel::deleteAbsence,
         onSubjectChange = viewModel::updateSubjectName,
         onClassTypeChange = viewModel::updateClassType,
         onDescriptionChange = viewModel::updateDescription,
@@ -89,7 +91,7 @@ fun AddEditAbsenceContent(
     onDateChange: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
+    val surfaceColor = MaterialTheme.colorScheme.surface
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
@@ -100,12 +102,11 @@ fun AddEditAbsenceContent(
     var showTypeModal by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    val isFormValid = !uiState.subjectName.isNullOrBlank() && !uiState.classType.isNullOrBlank()
+    val isFormValid = !uiState.subjectName.isNullOrBlank()
     val isTypeSelectionEnabled = !uiState.subjectName.isNullOrBlank()
 
     Surface(
         color = surfaceColor,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         modifier = modifier.fillMaxSize().statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -167,7 +168,7 @@ fun AddEditAbsenceContent(
                     Box(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Nieobecność",
+                        text = if(uiState.id != 0) "Edytuj nieobecność" else "Nowa nieobecność",
                         style = MaterialTheme.typography.headlineMedium.copy(color = textColor),
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
@@ -228,7 +229,7 @@ fun AddEditAbsenceContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć"
+                        val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć (opcjonalne)"
                         Text(
                             text = typeText,
                             style = MaterialTheme.typography.bodyLarge,
@@ -263,6 +264,24 @@ fun AddEditAbsenceContent(
                 }
 
                 HorizontalDivider(color = dividerColor)
+
+                // Przycisk Usuń (tylko edycja)
+                if (uiState.id != 0) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = onDeleteAbsence,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    ) {
+                        Icon(painterResource(R.drawable.ic_trash), null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Usuń nieobecność")
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
@@ -340,6 +359,16 @@ fun AddEditAbsenceContent(
                                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                             )
                         }
+                        if (availableTypes.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "Brak typów zajęć",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = subTextColor,
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                                )
+                            }
+                        }
                         items(items = availableTypes) { type ->
                             Row(
                                 modifier = Modifier
@@ -367,7 +396,6 @@ fun AddEditAbsenceContent(
     }
 }
 
-// Używamy lokalnej nazwy, żeby nie było konfliktu
 @Composable
 private fun AbsenceCommonRow(iconRes: Int, iconTint: Color, content: @Composable BoxScope.() -> Unit) {
     Row(

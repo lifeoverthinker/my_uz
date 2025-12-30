@@ -134,9 +134,14 @@ val nav_dark_border = Color(0xFF49454e)
 val nav_dark_active = Color(0xFFd3bcfd)
 val nav_dark_inactive = Color(0xFFcac4d0)
 
-// --- PRZYCISKI (Styl jak w TabBar dla Dark Mode) ---
-val button_background_light = Color(0xFFE8DEF8) // Jasny fiolet (Light)
-val button_background_dark = Color(0xFF4B4358) // Ciemny fiolet (Dark)
+// --- PRZYCISKI (Zaktualizowane zgodnie z prośbą) ---
+// Ogólne przyciski (wszystkie ekrany poza Home)
+val button_background_light = Color(0xFFF7F2F9)
+val button_background_dark = Color(0xFF2B2930) // Ciemny odpowiednik
+
+// Specyficzne przyciski dla ekranu Home
+val home_button_background_light = Color(0xFFE8DEF8)
+val home_button_background_dark = Color(0xFF4B4358) // Ciemniejszy fiolet dla Dark Mode
 
 // --- TEKST IKON ---
 val icon_text_light = Color(0xFF1D192B) // Ciemny tekst w Light

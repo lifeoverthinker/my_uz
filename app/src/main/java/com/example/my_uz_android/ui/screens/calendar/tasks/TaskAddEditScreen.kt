@@ -5,8 +5,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items // ✅ Ważny import
+import androidx.compose.foundation.lazy.LazyColumn // ✅ Ważny import
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue // ✅ Ważny import
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +44,7 @@ fun TaskAddEditScreen(
     viewModel: TaskAddEditViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val isSaved by viewModel.isSaved.collectAsState()
     val context = LocalContext.current
 
     LaunchedEffect(taskId) {
@@ -51,22 +53,25 @@ fun TaskAddEditScreen(
         }
     }
 
+    LaunchedEffect(isSaved) {
+        if (isSaved) {
+            Toast.makeText(context, "Operacja zakończona pomyślnie", Toast.LENGTH_SHORT).show()
+            onNavigateBack()
+        }
+    }
+
     TaskAddEditContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
         onSaveTask = {
-            viewModel.saveTask()
             if (uiState.title.isNotBlank()) {
-                Toast.makeText(context, "Zadanie zapisane", Toast.LENGTH_SHORT).show()
-                onNavigateBack()
+                viewModel.saveTask()
             } else {
                 Toast.makeText(context, "Wpisz tytuł zadania", Toast.LENGTH_SHORT).show()
             }
         },
         onDeleteTask = {
             viewModel.deleteTask()
-            Toast.makeText(context, "Zadanie usunięte", Toast.LENGTH_SHORT).show()
-            onNavigateBack()
         },
         onTitleChange = viewModel::updateTitle,
         onSubjectChange = viewModel::updateClassSubject,
@@ -291,6 +296,23 @@ fun TaskAddEditContent(
                         )
                     }
                 }
+
+                // Przycisk usuwania
+                if (uiState.taskId != 0) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = onDeleteTask,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    ) {
+                        Icon(painterResource(R.drawable.ic_trash), null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Usuń zadanie")
+                    }
+                }
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
@@ -308,7 +330,10 @@ fun TaskAddEditContent(
             text = {
                 LazyColumn {
                     item { TextButton(onClick = { onSubjectChange(null); onClassTypeChange(null); showSubjectModal = false }) { Text("Brak") } }
-                    items(uiState.availableSubjects) { (sub, _) -> TextButton(onClick = { onSubjectChange(sub); onClassTypeChange(null); showSubjectModal = false }) { Text(sub) } }
+                    // ✅ Poprawiono destrukturyzację
+                    items(uiState.availableSubjects) { (sub, _) ->
+                        TextButton(onClick = { onSubjectChange(sub); onClassTypeChange(null); showSubjectModal = false }) { Text(sub) }
+                    }
                 }
             },
             confirmButton = {}
