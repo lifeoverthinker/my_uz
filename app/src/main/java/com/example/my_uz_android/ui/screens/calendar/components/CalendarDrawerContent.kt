@@ -30,6 +30,8 @@ fun CalendarDrawerContent(
     onCloseDrawer: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+
+    // Filtrowanie po Stringach (zgodnie z "dobrym starym kodem")
     val groupFavorites = favorites.filter { it.type == "group" }
     val teacherFavorites = favorites.filter { it.type == "teacher" }
 
@@ -65,8 +67,8 @@ fun CalendarDrawerContent(
         DrawerDivider()
 
         // --- Sekcja: Grupy ---
+        DrawerSectionHeader(text = "Grupy")
         if (groupFavorites.isNotEmpty()) {
-            DrawerSectionHeader(text = "Grupy")
             groupFavorites.forEach { fav ->
                 DrawerItem(
                     label = fav.name,
@@ -75,12 +77,16 @@ fun CalendarDrawerContent(
                     onClick = { onFavoriteClick(fav) }
                 )
             }
-            DrawerDivider()
+        } else {
+            // Napis gdy brak grup
+            EmptyFavoritesText("Brak ulubionych grup")
         }
 
+        DrawerDivider()
+
         // --- Sekcja: Nauczyciele ---
+        DrawerSectionHeader(text = "Nauczyciele")
         if (teacherFavorites.isNotEmpty()) {
-            DrawerSectionHeader(text = "Nauczyciele")
             teacherFavorites.forEach { fav ->
                 DrawerItem(
                     label = fav.name,
@@ -89,6 +95,9 @@ fun CalendarDrawerContent(
                     onClick = { onFavoriteClick(fav) }
                 )
             }
+        } else {
+            // Napis gdy brak nauczycieli
+            EmptyFavoritesText("Brak ulubionych nauczycieli")
         }
     }
 }
@@ -101,7 +110,6 @@ fun DrawerSectionHeader(text: String) {
             .padding(horizontal = 16.dp, vertical = 18.dp),
     ) {
         Text(
-            // Type.kt: titleSmall ma Medium i 14.sp (pasuje idealnie)
             style = MaterialTheme.typography.titleSmall,
             text = text,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -118,7 +126,6 @@ fun DrawerItem(
 ) {
     val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
     val contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    // titleSmall ma domyślnie Medium (500), dla zaznaczonego chcemy SemiBold (600)
     val fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
 
     Box(
@@ -143,7 +150,6 @@ fun DrawerItem(
             )
             Text(
                 modifier = Modifier.weight(1f),
-                // Używamy titleSmall z Type.kt jako bazę
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = fontWeight),
                 text = label,
                 color = contentColor,
@@ -152,6 +158,16 @@ fun DrawerItem(
             )
         }
     }
+}
+
+@Composable
+fun EmptyFavoritesText(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
 }
 
 @Composable

@@ -33,6 +33,7 @@ data class ExtendedColors(
     val homeHeaderBackground: Color = home_header_light,
     val homeContentBackground: Color = home_content_light,
     val buttonBackground: Color = button_background_light,
+    val homeButtonBackground: Color = home_button_background_light, // ✅ DODANO
     val iconText: Color = icon_text_light,
     val grayInactive: Color = Color(0xFFBDBDBD)
 )
@@ -118,6 +119,7 @@ fun MyUZTheme(
             homeHeaderBackground = home_header_dark,
             homeContentBackground = home_content_dark,
             buttonBackground = button_background_dark,
+            homeButtonBackground = home_button_background_dark, // ✅ Ustawienie dla Dark Mode
             iconText = icon_text_dark,
             grayInactive = Color(0xFFBDBDBD)
         )
@@ -134,6 +136,7 @@ fun MyUZTheme(
             homeHeaderBackground = home_header_light,
             homeContentBackground = home_content_light,
             buttonBackground = button_background_light,
+            homeButtonBackground = home_button_background_light, // ✅ Ustawienie dla Light Mode (E8DEF8)
             iconText = icon_text_light,
             grayInactive = Color(0xFFBDBDBD)
         )
@@ -144,17 +147,23 @@ fun MyUZTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> darkScheme()
         else -> lightScheme()
     }
 
     val view = LocalView.current
-    val window = (view.context as? Activity)?.window
-    if (!view.isInEditMode && window != null) {
+    if (!view.isInEditMode) {
         SideEffect {
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            val window = (view.context as? Activity)?.window
+            if (window != null) {
+                // Domyślne kolory pasków (tło aplikacji)
+                window.statusBarColor = colorScheme.background.toArgb()
+                window.navigationBarColor = colorScheme.surface.toArgb()
+
+                val insets = WindowCompat.getInsetsController(window, view)
+                insets.isAppearanceLightStatusBars = !darkTheme
+                insets.isAppearanceLightNavigationBars = !darkTheme
+            }
         }
     }
 
@@ -167,7 +176,6 @@ fun MyUZTheme(
     }
 }
 
-// \[AKCESOR\] Udostępnia rozszerzone kolory jako `MaterialTheme.extendedColors`
 val MaterialTheme.extendedColors: ExtendedColors
     @Composable
     get() = LocalExtendedColors.current

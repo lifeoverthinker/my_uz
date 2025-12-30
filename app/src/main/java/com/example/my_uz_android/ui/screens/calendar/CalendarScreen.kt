@@ -38,7 +38,6 @@ fun CalendarScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // --- 1. Źródło danych (Mój Plan vs Inne) ---
     val source = uiState.currentSource
     val isMyPlan = source is ScheduleSource.MyPlan
 
@@ -50,7 +49,6 @@ fun CalendarScreen(
         }
     }
 
-    // --- 2. Filtrowanie i Info ---
     val planName = uiState.selectedPlanName
     val isTeacher = if (!isMyPlan) {
         (source as? ScheduleSource.Favorite)?.type == "teacher" || (source as? ScheduleSource.Preview)?.type == "teacher"
@@ -81,7 +79,6 @@ fun CalendarScreen(
         }
     }
 
-    // --- 3. Konfiguracja Kalendarza ---
     val currentDate = remember { LocalDate.now(ZoneId.of("Europe/Warsaw")) }
     val currentMonth = remember { YearMonth.now(ZoneId.of("Europe/Warsaw")) }
     val startMonth = remember { currentMonth.minusMonths(24) }
@@ -116,10 +113,8 @@ fun CalendarScreen(
     val monthName = visibleMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
 
-    // Jeśli rok jest obecny, pokazujemy tylko miesiąc, jeśli inny - dodajemy rok
     val calendarTitle = if (visibleMonth.year == YearMonth.now().year) monthName else "$monthName ${visibleMonth.year}"
 
-    // --- 4. Dialogi ---
     var showTeacherInfo by remember { mutableStateOf(false) }
     var showSubgroupFilter by remember { mutableStateOf(false) }
 
@@ -154,7 +149,6 @@ fun CalendarScreen(
                         isExpanded = isMonthView,
                         onNavigationClick = { scope.launch { drawerState.open() } },
                         onSearchClick = onSearchClick,
-                        // Akcja "Dziś" (kliknięcie plusa/ikony kalendarza w TopBar)
                         onAddClick = {
                             val today = LocalDate.now(ZoneId.of("Europe/Warsaw"))
                             selectedDate = today
@@ -185,7 +179,6 @@ fun CalendarScreen(
                     )
                 }
             },
-            // ZMIANA: Standardowy kolor tła (Theme.kt)
             containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
             if (uiState.isLoading) {
@@ -216,7 +209,7 @@ fun CalendarScreen(
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
                     modifier = Modifier.padding(innerPadding),
-                    showHeader = !isMyPlan // Nagłówek tylko w trybie podglądu (bo Mój Plan ma go w TopBar)
+                    showHeader = !isMyPlan
                 )
             }
         }

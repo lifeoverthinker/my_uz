@@ -2,8 +2,8 @@ package com.example.my_uz_android.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -57,11 +57,12 @@ fun TaskCard(
             overflow = TextOverflow.Ellipsis
         )
 
-        if (showDayMarker) {
-            val dateText = formatTaskDateShort(task.dueDate)
-            val subjectText = task.subjectName?.takeIf { it.isNotBlank() }
-            val fullText = subjectText?.let { "$dateText • $it" } ?: dateText
+        // Wyświetlanie daty i przedmiotu
+        val dateText = formatTaskDateShort(task.dueDate)
+        val subjectText = task.subjectName?.takeIf { it.isNotBlank() }
+        val fullText = subjectText?.let { "$dateText • $it" } ?: dateText
 
+        if (fullText.isNotBlank()) {
             Text(
                 text = fullText,
                 style = MaterialTheme.typography.bodySmall.copy(

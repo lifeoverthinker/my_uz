@@ -6,5 +6,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class SharedTaskRequest(
     @SerialName("share_id") val shareId: String,
-    @SerialName("tasks_json") val tasks: List<TaskEntity>
+    // Mapujemy pole 'payload' w kodzie na kolumnę 'tasks_json' w bazie danych
+    @SerialName("tasks_json") val payload: String
 )

@@ -2,7 +2,8 @@ package com.example.my_uz_android.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -12,18 +13,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
+import com.example.my_uz_android.ui.theme.extendedColors
 
 data class FabOption(
     val label: String,
@@ -37,125 +41,139 @@ fun UniversalFab(
     modifier: Modifier = Modifier,
     isExpandable: Boolean = false,
     isExpanded: Boolean = false,
-    iconRes: Int = R.drawable.ic_plus,
-    options: List<FabOption> = emptyList()
+    options: List<FabOption> = emptyList(),
+    iconRes: Int = R.drawable.ic_plus
 ) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
+    // --- STAŁE KOLORY DLA MENU (OPCJE) ---
+    val menuContainerColor = Color(0xFFEADDFF)
+    val menuContentColor = Color(0xFF4F378A)
+    val menuShape = RoundedCornerShape(16.dp)
 
-    val optionContainerColor = MaterialTheme.colorScheme.primaryContainer
-    val onOptionContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
+    // --- ANIMACJA STANU GŁÓWNEGO FABA ---
+    // Logika: Jeśli jest rozwinięty (tylko na Home), ma inny styl.
+    // W przeciwnym razie (zwinięty Home LUB inne ekrany) ma styl domyślny (jasny, 16dp).
 
-    // ✅ POPRAWKA: Używamy 'scrim' z Twojego Theme.kt dla poprawnego trybu nocnego.
-    val overlayColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)
+    val targetCornerRadius = if (isExpandable && isExpanded) 28.dp else 16.dp
+    val currentCornerRadius by animateDpAsState(
+        targetValue = targetCornerRadius,
+        label = "FabCornerAnimation"
+    )
+
+    val targetContainerColor = if (isExpandable && isExpanded) Color(0xFF6750A4) else Color(0xFFEADDFF)
+    val currentContainerColor by animateColorAsState(
+        targetValue = targetContainerColor,
+        label = "FabContainerColorAnimation"
+    )
+
+    // Kolor ikony: Biały gdy rozwinięty, Ciemny (z Theme lub Hex) gdy zwinięty
+    val collapsedIconColor = MaterialTheme.extendedColors.iconText // Używamy koloru z motywu (np. 0xFF1D192B) dla spójności z innymi przyciskami
+    val targetContentColor = if (isExpandable && isExpanded) Color.White else collapsedIconColor
+    val currentContentColor by animateColorAsState(
+        targetValue = targetContentColor,
+        label = "FabContentColorAnimation"
+    )
 
     val rotation by animateFloatAsState(
         targetValue = if (isExpanded) 45f else 0f,
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        label = "rotation"
+        label = "FabRotation"
     )
 
-    val cornerRadius by animateDpAsState(
-        targetValue = if (isExpanded) 28.dp else 16.dp,
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        label = "cornerRadius"
-    )
-
-    val fabColor by animateColorAsState(
-        targetValue = if (isExpanded) surfaceColor else primaryColor,
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        label = "fabColor"
-    )
-
-    val iconColor by animateColorAsState(
-        targetValue = if (isExpanded) primaryColor else onPrimaryColor,
-        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
-        label = "iconColor"
-    )
-
-    Box(
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
-            .fillMaxSize()
-            .navigationBarsPadding()
     ) {
-        if (isExpandable && isExpanded) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(overlayColor)
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
-                        onMainFabClick()
-                    }
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 16.dp),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        // --- MENU (Rozwijane opcje) ---
+        AnimatedVisibility(
+            visible = isExpandable && isExpanded,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
         ) {
-            if (isExpandable && isExpanded) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalAlignment = Alignment.End
+            ) {
                 options.forEach { option ->
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = fadeIn() + slideInVertically { it / 2 },
-                        exit = fadeOut() + slideOutVertically { it / 2 }
+                    Box(
+                        modifier = Modifier
+                            .height(56.dp)
+                            .clip(menuShape)
+                            .background(menuContainerColor)
+                            .clickable { option.onClick() }
                     ) {
-                        Surface(
-                            onClick = option.onClick,
-                            shape = RoundedCornerShape(28.dp),
-                            color = optionContainerColor,
-                            shadowElevation = 4.dp,
-                            modifier = Modifier.height(56.dp)
+                        Row(
+                            modifier = Modifier
+                                .height(56.dp)
+                                .padding(horizontal = 24.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                // ✅ Używamy stylu z Twojego AppTypography (Type.kt)
-                                Text(
-                                    text = option.label,
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Medium
-                                    ),
-                                    color = onOptionContainerColor
+                            // Ikona opcji
+                            Box(modifier = Modifier.size(24.dp)) {
+                                Icon(
+                                    painter = painterResource(id = option.iconRes),
+                                    contentDescription = null,
+                                    tint = menuContentColor,
+                                    modifier = Modifier.fillMaxSize()
                                 )
                             }
+                            // Tekst
+                            Text(
+                                text = option.label,
+                                style = TextStyle(
+                                    fontWeight = FontWeight(500),
+                                    fontSize = 16.sp,
+                                    lineHeight = 24.sp
+                                ),
+                                color = menuContentColor,
+                                textAlign = TextAlign.End
+                            )
                         }
                     }
                 }
             }
+        }
 
-            FloatingActionButton(
-                onClick = onMainFabClick,
-                containerColor = fabColor,
-                shape = RoundedCornerShape(cornerRadius),
-                elevation = FloatingActionButtonDefaults.elevation(6.dp),
-                modifier = Modifier.size(56.dp)
+        // --- GŁÓWNY PRZYCISK FAB ---
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                // Najpierw clip (kształt), potem background (kolor)
+                .clip(RoundedCornerShape(currentCornerRadius))
+                .background(currentContainerColor)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onMainFabClick
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                if (isExpandable) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = if (isExpanded) "Zamknij" else "Otwórz",
-                        tint = iconColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .rotate(rotation)
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = "Akcja",
-                        tint = iconColor,
-                        modifier = Modifier.size(24.dp)
-                    )
+                Box(modifier = Modifier.size(24.dp)) {
+                    if (isExpandable) {
+                        // Ikona Plusa (obracana)
+                        Icon(
+                            painter = painterResource(R.drawable.ic_plus),
+                            contentDescription = if (isExpanded) "Zamknij" else "Otwórz",
+                            tint = currentContentColor,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .rotate(rotation)
+                        )
+                    } else {
+                        // Zwykła ikona (statyczna)
+                        Icon(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = "Akcja",
+                            tint = currentContentColor,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }

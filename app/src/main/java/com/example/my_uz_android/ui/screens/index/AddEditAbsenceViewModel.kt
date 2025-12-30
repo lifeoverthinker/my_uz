@@ -19,7 +19,7 @@ data class AddEditAbsenceUiState(
 )
 
 class AddEditAbsenceViewModel(
-    savedStateHandle: SavedStateHandle, // ✅ Dodano, aby Factory nie wyrzucało błędu
+    savedStateHandle: SavedStateHandle,
     private val absenceRepository: AbsenceRepository,
     private val classRepository: ClassRepository
 ) : ViewModel() {
@@ -27,15 +27,22 @@ class AddEditAbsenceViewModel(
     private val _uiState = MutableStateFlow(AddEditAbsenceUiState())
     val uiState: StateFlow<AddEditAbsenceUiState> = _uiState.asStateFlow()
 
+    // ✅ Flaga zapisu/usunięcia
+    private val _isSaved = MutableStateFlow(false)
+    val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
+
     private var loadedAbsenceId: Int? = null
 
     init {
         loadAvailableSubjects()
 
-        // ✅ Dodano automatyczne ładowanie, jeśli ID zostało przekazane w nawigacji
         val absenceId = savedStateHandle.get<Int>("absenceId")
         if (absenceId != null && absenceId != -1 && absenceId != 0) {
             loadAbsence(absenceId)
+        } else {
+            val preSubject = savedStateHandle.get<String>("subject")
+            val preType = savedStateHandle.get<String>("classType")
+            initNewAbsence(preSubject, preType)
         }
     }
 
@@ -56,6 +63,7 @@ class AddEditAbsenceViewModel(
         loadedAbsenceId = absenceId
 
         viewModelScope.launch {
+            // Pobieramy listę i filtrujemy, bo getAbsenceById może nie być w DAO
             val allAbsences = absenceRepository.getAllAbsencesStream().first()
             val absence = allAbsences.find { it.id == absenceId }
 
@@ -104,7 +112,7 @@ class AddEditAbsenceViewModel(
         _uiState.update { it.copy(date = date) }
     }
 
-    fun saveAbsence(onSuccess: () -> Unit) {
+    fun saveAbsence() {
         viewModelScope.launch {
             val state = _uiState.value
             if (state.subjectName == null) return@launch
@@ -118,11 +126,12 @@ class AddEditAbsenceViewModel(
             )
 
             absenceRepository.insertAbsence(entity)
-            onSuccess()
+            // ✅ Sygnał zapisu
+            _isSaved.value = true
         }
     }
 
-    fun deleteAbsence(onSuccess: () -> Unit) {
+    fun deleteAbsence() {
         viewModelScope.launch {
             val state = _uiState.value
             if (loadedAbsenceId != null && loadedAbsenceId != 0) {
@@ -133,7 +142,8 @@ class AddEditAbsenceViewModel(
                     classType = state.classType ?: ""
                 )
                 absenceRepository.deleteAbsence(entity)
-                onSuccess()
+                // ✅ Sygnał usunięcia
+                _isSaved.value = true
             }
         }
     }

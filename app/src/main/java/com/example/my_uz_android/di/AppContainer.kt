@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.my_uz_android.data.db.AppDatabase
 import com.example.my_uz_android.data.provideSupabaseClient
 import com.example.my_uz_android.data.repositories.*
+import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 
 interface AppContainer {
@@ -23,7 +24,8 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         AppDatabase.getDatabase(context)
     }
 
-    private val supabase by lazy { provideSupabaseClient() }
+    // POPRAWKA: Jawny typ SupabaseClient
+    private val supabase: SupabaseClient by lazy { provideSupabaseClient() }
 
     override val settingsRepository: SettingsRepository by lazy {
         SettingsRepository(database.settingsDao())
@@ -37,7 +39,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         ClassRepository(database.classDao())
     }
 
-    // ZMIANA: Przekazujemy 'supabase' do konstruktora
     override val tasksRepository: TasksRepository by lazy {
         TasksRepository(database.tasksDao(), supabase)
     }
