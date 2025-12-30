@@ -138,9 +138,10 @@ fun TasksScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Box {
+                            // ✅ POPRAWKA: Ujednolicony rozmiar przycisku (48dp) i ikony (24dp)
                             Box(
                                 modifier = Modifier
-                                    .size(44.dp)
+                                    .size(48.dp) // Było 44.dp
                                     .clip(CircleShape)
                                     .background(MaterialTheme.extendedColors.buttonBackground)
                                     .clickable { showMenu = true },
@@ -149,7 +150,8 @@ fun TasksScreen(
                                 Icon(
                                     imageVector = Icons.Default.MoreVert,
                                     contentDescription = "Opcje",
-                                    tint = MaterialTheme.extendedColors.iconText
+                                    tint = MaterialTheme.extendedColors.iconText,
+                                    modifier = Modifier.size(24.dp) // Wymuszony rozmiar ikony dla spójności
                                 )
                             }
                             DropdownMenu(
