@@ -66,31 +66,35 @@ class TaskAddEditViewModel(
     fun loadTask(taskId: Int) {
         currentTaskId = taskId
         viewModelScope.launch {
-            tasksRepository.getTaskById(taskId)?.let { task ->
-                _uiState.value = TaskAddEditUiState(
-                    title = task.title,
-                    description = task.description ?: "",
-                    classSubject = task.subjectName,
-                    classType = task.classType,
-                    priority = task.priority,
-                    isAllDay = task.isAllDay,
-                    startDate = Instant.ofEpochMilli(task.dueDate)
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate(),
-                    endDate = Instant.ofEpochMilli(task.endDate)
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate(),
-                    startTime = task.dueTime?.let {
-                        try {
-                            val parts = it.split(":")
-                            LocalTime.of(parts[0].toInt(), parts[1].toInt())
-                        } catch (e: Exception) { LocalTime.of(8,0) }
-                    },
-                    endTime = LocalTime.of(10, 0),
-                    availableSubjects = _uiState.value.availableSubjects,
-                    isTitleValid = true,
-                    isSubjectValid = true
-                )
+            // POPRAWKA: Pobieramy Flow i zbieramy go, aby uzyskać obiekt TaskEntity
+            tasksRepository.getTaskById(taskId).collect { task ->
+                if (task != null) {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            title = task.title,
+                            description = task.description ?: "",
+                            classSubject = task.subjectName,
+                            classType = task.classType,
+                            priority = task.priority,
+                            isAllDay = task.isAllDay,
+                            startDate = Instant.ofEpochMilli(task.dueDate)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate(),
+                            endDate = Instant.ofEpochMilli(task.endDate)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate(),
+                            startTime = task.dueTime?.let {
+                                try {
+                                    val parts = it.split(":")
+                                    LocalTime.of(parts[0].toInt(), parts[1].toInt())
+                                } catch (e: Exception) { LocalTime.of(8,0) }
+                            },
+                            endTime = LocalTime.of(10, 0),
+                            isTitleValid = true,
+                            isSubjectValid = true
+                        )
+                    }
+                }
             }
         }
     }
@@ -190,7 +194,7 @@ class TaskAddEditViewModel(
     fun deleteTask() {
         currentTaskId?.let { id ->
             viewModelScope.launch {
-                tasksRepository.getTaskById(id)?.let { task ->
+                tasksRepository.getTaskById(id).first()?.let { task ->
                     tasksRepository.deleteTask(task)
                 }
             }

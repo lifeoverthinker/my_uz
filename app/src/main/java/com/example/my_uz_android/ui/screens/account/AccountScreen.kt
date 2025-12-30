@@ -1,6 +1,7 @@
 package com.example.my_uz_android.ui.screens.account
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,12 +21,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.extendedColors
+import androidx.compose.runtime.getValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     onBackClick: () -> Unit,
-    onLogoutClick: () -> Unit,
+    // Usunięto onLogoutClick
     onSettingsClick: () -> Unit = {},
     onPersonalDataClick: () -> Unit = {},
     onAboutClick: () -> Unit = {},
@@ -99,25 +101,41 @@ fun AccountScreen(
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionTitle(text = "Zarządzanie kontem")
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     AccountOptionItem(
                         iconRes = R.drawable.ic_user,
                         label = "Dane osobowe",
                         onClick = onPersonalDataClick
                     )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
                     AccountOptionItem(
                         iconRes = R.drawable.ic_settings,
                         label = "Ustawienia",
                         onClick = onSettingsClick
                     )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
                     AccountOptionItem(
                         iconRes = R.drawable.ic_info_circle,
                         label = "O aplikacji",
-                        onClick = onAboutClick,
-                        showDivider = false
+                        onClick = onAboutClick
                     )
                 }
             }
+
+            // Usunięto przycisk wylogowania
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
@@ -127,51 +145,42 @@ fun AccountScreen(
 fun AccountOptionItem(
     iconRes: Int,
     label: String,
-    onClick: () -> Unit,
-    showDivider: Boolean = true
+    onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         color = Color.Transparent,
     ) {
-        Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp, horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_chevron_right),
+                    painter = painterResource(id = iconRes),
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
-            }
-            if (showDivider) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 1.dp
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
             }
+            Icon(
+                painter = painterResource(id = R.drawable.ic_chevron_right),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
         }
     }
 }
@@ -232,7 +241,6 @@ fun StudyCard(
     mode: String,
     isAnonymous: Boolean
 ) {
-    // Wymuszenie ciemnych kolorów tekstu, ponieważ tło (classCardBackground) jest teraz jasne/pastelowe w Dark Mode
     val contentColor = Color(0xFF1D192B)
     val labelColor = Color(0xFF494949)
 
