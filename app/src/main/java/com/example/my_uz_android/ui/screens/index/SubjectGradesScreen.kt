@@ -18,7 +18,7 @@ import com.example.my_uz_android.ui.screens.index.components.AverageCard
 import com.example.my_uz_android.ui.screens.index.components.GradeListItem
 import com.example.my_uz_android.ui.screens.index.components.SubjectTypeAppBar
 import com.example.my_uz_android.util.ClassTypeUtils
-
+import kotlinx.coroutines.launch
 @Composable
 fun SubjectGradesScreen(
     subjectName: String,
@@ -93,10 +93,13 @@ fun SubjectGradesScreen(
                     )
                 }
             } else {
-                items(filteredGrades.sortedByDescending { it.date }) { grade ->
+                // Zmieniono z uiState.grades na filteredGrades
+                items(filteredGrades, key = { it.id }) { grade -> // Użyj filteredGrades zamiast uiState.grades
                     GradeListItem(
                         grade = grade,
-                        onClick = { onGradeClick(grade.id) }
+                        onClick = { onGradeClick(grade.id) },
+                        onDelete = { viewModel.deleteGrade(it) },
+                        onDuplicate = { viewModel.duplicateGrade(it) }
                     )
                 }
             }

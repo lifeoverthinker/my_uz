@@ -1,95 +1,154 @@
 package com.example.my_uz_android.ui.screens.index.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.GradeEntity
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GradeListItem(
     grade: GradeEntity,
     onClick: () -> Unit,
+    onDelete: (GradeEntity) -> Unit,
+    onDuplicate: (GradeEntity) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val containerColor = MaterialTheme.colorScheme.primaryContainer
-    val onContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onClick() }
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // KOLUMNA 1: Ocena w kółku
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(containerColor, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = if (grade.grade == -1.0) "+" else {
-                        if (grade.grade % 1.0 == 0.0) grade.grade.toInt().toString()
-                        else grade.grade.toString()
-                    },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = onContainerColor,
-                    textAlign = TextAlign.Center
-                )
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onDelete(grade)
+                    false
+                }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onDuplicate(grade)
+                    false
+                }
+                else -> false
             }
+        }
+    )
 
-            Spacer(modifier = Modifier.width(16.dp))
+    // Divider jest częścią Column, ale SwipeToDismissBox jest nad nim
+    Column(modifier = modifier) {
+        SwipeToDismissBox(
+            state = dismissState,
+            backgroundContent = {
+                val color by animateColorAsState(
+                    when (dismissState.targetValue) {
+                        SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)
+                        SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
+                        else -> Color.Transparent
+                    }, label = "swipe_bg"
+                )
 
-            // KOLUMNA 2: Opis (Środek)
-            Text(
-                text = if (grade.description.isNullOrBlank()) "Ocena" else grade.description!!,
-                style = MaterialTheme.typography.bodyMedium,
-                color = textColor,
-                modifier = Modifier.weight(1f)
-            )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(color)
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = when (dismissState.dismissDirection) {
+                        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                        SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                        else -> Alignment.Center
+                    }
+                ) {
+                    val iconRes = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd)
+                        R.drawable.ic_copy else R.drawable.ic_trash
 
-            // KOLUMNA 3: Data (Prawa)
-            Text(
-                text = formatDate(grade.date),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.End
-            )
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd)
+                            MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .clickable { onClick() }
+                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // SEKCJA 1: Ocena
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (grade.grade == -1.0) "+" else {
+                                if (grade.grade % 1.0 == 0.0) grade.grade.toInt().toString()
+                                else grade.grade.toString()
+                            },
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                // SEKCJA 2: Opis
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = grade.description ?: "Ocena",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
+
+                // SEKCJA 3: Data i Waga
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = formatDate(grade.date),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (grade.weight.toDouble() != 1.0) {
+                        Text(
+                            text = "waga: ${grade.weight.toInt()}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
         }
 
+        // Divider poza SwipeToDismissBox - nie przesuwa się
         HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant,
-            thickness = 1.dp
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant
         )
     }
 }
 
 private fun formatDate(timestamp: Long): String {
-    return try {
-        val date = Instant.ofEpochMilli(timestamp)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-        date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
-    } catch (e: Exception) {
-        ""
-    }
+    val date = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()).toLocalDate()
+    return date.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
 }
