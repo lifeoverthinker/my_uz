@@ -21,7 +21,6 @@ class GradeDetailsViewModel(
 
     val uiState: StateFlow<GradeDetailsUiState> = gradesRepository
         .getGradeByIdStream(gradeId)
-        .filterNotNull()
         .map { GradeDetailsUiState(grade = it) }
         .stateIn(
             scope = viewModelScope,
