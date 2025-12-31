@@ -10,7 +10,6 @@ import com.example.my_uz_android.data.repositories.SettingsRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// Enum i UiState muszą być tutaj (lub w osobnych plikach, ale dla spójności daję tutaj)
 enum class GradeType {
     STANDARD,
     CUSTOM,
@@ -18,6 +17,7 @@ enum class GradeType {
 }
 
 data class AddEditGradeUiState(
+    val gradeId: Int = 0,
     val subjectName: String? = null,
     val classType: String? = null,
     val gradeType: GradeType = GradeType.STANDARD,
@@ -40,7 +40,6 @@ class AddEditGradeViewModel(
     private val _uiState = MutableStateFlow(AddEditGradeUiState())
     val uiState: StateFlow<AddEditGradeUiState> = _uiState.asStateFlow()
 
-    // ✅ Flaga zapisu
     private val _isSaved = MutableStateFlow(false)
     val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
 
@@ -51,13 +50,46 @@ class AddEditGradeViewModel(
         loadAvailableSubjects()
         loadCurrentSemester()
 
-        val gradeId = savedStateHandle.get<Int>("gradeId")
-        if (gradeId != null && gradeId != 0 && gradeId != -1) {
+        val gradeId = savedStateHandle.get<Int>("gradeId") ?: 0
+
+        // Jeśli gradeId > 0, to edytujemy istniejącą
+        if (gradeId > 0) {
             loadGrade(gradeId)
         } else {
-            val preSubject = savedStateHandle.get<String>("subject")
-            val preType = savedStateHandle.get<String>("classType")
-            initNewGrade(preSubject, preType)
+            // Pobieramy dane z nawigacji (dla nowej lub duplikatu)
+            val subject = savedStateHandle.get<String>("subject")
+            val type = savedStateHandle.get<String>("classType")
+            val desc = savedStateHandle.get<String>("description")
+            val weightStr = savedStateHandle.get<String>("weight")
+            val gradeValStr = savedStateHandle.get<String>("gradeValue")
+            val comment = savedStateHandle.get<String>("comment")
+
+            initNewGrade(subject, type, desc, weightStr, gradeValStr, comment)
+        }
+    }
+
+    // Dodana metoda, której brakowało w Twoim kodzie
+    fun initNewGrade(
+        subject: String?,
+        type: String?,
+        desc: String? = null,
+        weight: String? = null,
+        gradeVal: String? = null,
+        comment: String? = null
+    ) {
+        val gradeDouble = gradeVal?.toDoubleOrNull()
+        _uiState.update {
+            it.copy(
+                gradeId = 0,
+                subjectName = subject,
+                classType = type,
+                description = desc ?: "",
+                weight = weight ?: "1",
+                gradeValue = if (gradeDouble != -1.0) gradeDouble else null,
+                gradeType = if (gradeDouble == -1.0) GradeType.ACTIVITY else GradeType.STANDARD,
+                comment = comment ?: "",
+                date = System.currentTimeMillis()
+            )
         }
     }
 
@@ -66,13 +98,12 @@ class AddEditGradeViewModel(
         loadedGradeId = gradeId
 
         viewModelScope.launch {
-            // Używamy first() na strumieniu, bo getGradeByIdStream zwraca Flow
             val grade = gradesRepository.getGradeByIdStream(gradeId).first()
             if (grade != null) {
                 val type = if (grade.grade == -1.0) GradeType.ACTIVITY else GradeType.STANDARD
-
                 _uiState.update {
                     it.copy(
+                        gradeId = grade.id,
                         subjectName = grade.subjectName,
                         classType = grade.classType,
                         gradeType = type,
@@ -84,18 +115,6 @@ class AddEditGradeViewModel(
                     )
                 }
             }
-        }
-    }
-
-    fun initNewGrade(subject: String?, type: String?) {
-        _uiState.update {
-            it.copy(
-                subjectName = subject,
-                classType = type,
-                gradeType = GradeType.STANDARD,
-                description = "",
-                date = System.currentTimeMillis()
-            )
         }
     }
 
@@ -115,52 +134,24 @@ class AddEditGradeViewModel(
                     }
                     .toList()
                     .sortedBy { it.first }
-
                 _uiState.update { it.copy(availableSubjects = subjectsMap) }
             }
         }
     }
 
-    fun updateSubjectName(name: String?) {
-        _uiState.update { it.copy(subjectName = name) }
-    }
+    fun updateSubjectName(name: String?) { _uiState.update { it.copy(subjectName = name) } }
+    fun updateClassType(type: String?) { _uiState.update { it.copy(classType = type) } }
+    fun updateGradeType(type: GradeType) { _uiState.update { it.copy(gradeType = type) } }
+    fun updateGradeValue(value: Double?) { _uiState.update { it.copy(gradeValue = value) } }
+    fun updateCustomGradeValue(value: String) { _uiState.update { it.copy(customGradeValue = value) } }
+    fun updateWeight(weight: String) { _uiState.update { it.copy(weight = weight) } }
+    fun updateDescription(description: String) { _uiState.update { it.copy(description = description) } }
+    fun updateComment(comment: String) { _uiState.update { it.copy(comment = comment) } }
+    fun updateDate(date: Long) { _uiState.update { it.copy(date = date) } }
 
-    fun updateClassType(type: String?) {
-        _uiState.update { it.copy(classType = type) }
-    }
-
-    fun updateGradeType(type: GradeType) {
-        _uiState.update { it.copy(gradeType = type) }
-    }
-
-    fun updateGradeValue(value: Double?) {
-        _uiState.update { it.copy(gradeValue = value) }
-    }
-
-    fun updateCustomGradeValue(value: String) {
-        _uiState.update { it.copy(customGradeValue = value) }
-    }
-
-    fun updateWeight(weight: String) {
-        _uiState.update { it.copy(weight = weight) }
-    }
-
-    fun updateDescription(description: String) {
-        _uiState.update { it.copy(description = description) }
-    }
-
-    fun updateComment(comment: String) {
-        _uiState.update { it.copy(comment = comment) }
-    }
-
-    fun updateDate(date: Long) {
-        _uiState.update { it.copy(date = date) }
-    }
-
-    fun saveGrade(onSuccess: () -> Unit = {}) {
+    fun saveGrade() {
         viewModelScope.launch {
             val state = _uiState.value
-
             if (state.subjectName == null) return@launch
 
             val finalGrade = when (state.gradeType) {
@@ -170,7 +161,8 @@ class AddEditGradeViewModel(
             }
 
             val weightInt = state.weight.toIntOrNull() ?: 1
-            val idToSave = loadedGradeId ?: 0
+            // Jeśli edycja to ID z bazy, jeśli duplikacja/nowa to 0
+            val idToSave = if (loadedGradeId != null && loadedGradeId != 0) loadedGradeId!! else 0
 
             val entity = GradeEntity(
                 id = idToSave,
@@ -189,23 +181,7 @@ class AddEditGradeViewModel(
             } else {
                 gradesRepository.insertGrade(entity)
             }
-            // Sygnał zapisu (flaga + opcjonalny callback dla wstecznej kompatybilności)
             _isSaved.value = true
-            onSuccess()
-        }
-    }
-
-    // Brak metody deleteGrade w Twoim oryginalnym kodzie, dodaję ją:
-    fun deleteGrade(onSuccess: () -> Unit = {}) {
-        viewModelScope.launch {
-            if (loadedGradeId != null && loadedGradeId != 0) {
-                val grade = gradesRepository.getGradeByIdStream(loadedGradeId!!).first()
-                if (grade != null) {
-                    gradesRepository.deleteGrade(grade)
-                    _isSaved.value = true
-                    onSuccess()
-                }
-            }
         }
     }
 }

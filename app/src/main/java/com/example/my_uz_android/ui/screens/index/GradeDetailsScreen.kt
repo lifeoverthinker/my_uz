@@ -16,9 +16,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Import sp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.GradeEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
@@ -28,28 +29,45 @@ import java.util.*
 fun GradeDetailsScreen(
     onNavigateBack: () -> Unit,
     onEdit: (Int) -> Unit,
+    onDuplicateGrade: (String, String, Double, Int, String, String) -> Unit,
     viewModel: GradeDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val grade = uiState.grade
 
     GradeDetailsContent(
-        grade = uiState.grade,
-        isLoading = uiState.grade == null,
+        grade = grade,
+        isLoading = grade == null,
         onNavigateBack = onNavigateBack,
         onEditGrade = onEdit,
         onDeleteGrade = {
             viewModel.deleteGrade(onSuccess = onNavigateBack)
+        },
+        onDuplicateClick = {
+            grade?.let {
+                // Duplikacja przesyła te same dane (subject, type, grade, weight, desc, comment)
+                // Ale id zostanie nadane jako 0 (nowe) w formularzu docelowym
+                onDuplicateGrade(
+                    it.subjectName,
+                    it.classType,
+                    it.grade,
+                    it.weight.toInt(),
+                    it.description ?: "",
+                    it.comment ?: ""
+                )
+            }
         }
     )
 }
 
 @Composable
 fun GradeDetailsContent(
-    grade: com.example.my_uz_android.data.models.GradeEntity?,
+    grade: GradeEntity?,
     isLoading: Boolean,
     onNavigateBack: () -> Unit,
     onEditGrade: (Int) -> Unit,
-    onDeleteGrade: () -> Unit
+    onDeleteGrade: () -> Unit,
+    onDuplicateClick: () -> Unit
 ) {
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -67,7 +85,7 @@ fun GradeDetailsContent(
             .statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // HEADER
+            // --- HEADER ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -105,17 +123,23 @@ fun GradeDetailsContent(
                                 )
                             }
 
+                            // Menu ujednolicone z stylem terminarza
                             DropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface).width(180.dp)
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Duplikuj (Wkrótce)", color = textColor) },
-                                    onClick = { showMenu = false }
+                                    text = { Text("Duplikuj", style = MaterialTheme.typography.bodyLarge) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.ic_copy), null, Modifier.size(20.dp)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onDuplicateClick()
+                                    }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.ic_trash), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         showMenu = false
                                         showDeleteDialog = true
@@ -134,7 +158,7 @@ fun GradeDetailsContent(
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // TYTUŁ i DATA
+                    // --- TYTUŁ i DATA ---
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -171,7 +195,7 @@ fun GradeDetailsContent(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // SZCZEGÓŁY
+                    // --- SZCZEGÓŁY ---
                     DetailSectionGrade(
                         label = "PRZEDMIOT",
                         text = grade.subjectName,
@@ -216,7 +240,6 @@ fun GradeDetailsContent(
                         labelColor = subTextColor
                     )
 
-                    // ✅ OPIS (Komentarz) - wyświetlamy jeśli nie jest pusty
                     if (!grade.comment.isNullOrEmpty()) {
                         DetailSectionGrade(
                             label = "OPIS",
@@ -245,14 +268,16 @@ fun GradeDetailsContent(
                         onDeleteGrade()
                         showDeleteDialog = false
                     }) {
-                        Text("Usuń", color = MaterialTheme.colorScheme.error)
+                        Text("Usuń", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelLarge)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("Anuluj")
+                        Text("Anuluj", style = MaterialTheme.typography.labelLarge)
                     }
-                }
+                },
+                shape = RoundedCornerShape(28.dp),
+                containerColor = MaterialTheme.colorScheme.surface
             )
         }
     }
