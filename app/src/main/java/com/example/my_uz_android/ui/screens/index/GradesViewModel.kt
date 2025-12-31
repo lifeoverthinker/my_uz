@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 // --- Modele Stanu (lokalne dla ViewModelu, mapowane później na UI) ---
 data class ClassTypeState(
@@ -133,5 +134,18 @@ class GradesViewModel(
     suspend fun isPlanSelected(): Boolean {
         val settings = settingsRepository.getSettingsStream().first()
         return !settings?.selectedGroupCode.isNullOrBlank()
+    }
+
+    fun deleteGrade(grade: GradeEntity) {
+        viewModelScope.launch { // Teraz 'launch' będzie rozpoznawane
+            gradesRepository.deleteGrade(grade)
+        }
+    }
+
+    fun duplicateGrade(grade: GradeEntity) {
+        viewModelScope.launch { // Teraz 'launch' będzie rozpoznawane
+            val duplicatedGrade = grade.copy(id = 0)
+            gradesRepository.insertGrade(duplicatedGrade)
+        }
     }
 }
