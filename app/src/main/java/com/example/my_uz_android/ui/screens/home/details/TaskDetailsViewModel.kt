@@ -8,11 +8,13 @@ import com.example.my_uz_android.data.repositories.TasksRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-sealed interface TaskDetailsUiState {
-    data object Loading : TaskDetailsUiState
-    data class Success(val task: TaskEntity) : TaskDetailsUiState
-    data class Error(val message: String) : TaskDetailsUiState
-}
+// Zmieniono strukturę UiState na prostszą klasę danych,
+// aby uniknąć błędów Unresolved reference 'task' w TaskDetailsScreen.
+data class TaskDetailsUiState(
+    val task: TaskEntity? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null
+)
 
 class TaskDetailsViewModel(
     savedStateHandle: SavedStateHandle,
@@ -21,7 +23,7 @@ class TaskDetailsViewModel(
 
     private val taskId: Int = checkNotNull(savedStateHandle["taskId"])
 
-    private val _uiState = MutableStateFlow<TaskDetailsUiState>(TaskDetailsUiState.Loading)
+    private val _uiState = MutableStateFlow(TaskDetailsUiState())
     val uiState: StateFlow<TaskDetailsUiState> = _uiState.asStateFlow()
 
     init {
@@ -30,51 +32,30 @@ class TaskDetailsViewModel(
 
     private fun loadTask() {
         viewModelScope.launch {
-            // POPRAWKA: Użycie getTaskById zamiast getTaskByIdStream
             tasksRepository.getTaskById(taskId)
                 .catch { e ->
-                    _uiState.value = TaskDetailsUiState.Error(e.message ?: "Błąd ładowania zadania")
+                    _uiState.update { it.copy(isLoading = false, error = e.message) }
                 }
                 .collect { task ->
-                    if (task != null) {
-                        _uiState.value = TaskDetailsUiState.Success(task)
-                    } else {
-                        _uiState.value = TaskDetailsUiState.Error("Nie znaleziono zadania")
-                    }
+                    _uiState.update { it.copy(task = task, isLoading = false) }
                 }
         }
     }
 
     fun deleteTask(onSuccess: () -> Unit) {
-        val currentState = _uiState.value
-        if (currentState is TaskDetailsUiState.Success) {
-            viewModelScope.launch {
-                tasksRepository.deleteTask(currentState.task)
+        viewModelScope.launch {
+            uiState.value.task?.let {
+                tasksRepository.deleteTask(it)
                 onSuccess()
             }
         }
     }
 
-    fun duplicateTask(onSuccess: () -> Unit) {
-        val currentState = _uiState.value
-        if (currentState is TaskDetailsUiState.Success) {
-            viewModelScope.launch {
-                val currentTask = currentState.task
-                val newTask = currentTask.copy(
-                    id = 0, // 0 oznacza, że Room wygeneruje nowe ID
-                    title = "${currentTask.title} (Kopia)"
-                )
-                tasksRepository.insertTask(newTask)
-                onSuccess()
-            }
-        }
-    }
-
+    // Metoda toggle pozostaje dla szybkiej edycji z poziomu szczegółów
     fun toggleTaskCompletion() {
-        val currentState = _uiState.value
-        if (currentState is TaskDetailsUiState.Success) {
-            viewModelScope.launch {
-                val updatedTask = currentState.task.copy(isCompleted = !currentState.task.isCompleted)
+        viewModelScope.launch {
+            uiState.value.task?.let {
+                val updatedTask = it.copy(isCompleted = !it.isCompleted)
                 tasksRepository.updateTask(updatedTask)
             }
         }

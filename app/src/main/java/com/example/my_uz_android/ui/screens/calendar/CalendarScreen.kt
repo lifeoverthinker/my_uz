@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.CalendarTopAppBar
 import com.example.my_uz_android.ui.components.PreviewTopAppBar
@@ -37,6 +38,9 @@ fun CalendarScreen(
     viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Poprawka: użycie parametru 'initial' oraz jawne typowanie listy zadań
+    val tasks: List<TaskEntity> by viewModel.tasks.collectAsState(initial = emptyList())
 
     val source = uiState.currentSource
     val isMyPlan = source is ScheduleSource.MyPlan
@@ -206,8 +210,11 @@ fun CalendarScreen(
                         }
                     },
                     classes = displayedClasses,
+                    tasks = tasks,
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
+                    onTaskClick = { task -> onTasksClick() },
+                    onToggleTaskCompletion = { task -> viewModel.toggleTaskCompletion(task) },
                     modifier = Modifier.padding(innerPadding),
                     showHeader = !isMyPlan
                 )

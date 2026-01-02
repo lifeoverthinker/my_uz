@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,13 +17,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // ✅ DODANO BRAKUJĄCY IMPORT
+import androidx.compose.ui.unit.sp
+import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.components.ClassCardType
+import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
@@ -40,7 +45,7 @@ private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
 private val HourColWidth = 56.dp
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleView(
     calendarState: CalendarState,
@@ -50,13 +55,23 @@ fun ScheduleView(
     onDateSelected: (LocalDate) -> Unit,
     onToggleView: () -> Unit,
     classes: List<ClassEntity>,
+    tasks: List<TaskEntity>, // ✅ Lista zadań
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
+    onTaskClick: (TaskEntity) -> Unit, // ✅ Kliknięcie w zadanie
+    onToggleTaskCompletion: (TaskEntity) -> Unit, // ✅ Zmiana statusu
     modifier: Modifier = Modifier,
     showHeader: Boolean = false
 ) {
     val classesForDay = remember(classes, selectedDate) {
         classes.filter { it.date == selectedDate.toString() }.sortedBy { it.startTime }
+    }
+
+    // Filtrujemy zadania dla wybranego dnia
+    val tasksForDay = remember(tasks, selectedDate) {
+        tasks.filter {
+            Instant.ofEpochMilli(it.dueDate).atZone(PolandZone).toLocalDate() == selectedDate
+        }
     }
 
     val scrollState = rememberScrollState()
@@ -72,9 +87,8 @@ fun ScheduleView(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp)
     ) {
-        // --- NAGŁÓWEK ---
+        // --- NAGŁÓWEK (Miesiąc/Rok) ---
         if (showHeader) {
             val visibleMonth = if (isMonthView) {
                 calendarState.firstVisibleMonth.yearMonth
@@ -95,7 +109,6 @@ fun ScheduleView(
             ) {
                 Text(
                     text = monthTitle,
-                    // Type.kt titleMedium (16sp, Medium) -> podbijamy rozmiar do 18sp
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 18.sp
@@ -104,21 +117,20 @@ fun ScheduleView(
                 )
             }
         }
-        // ----------------
 
         // Nagłówek dni tygodnia
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
                 DaysOfWeekTitle(daysOfWeek = daysOfWeek(firstDayOfWeek = DayOfWeek.MONDAY))
             }
         }
 
-        AnimatedContent(targetState = isMonthView, label = "CalendarViewTransition") { targetIsMonthView ->
+        AnimatedContent(targetState = isMonthView, label = "CalendarTransition", modifier = Modifier.padding(horizontal = 16.dp)) { targetIsMonth ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 Spacer(modifier = Modifier.width(HourColWidth))
                 Box(modifier = Modifier.weight(1f)) {
-                    if (targetIsMonthView) {
+                    if (targetIsMonth) {
                         HorizontalCalendar(
                             state = calendarState,
                             dayContent = { day ->
@@ -150,24 +162,83 @@ fun ScheduleView(
         }
 
         Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-            // Rysowanie siatki godzin (0 do 23)
             Column(modifier = Modifier.fillMaxWidth()) {
-                repeat(24) { index -> HourRow(hour = index) }
-            }
+                // --- SEKCJA ZADAŃ (Nad godzinami) ---
+                if (tasksForDay.isNotEmpty()) {
+                    Column(modifier = Modifier.padding(start = HourColWidth + 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)) {
+                        Text(
+                            text = "ZADANIA",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        tasksForDay.forEach { task ->
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { value ->
+                                    if (value == SwipeToDismissBoxValue.StartToEnd) {
+                                        onToggleTaskCompletion(task)
+                                        false // ✅ Zwracamy false, żeby karta wróciła na miejsce (toggle)
+                                    } else false
+                                }
+                            )
 
-            // Zajęcia
-            Box(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
-                classesForDay.forEach { classEntity ->
-                    ScheduledClassItem(
-                        classEntity = classEntity,
-                        selectedDate = selectedDate,
-                        classColorMap = classColorMap,
-                        onClassClick = onClassClick
-                    )
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                backgroundContent = {
+                                    val color = if (task.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+                                    Box(
+                                        Modifier
+                                            .fillMaxSize()
+                                            .padding(vertical = 4.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(color),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(if (task.isCompleted) R.drawable.ic_x_close else R.drawable.ic_check_square_broken),
+                                            contentDescription = null,
+                                            tint = if (task.isCompleted) Color.White else MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.padding(start = 16.dp)
+                                        )
+                                    }
+                                },
+                                enableDismissFromEndToStart = false,
+                                content = {
+                                    // ✅ Naprawa: TaskCard nie ma parametru onClick, więc opakowujemy go w Box
+                                    Box(modifier = Modifier.clickable { onTaskClick(task) }) {
+                                        TaskCard(
+                                            task = task,
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    }
+                }
+
+                // --- SIATKA GODZINOWA ---
+                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        repeat(24) { index -> HourRow(hour = index) }
+                    }
+
+                    // Zajęcia
+                    Box(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
+                        classesForDay.forEach { classEntity ->
+                            ScheduledClassItem(
+                                classEntity = classEntity,
+                                selectedDate = selectedDate,
+                                classColorMap = classColorMap,
+                                onClassClick = onClassClick
+                            )
+                        }
+                    }
+
+                    if (selectedDate == LocalDate.now(PolandZone)) CurrentTimeIndicator()
                 }
             }
-
-            if (selectedDate == LocalDate.now(PolandZone)) CurrentTimeIndicator()
         }
     }
 }
@@ -181,7 +252,6 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
                 text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl"))
                     .replaceFirstChar { it.titlecase() }.take(1),
                 textAlign = TextAlign.Center,
-                // Type.kt: labelSmall ma Medium i 11sp. Tu podbijamy do 12sp.
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -224,7 +294,6 @@ fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, on
             ) {
                 Text(
                     text = date.dayOfMonth.toString(),
-                    // bodyMedium ma Normal 14sp. Nadpisujemy na Medium 16sp
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Medium,
                         fontSize = 16.sp
@@ -243,7 +312,6 @@ fun HourRow(hour: Int) {
     val textYOffset = (-8).dp
     val verticalLinePos = HourColWidth
     val horizontalLineStart = HourColWidth - 8.dp
-
     val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
     Box(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
@@ -270,7 +338,6 @@ fun HourRow(hour: Int) {
         if (hour != 0) {
             Text(
                 text = String.format("%02d:00", hour),
-                // labelSmall (11sp, Medium). Nadpisujemy kolor.
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

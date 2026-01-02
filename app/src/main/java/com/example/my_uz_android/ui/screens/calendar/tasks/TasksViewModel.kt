@@ -32,6 +32,7 @@ class TasksViewModel(
 
     fun toggleTaskCompletion(task: TaskEntity) {
         viewModelScope.launch {
+            // Zmieniamy na stan przeciwny (!task.isCompleted)
             tasksRepository.updateTask(task.copy(isCompleted = !task.isCompleted))
         }
     }

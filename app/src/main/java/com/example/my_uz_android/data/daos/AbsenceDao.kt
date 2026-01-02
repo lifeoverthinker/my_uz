@@ -13,13 +13,16 @@ interface AbsenceDao {
     @Query("SELECT * FROM absences ORDER BY date DESC")
     fun getAllAbsences(): Flow<List<AbsenceEntity>>
 
+    // ✅ DODANE: Pobieranie konkretnej nieobecności po ID
+    @Query("SELECT * FROM absences WHERE id = :id")
+    fun getAbsenceById(id: Int): Flow<AbsenceEntity?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAbsence(absence: AbsenceEntity)
 
     @Delete
     suspend fun deleteAbsence(absence: AbsenceEntity)
 
-    // ✅ DODANE: Usuwa wszystkie nieobecności (wymagane do importu)
     @Query("DELETE FROM absences")
     suspend fun deleteAll()
 }

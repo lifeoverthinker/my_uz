@@ -7,6 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.data.models.FavoriteEntity
+import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.FavoritesRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
@@ -44,15 +45,19 @@ class CalendarViewModel(
     private val classRepository: ClassRepository,
     private val settingsRepository: SettingsRepository,
     private val universityRepository: UniversityRepository,
-    private val tasksRepository: TasksRepository? = null // Opcjonalny, jeśli używany
+    private val tasksRepository: TasksRepository // Zmieniono na wymagany dla obsługi zadań
 ) : AndroidViewModel(application) {
 
     private val gson = Gson()
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
+    // Strumień zajęć
     val myPlanClasses: StateFlow<List<ClassEntity>> = classRepository.getAllClassesStream()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Strumień zadań dla CalendarScreen
+    val tasks: Flow<List<TaskEntity>> = tasksRepository.getAllTasks()
 
     val networkClasses: StateFlow<List<ClassEntity>> = _uiState
         .map { it.networkClasses }
@@ -196,14 +201,21 @@ class CalendarViewModel(
         }
     }
 
+    // Dodana metoda przełączania statusu zadania
+    fun toggleTaskCompletion(task: TaskEntity) {
+        viewModelScope.launch {
+            tasksRepository.updateTask(task.copy(isCompleted = !task.isCompleted))
+        }
+    }
+
     fun shareCalendarTasks() {
         viewModelScope.launch {
-            if (tasksRepository == null) return@launch
             _uiState.update { it.copy(isShareLoading = true, error = null) }
             try {
-                val tasks = tasksRepository.getAllTasks().first()
-                if (tasks.isNotEmpty()) {
-                    val code = tasksRepository.shareTasks(tasks)
+                // Naprawiono: Import first() dla Flow
+                val tasksList = tasksRepository.getAllTasks().first()
+                if (tasksList.isNotEmpty()) {
+                    val code = tasksRepository.shareTasks(tasksList)
                     _uiState.update { it.copy(isShareLoading = false, sharedCode = code) }
                 } else {
                     _uiState.update { it.copy(isShareLoading = false, error = "Brak zadań") }

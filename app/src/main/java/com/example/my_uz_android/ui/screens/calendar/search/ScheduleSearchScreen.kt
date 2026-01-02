@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.components.SearchTopAppBar
+import com.example.my_uz_android.data.models.FavoriteEntity
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,10 +27,26 @@ fun ScheduleSearchScreen(
 
     Scaffold(
         topBar = {
-            SearchTopAppBar(
-                query = uiState.searchQuery,
-                onQueryChange = { newValue -> searchViewModel.onQueryChange(newValue) },
-                onBackClick = { navController.popBackStack() }
+            TopAppBar(
+                title = {
+                    TextField(
+                        value = uiState.searchQuery,
+                        onValueChange = searchViewModel::onQueryChange,
+                        placeholder = { Text("Szukaj grupy lub nauczyciela...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                            unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
+                        )
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(painterResource(R.drawable.ic_chevron_left), null)
+                    }
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -49,7 +65,10 @@ fun ScheduleSearchScreen(
                     SearchListItem(
                         item = item,
                         onClick = {
-                            calendarViewModel.selectPreviewPlan(item.name, item.type)
+                            // Naprawiono: Użycie poprawnej metody ładowania planu
+                            calendarViewModel.selectFavoritePlan(
+                                FavoriteEntity(name = item.name, type = item.type, resourceId = item.name)
+                            )
                             navController.navigate("schedule_preview")
                         },
                         onFavoriteClick = { searchViewModel.toggleFavorite(item) }
@@ -92,7 +111,6 @@ fun SearchListItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = item.name,
-                // bodyLarge w Type.kt ma Normal. Nadpisujemy na Medium.
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurface
             )

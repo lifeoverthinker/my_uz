@@ -47,7 +47,6 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val iconR
     data object Index : Screen("index", "Indeks", R.drawable.ic_graduation_hat)
     data object Account : Screen("account", "Konto", R.drawable.ic_user)
 
-    // DODANE OBIEKTY DLA TRAS SZCZEGÓŁOWYCH
     data object GradeDetails : Screen("grade_details", "Szczegóły oceny", 0)
     data object AddEditGrade : Screen("add_grade", "Dodaj/Edytuj ocenę", 0)
 }
@@ -240,7 +239,8 @@ fun AppNavigation(
                             navController.navigate("add_absence")
                         }
                     },
-                    onEditAbsenceClick = { absenceId -> navController.navigate("edit_absence/$absenceId") }
+                    // ZMIANA: Przekierowanie do szczegółów zamiast od razu do edycji
+                    onEditAbsenceClick = { absenceId -> navController.navigate("absence_details/$absenceId") }
                 )
             }
 
@@ -259,11 +259,42 @@ fun AppNavigation(
             composable("about_app") { AboutAppScreen(onBackClick = { navController.popBackStack() }) }
             composable("class_details/{classId}", arguments = listOf(navArgument("classId") { type = NavType.IntType })) { ClassDetailsScreen(onBackClick = { navController.popBackStack() }) }
             composable("event_details/{eventId}", arguments = listOf(navArgument("eventId") { type = NavType.IntType })) { EventDetailsScreen(onBackClick = { navController.popBackStack() }) }
-            composable("task_details/{taskId}", arguments = listOf(navArgument("taskId") { type = NavType.IntType })) { TaskDetailsScreen(onNavigateBack = { navController.popBackStack() }, onEditTask = { taskId -> navController.navigate("edit_task/$taskId") }) }
-            composable("add_task") { TaskAddEditScreen(taskId = null, onNavigateBack = { navController.popBackStack() }) }
+
+            composable("task_details/{taskId}", arguments = listOf(navArgument("taskId") { type = NavType.IntType })) { backStackEntry ->
+                TaskDetailsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onEditTask = { taskId -> navController.navigate("edit_task/$taskId") },
+                    onDuplicateTask = { title, desc, subject, type, dueDate, isAllDay ->
+                        navController.navigate("add_task?title=$title&desc=$desc&subject=$subject&type=$type&dueDate=$dueDate&isAllDay=$isAllDay")
+                    }
+                )
+            }
+
+            composable(
+                route = "add_task?title={title}&desc={desc}&subject={subject}&type={type}&dueDate={dueDate}&isAllDay={isAllDay}",
+                arguments = listOf(
+                    navArgument("title") { nullable = true; defaultValue = null },
+                    navArgument("desc") { nullable = true; defaultValue = null },
+                    navArgument("subject") { nullable = true; defaultValue = null },
+                    navArgument("type") { nullable = true; defaultValue = null },
+                    navArgument("dueDate") { type = NavType.LongType; defaultValue = 0L },
+                    navArgument("isAllDay") { type = NavType.BoolType; defaultValue = false }
+                )
+            ) { backStackEntry ->
+                TaskAddEditScreen(
+                    taskId = null,
+                    prefilledTitle = backStackEntry.arguments?.getString("title"),
+                    prefilledDesc = backStackEntry.arguments?.getString("desc"),
+                    prefilledSubject = backStackEntry.arguments?.getString("subject"),
+                    prefilledType = backStackEntry.arguments?.getString("type"),
+                    prefilledDate = backStackEntry.arguments?.getLong("dueDate").takeIf { it != 0L },
+                    prefilledIsAllDay = backStackEntry.arguments?.getBoolean("isAllDay") ?: false,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
             composable(route = "edit_task/{taskId}", arguments = listOf(navArgument("taskId") { type = NavType.IntType })) { backStackEntry -> TaskAddEditScreen(taskId = backStackEntry.arguments?.getInt("taskId"), onNavigateBack = { navController.popBackStack() }) }
 
-            // ZMODYFIKOWANA TRASA DLA DODAWANIA I DUPLIKACJI OCENY
             composable(
                 route = "add_grade?gradeId={gradeId}&subject={subject}&classType={classType}&gradeValue={gradeValue}&weight={weight}&description={description}&comment={comment}",
                 arguments = listOf(
@@ -271,17 +302,30 @@ fun AppNavigation(
                     navArgument("subject") { type = NavType.StringType; nullable = true },
                     navArgument("classType") { type = NavType.StringType; nullable = true },
                     navArgument("gradeValue") { type = NavType.StringType; nullable = true },
-                    navArgument("weight") { type = NavType.StringType; nullable = true }, // Zmienione na String
+                    navArgument("weight") { type = NavType.StringType; nullable = true },
                     navArgument("description") { type = NavType.StringType; nullable = true },
                     navArgument("comment") { type = NavType.StringType; nullable = true }
                 )
             ) { backStackEntry ->
                 AddEditGradeScreen(
                     gradeId = backStackEntry.arguments?.getInt("gradeId"),
-                    // ViewModel sam wyciągnie resztę z SavedStateHandle, ale przekazujemy te podstawowe dla pewności
                     prefilledSubject = backStackEntry.arguments?.getString("subject"),
                     prefilledClassType = backStackEntry.arguments?.getString("classType"),
                     onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            // NOWA TRASA DLA SZCZEGÓŁÓW NIEOBECNOŚCI
+            composable(
+                route = "absence_details/{absenceId}",
+                arguments = listOf(navArgument("absenceId") { type = NavType.IntType })
+            ) {
+                AbsenceDetailsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onEdit = { id -> navController.navigate("edit_absence/$id") },
+                    onDuplicateAbsence = { subject, type, date ->
+                        navController.navigate("add_absence?subject=$subject&classType=$type&date=$date")
+                    }
                 )
             }
 
@@ -305,7 +349,25 @@ fun AppNavigation(
             }
             composable(route = "edit_grade/{gradeId}", arguments = listOf(navArgument("gradeId") { type = NavType.IntType })) { backStackEntry -> AddEditGradeScreen(gradeId = backStackEntry.arguments?.getInt("gradeId"), prefilledSubject = null, prefilledClassType = null, onNavigateBack = { navController.popBackStack() }) }
             composable(route = "class_type_grades/{subjectName}/{classType}", arguments = listOf(navArgument("subjectName") { type = NavType.StringType }, navArgument("classType") { type = NavType.StringType })) { backStackEntry -> SubjectGradesScreen(subjectName = backStackEntry.arguments?.getString("subjectName") ?: "", classType = backStackEntry.arguments?.getString("classType") ?: "", onNavigateBack = { navController.popBackStack() }, onGradeClick = { gradeId -> navController.navigate("grade_details/$gradeId") }, onAddGradeClick = { navController.navigate("add_grade?subject=${backStackEntry.arguments?.getString("subjectName")}&classType=${backStackEntry.arguments?.getString("classType")}") }) }
-            composable(route = "add_absence?subject={subject}&classType={classType}", arguments = listOf(navArgument("subject") { type = NavType.StringType; nullable = true }, navArgument("classType") { type = NavType.StringType; nullable = true })) { backStackEntry -> AddEditAbsenceScreen(absenceId = null, prefilledSubject = backStackEntry.arguments?.getString("subject"), prefilledClassType = backStackEntry.arguments?.getString("classType"), onNavigateBack = { navController.popBackStack() }) }
+
+            // ZMODYFIKOWANA TRASA DLA ADD_ABSENCE (dodano parametr date)
+            composable(
+                route = "add_absence?subject={subject}&classType={classType}&date={date}",
+                arguments = listOf(
+                    navArgument("subject") { type = NavType.StringType; nullable = true },
+                    navArgument("classType") { type = NavType.StringType; nullable = true },
+                    navArgument("date") { type = NavType.LongType; defaultValue = 0L }
+                )
+            ) { backStackEntry ->
+                AddEditAbsenceScreen(
+                    absenceId = null,
+                    prefilledSubject = backStackEntry.arguments?.getString("subject"),
+                    prefilledClassType = backStackEntry.arguments?.getString("classType"),
+                    prefilledDate = backStackEntry.arguments?.getLong("date").takeIf { it != 0L },
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
             composable(route = "edit_absence/{absenceId}", arguments = listOf(navArgument("absenceId") { type = NavType.IntType })) { backStackEntry -> AddEditAbsenceScreen(absenceId = backStackEntry.arguments?.getInt("absenceId"), onNavigateBack = { navController.popBackStack() }) }
         }
     }
