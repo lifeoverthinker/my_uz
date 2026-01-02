@@ -35,7 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.CalendarTopAppBar
+import com.example.my_uz_android.ui.components.TopAppBar // Zmiana importu
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
@@ -124,7 +124,8 @@ fun TasksScreen(
         Scaffold(
             containerColor = backgroundColor,
             topBar = {
-                CalendarTopAppBar(
+                // ZMIANA: Użycie TopAppBar zamiast CalendarTopAppBar
+                TopAppBar(
                     title = "Terminarz",
                     navigationIcon = R.drawable.ic_menu,
                     onNavigationClick = { scope.launch { drawerState.open() } },
@@ -138,10 +139,9 @@ fun TasksScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Box {
-                            // ✅ POPRAWKA: Ujednolicony rozmiar przycisku (48dp) i ikony (24dp)
                             Box(
                                 modifier = Modifier
-                                    .size(48.dp) // Było 44.dp
+                                    .size(48.dp)
                                     .clip(CircleShape)
                                     .background(MaterialTheme.extendedColors.buttonBackground)
                                     .clickable { showMenu = true },
@@ -151,7 +151,7 @@ fun TasksScreen(
                                     imageVector = Icons.Default.MoreVert,
                                     contentDescription = "Opcje",
                                     tint = MaterialTheme.extendedColors.iconText,
-                                    modifier = Modifier.size(24.dp) // Wymuszony rozmiar ikony dla spójności
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                             DropdownMenu(
@@ -324,42 +324,48 @@ fun DayScheduleRow(
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             tasks.forEach { task ->
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = {
-                        when (it) {
-                            SwipeToDismissBoxValue.StartToEnd -> {
-                                onToggleTask(task)
-                                false
+                // Klucz dla animacji swipe
+                key(task.id, task.isCompleted) {
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            when (it) {
+                                SwipeToDismissBoxValue.StartToEnd -> {
+                                    onToggleTask(task)
+                                    false
+                                }
+                                SwipeToDismissBoxValue.EndToStart -> {
+                                    onDeleteTask(task)
+                                    true
+                                }
+                                else -> false
                             }
-                            SwipeToDismissBoxValue.EndToStart -> {
-                                onDeleteTask(task)
-                                true
+                        }
+                    )
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        backgroundContent = {
+                            val direction = dismissState.dismissDirection
+                            val color by animateColorAsState(
+                                when (dismissState.targetValue) {
+                                    SwipeToDismissBoxValue.StartToEnd -> if (task.isCompleted) MaterialTheme.colorScheme.primary else Color(0xFF81C784)
+                                    SwipeToDismissBoxValue.EndToStart -> Color(0xFFE57373)
+                                    else -> Color.Transparent
+                                }, label = "SwipeColor"
+                            )
+                            val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+                            Box(Modifier.fillMaxSize().background(color, RoundedCornerShape(8.dp)).padding(horizontal = 20.dp), contentAlignment = alignment) {
+                                val icon = if (direction == SwipeToDismissBoxValue.StartToEnd) {
+                                    if(task.isCompleted) Icons.Default.Check else Icons.Default.Check
+                                } else Icons.Default.Delete
+                                val scale by animateFloatAsState(if (dismissState.targetValue == SwipeToDismissBoxValue.Settled) 0.75f else 1f, label = "IconScale")
+                                Icon(icon, contentDescription = null, modifier = Modifier.scale(scale), tint = Color.White)
                             }
-                            else -> false
+                        },
+                        content = {
+                            TaskCard(task = task, modifier = Modifier.fillMaxWidth(), onTaskClick = { onTaskClick(task.id) }, showDayMarker = false)
                         }
-                    }
-                )
-                SwipeToDismissBox(
-                    state = dismissState,
-                    backgroundContent = {
-                        val direction = dismissState.dismissDirection
-                        val color by animateColorAsState(
-                            when (dismissState.targetValue) {
-                                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF81C784)
-                                SwipeToDismissBoxValue.EndToStart -> Color(0xFFE57373)
-                                else -> Color.Transparent
-                            }, label = "SwipeColor"
-                        )
-                        Box(Modifier.fillMaxSize().background(color, RoundedCornerShape(8.dp)).padding(horizontal = 20.dp), contentAlignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
-                            val icon = if (direction == SwipeToDismissBoxValue.StartToEnd) Icons.Default.Check else Icons.Default.Delete
-                            val scale by animateFloatAsState(if (dismissState.targetValue == SwipeToDismissBoxValue.Settled) 0.75f else 1f, label = "IconScale")
-                            Icon(icon, contentDescription = null, modifier = Modifier.scale(scale), tint = Color.White)
-                        }
-                    },
-                    content = {
-                        TaskCard(task = task, modifier = Modifier.fillMaxWidth(), onTaskClick = { onTaskClick(task.id) }, showDayMarker = false)
-                    }
-                )
+                    )
+                }
             }
         }
     }

@@ -127,12 +127,12 @@ fun SchedulePreviewScreen(
                         }
                     },
                     classes = filteredClasses,
-                    // ✅ Puste parametry dla zadań w podglądzie
                     tasks = emptyList(),
                     classColorMap = classColorMap,
                     onClassClick = onClassClick,
                     onTaskClick = {},
                     onToggleTaskCompletion = {},
+                    onDeleteTask = {}, // ✅ Przekazano pustą akcję, aby uniknąć błędu kompilacji
                     showHeader = true
                 )
             }

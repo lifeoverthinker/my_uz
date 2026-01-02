@@ -38,8 +38,6 @@ fun CalendarScreen(
     viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
-    // Poprawka: użycie parametru 'initial' oraz jawne typowanie listy zadań
     val tasks: List<TaskEntity> by viewModel.tasks.collectAsState(initial = emptyList())
 
     val source = uiState.currentSource
@@ -215,6 +213,7 @@ fun CalendarScreen(
                     onClassClick = onClassClick,
                     onTaskClick = { task -> onTasksClick() },
                     onToggleTaskCompletion = { task -> viewModel.toggleTaskCompletion(task) },
+                    onDeleteTask = { task -> viewModel.deleteTask(task) }, // ✅ Przekazanie metody usuwania
                     modifier = Modifier.padding(innerPadding),
                     showHeader = !isMyPlan
                 )

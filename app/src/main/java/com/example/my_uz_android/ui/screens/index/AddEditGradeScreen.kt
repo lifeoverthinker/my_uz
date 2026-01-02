@@ -113,7 +113,10 @@ fun AddEditGradeContent(
     var showTypeModal by remember { mutableStateOf(false) }
     var showGradeModal by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
-    val standardGrades = listOf(2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0)
+
+    // ZMIANA: Sortowanie od najwyższej do najniższej
+    val standardGrades = listOf(5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0)
+
     val isTypeSelectionEnabled = !uiState.subjectName.isNullOrEmpty()
 
     Surface(color = surfaceColor, modifier = modifier.fillMaxSize().statusBarsPadding()) {
@@ -326,7 +329,16 @@ fun AddEditGradeContent(
                             }
                         }
                         item {
-                            Row(modifier = Modifier.fillMaxWidth().clickable { onGradeTypeChange(GradeType.ACTIVITY); onCustomGradeChange("+"); showGradeModal = false }.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            // ZMIANA: Dodano onDescriptionChange("Aktywność") aby automatycznie wypełnić tytuł
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    onGradeTypeChange(GradeType.ACTIVITY)
+                                    onCustomGradeChange("+")
+                                    onDescriptionChange("Aktywność") // Automatyczne ustawienie tytułu
+                                    showGradeModal = false
+                                }.padding(horizontal = 24.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 RadioButton(selected = uiState.gradeType == GradeType.ACTIVITY, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text("Aktywność +", style = MaterialTheme.typography.bodyLarge, color = textColor)

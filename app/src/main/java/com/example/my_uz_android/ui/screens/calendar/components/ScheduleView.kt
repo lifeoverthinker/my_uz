@@ -55,19 +55,21 @@ fun ScheduleView(
     onDateSelected: (LocalDate) -> Unit,
     onToggleView: () -> Unit,
     classes: List<ClassEntity>,
-    tasks: List<TaskEntity>, // ✅ Lista zadań
+    tasks: List<TaskEntity>,
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
-    onTaskClick: (TaskEntity) -> Unit, // ✅ Kliknięcie w zadanie
-    onToggleTaskCompletion: (TaskEntity) -> Unit, // ✅ Zmiana statusu
+    onTaskClick: (TaskEntity) -> Unit,
+    onToggleTaskCompletion: (TaskEntity) -> Unit,
+    onDeleteTask: (TaskEntity) -> Unit,
     modifier: Modifier = Modifier,
     showHeader: Boolean = false
 ) {
+    // Pobieramy zajęcia dla danego dnia
     val classesForDay = remember(classes, selectedDate) {
         classes.filter { it.date == selectedDate.toString() }.sortedBy { it.startTime }
     }
 
-    // Filtrujemy zadania dla wybranego dnia
+    // Pobieramy zadania dla danego dnia
     val tasksForDay = remember(tasks, selectedDate) {
         tasks.filter {
             Instant.ofEpochMilli(it.dueDate).atZone(PolandZone).toLocalDate() == selectedDate
@@ -77,10 +79,46 @@ fun ScheduleView(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    LaunchedEffect(Unit) {
-        val now = LocalTime.now(PolandZone)
-        val offsetMinutes = (now.hour * 60 + now.minute - 60).coerceAtLeast(0)
-        scrollState.scrollTo(with(density) { offsetMinutes.dp.toPx() }.toInt())
+    // --- SMART SCROLL (Logika a'la Google Calendar) ---
+    LaunchedEffect(classesForDay, tasksForDay) {
+        // 1. Znajdź najwcześniejszą minutę startu zajęć (np. 08:15 -> 495 min)
+        val firstClassMinute = classesForDay.minOfOrNull {
+            val parts = it.startTime.split(":")
+            parts[0].toInt() * 60 + parts[1].toInt()
+        }
+
+        // 2. Znajdź najwcześniejszą minutę zadania (jeśli ma godzinę i nie jest całodniowe)
+        // (W TaskEntity masz dueTime jako String "HH:MM" lub null)
+        val firstTaskMinute = tasksForDay
+            .filter { !it.isAllDay && !it.dueTime.isNullOrBlank() }
+            .minOfOrNull {
+                try {
+                    val parts = it.dueTime!!.split(":")
+                    parts[0].toInt() * 60 + parts[1].toInt()
+                } catch (e: Exception) {
+                    Int.MAX_VALUE
+                }
+            }
+
+        // 3. Wybierz wcześniejsze z dwojga (Zajęcia vs Zadania)
+        val earliestEventMinute = when {
+            firstClassMinute != null && firstTaskMinute != null -> minOf(firstClassMinute, firstTaskMinute)
+            firstClassMinute != null -> firstClassMinute
+            firstTaskMinute != null -> firstTaskMinute
+            else -> null
+        }
+
+        // 4. Oblicz docelową pozycję scrolla
+        val targetMinute = if (earliestEventMinute != null) {
+            // Jeśli są wydarzenia: Cofnij się o 60 minut (margines), ale nie mniej niż 0
+            (earliestEventMinute - 60).coerceAtLeast(0)
+        } else {
+            // Jeśli dzień jest PUSTY: Ustaw na 08:00 (480 min) jako standardowy start dnia
+            8 * 60
+        }
+
+        // Wykonaj przewinięcie
+        scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
     }
 
     Column(
@@ -88,7 +126,6 @@ fun ScheduleView(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // --- NAGŁÓWEK (Miesiąc/Rok) ---
         if (showHeader) {
             val visibleMonth = if (isMonthView) {
                 calendarState.firstVisibleMonth.yearMonth
@@ -118,7 +155,6 @@ fun ScheduleView(
             }
         }
 
-        // Nagłówek dni tygodnia
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
@@ -163,7 +199,6 @@ fun ScheduleView(
 
         Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // --- SEKCJA ZADAŃ (Nad godzinami) ---
                 if (tasksForDay.isNotEmpty()) {
                     Column(modifier = Modifier.padding(start = HourColWidth + 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)) {
                         Text(
@@ -173,58 +208,107 @@ fun ScheduleView(
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         tasksForDay.forEach { task ->
-                            val dismissState = rememberSwipeToDismissBoxState(
-                                confirmValueChange = { value ->
-                                    if (value == SwipeToDismissBoxValue.StartToEnd) {
-                                        onToggleTaskCompletion(task)
-                                        false // ✅ Zwracamy false, żeby karta wróciła na miejsce (toggle)
-                                    } else false
-                                }
-                            )
+                            key(task.id) {
+                                val currentTask by rememberUpdatedState(task)
+                                val dismissState = rememberSwipeToDismissBoxState(
+                                    confirmValueChange = { value ->
+                                        when (value) {
+                                            SwipeToDismissBoxValue.StartToEnd -> {
+                                                onToggleTaskCompletion(currentTask)
+                                                false
+                                            }
+                                            SwipeToDismissBoxValue.EndToStart -> {
+                                                onDeleteTask(currentTask)
+                                                true
+                                            }
+                                            else -> false
+                                        }
+                                    }
+                                )
 
-                            SwipeToDismissBox(
-                                state = dismissState,
-                                backgroundContent = {
-                                    val color = if (task.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
-                                    Box(
-                                        Modifier
-                                            .fillMaxSize()
-                                            .padding(vertical = 4.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(color),
-                                        contentAlignment = Alignment.CenterStart
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(if (task.isCompleted) R.drawable.ic_x_close else R.drawable.ic_check_square_broken),
-                                            contentDescription = null,
-                                            tint = if (task.isCompleted) Color.White else MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.padding(start = 16.dp)
-                                        )
-                                    }
-                                },
-                                enableDismissFromEndToStart = false,
-                                content = {
-                                    // ✅ Naprawa: TaskCard nie ma parametru onClick, więc opakowujemy go w Box
-                                    Box(modifier = Modifier.clickable { onTaskClick(task) }) {
-                                        TaskCard(
-                                            task = task,
-                                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                                        )
+                                LaunchedEffect(currentTask.isCompleted) {
+                                    if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                                        dismissState.snapTo(SwipeToDismissBoxValue.Settled)
                                     }
                                 }
-                            )
+
+                                SwipeToDismissBox(
+                                    state = dismissState,
+                                    backgroundContent = {
+                                        val direction = dismissState.dismissDirection
+
+                                        val toggleColor = if (currentTask.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+                                        val toggleIcon = if (currentTask.isCompleted) R.drawable.ic_x_close else R.drawable.ic_check_square_broken
+                                        val toggleTint = if (currentTask.isCompleted) Color.White else MaterialTheme.colorScheme.onPrimaryContainer
+
+                                        val deleteColor = MaterialTheme.colorScheme.errorContainer
+                                        val deleteIcon = R.drawable.ic_trash
+                                        val deleteTint = MaterialTheme.colorScheme.onErrorContainer
+
+                                        val color = when (direction) {
+                                            SwipeToDismissBoxValue.StartToEnd -> toggleColor
+                                            SwipeToDismissBoxValue.EndToStart -> deleteColor
+                                            else -> Color.Transparent
+                                        }
+
+                                        val alignment = when (direction) {
+                                            SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                                            SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                                            else -> Alignment.CenterStart
+                                        }
+
+                                        val icon = when (direction) {
+                                            SwipeToDismissBoxValue.StartToEnd -> toggleIcon
+                                            SwipeToDismissBoxValue.EndToStart -> deleteIcon
+                                            else -> 0
+                                        }
+
+                                        val tint = when (direction) {
+                                            SwipeToDismissBoxValue.StartToEnd -> toggleTint
+                                            SwipeToDismissBoxValue.EndToStart -> deleteTint
+                                            else -> Color.Transparent
+                                        }
+
+                                        Box(
+                                            Modifier
+                                                .fillMaxSize()
+                                                .padding(vertical = 4.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(color)
+                                                .padding(horizontal = 16.dp),
+                                            contentAlignment = alignment
+                                        ) {
+                                            if (direction != SwipeToDismissBoxValue.Settled && icon != 0) {
+                                                Icon(
+                                                    painter = painterResource(icon),
+                                                    contentDescription = null,
+                                                    tint = tint
+                                                )
+                                            }
+                                        }
+                                    },
+                                    enableDismissFromEndToStart = true,
+                                    enableDismissFromStartToEnd = true,
+                                    content = {
+                                        Box(modifier = Modifier.clickable { onTaskClick(currentTask) }) {
+                                            TaskCard(
+                                                task = currentTask,
+                                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                )
+                            }
                         }
                         HorizontalDivider(modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     }
                 }
 
-                // --- SIATKA GODZINOWA ---
                 Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         repeat(24) { index -> HourRow(hour = index) }
                     }
 
-                    // Zajęcia
                     Box(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
                         classesForDay.forEach { classEntity ->
                             ScheduledClassItem(

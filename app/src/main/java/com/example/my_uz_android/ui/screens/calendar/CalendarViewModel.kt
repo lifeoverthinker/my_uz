@@ -45,18 +45,16 @@ class CalendarViewModel(
     private val classRepository: ClassRepository,
     private val settingsRepository: SettingsRepository,
     private val universityRepository: UniversityRepository,
-    private val tasksRepository: TasksRepository // Zmieniono na wymagany dla obsługi zadań
+    private val tasksRepository: TasksRepository
 ) : AndroidViewModel(application) {
 
     private val gson = Gson()
     private val _uiState = MutableStateFlow(CalendarUiState())
     val uiState: StateFlow<CalendarUiState> = _uiState.asStateFlow()
 
-    // Strumień zajęć
     val myPlanClasses: StateFlow<List<ClassEntity>> = classRepository.getAllClassesStream()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Strumień zadań dla CalendarScreen
     val tasks: Flow<List<TaskEntity>> = tasksRepository.getAllTasks()
 
     val networkClasses: StateFlow<List<ClassEntity>> = _uiState
@@ -201,10 +199,16 @@ class CalendarViewModel(
         }
     }
 
-    // Dodana metoda przełączania statusu zadania
     fun toggleTaskCompletion(task: TaskEntity) {
         viewModelScope.launch {
             tasksRepository.updateTask(task.copy(isCompleted = !task.isCompleted))
+        }
+    }
+
+    // Nowa metoda do usuwania
+    fun deleteTask(task: TaskEntity) {
+        viewModelScope.launch {
+            tasksRepository.deleteTask(task)
         }
     }
 
@@ -212,7 +216,6 @@ class CalendarViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isShareLoading = true, error = null) }
             try {
-                // Naprawiono: Import first() dla Flow
                 val tasksList = tasksRepository.getAllTasks().first()
                 if (tasksList.isNotEmpty()) {
                     val code = tasksRepository.shareTasks(tasksList)
