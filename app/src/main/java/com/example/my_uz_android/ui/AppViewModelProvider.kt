@@ -31,7 +31,6 @@ object AppViewModelProvider {
             )
         }
 
-        // POPRAWKA: TasksViewModel przyjmuje tylko tasksRepository
         initializer {
             TasksViewModel(
                 tasksRepository = myUZApplication().container.tasksRepository
@@ -95,6 +94,13 @@ object AppViewModelProvider {
             AbsencesViewModel(
                 absenceRepository = myUZApplication().container.absenceRepository,
                 classRepository = myUZApplication().container.classRepository
+            )
+        }
+
+        initializer {
+            AbsenceDetailsViewModel(
+                savedStateHandle = createSavedStateHandle(),
+                absenceRepository = myUZApplication().container.absenceRepository
             )
         }
 

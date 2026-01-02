@@ -6,9 +6,11 @@ import kotlinx.coroutines.flow.Flow
 
 class AbsenceRepository(private val absenceDao: AbsenceDao) {
     fun getAllAbsencesStream(): Flow<List<AbsenceEntity>> = absenceDao.getAllAbsences()
+
+    // ✅ DODANE: Metoda pobierająca strumień pojedynczej nieobecności
+    fun getAbsence(id: Int): Flow<AbsenceEntity?> = absenceDao.getAbsenceById(id)
+
     suspend fun insertAbsence(absence: AbsenceEntity) = absenceDao.insertAbsence(absence)
     suspend fun deleteAbsence(absence: AbsenceEntity) = absenceDao.deleteAbsence(absence)
-
-    // ✅ DODANE: Metoda repozytorium do czyszczenia tabeli
     suspend fun deleteAllAbsences() = absenceDao.deleteAll()
 }

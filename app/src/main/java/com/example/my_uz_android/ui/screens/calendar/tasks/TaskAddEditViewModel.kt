@@ -19,12 +19,13 @@ data class TaskAddEditUiState(
     val classSubject: String? = null,
     val classType: String? = null,
     val description: String = "",
-    val startDate: LocalDate? = null,
-    val startTime: LocalTime? = null,
-    val endDate: LocalDate? = null,
-    val endTime: LocalTime? = null,
+    val startDate: LocalDate = LocalDate.now(),
+    val startTime: LocalTime = LocalTime.of(8, 0),
+    val endDate: LocalDate = LocalDate.now(),
+    val endTime: LocalTime = LocalTime.of(10, 0),
     val isAllDay: Boolean = false,
     val priority: Int = 1,
+    val isSaved: Boolean = false,
     val availableSubjects: List<Pair<String, List<String>>> = emptyList()
 )
 
@@ -37,7 +38,7 @@ class TaskAddEditViewModel(
     private val _uiState = MutableStateFlow(TaskAddEditUiState())
     val uiState: StateFlow<TaskAddEditUiState> = _uiState.asStateFlow()
 
-    // ✅ Flaga do nawigacji
+    // Flaga dla nawigacji wstecz po zapisaniu/usunięciu
     private val _isSaved = MutableStateFlow(false)
     val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
 
@@ -46,8 +47,21 @@ class TaskAddEditViewModel(
     init {
         loadAvailableSubjects()
         val taskId = savedStateHandle.get<Int>("taskId")
+
         if (taskId != null && taskId != -1 && taskId != 0) {
             loadTask(taskId)
+        } else {
+            // Logika duplikacji: wypełnij pola z parametrów nawigacji
+            _uiState.update { it.copy(
+                title = savedStateHandle.get<String>("title") ?: "",
+                description = savedStateHandle.get<String>("description") ?: "",
+                classSubject = savedStateHandle.get<String>("subject"),
+                classType = savedStateHandle.get<String>("classType"),
+                isAllDay = savedStateHandle.get<Boolean>("isAllDay") ?: false,
+                startDate = savedStateHandle.get<Long>("date")?.let {
+                    Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                } ?: LocalDate.now()
+            )}
         }
     }
 
@@ -55,33 +69,23 @@ class TaskAddEditViewModel(
         if (loadedTaskId == taskId) return
         loadedTaskId = taskId
         viewModelScope.launch {
-            val task = tasksRepository.getTaskById(taskId).first()
-            if (task != null) {
+            tasksRepository.getTaskById(taskId).filterNotNull().collect { task ->
                 val startZone = Instant.ofEpochMilli(task.dueDate).atZone(ZoneId.systemDefault())
                 val endZone = Instant.ofEpochMilli(task.endDate).atZone(ZoneId.systemDefault())
 
-                // Parsowanie czasu, jeśli istnieje
-                val sTime = task.dueTime?.let {
-                    try {
-                        val parts = it.split(":")
-                        LocalTime.of(parts[0].toInt(), parts[1].toInt())
-                    } catch (e: Exception) { null }
-                }
-
-                _uiState.update {
-                    it.copy(
-                        taskId = task.id,
-                        title = task.title,
-                        description = task.description ?: "",
-                        classSubject = task.subjectName, // ✅ Poprawiono nazwę pola z encji
-                        classType = task.classType,
-                        startDate = startZone.toLocalDate(),
-                        startTime = sTime,
-                        endDate = endZone.toLocalDate(),
-                        isAllDay = task.isAllDay,
-                        priority = task.priority
-                    )
-                }
+                _uiState.update { it.copy(
+                    taskId = task.id,
+                    title = task.title,
+                    description = task.description ?: "",
+                    classSubject = task.subjectName,
+                    classType = task.classType,
+                    startDate = startZone.toLocalDate(),
+                    startTime = startZone.toLocalTime(),
+                    endDate = endZone.toLocalDate(),
+                    endTime = endZone.toLocalTime(),
+                    isAllDay = task.isAllDay,
+                    priority = task.priority
+                )}
             }
         }
     }
@@ -90,38 +94,34 @@ class TaskAddEditViewModel(
         viewModelScope.launch {
             classRepository.getAllClassesStream().collect { classes ->
                 val subjectsMap = classes.groupBy { it.subjectName }
-                    .mapValues { (_, classList) ->
-                        classList.map { it.classType }.distinct().sorted()
-                    }
-                    .toList()
-                    .sortedBy { it.first }
+                    .mapValues { (_, list) -> list.map { it.classType }.distinct().sorted() }
+                    .toList().sortedBy { it.first }
                 _uiState.update { it.copy(availableSubjects = subjectsMap) }
             }
         }
     }
 
-    fun updateTitle(v: String) { _uiState.update { it.copy(title = v) } }
-    fun updateClassSubject(v: String?) { _uiState.update { it.copy(classSubject = v) } }
-    fun updateClassType(v: String?) { _uiState.update { it.copy(classType = v) } }
-    fun updatePriority(v: Int) { _uiState.update { it.copy(priority = v) } }
-    fun updateIsAllDay(v: Boolean) { _uiState.update { it.copy(isAllDay = v) } }
-    fun updateStartDate(v: LocalDate) { _uiState.update { it.copy(startDate = v) } }
-    fun updateEndDate(v: LocalDate) { _uiState.update { it.copy(endDate = v) } }
-    fun updateStartTime(v: LocalTime) { _uiState.update { it.copy(startTime = v) } }
-    fun updateEndTime(v: LocalTime) { _uiState.update { it.copy(endTime = v) } }
-    fun updateDescription(v: String) { _uiState.update { it.copy(description = v) } }
+    fun updateTitle(v: String) = _uiState.update { it.copy(title = v) }
+    fun updateClassSubject(v: String?) = _uiState.update { it.copy(classSubject = v) }
+    fun updateClassType(v: String?) = _uiState.update { it.copy(classType = v) }
+    fun updateIsAllDay(v: Boolean) = _uiState.update { it.copy(isAllDay = v) }
+    fun updateStartDate(v: LocalDate) = _uiState.update { it.copy(startDate = v) }
+    fun updateEndDate(v: LocalDate) = _uiState.update { it.copy(endDate = v) }
+    fun updateStartTime(v: LocalTime) = _uiState.update { it.copy(startTime = v) }
+    fun updateEndTime(v: LocalTime) = _uiState.update { it.copy(endTime = v) }
+    fun updateDescription(v: String) = _uiState.update { it.copy(description = v) }
+    fun updatePriority(v: Int) = _uiState.update { it.copy(priority = v) }
 
     fun saveTask() {
         viewModelScope.launch {
             val s = _uiState.value
-            // Konwersja daty do long
-            val due = s.startDate?.atTime(s.startTime ?: LocalTime.MIN)?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli() ?: System.currentTimeMillis()
-            val end = s.endDate?.atTime(s.endTime ?: LocalTime.MAX)?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli() ?: due
-
-            val timeStr = s.startTime?.let { String.format("%02d:%02d", it.hour, it.minute) }
+            val due = s.startDate.atTime(if (s.isAllDay) LocalTime.MIN else s.startTime)
+                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            val end = s.endDate.atTime(if (s.isAllDay) LocalTime.MAX else s.endTime)
+                .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
             val task = TaskEntity(
-                id = loadedTaskId ?: 0,
+                id = s.taskId,
                 title = s.title,
                 description = s.description.ifBlank { null },
                 subjectName = s.classSubject ?: "",
@@ -130,25 +130,20 @@ class TaskAddEditViewModel(
                 isAllDay = s.isAllDay,
                 dueDate = due,
                 endDate = end,
-                dueTime = timeStr,
                 isCompleted = false
             )
-
-            if (loadedTaskId != null && loadedTaskId != 0) {
-                tasksRepository.updateTask(task) // ✅ Poprawna nazwa metody
-            } else {
-                tasksRepository.insertTask(task) // ✅ Poprawna nazwa metody
-            }
+            if (task.id == 0) tasksRepository.insertTask(task) else tasksRepository.updateTask(task)
             _isSaved.value = true
         }
     }
 
     fun deleteTask() {
         viewModelScope.launch {
-            if (loadedTaskId != null && loadedTaskId != 0) {
-                val task = tasksRepository.getTaskById(loadedTaskId!!).first()
+            val id = _uiState.value.taskId
+            if (id != 0) {
+                val task = tasksRepository.getTaskById(id).first()
                 if (task != null) {
-                    tasksRepository.deleteTask(task) // ✅ Poprawna nazwa metody
+                    tasksRepository.deleteTask(task)
                     _isSaved.value = true
                 }
             }

@@ -34,18 +34,23 @@ import java.util.*
 fun TaskDetailsScreen(
     onNavigateBack: () -> Unit,
     onEditTask: (Int) -> Unit,
+    onDuplicateTask: (String, String, String, String, Long, Boolean) -> Unit,
     viewModel: TaskDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val task = (uiState as? TaskDetailsUiState.Success)?.task
+    val task = uiState.task
 
     TaskDetailsContent(
         task = task,
-        isLoading = uiState is TaskDetailsUiState.Loading,
+        isLoading = uiState.isLoading,
         onNavigateBack = onNavigateBack,
         onEditTask = onEditTask,
         onDeleteTask = { viewModel.deleteTask(onSuccess = onNavigateBack) },
-        onDuplicateTask = { viewModel.duplicateTask(onSuccess = onNavigateBack) },
+        onDuplicateTask = {
+            task?.let {
+                onDuplicateTask(it.title, it.description ?: "", it.subjectName ?: "", it.classType ?: "", it.dueDate, it.isAllDay)
+            }
+        },
         onToggleCompletion = { viewModel.toggleTaskCompletion() }
     )
 }
@@ -71,79 +76,41 @@ fun TaskDetailsContent(
     Surface(
         color = surfaceColor,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
+        modifier = Modifier.fillMaxSize().statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // --- HEADER ---
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DetailIconBox(onClick = onNavigateBack) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = "Zamknij",
-                        tint = textColor,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Icon(painterResource(R.drawable.ic_x_close), "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
                 }
 
                 if (task != null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         DetailIconBox(onClick = { onEditTask(task.id) }) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_edit),
-                                contentDescription = "Edytuj",
-                                tint = textColor,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Icon(painterResource(R.drawable.ic_edit), "Edytuj", tint = textColor, modifier = Modifier.size(24.dp))
                         }
-
                         Box {
                             DetailIconBox(onClick = { showMenu = true }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_dots_vertical),
-                                    contentDescription = "Opcje",
-                                    tint = textColor,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                Icon(painterResource(R.drawable.ic_dots_vertical), "Opcje", tint = textColor, modifier = Modifier.size(24.dp))
                             }
-
                             DropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                                modifier = Modifier.background(MaterialTheme.colorScheme.surface).width(180.dp)
                             ) {
                                 DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            "Duplikuj",
-                                            color = textColor,
-                                            style = MaterialTheme.typography.bodyLarge // ✅ Poprawiona typografia
-                                        )
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        onDuplicateTask()
-                                    }
+                                    text = { Text("Duplikuj", style = MaterialTheme.typography.bodyLarge) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.ic_copy), null, Modifier.size(20.dp)) },
+                                    onClick = { showMenu = false; onDuplicateTask() }
                                 )
                                 DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            "Usuń",
-                                            color = MaterialTheme.colorScheme.error,
-                                            style = MaterialTheme.typography.bodyLarge // ✅ Poprawiona typografia
-                                        )
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        showDeleteDialog = true
-                                    }
+                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyLarge) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.ic_trash), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error) },
+                                    onClick = { showMenu = false; showDeleteDialog = true }
                                 )
                             }
                         }
@@ -152,164 +119,71 @@ fun TaskDetailsContent(
             }
 
             if (task != null) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    // --- TYTUŁ i DATA ---
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .padding(top = 8.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
+                Column(modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp), verticalAlignment = Alignment.Top) {
                         DetailIconBox {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(MaterialTheme.extendedColors.taskCardBackground)
-                            )
+                            Box(Modifier.size(18.dp).clip(RoundedCornerShape(6.dp)).background(MaterialTheme.extendedColors.taskCardBackground))
                         }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
                             Text(
                                 text = task.title,
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = textColor,
-                                modifier = Modifier.padding(bottom = 4.dp),
                                 textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
                             )
-
-                            Text(
-                                text = formatTaskDate(task.dueDate),
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                                color = subTextColor
-                            )
+                            Text(text = formatTaskDate(task.dueDate), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = subTextColor)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(Modifier.height(24.dp))
 
-                    // --- STATUS ---
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onToggleCompletion() }
-                            .padding(horizontal = 16.dp)
-                            .padding(bottom = 24.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        DetailIconBox {
-                            Icon(
-                                painter = painterResource(
-                                    if (task.isCompleted) R.drawable.ic_check_square_broken else R.drawable.ic_square
-                                ),
-                                contentDescription = null,
-                                tint = if (task.isCompleted) MaterialTheme.colorScheme.primary else iconTint,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.padding(top = 4.dp)) {
-                            Text(
-                                text = "STATUS",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = subTextColor,
-                                modifier = Modifier.padding(bottom = 2.dp)
-                            )
-
-                            Text(
-                                text = if (task.isCompleted) "Ukończone" else "Do zrobienia",
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                                color = if (task.isCompleted) MaterialTheme.colorScheme.primary else textColor
-                            )
-                        }
-                    }
+                    DetailSectionTask(
+                        label = "STATUS",
+                        text = if (task.isCompleted) "Ukończone" else "Do zrobienia",
+                        iconRes = if (task.isCompleted) R.drawable.ic_check_square_broken else R.drawable.ic_square,
+                        iconColor = if (task.isCompleted) MaterialTheme.colorScheme.primary else iconTint,
+                        textColor = if (task.isCompleted) MaterialTheme.colorScheme.primary else textColor,
+                        labelColor = subTextColor,
+                        modifier = Modifier.clickable { onToggleCompletion() }
+                    )
 
                     if (!task.subjectName.isNullOrEmpty()) {
-                        DetailSectionTask(
-                            label = "PRZEDMIOT",
-                            text = task.subjectName,
-                            iconRes = R.drawable.ic_book_open,
-                            iconColor = iconTint,
-                            textColor = textColor,
-                            labelColor = subTextColor
-                        )
+                        DetailSectionTask("PRZEDMIOT", task.subjectName, R.drawable.ic_book_open, iconTint, textColor, subTextColor)
                     }
 
                     if (!task.classType.isNullOrEmpty()) {
-                        DetailSectionTask(
-                            label = "RODZAJ ZAJĘĆ",
-                            text = ClassTypeUtils.getFullName(task.classType),
-                            iconRes = R.drawable.ic_graduation_hat,
-                            iconColor = iconTint,
-                            textColor = textColor,
-                            labelColor = subTextColor
-                        )
+                        DetailSectionTask("RODZAJ ZAJĘĆ", ClassTypeUtils.getFullName(task.classType), R.drawable.ic_graduation_hat, iconTint, textColor, subTextColor)
                     }
 
                     val timeString = if (task.isAllDay) "Cały dzień" else {
-                        val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-                            .withZone(ZoneId.systemDefault())
-                        timeFormatter.format(Instant.ofEpochMilli(task.dueDate))
+                        DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(task.dueDate))
                     }
-
-                    DetailSectionTask(
-                        label = "GODZINA",
-                        text = timeString,
-                        iconRes = R.drawable.ic_clock,
-                        iconColor = iconTint,
-                        textColor = textColor,
-                        labelColor = subTextColor
-                    )
+                    DetailSectionTask("GODZINA", timeString, R.drawable.ic_clock, iconTint, textColor, subTextColor)
 
                     if (!task.description.isNullOrEmpty()) {
-                        DetailSectionTask(
-                            label = "OPIS",
-                            text = task.description,
-                            iconRes = R.drawable.ic_menu_2,
-                            iconColor = iconTint,
-                            textColor = textColor,
-                            labelColor = subTextColor
-                        )
+                        DetailSectionTask("OPIS", task.description, R.drawable.ic_menu_2, iconTint, textColor, subTextColor)
                     }
                 }
             } else if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             }
         }
 
         if (showDeleteDialog) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Usuń zadanie", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)) }, // Ujednolicone title
+                title = { Text("Usuń zadanie", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)) },
                 text = { Text("Czy na pewno chcesz usunąć to zadanie?", style = MaterialTheme.typography.bodyMedium) },
                 confirmButton = {
-                    TextButton(onClick = {
-                        onDeleteTask()
-                        showDeleteDialog = false
-                    }) {
-                        // ✅ POPRAWKA: Użycie stylu labelLarge dla spójności z DatePicker
+                    TextButton(onClick = { onDeleteTask(); showDeleteDialog = false }) {
                         Text("Usuń", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelLarge)
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) {
-                        // ✅ POPRAWKA: Użycie stylu labelLarge
-                        Text("Anuluj", style = MaterialTheme.typography.labelLarge)
-                    }
+                    TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj", style = MaterialTheme.typography.labelLarge) }
                 },
-                shape = RoundedCornerShape(28.dp), // ✅ Dodano zaokrąglenie zgodne z innymi dialogami
+                shape = RoundedCornerShape(28.dp),
                 containerColor = MaterialTheme.colorScheme.surface
             )
         }
@@ -319,55 +193,22 @@ fun TaskDetailsContent(
 @Composable
 private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
     Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .clickable(enabled = onClick != null) { onClick?.invoke() },
-        contentAlignment = Alignment.Center,
-        content = content
+        modifier = Modifier.size(48.dp).clip(CircleShape).clickable(enabled = onClick != null) { onClick?.invoke() },
+        contentAlignment = Alignment.Center, content = content
     )
 }
 
 @Composable
 private fun DetailSectionTask(
-    label: String,
-    text: String,
-    iconRes: Int,
-    iconColor: Color,
-    textColor: Color,
-    labelColor: Color
+    label: String, text: String, iconRes: Int, iconColor: Color, textColor: Color, labelColor: Color,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 24.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        DetailIconBox {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.padding(top = 4.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = labelColor,
-                modifier = Modifier.padding(bottom = 2.dp)
-            )
-
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = textColor
-            )
+    Row(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalAlignment = Alignment.Top) {
+        DetailIconBox { Icon(painterResource(iconRes), null, tint = iconColor, modifier = Modifier.size(24.dp)) }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.padding(top = 4.dp)) {
+            Text(label, style = MaterialTheme.typography.labelSmall, color = labelColor, modifier = Modifier.padding(bottom = 2.dp))
+            Text(text, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = textColor)
         }
     }
 }

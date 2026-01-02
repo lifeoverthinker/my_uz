@@ -15,7 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color // DODANO BRAKUJĄCY IMPORT
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -38,6 +38,7 @@ fun AddEditAbsenceScreen(
     absenceId: Int?,
     prefilledSubject: String? = null,
     prefilledClassType: String? = null,
+    prefilledDate: Long? = null,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AddEditAbsenceViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -46,7 +47,6 @@ fun AddEditAbsenceScreen(
     val isSaved by viewModel.isSaved.collectAsState()
     val context = LocalContext.current
 
-    // ✅ Obsługa powrotu po zapisie
     LaunchedEffect(isSaved) {
         if (isSaved) {
             Toast.makeText(context, "Operacja zakończona pomyślnie", Toast.LENGTH_SHORT).show()
@@ -54,14 +54,15 @@ fun AddEditAbsenceScreen(
         }
     }
 
-    LaunchedEffect(absenceId, prefilledSubject, prefilledClassType) {
+    LaunchedEffect(absenceId, prefilledSubject, prefilledClassType, prefilledDate) {
         if (absenceId != null && absenceId != 0) {
             viewModel.loadAbsence(absenceId)
         } else {
-            // Jeśli nie ma ID, ale są prefilled, ViewModel to obsłuży w init,
-            // ale wywołanie tutaj upewnia się, że stan jest zresetowany
             if (uiState.id == 0 && uiState.subjectName == null) {
                 viewModel.initNewAbsence(prefilledSubject, prefilledClassType)
+                if (prefilledDate != null) {
+                    viewModel.updateDate(prefilledDate)
+                }
             }
         }
     }
@@ -70,7 +71,6 @@ fun AddEditAbsenceScreen(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
         onSaveAbsence = viewModel::saveAbsence,
-        onDeleteAbsence = viewModel::deleteAbsence,
         onSubjectChange = viewModel::updateSubjectName,
         onClassTypeChange = viewModel::updateClassType,
         onDescriptionChange = viewModel::updateDescription,
@@ -84,7 +84,6 @@ fun AddEditAbsenceContent(
     uiState: AddEditAbsenceUiState,
     onNavigateBack: () -> Unit,
     onSaveAbsence: () -> Unit,
-    onDeleteAbsence: () -> Unit,
     onSubjectChange: (String?) -> Unit,
     onClassTypeChange: (String?) -> Unit,
     onDescriptionChange: (String) -> Unit,
@@ -110,7 +109,6 @@ fun AddEditAbsenceContent(
         modifier = modifier.fillMaxSize().statusBarsPadding()
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // --- HEADER ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -157,7 +155,6 @@ fun AddEditAbsenceContent(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
-                // 1. TYTUŁ
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -177,7 +174,6 @@ fun AddEditAbsenceContent(
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = dividerColor)
 
-                // 2. DATA
                 AbsenceCommonRow(iconRes = R.drawable.ic_calendar, iconTint = iconTint) {
                     Box(
                         modifier = Modifier
@@ -195,7 +191,6 @@ fun AddEditAbsenceContent(
 
                 HorizontalDivider(color = dividerColor)
 
-                // 3. PRZEDMIOT
                 AbsenceCommonRow(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
                     Row(
                         modifier = Modifier
@@ -216,7 +211,6 @@ fun AddEditAbsenceContent(
 
                 HorizontalDivider(color = dividerColor)
 
-                // 4. RODZAJ ZAJĘĆ
                 AbsenceCommonRow(
                     iconRes = R.drawable.ic_graduation_hat,
                     iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(alpha = 0.4f)
@@ -241,7 +235,6 @@ fun AddEditAbsenceContent(
 
                 HorizontalDivider(color = dividerColor)
 
-                // 5. OPIS
                 AbsenceCommonRow(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
                     Box(modifier = Modifier.padding(vertical = 12.dp)) {
                         BasicTextField(
@@ -264,29 +257,10 @@ fun AddEditAbsenceContent(
                 }
 
                 HorizontalDivider(color = dividerColor)
-
-                // Przycisk Usuń (tylko edycja)
-                if (uiState.id != 0) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = onDeleteAbsence,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    ) {
-                        Icon(painterResource(R.drawable.ic_trash), null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Usuń nieobecność")
-                    }
-                }
-
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
 
-        // --- Dialogi ---
         if (showDatePicker) {
             DatePicker(
                 date = uiState.date,

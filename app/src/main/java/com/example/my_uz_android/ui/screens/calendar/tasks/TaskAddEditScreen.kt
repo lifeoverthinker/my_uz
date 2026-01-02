@@ -5,8 +5,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items // ✅ Ważny import
-import androidx.compose.foundation.lazy.LazyColumn // ✅ Ważny import
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,7 +14,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue // ✅ Ważny import
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,40 +38,47 @@ import java.time.ZoneId
 @Composable
 fun TaskAddEditScreen(
     taskId: Int?,
+    prefilledTitle: String? = null,
+    prefilledDesc: String? = null,
+    prefilledSubject: String? = null,
+    prefilledType: String? = null,
+    prefilledDate: Long? = null,
+    prefilledIsAllDay: Boolean = false,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TaskAddEditViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isSaved by viewModel.isSaved.collectAsState()
-    val context = LocalContext.current
-
-    LaunchedEffect(taskId) {
-        if (taskId != null && taskId != -1) {
-            viewModel.loadTask(taskId)
-        }
-    }
 
     LaunchedEffect(isSaved) {
         if (isSaved) {
-            Toast.makeText(context, "Operacja zakończona pomyślnie", Toast.LENGTH_SHORT).show()
             onNavigateBack()
+        }
+    }
+
+    LaunchedEffect(taskId, prefilledTitle) {
+        if (taskId != null) {
+            viewModel.loadTask(taskId)
+        } else {
+            // Obsługa danych z duplikacji
+            if (prefilledTitle != null) viewModel.updateTitle(prefilledTitle)
+            if (prefilledDesc != null) viewModel.updateDescription(prefilledDesc)
+            if (prefilledSubject != null) viewModel.updateClassSubject(prefilledSubject)
+            if (prefilledType != null) viewModel.updateClassType(prefilledType)
+            if (prefilledDate != null) {
+                val date = Instant.ofEpochMilli(prefilledDate).atZone(ZoneId.systemDefault()).toLocalDate()
+                viewModel.updateStartDate(date)
+                viewModel.updateEndDate(date)
+                viewModel.updateIsAllDay(prefilledIsAllDay)
+            }
         }
     }
 
     TaskAddEditContent(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
-        onSaveTask = {
-            if (uiState.title.isNotBlank()) {
-                viewModel.saveTask()
-            } else {
-                Toast.makeText(context, "Wpisz tytuł zadania", Toast.LENGTH_SHORT).show()
-            }
-        },
-        onDeleteTask = {
-            viewModel.deleteTask()
-        },
+        onSaveTask = viewModel::saveTask,
         onTitleChange = viewModel::updateTitle,
         onSubjectChange = viewModel::updateClassSubject,
         onClassTypeChange = viewModel::updateClassType,
@@ -93,7 +99,6 @@ fun TaskAddEditContent(
     uiState: TaskAddEditUiState,
     onNavigateBack: () -> Unit,
     onSaveTask: () -> Unit,
-    onDeleteTask: () -> Unit,
     onTitleChange: (String) -> Unit,
     onSubjectChange: (String?) -> Unit,
     onClassTypeChange: (String?) -> Unit,
@@ -122,11 +127,6 @@ fun TaskAddEditContent(
     var showTimePickerStart by remember { mutableStateOf(false) }
     var showTimePickerEnd by remember { mutableStateOf(false) }
 
-    val startDate = uiState.startDate ?: LocalDate.now()
-    val endDate = uiState.endDate ?: startDate
-    val startTime = uiState.startTime ?: LocalTime.of(8, 0)
-    val endTime = uiState.endTime ?: LocalTime.of(10, 0)
-
     val isTypeSelectionEnabled = !uiState.classSubject.isNullOrEmpty()
 
     Surface(
@@ -154,7 +154,6 @@ fun TaskAddEditContent(
                     contentPadding = PaddingValues(horizontal = 24.dp),
                     modifier = Modifier.height(40.dp)
                 ) {
-                    // labelLarge (14sp Medium)
                     Text(stringResource(R.string.btn_save), style = MaterialTheme.typography.labelLarge)
                 }
             }
@@ -164,9 +163,7 @@ fun TaskAddEditContent(
                     Box(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Box(modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
-                        // ZMIANA: Użycie headlineMedium (28sp Normal) z Type.kt
                         val titleStyle = MaterialTheme.typography.headlineMedium.copy(color = textColor)
-
                         BasicTextField(
                             value = uiState.title,
                             onValueChange = onTitleChange,
@@ -174,10 +171,7 @@ fun TaskAddEditContent(
                             cursorBrush = SolidColor(primaryColor),
                             decorationBox = { innerTextField ->
                                 if (uiState.title.isEmpty()) {
-                                    Text(
-                                        stringResource(R.string.task_title_placeholder),
-                                        style = titleStyle.copy(color = textColor.copy(0.4f))
-                                    )
+                                    Text(stringResource(R.string.task_title_placeholder), style = titleStyle.copy(color = textColor.copy(0.4f)))
                                 }
                                 innerTextField()
                             },
@@ -201,12 +195,7 @@ fun TaskAddEditContent(
                             modifier = Modifier.height(32.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp)) {
-                                Text(
-                                    title,
-                                    // labelMedium (12sp Medium), używamy onPrimary gdy zaznaczone
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor
-                                )
+                                Text(title, style = MaterialTheme.typography.labelMedium, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor)
                             }
                         }
                     }
@@ -222,8 +211,8 @@ fun TaskAddEditContent(
                             Switch(checked = uiState.isAllDay, onCheckedChange = onIsAllDayChange)
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            SimpleDateTimeRow(startDate, if (uiState.isAllDay) null else startTime, { showDatePickerStart = true }, { showTimePickerStart = true }, textColor)
-                            SimpleDateTimeRow(endDate, if (uiState.isAllDay) null else endTime, { showDatePickerEnd = true }, { showTimePickerEnd = true }, textColor)
+                            SimpleDateTimeRow(uiState.startDate, if (uiState.isAllDay) null else uiState.startTime, { showDatePickerStart = true }, { showTimePickerStart = true }, textColor)
+                            SimpleDateTimeRow(uiState.endDate, if (uiState.isAllDay) null else uiState.endTime, { showDatePickerEnd = true }, { showTimePickerEnd = true }, textColor)
                         }
                     }
                 }
@@ -231,14 +220,8 @@ fun TaskAddEditContent(
                 HorizontalDivider(color = dividerColor)
 
                 CommonRow(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    Box(modifier = Modifier.fillMaxWidth().clickable { showSubjectModal = true }.padding(vertical = 12.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = uiState.classSubject ?: stringResource(R.string.task_subject_label),
                                 style = MaterialTheme.typography.bodyLarge,
@@ -246,25 +229,14 @@ fun TaskAddEditContent(
                             )
                             Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
                         }
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable { showSubjectModal = true }
-                        )
                     }
                 }
 
                 HorizontalDivider(color = dividerColor)
 
                 CommonRow(iconRes = R.drawable.ic_graduation_hat, iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(0.4f)) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    Box(modifier = Modifier.fillMaxWidth().clickable(enabled = isTypeSelectionEnabled) { showTypeModal = true }.padding(vertical = 12.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: stringResource(R.string.task_type_label)
                             Text(
                                 text = typeText,
@@ -272,9 +244,6 @@ fun TaskAddEditContent(
                                 color = if (!isTypeSelectionEnabled) subTextColor.copy(0.4f) else if (uiState.classType == null) subTextColor else textColor
                             )
                             Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(0.4f), modifier = Modifier.size(24.dp))
-                        }
-                        if (isTypeSelectionEnabled) {
-                            Box(modifier = Modifier.matchParentSize().clickable { showTypeModal = true })
                         }
                     }
                 }
@@ -297,31 +266,15 @@ fun TaskAddEditContent(
                     }
                 }
 
-                // Przycisk usuwania
-                if (uiState.taskId != 0) {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Button(
-                        onClick = onDeleteTask,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    ) {
-                        Icon(painterResource(R.drawable.ic_trash), null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Usuń zadanie")
-                    }
-                }
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
 
-    if (showDatePickerStart) DatePicker(date = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), onDateSelected = { showDatePickerStart = false; onStartDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()) }, onDismiss = { showDatePickerStart = false })
-    if (showDatePickerEnd) DatePicker(date = endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), onDateSelected = { showDatePickerEnd = false; onEndDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()) }, onDismiss = { showDatePickerEnd = false })
-    if (showTimePickerStart) TimePicker(time = String.format("%02d:%02d", startTime.hour, startTime.minute), onTimeSelected = { h, m -> showTimePickerStart = false; onStartTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerStart = false })
-    if (showTimePickerEnd) TimePicker(time = String.format("%02d:%02d", endTime.hour, endTime.minute), onTimeSelected = { h, m -> showTimePickerEnd = false; onEndTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerEnd = false })
+    if (showDatePickerStart) DatePicker(date = uiState.startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), onDateSelected = { showDatePickerStart = false; onStartDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()) }, onDismiss = { showDatePickerStart = false })
+    if (showDatePickerEnd) DatePicker(date = uiState.endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), onDateSelected = { showDatePickerEnd = false; onEndDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()) }, onDismiss = { showDatePickerEnd = false })
+    if (showTimePickerStart) TimePicker(time = String.format("%02d:%02d", uiState.startTime.hour, uiState.startTime.minute), onTimeSelected = { h, m -> showTimePickerStart = false; onStartTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerStart = false })
+    if (showTimePickerEnd) TimePicker(time = String.format("%02d:%02d", uiState.endTime.hour, uiState.endTime.minute), onTimeSelected = { h, m -> showTimePickerEnd = false; onEndTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerEnd = false })
 
     if (showSubjectModal) {
         AlertDialog(
@@ -330,7 +283,6 @@ fun TaskAddEditContent(
             text = {
                 LazyColumn {
                     item { TextButton(onClick = { onSubjectChange(null); onClassTypeChange(null); showSubjectModal = false }) { Text("Brak") } }
-                    // ✅ Poprawiono destrukturyzację
                     items(uiState.availableSubjects) { (sub, _) ->
                         TextButton(onClick = { onSubjectChange(sub); onClassTypeChange(null); showSubjectModal = false }) { Text(sub) }
                     }
