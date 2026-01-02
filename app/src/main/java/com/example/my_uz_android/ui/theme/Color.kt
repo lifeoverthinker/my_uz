@@ -13,6 +13,7 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // --- Motywy Material 3 (Light) ---
+// Twój Fiolet (Główny)
 val md_theme_light_primary = Color(0xFF68548e)
 val md_theme_light_onPrimary = Color(0xFFffffff)
 val md_theme_light_primaryContainer = Color(0xFFebddff)
@@ -92,7 +93,8 @@ val md_theme_dark_surfaceContainer = Color(0xFF212121)
 val md_theme_dark_surfaceContainerHigh = Color(0xFF2B2B2B)
 val md_theme_dark_surfaceContainerHighest = Color(0xFF363636)
 
-// --- KOLORY KART (Zostawiamy Pastele w Dark Mode - bo ładne) ---
+// --- KOLORY KART ---
+// Używamy Twojego fioletu (Lavender) jako domyślnego
 val card_class_light = Color(0xFFE8DEF8)
 val card_class_dark = Color(0xFFE8DEF8)
 
@@ -115,7 +117,7 @@ val custom_blue_dark = Color(0xFFa2c9fe)
 
 // --- HEADER I TŁA ---
 val home_top_background_light = Color(0xFFF7F2F9)
-val home_top_background_dark = Color(0xFF25232A) // Ciemny grafit/fiolet (lepszy kontrast)
+val home_top_background_dark = Color(0xFF25232A)
 
 val home_header_light = Color(0xFFF7F2F9)
 val home_header_dark = Color(0xFF25232A)
@@ -134,20 +136,18 @@ val nav_dark_border = Color(0xFF49454e)
 val nav_dark_active = Color(0xFFd3bcfd)
 val nav_dark_inactive = Color(0xFFcac4d0)
 
-// --- PRZYCISKI (Zaktualizowane zgodnie z prośbą) ---
-// Ogólne przyciski (wszystkie ekrany poza Home)
+// --- PRZYCISKI ---
 val button_background_light = Color(0xFFF7F2F9)
-val button_background_dark = Color(0xFF2B2930) // Ciemny odpowiednik
+val button_background_dark = Color(0xFF2B2930)
 
-// Specyficzne przyciski dla ekranu Home
 val home_button_background_light = Color(0xFFE8DEF8)
-val home_button_background_dark = Color(0xFF4B4358) // Ciemniejszy fiolet dla Dark Mode
+val home_button_background_dark = Color(0xFF4B4358)
 
 // --- TEKST IKON ---
-val icon_text_light = Color(0xFF1D192B) // Ciemny tekst w Light
-val icon_text_dark = Color(0xFFE8DEF8) // Jasny tekst w Dark (na ciemnym przycisku)
+val icon_text_light = Color(0xFF1D192B)
+val icon_text_dark = Color(0xFFE8DEF8)
 
-// --- PALETA KOLORÓW Zajęć (PASTELE) ---
+// --- PALETA KOLORÓW Zajęć (POPRAWIONE PASTELE) ---
 data class ClassColorSet(
     val lightBg: Color,
     val darkBg: Color,
@@ -155,6 +155,7 @@ data class ClassColorSet(
     val darkAccent: Color
 )
 
+// 1. FIOLETOWY (Lavender) - E8DEF8
 val ColorSetLavender = ClassColorSet(
     lightBg = Color(0xFFE8DEF8),
     darkBg = Color(0xFF4A4458),
@@ -162,6 +163,7 @@ val ColorSetLavender = ClassColorSet(
     darkAccent = Color(0xFFD0BCFF)
 )
 
+// 2. RÓŻOWY (Pink) - FFD8E4
 val ColorSetPink = ClassColorSet(
     lightBg = Color(0xFFFFD8E4),
     darkBg = Color(0xFF633B48),
@@ -169,6 +171,7 @@ val ColorSetPink = ClassColorSet(
     darkAccent = Color(0xFFEFB8C8)
 )
 
+// 3. ZIELONY (Green) - DAF5D7
 val ColorSetGreen = ClassColorSet(
     lightBg = Color(0xFFDAF5D7),
     darkBg = Color(0xFF2E4E30),
@@ -176,6 +179,7 @@ val ColorSetGreen = ClassColorSet(
     darkAccent = Color(0xFFA5D6A7)
 )
 
+// 4. NIEBIESKI (Blue) - D7E3FF (Pasuje idealnie, zostawiam)
 val ColorSetBlue = ClassColorSet(
     lightBg = Color(0xFFD7E3FF),
     darkBg = Color(0xFF32476E),
@@ -183,6 +187,7 @@ val ColorSetBlue = ClassColorSet(
     darkAccent = Color(0xFF90CAF9)
 )
 
+// 5. POMARAŃCZOWY/BRZOSKWINIOWY (Orange) - FFDBCF (Pasuje idealnie, zostawiam)
 val ColorSetOrange = ClassColorSet(
     lightBg = Color(0xFFFFDBCF),
     darkBg = Color(0xFF5E4035),
@@ -190,8 +195,9 @@ val ColorSetOrange = ClassColorSet(
     darkAccent = Color(0xFFFFCC80)
 )
 
+// 6. ŻÓŁTY (Yellow) - ZMIENIONY na ładny pastel (FFF9C4)
 val ColorSetYellow = ClassColorSet(
-    lightBg = Color(0xFFF3E2A9),
+    lightBg = Color(0xFFFFF9C4), // Poprzednio był "musztardowy" F3E2A9
     darkBg = Color(0xFF5C5326),
     lightAccent = Color(0xFF564600),
     darkAccent = Color(0xFFFFF59D)

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.*
 import com.example.my_uz_android.data.repositories.*
+import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.example.my_uz_android.util.NetworkResult
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -11,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 // Enum definiujący typy danych do backupu
 enum class BackupDataType(val displayName: String) {
@@ -33,7 +35,7 @@ data class BackupData(
 
 data class SettingsUiState(
     val settings: SettingsEntity? = null,
-    val draftSettings: SettingsEntity? = null, // Dodano: Brudnopis ustawień (przed zapisaniem)
+    val draftSettings: SettingsEntity? = null, // Brudnopis ustawień
     val availableGroups: List<String> = emptyList(),
     val availableSubgroups: List<String> = emptyList(),
     val uniqueClassTypes: List<String> = emptyList(),
@@ -42,8 +44,8 @@ data class SettingsUiState(
     val importMessage: String? = null,
     val backupPreview: BackupData? = null,
     val showImportDialog: Boolean = false,
-    val isSaved: Boolean = false,      // Dodano: Flaga sukcesu zapisu
-    val isModified: Boolean = false    // Dodano: Flaga czy są niezapisane zmiany
+    val isSaved: Boolean = false,
+    val isModified: Boolean = false
 )
 
 class SettingsViewModel(
@@ -85,7 +87,7 @@ class SettingsViewModel(
                 classRepository.getAllClassesStream()
             ) { settings, classes ->
                 val uniqueTypes = classes
-                    .map { it.classType.trim() } // Normalizacja nazw (usuwanie spacji)
+                    .map { it.classType.trim() }
                     .filter { it.isNotBlank() }
                     .distinct()
                     .sorted()
@@ -93,16 +95,26 @@ class SettingsViewModel(
                 Pair(settings, uniqueTypes)
             }.collect { (settings, uniqueTypes) ->
                 _uiState.update { currentState ->
-                    // Jeśli draftSettings jest null, inicjujemy go aktualnymi ustawieniami z bazy
                     val currentDraft = if (currentState.draftSettings == null) settings else currentState.draftSettings
 
-                    // Kolory pobieramy z draftu (jeśli jest) lub z bazy
                     val sourceForColors = currentDraft ?: settings
                     val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
-                    val colorMap: Map<String, Int> = try {
+
+                    // 1. Pobieramy mapę z bazy
+                    var colorMap: Map<String, Int> = try {
                         gson.fromJson(sourceForColors?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
                     } catch (e: Exception) {
                         emptyMap()
+                    }
+
+                    // 2. NAPRAWA: Jeśli mapa jest pusta (pierwsze uruchomienie),
+                    // generujemy domyślne kolory na podstawie nazwy (hash),
+                    // tak samo jak robi to Terminarz. Dzięki temu w Ustawieniach
+                    // zobaczymy poprawne kolory, a nie same fioletowe.
+                    if (colorMap.isEmpty() && uniqueTypes.isNotEmpty()) {
+                        colorMap = uniqueTypes.associateWith { type ->
+                            abs(type.hashCode()) % ClassColorPalette.size
+                        }
                     }
 
                     currentState.copy(
@@ -111,14 +123,13 @@ class SettingsViewModel(
                         availableGroups = groups,
                         uniqueClassTypes = uniqueTypes,
                         classColorMap = colorMap,
-                        isModified = currentDraft != settings // Sprawdzamy czy są różnice między draftem a bazą
+                        isModified = currentDraft != settings
                     )
                 }
             }
         }
     }
 
-    // Funkcja pomocnicza do aktualizacji brudnopisu (draftu)
     private fun updateDraft(newSettings: SettingsEntity) {
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
         val colorMap: Map<String, Int> = try {
@@ -132,7 +143,7 @@ class SettingsViewModel(
                 draftSettings = newSettings,
                 classColorMap = colorMap,
                 isSaved = false,
-                isModified = newSettings != it.settings // Aktualizacja statusu modyfikacji
+                isModified = newSettings != it.settings
             )
         }
     }
@@ -141,7 +152,6 @@ class SettingsViewModel(
         val currentDraft = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
         val currentMap = _uiState.value.classColorMap.toMutableMap()
 
-        // Zapisujemy pod kluczem znormalizowanym (trim)
         currentMap[classType.trim()] = colorIndex
 
         val newJson = gson.toJson(currentMap)
@@ -163,16 +173,25 @@ class SettingsViewModel(
         updateDraft(current.copy(selectedGroupCode = groupCode, selectedSubgroup = ""))
     }
 
-    // Funkcja wywoływana po kliknięciu "Zapisz"
     fun saveSettings() {
-        val settingsToSave = _uiState.value.draftSettings ?: return
+        // Przy zapisie musimy upewnić się, że 'classColorsJson' w draftSettings
+        // odzwierciedla aktualny stan UI (nawet jeśli to były te auto-generowane kolory).
+        var settingsToSave = _uiState.value.draftSettings ?: return
+
+        // Jeśli mapa w UI nie jest pusta, a JSON w settings jest pusty/nieaktualny, nadpisz go
+        if (_uiState.value.classColorMap.isNotEmpty()) {
+            val newJson = gson.toJson(_uiState.value.classColorMap)
+            settingsToSave = settingsToSave.copy(classColorsJson = newJson)
+        }
+
         viewModelScope.launch {
             settingsRepository.insertSettings(settingsToSave)
             _uiState.update {
                 it.copy(
                     isSaved = true,
                     isModified = false,
-                    settings = settingsToSave // Zaktualizuj "oryginał", żeby isModified wróciło na false
+                    settings = settingsToSave,
+                    draftSettings = settingsToSave // Ważne: zaktualizuj draft po zapisie
                 )
             }
             delayResetSavedFlag()
@@ -185,8 +204,6 @@ class SettingsViewModel(
             _uiState.update { it.copy(isSaved = false) }
         }
     }
-
-    // --- LOGIKA EKSPORTU ---
 
     suspend fun createBackupJson(selectedTypes: Set<BackupDataType>): String {
         return withContext(Dispatchers.IO) {
@@ -212,8 +229,6 @@ class SettingsViewModel(
             Gson().toJson(backupData)
         }
     }
-
-    // --- LOGIKA IMPORTU ---
 
     fun previewBackupFile(jsonString: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -249,7 +264,6 @@ class SettingsViewModel(
                 if (selectedTypes.contains(BackupDataType.SETTINGS) && backupData.settings != null) {
                     settingsRepository.clearSettings()
                     settingsRepository.insertSettings(backupData.settings)
-                    // Po imporcie aktualizujemy też draft
                     withContext(Dispatchers.Main) {
                         _uiState.update { it.copy(draftSettings = backupData.settings, settings = backupData.settings, isModified = false) }
                     }

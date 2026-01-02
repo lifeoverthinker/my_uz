@@ -6,8 +6,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -33,7 +31,7 @@ data class ExtendedColors(
     val homeHeaderBackground: Color = home_header_light,
     val homeContentBackground: Color = home_content_light,
     val buttonBackground: Color = button_background_light,
-    val homeButtonBackground: Color = home_button_background_light, // ✅ DODANO
+    val homeButtonBackground: Color = home_button_background_light,
     val iconText: Color = icon_text_light,
     val grayInactive: Color = Color(0xFFBDBDBD)
 )
@@ -103,7 +101,7 @@ private fun darkScheme(): ColorScheme = darkColorScheme(
 @Composable
 fun MyUZTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = false,
+    // Usunięto parametr dynamicColor, aby uniknąć pomyłek
     content: @Composable () -> Unit
 ) {
     val extended = if (darkTheme) {
@@ -119,7 +117,7 @@ fun MyUZTheme(
             homeHeaderBackground = home_header_dark,
             homeContentBackground = home_content_dark,
             buttonBackground = button_background_dark,
-            homeButtonBackground = home_button_background_dark, // ✅ Ustawienie dla Dark Mode
+            homeButtonBackground = home_button_background_dark,
             iconText = icon_text_dark,
             grayInactive = Color(0xFFBDBDBD)
         )
@@ -136,17 +134,14 @@ fun MyUZTheme(
             homeHeaderBackground = home_header_light,
             homeContentBackground = home_content_light,
             buttonBackground = button_background_light,
-            homeButtonBackground = home_button_background_light, // ✅ Ustawienie dla Light Mode (E8DEF8)
+            homeButtonBackground = home_button_background_light,
             iconText = icon_text_light,
             grayInactive = Color(0xFFBDBDBD)
         )
     }
 
+    // WYMUSZENIE: Zawsze używamy naszych schematów, nigdy dynamicznych z tapety
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
         darkTheme -> darkScheme()
         else -> lightScheme()
     }
@@ -156,7 +151,6 @@ fun MyUZTheme(
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) {
-                // Domyślne kolory pasków (tło aplikacji)
                 window.statusBarColor = colorScheme.background.toArgb()
                 window.navigationBarColor = colorScheme.surface.toArgb()
 
