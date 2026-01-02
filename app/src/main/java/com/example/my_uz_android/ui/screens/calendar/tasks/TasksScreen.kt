@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,7 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.TopAppBar // Zmiana importu
+import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
@@ -124,10 +123,11 @@ fun TasksScreen(
         Scaffold(
             containerColor = backgroundColor,
             topBar = {
-                // ZMIANA: Użycie TopAppBar zamiast CalendarTopAppBar
+                // ZMIANA: Dodano isNavigationIconFilled = true
                 TopAppBar(
                     title = "Terminarz",
                     navigationIcon = R.drawable.ic_menu,
+                    isNavigationIconFilled = true, // To ustawia szare kółko i poprawny rozmiar ikony
                     onNavigationClick = { scope.launch { drawerState.open() } },
                     actions = {
                         if (isSharing || isImporting) {
@@ -299,8 +299,17 @@ fun MonthHeaderSticky(yearMonth: YearMonth, backgroundColor: Color) {
     val monthName = yearMonth.month.getDisplayName(TextStyle.FULL, Locale("pl"))
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
     val year = yearMonth.year
-    Box(modifier = Modifier.fillMaxWidth().background(backgroundColor).padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(text = "$monthName $year", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = "$monthName $year",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -316,15 +325,21 @@ fun DayScheduleRow(
     val dayOfWeek = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl"))
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
     val dayOfMonth = date.dayOfMonth.toString()
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.Top) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
         Column(modifier = Modifier.width(48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = dayOfWeek, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = dayOfWeek,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Text(text = dayOfMonth, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             tasks.forEach { task ->
-                // Klucz dla animacji swipe
                 key(task.id, task.isCompleted) {
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = {
@@ -347,22 +362,48 @@ fun DayScheduleRow(
                             val direction = dismissState.dismissDirection
                             val color by animateColorAsState(
                                 when (dismissState.targetValue) {
-                                    SwipeToDismissBoxValue.StartToEnd -> if (task.isCompleted) MaterialTheme.colorScheme.primary else Color(0xFF81C784)
-                                    SwipeToDismissBoxValue.EndToStart -> Color(0xFFE57373)
+                                    SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50) // Zawsze zielony
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
                                     else -> Color.Transparent
                                 }, label = "SwipeColor"
                             )
                             val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
-                            Box(Modifier.fillMaxSize().background(color, RoundedCornerShape(8.dp)).padding(horizontal = 20.dp), contentAlignment = alignment) {
-                                val icon = if (direction == SwipeToDismissBoxValue.StartToEnd) {
-                                    if(task.isCompleted) Icons.Default.Check else Icons.Default.Check
-                                } else Icons.Default.Delete
-                                val scale by animateFloatAsState(if (dismissState.targetValue == SwipeToDismissBoxValue.Settled) 0.75f else 1f, label = "IconScale")
-                                Icon(icon, contentDescription = null, modifier = Modifier.scale(scale), tint = Color.White)
+                            Box(
+                                Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(color)
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = alignment
+                            ) {
+                                val scale by animateFloatAsState(
+                                    if (dismissState.targetValue == SwipeToDismissBoxValue.Settled) 0.75f else 1f,
+                                    label = "IconScale"
+                                )
+                                if (direction == SwipeToDismissBoxValue.StartToEnd) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_check_square_broken),
+                                        contentDescription = null,
+                                        modifier = Modifier.scale(scale).size(24.dp),
+                                        tint = Color.White
+                                    )
+                                } else {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_trash),
+                                        contentDescription = null,
+                                        modifier = Modifier.scale(scale).size(24.dp),
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
                             }
                         },
                         content = {
-                            TaskCard(task = task, modifier = Modifier.fillMaxWidth(), onTaskClick = { onTaskClick(task.id) }, showDayMarker = false)
+                            TaskCard(
+                                task = task,
+                                modifier = Modifier.fillMaxWidth(),
+                                onTaskClick = { onTaskClick(task.id) },
+                                showDayMarker = false
+                            )
                         }
                     )
                 }
@@ -376,8 +417,41 @@ fun ShareCodeDialog(code: String, onDismiss: () -> Unit, onShareSystem: (String)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Zadania udostępnione!") },
-        text = { Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) { Text("Twój kod dostępu:", style = MaterialTheme.typography.bodyMedium); Spacer(modifier = Modifier.height(16.dp)); Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) { Text(text = code, style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold, letterSpacing = 4.sp), modifier = Modifier.padding(24.dp), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onPrimaryContainer) }; Spacer(modifier = Modifier.height(16.dp)); Text("Podaj ten kod innej osobie, aby mogła pobrać Twoją listę zadań.", style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) } },
-        confirmButton = { Button(onClick = { onShareSystem(code) }) { Icon(painter = painterResource(R.drawable.ic_share), contentDescription = null, modifier = Modifier.size(18.dp)); Spacer(modifier = Modifier.width(8.dp)); Text("Wyślij kod") } },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Text("Twój kod dostępu:", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(16.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                ) {
+                    Text(
+                        text = code,
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 4.sp
+                        ),
+                        modifier = Modifier.padding(24.dp),
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Podaj ten kod innej osobie, aby mogła pobrać Twoją listę zadań.",
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onShareSystem(code) }) {
+                Icon(painter = painterResource(R.drawable.ic_share), contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Wyślij kod")
+            }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } }
     )
 }

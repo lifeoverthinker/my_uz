@@ -5,6 +5,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,8 +46,16 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    val activeSettings = uiState.draftSettings ?: uiState.settings
+
     var showExportDialog by remember { mutableStateOf(false) }
     var exportSelection by remember { mutableStateOf(BackupDataType.values().toSet()) }
+
+    LaunchedEffect(uiState.isSaved) {
+        if (uiState.isSaved) {
+            Toast.makeText(context, "Zapisano ustawienia", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -67,7 +76,25 @@ fun SettingsScreen(
                 title = "Ustawienia",
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onBackClick,
-                isNavigationIconFilled = true
+                isNavigationIconFilled = true, // Używamy stylu z kółkiem (jak w Terminarzu) dla spójności
+                actions = {
+                    // PRZYCISK ZAPISZ - widoczny po prawej stronie
+                    TextButton(
+                        onClick = { if (uiState.isModified) viewModel.saveSettings() },
+                        enabled = uiState.isModified, // Aktywny tylko gdy są zmiany
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
+                    ) {
+                        Text(
+                            text = "Zapisz",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -83,7 +110,7 @@ fun SettingsScreen(
                     iconRes = R.drawable.ic_palette,
                     title = "Ciemny motyw",
                     description = "Dostosuj jasność interfejsu",
-                    isChecked = uiState.settings?.isDarkMode == true,
+                    isChecked = activeSettings?.isDarkMode == true,
                     onCheckedChange = { viewModel.toggleDarkMode(it) }
                 )
 
@@ -91,16 +118,16 @@ fun SettingsScreen(
                     SettingsHeader("Kolory zajęć")
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                         uiState.uniqueClassTypes.forEach { classType ->
+                            val safeClassType = classType.trim()
                             ClassColorPickerRow(
-                                classType = ClassTypeUtils.getFullName(classType),
-                                selectedColorIndex = uiState.classColorMap[classType] ?: 0,
-                                onColorSelected = { viewModel.updateClassColor(classType, it) }
+                                classType = ClassTypeUtils.getFullName(safeClassType),
+                                selectedColorIndex = uiState.classColorMap[safeClassType] ?: 0,
+                                onColorSelected = { viewModel.updateClassColor(safeClassType, it) }
                             )
                         }
                     }
                 }
 
-                // ✅ DIVIDER JAK W DRAWERZE
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -111,7 +138,7 @@ fun SettingsScreen(
                     iconRes = R.drawable.ic_check_circle_broken,
                     title = "Tryb offline",
                     description = "Używaj tylko danych lokalnych",
-                    isChecked = uiState.settings?.offlineModeEnabled == true,
+                    isChecked = activeSettings?.offlineModeEnabled == true,
                     onCheckedChange = { viewModel.toggleOfflineMode(it) }
                 )
 
