@@ -21,13 +21,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.ui.theme.InterFontFamily
 
 data class FabOption(
     val label: String,
@@ -44,30 +42,32 @@ fun UniversalFab(
     options: List<FabOption> = emptyList(),
     iconRes: Int = R.drawable.ic_plus
 ) {
-    // --- STAŁE KOLORY DLA MENU (OPCJE) ---
-    val menuContainerColor = Color(0xFFEADDFF)
-    val menuContentColor = Color(0xFF4F378A)
+    // --- KOLORY (Dynamicznie z Theme.kt) ---
+    // Główny FAB: PrimaryContainer (Fiolet)
+    val fabContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val fabContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+
+    // Menu opcji: SecondaryContainer
+    val menuContainerColor = MaterialTheme.colorScheme.secondaryContainer
+    val menuContentColor = MaterialTheme.colorScheme.onSecondaryContainer
     val menuShape = RoundedCornerShape(16.dp)
 
     // --- ANIMACJA STANU GŁÓWNEGO FABA ---
-    // Logika: Jeśli jest rozwinięty (tylko na Home), ma inny styl.
-    // W przeciwnym razie (zwinięty Home LUB inne ekrany) ma styl domyślny (jasny, 16dp).
-
     val targetCornerRadius = if (isExpandable && isExpanded) 28.dp else 16.dp
     val currentCornerRadius by animateDpAsState(
         targetValue = targetCornerRadius,
         label = "FabCornerAnimation"
     )
 
-    val targetContainerColor = if (isExpandable && isExpanded) Color(0xFF6750A4) else Color(0xFFEADDFF)
+    // Jeśli rozwinięty, zmieniamy lekko kolor na Primary (akcent), jeśli zwinięty - PrimaryContainer
+    val targetContainerColor = if (isExpandable && isExpanded) MaterialTheme.colorScheme.primary else fabContainerColor
     val currentContainerColor by animateColorAsState(
         targetValue = targetContainerColor,
         label = "FabContainerColorAnimation"
     )
 
-    // Kolor ikony: Biały gdy rozwinięty, Ciemny (z Theme lub Hex) gdy zwinięty
-    val collapsedIconColor = MaterialTheme.extendedColors.iconText // Używamy koloru z motywu (np. 0xFF1D192B) dla spójności z innymi przyciskami
-    val targetContentColor = if (isExpandable && isExpanded) Color.White else collapsedIconColor
+    // Ikona: Biała na Primary (gdy rozwinięty), onPrimaryContainer (gdy zwinięty)
+    val targetContentColor = if (isExpandable && isExpanded) MaterialTheme.colorScheme.onPrimary else fabContentColor
     val currentContentColor by animateColorAsState(
         targetValue = targetContentColor,
         label = "FabContentColorAnimation"
@@ -90,43 +90,47 @@ fun UniversalFab(
             exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp), // Zwiększony odstęp dla czytelności
                 horizontalAlignment = Alignment.End
             ) {
                 options.forEach { option ->
-                    Box(
-                        modifier = Modifier
-                            .height(56.dp)
-                            .clip(menuShape)
-                            .background(menuContainerColor)
-                            .clickable { option.onClick() }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(end = 4.dp) // Lekki margines od prawej
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .height(56.dp)
-                                .padding(horizontal = 24.dp, vertical = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        // Etykieta w Surface (dla widoczności w Dark Mode)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh, // Wysoki kontrast tła
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            tonalElevation = 2.dp,
+                            shadowElevation = 2.dp
                         ) {
-                            // Ikona opcji
-                            Box(modifier = Modifier.size(24.dp)) {
-                                Icon(
-                                    painter = painterResource(id = option.iconRes),
-                                    contentDescription = null,
-                                    tint = menuContentColor,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                            // Tekst
                             Text(
                                 text = option.label,
-                                style = TextStyle(
-                                    fontWeight = FontWeight(500),
-                                    fontSize = 16.sp,
-                                    lineHeight = 24.sp
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.Medium
                                 ),
-                                color = menuContentColor,
-                                textAlign = TextAlign.End
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+
+                        // Mały przycisk FAB dla opcji
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp) // Standardowy rozmiar Small FAB
+                                .clip(menuShape)
+                                .background(menuContainerColor)
+                                .clickable { option.onClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = option.iconRes),
+                                contentDescription = null,
+                                tint = menuContentColor,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
@@ -135,45 +139,38 @@ fun UniversalFab(
         }
 
         // --- GŁÓWNY PRZYCISK FAB ---
-        Box(
+        Surface(
+            shape = RoundedCornerShape(currentCornerRadius),
+            color = currentContainerColor,
+            shadowElevation = 4.dp, // Dodajemy cień dla głębi
             modifier = Modifier
                 .size(56.dp)
-                // Najpierw clip (kształt), potem background (kolor)
-                .clip(RoundedCornerShape(currentCornerRadius))
-                .background(currentContainerColor)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
+                    indication = null, // Własna animacja koloru wyżej
                     onClick = onMainFabClick
-                ),
-            contentAlignment = Alignment.Center
+                )
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
             ) {
-                Box(modifier = Modifier.size(24.dp)) {
-                    if (isExpandable) {
-                        // Ikona Plusa (obracana)
-                        Icon(
-                            painter = painterResource(R.drawable.ic_plus),
-                            contentDescription = if (isExpanded) "Zamknij" else "Otwórz",
-                            tint = currentContentColor,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .rotate(rotation)
-                        )
-                    } else {
-                        // Zwykła ikona (statyczna)
-                        Icon(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = "Akcja",
-                            tint = currentContentColor,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                if (isExpandable) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_plus),
+                        contentDescription = if (isExpanded) "Zamknij" else "Otwórz",
+                        tint = currentContentColor,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .rotate(rotation)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = "Akcja",
+                        tint = currentContentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }

@@ -14,7 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color // Dodano import Color
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -251,7 +251,7 @@ fun CalendarTopAppBar(
 fun TopBarActionIcon(
     icon: Int,
     isLoading: Boolean = false,
-    tint: Color = MaterialTheme.extendedColors.iconText, // Domyślnie stary kolor
+    tint: Color = MaterialTheme.extendedColors.iconText,
     onClick: () -> Unit
 ) {
     Box(
@@ -273,7 +273,7 @@ fun TopBarActionIcon(
                 painterResource(icon),
                 null,
                 Modifier.size(TopBarIconSize),
-                tint = tint // Użycie przekazanego koloru
+                tint = tint
             )
         }
     }
@@ -334,7 +334,7 @@ fun PreviewTopAppBar(
                 TopBarActionIcon(icon = actionIcon, onClick = onActionClick)
                 TopBarActionIcon(
                     icon = if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart,
-                    tint = MaterialTheme.colorScheme.primary, // ZMIANA: Kolor Primary dla serduszka
+                    tint = MaterialTheme.colorScheme.primary,
                     onClick = onFavoriteClick
                 )
             }
@@ -344,22 +344,67 @@ fun PreviewTopAppBar(
 
 @Composable
 fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick: () -> Unit) {
+    val buttonBg = MaterialTheme.extendedColors.buttonBackground
+    val iconColor = MaterialTheme.extendedColors.iconText
+
     Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
-        Row(modifier = Modifier
-            .statusBarsPadding()
-            .height(64.dp)
-            .padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBackClick) {
-                Icon(painter = painterResource(id = R.drawable.ic_chevron_left), contentDescription = "Wstecz")
+        Row(
+            modifier = Modifier
+                .statusBarsPadding()
+                .height(72.dp) // Zmiana na 72.dp dla spójności
+                .padding(horizontal = 16.dp), // Padding jak w innych paskach
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Strzałka w tył w kółku (identycznie jak w innych ekranach)
+            Box(
+                modifier = Modifier
+                    .size(TopBarButtonSize) // 48.dp
+                    .clip(CircleShape)
+                    .background(buttonBg)
+                    .clickable(onClick = onBackClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_chevron_left),
+                    contentDescription = "Wstecz",
+                    modifier = Modifier.size(TopBarIconSize), // 24.dp
+                    tint = iconColor
+                )
             }
-            Box(modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
-                if (query.isEmpty()) Text("Szukaj planu...", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                BasicTextField(value = query, onValueChange = onQueryChange, modifier = Modifier.fillMaxWidth(), textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface), cursorBrush = SolidColor(MaterialTheme.colorScheme.primary), singleLine = true)
+
+            Spacer(Modifier.width(12.dp))
+
+            // Pole tekstowe
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                if (query.isEmpty()) {
+                    Text(
+                        "Szukaj planu...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    singleLine = true
+                )
             }
+
             if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) { Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Wyczyść") }
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_x_close),
+                        contentDescription = "Wyczyść"
+                    )
+                }
             }
         }
     }
