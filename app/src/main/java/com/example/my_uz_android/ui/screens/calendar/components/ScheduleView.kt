@@ -15,9 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,7 @@ import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.components.ClassCardType
 import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.theme.ClassColorPalette
+import com.example.my_uz_android.ui.theme.InterFontFamily // Dodano import czcionki
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
@@ -37,7 +40,7 @@ import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.daysOfWeek
 import kotlinx.coroutines.delay
 import java.time.*
-import java.time.format.TextStyle
+import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 import kotlin.math.abs
 
@@ -118,6 +121,7 @@ fun ScheduleView(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        // --- NAGŁÓWEK MIESIĄCA (Zaktualizowany styl) ---
         if (showHeader) {
             val visibleMonth = if (isMonthView) {
                 calendarState.firstVisibleMonth.yearMonth
@@ -125,7 +129,7 @@ fun ScheduleView(
                 val weekDays = weekState.firstVisibleWeek.days
                 if (weekDays.isNotEmpty()) weekDays.first().date.let { YearMonth.from(it) } else YearMonth.now(PolandZone)
             }
-            val monthName = visibleMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
+            val monthName = visibleMonth.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
                 .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
             val monthTitle = "$monthName ${visibleMonth.year}"
 
@@ -136,14 +140,31 @@ fun ScheduleView(
                     .clickable { onToggleView() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = monthTitle,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                // Używamy Row, aby umieścić tekst i ikonkę obok siebie
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = monthTitle,
+                        style = TextStyle( // Styl zgodny z CalendarTopAppBar
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 24.sp,
+                            lineHeight = 24.sp,
+                            letterSpacing = 0.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+
+                    // Ikonka Chevron (20x20dp)
+                    Icon(
+                        painter = painterResource(if (isMonthView) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onBackground
+                    )
+                }
             }
         }
 
@@ -274,7 +295,7 @@ fun ScheduleView(
                                                 Icon(
                                                     painter = painterResource(icon),
                                                     contentDescription = null,
-                                                    modifier = Modifier.size(24.dp), // ✅ Dodano rozmiar ikony 24.dp
+                                                    modifier = Modifier.size(24.dp), // Ikona 24dp
                                                     tint = tint
                                                 )
                                             }
@@ -326,7 +347,7 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
         for (dayOfWeek in daysOfWeek) {
             Text(
                 modifier = Modifier.weight(1f).height(24.dp),
-                text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl"))
+                text = dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale("pl"))
                     .replaceFirstChar { it.titlecase() }.take(1),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
