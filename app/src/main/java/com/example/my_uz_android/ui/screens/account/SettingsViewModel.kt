@@ -33,15 +33,17 @@ data class BackupData(
 
 data class SettingsUiState(
     val settings: SettingsEntity? = null,
+    val draftSettings: SettingsEntity? = null, // Dodano: Brudnopis ustawień (przed zapisaniem)
     val availableGroups: List<String> = emptyList(),
     val availableSubgroups: List<String> = emptyList(),
     val uniqueClassTypes: List<String> = emptyList(),
     val classColorMap: Map<String, Int> = emptyMap(),
     val isLoading: Boolean = false,
     val importMessage: String? = null,
-    // Pola do obsługi selektywnego importu
     val backupPreview: BackupData? = null,
-    val showImportDialog: Boolean = false
+    val showImportDialog: Boolean = false,
+    val isSaved: Boolean = false,      // Dodano: Flaga sukcesu zapisu
+    val isModified: Boolean = false    // Dodano: Flaga czy są niezapisane zmiany
 )
 
 class SettingsViewModel(
@@ -70,11 +72,10 @@ class SettingsViewModel(
                 NetworkResult.Error("Błąd sieci")
             }
 
-            // TUTAJ ZMIANA: Filtrujemy nulle i puste ciągi, aby nie pokazywać "całej grupy" jako opcji
             val groups = if (groupsResult is NetworkResult.Success) {
                 (groupsResult.data ?: emptyList())
-                    .filter { !it.isNullOrBlank() && it != "null" } // Usuwa puste opcje i ewentualne stringi "null"
-                    .sorted() // Opcjonalnie: sortuje grupy alfabetycznie
+                    .filter { !it.isNullOrBlank() && it != "null" }
+                    .sorted()
             } else {
                 emptyList()
             }
@@ -84,62 +85,105 @@ class SettingsViewModel(
                 classRepository.getAllClassesStream()
             ) { settings, classes ->
                 val uniqueTypes = classes
-                    .map { it.classType }
+                    .map { it.classType.trim() } // Normalizacja nazw (usuwanie spacji)
                     .filter { it.isNotBlank() }
                     .distinct()
                     .sorted()
 
-                val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
-                val colorMap: Map<String, Int> = try {
-                    gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-                } catch (e: Exception) {
-                    emptyMap()
-                }
+                Pair(settings, uniqueTypes)
+            }.collect { (settings, uniqueTypes) ->
+                _uiState.update { currentState ->
+                    // Jeśli draftSettings jest null, inicjujemy go aktualnymi ustawieniami z bazy
+                    val currentDraft = if (currentState.draftSettings == null) settings else currentState.draftSettings
 
-                Triple(settings, uniqueTypes, colorMap)
-            }.collect { (settings, uniqueTypes, colorMap) ->
-                _uiState.update {
-                    it.copy(
+                    // Kolory pobieramy z draftu (jeśli jest) lub z bazy
+                    val sourceForColors = currentDraft ?: settings
+                    val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
+                    val colorMap: Map<String, Int> = try {
+                        gson.fromJson(sourceForColors?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
+                    } catch (e: Exception) {
+                        emptyMap()
+                    }
+
+                    currentState.copy(
                         settings = settings,
+                        draftSettings = currentDraft,
                         availableGroups = groups,
                         uniqueClassTypes = uniqueTypes,
-                        classColorMap = colorMap
+                        classColorMap = colorMap,
+                        isModified = currentDraft != settings // Sprawdzamy czy są różnice między draftem a bazą
                     )
                 }
             }
         }
     }
 
-    fun updateClassColor(classType: String, colorIndex: Int) {
-        val currentSettings = _uiState.value.settings ?: return
-        val currentMap = _uiState.value.classColorMap.toMutableMap()
-        currentMap[classType] = colorIndex
-        val newJson = gson.toJson(currentMap)
+    // Funkcja pomocnicza do aktualizacji brudnopisu (draftu)
+    private fun updateDraft(newSettings: SettingsEntity) {
+        val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
+        val colorMap: Map<String, Int> = try {
+            gson.fromJson(newSettings.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
+        } catch (e: Exception) {
+            emptyMap()
+        }
 
-        viewModelScope.launch {
-            settingsRepository.insertSettings(currentSettings.copy(classColorsJson = newJson))
+        _uiState.update {
+            it.copy(
+                draftSettings = newSettings,
+                classColorMap = colorMap,
+                isSaved = false,
+                isModified = newSettings != it.settings // Aktualizacja statusu modyfikacji
+            )
         }
     }
 
-    fun updateSettings(newSettings: SettingsEntity) {
-        viewModelScope.launch {
-            settingsRepository.insertSettings(newSettings)
-        }
+    fun updateClassColor(classType: String, colorIndex: Int) {
+        val currentDraft = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
+        val currentMap = _uiState.value.classColorMap.toMutableMap()
+
+        // Zapisujemy pod kluczem znormalizowanym (trim)
+        currentMap[classType.trim()] = colorIndex
+
+        val newJson = gson.toJson(currentMap)
+        updateDraft(currentDraft.copy(classColorsJson = newJson))
     }
 
     fun toggleOfflineMode(enabled: Boolean) {
-        val current = _uiState.value.settings ?: return
-        updateSettings(current.copy(offlineModeEnabled = enabled))
+        val current = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
+        updateDraft(current.copy(offlineModeEnabled = enabled))
     }
 
     fun toggleDarkMode(enabled: Boolean) {
-        val current = _uiState.value.settings ?: return
-        updateSettings(current.copy(isDarkMode = enabled))
+        val current = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
+        updateDraft(current.copy(isDarkMode = enabled))
     }
 
     fun onGroupSelected(groupCode: String) {
-        val current = _uiState.value.settings ?: return
-        updateSettings(current.copy(selectedGroupCode = groupCode, selectedSubgroup = ""))
+        val current = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
+        updateDraft(current.copy(selectedGroupCode = groupCode, selectedSubgroup = ""))
+    }
+
+    // Funkcja wywoływana po kliknięciu "Zapisz"
+    fun saveSettings() {
+        val settingsToSave = _uiState.value.draftSettings ?: return
+        viewModelScope.launch {
+            settingsRepository.insertSettings(settingsToSave)
+            _uiState.update {
+                it.copy(
+                    isSaved = true,
+                    isModified = false,
+                    settings = settingsToSave // Zaktualizuj "oryginał", żeby isModified wróciło na false
+                )
+            }
+            delayResetSavedFlag()
+        }
+    }
+
+    private fun delayResetSavedFlag() {
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(2000)
+            _uiState.update { it.copy(isSaved = false) }
+        }
     }
 
     // --- LOGIKA EKSPORTU ---
@@ -202,10 +246,13 @@ class SettingsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, showImportDialog = false) }
             try {
-                // Importujemy tylko wybrane sekcje
                 if (selectedTypes.contains(BackupDataType.SETTINGS) && backupData.settings != null) {
                     settingsRepository.clearSettings()
                     settingsRepository.insertSettings(backupData.settings)
+                    // Po imporcie aktualizujemy też draft
+                    withContext(Dispatchers.Main) {
+                        _uiState.update { it.copy(draftSettings = backupData.settings, settings = backupData.settings, isModified = false) }
+                    }
                 }
 
                 if (selectedTypes.contains(BackupDataType.CLASSES) && backupData.classes.isNotEmpty()) {

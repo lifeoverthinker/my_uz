@@ -79,16 +79,13 @@ fun ScheduleView(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    // --- SMART SCROLL (Logika a'la Google Calendar) ---
+    // --- SMART SCROLL ---
     LaunchedEffect(classesForDay, tasksForDay) {
-        // 1. Znajdź najwcześniejszą minutę startu zajęć (np. 08:15 -> 495 min)
         val firstClassMinute = classesForDay.minOfOrNull {
             val parts = it.startTime.split(":")
             parts[0].toInt() * 60 + parts[1].toInt()
         }
 
-        // 2. Znajdź najwcześniejszą minutę zadania (jeśli ma godzinę i nie jest całodniowe)
-        // (W TaskEntity masz dueTime jako String "HH:MM" lub null)
         val firstTaskMinute = tasksForDay
             .filter { !it.isAllDay && !it.dueTime.isNullOrBlank() }
             .minOfOrNull {
@@ -100,7 +97,6 @@ fun ScheduleView(
                 }
             }
 
-        // 3. Wybierz wcześniejsze z dwojga (Zajęcia vs Zadania)
         val earliestEventMinute = when {
             firstClassMinute != null && firstTaskMinute != null -> minOf(firstClassMinute, firstTaskMinute)
             firstClassMinute != null -> firstClassMinute
@@ -108,16 +104,12 @@ fun ScheduleView(
             else -> null
         }
 
-        // 4. Oblicz docelową pozycję scrolla
         val targetMinute = if (earliestEventMinute != null) {
-            // Jeśli są wydarzenia: Cofnij się o 60 minut (margines), ale nie mniej niż 0
             (earliestEventMinute - 60).coerceAtLeast(0)
         } else {
-            // Jeśli dzień jest PUSTY: Ustaw na 08:00 (480 min) jako standardowy start dnia
             8 * 60
         }
 
-        // Wykonaj przewinięcie
         scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
     }
 
@@ -237,9 +229,9 @@ fun ScheduleView(
                                     backgroundContent = {
                                         val direction = dismissState.dismissDirection
 
-                                        val toggleColor = if (currentTask.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
-                                        val toggleIcon = if (currentTask.isCompleted) R.drawable.ic_x_close else R.drawable.ic_check_square_broken
-                                        val toggleTint = if (currentTask.isCompleted) Color.White else MaterialTheme.colorScheme.onPrimaryContainer
+                                        val toggleColor = Color(0xFF4CAF50)
+                                        val toggleIcon = R.drawable.ic_check_square_broken
+                                        val toggleTint = Color.White
 
                                         val deleteColor = MaterialTheme.colorScheme.errorContainer
                                         val deleteIcon = R.drawable.ic_trash
@@ -282,6 +274,7 @@ fun ScheduleView(
                                                 Icon(
                                                     painter = painterResource(icon),
                                                     contentDescription = null,
+                                                    modifier = Modifier.size(24.dp), // ✅ Dodano rozmiar ikony 24.dp
                                                     tint = tint
                                                 )
                                             }
