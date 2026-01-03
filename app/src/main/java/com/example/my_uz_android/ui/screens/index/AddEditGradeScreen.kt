@@ -25,7 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
@@ -61,7 +60,6 @@ fun AddEditGradeScreen(
         if (gradeId != null && gradeId != 0) {
             viewModel.loadGrade(gradeId)
         } else {
-            // Inicjalizacja tylko jeśli to nowy element i nie został jeszcze zainicjalizowany
             if (uiState.subjectName == null) {
                 viewModel.initNewGrade(prefilledSubject, prefilledClassType)
             }
@@ -109,7 +107,7 @@ fun AddEditGradeContent(
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
     val primaryColor = MaterialTheme.colorScheme.primary
 
-    val quickTitles = listOf("Kolokwium", "Egzamin", "Kartkówka", "Wejściówka", "Projekt", "Aktywność")
+    val quickTitles = listOf("Kolokwium", "Egzamin", "Kartkówka", "Wejściówka", "Projekt", "Aktywność", "Zadanie")
     var showSubjectModal by remember { mutableStateOf(false) }
     var showTypeModal by remember { mutableStateOf(false) }
     var showGradeModal by remember { mutableStateOf(false) }
@@ -207,27 +205,54 @@ fun AddEditGradeContent(
                 }
                 HorizontalDivider(color = dividerColor)
 
+                // --- SEKCJA WARTOŚCI OCENY ---
                 CommonRowGrade(iconRes = R.drawable.ic_trophy, iconTint = iconTint) {
-                    Row(modifier = Modifier.fillMaxWidth().clickable { showGradeModal = true }.padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showGradeModal = true }
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         val gradeText = when (uiState.gradeType) {
                             GradeType.STANDARD -> uiState.gradeValue?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: "Wybierz ocenę"
-                            GradeType.CUSTOM -> uiState.customGradeValue.ifBlank { "Wpisz wartość" }
                             GradeType.ACTIVITY -> "Aktywność +"
+                            GradeType.POINTS -> if (uiState.customGradeValue.isNotEmpty()) "${uiState.customGradeValue} pkt" else "Punkty (wpisz)"
+                            else -> "Wybierz ocenę"
                         }
-                        Text(text = gradeText, style = MaterialTheme.typography.bodyLarge, color = if (uiState.gradeValue == null && uiState.gradeType != GradeType.ACTIVITY) subTextColor else textColor)
+
+                        // Kolorowanie tekstu (wyszarzony jeśli brak wyboru)
+                        val isPlaceholder = (uiState.gradeValue == null && uiState.gradeType == GradeType.STANDARD) ||
+                                (uiState.gradeType == GradeType.POINTS && uiState.customGradeValue.isEmpty())
+
+                        Text(
+                            text = gradeText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (isPlaceholder) subTextColor else textColor
+                        )
                         Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
                     }
                 }
                 HorizontalDivider(color = dividerColor)
 
+                // --- WAGA (Zawsze widoczna, ale nieaktywna dla punktów/aktywności) ---
                 CommonRowGrade(iconRes = R.drawable.ic_scales, iconTint = iconTint) {
+                    val isWeightEnabled = uiState.gradeType == GradeType.STANDARD
                     OutlinedTextField(
                         value = uiState.weight,
                         onValueChange = onWeightChange,
                         label = { Text("Waga") },
+                        enabled = isWeightEnabled,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = textColor, unfocusedTextColor = textColor),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = textColor,
+                            unfocusedTextColor = textColor,
+                            disabledTextColor = textColor.copy(alpha = 0.5f),
+                            disabledLabelColor = subTextColor.copy(alpha = 0.5f),
+                            disabledBorderColor = dividerColor.copy(alpha = 0.5f)
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -252,6 +277,8 @@ fun AddEditGradeContent(
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
+
+        // --- MODALE ---
 
         if (showDatePicker) {
             DatePicker(
@@ -316,8 +343,12 @@ fun AddEditGradeContent(
         if (showGradeModal) {
             Dialog(onDismissRequest = { showGradeModal = false }) {
                 Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    // Używamy Column zamiast LazyColumn wewnątrz dialogu dla lepszej kontroli nad widocznością inputu,
+                    // ale LazyColumn też jest OK. Tutaj dla uproszczenia lista itemów.
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
                         item { Text(text = "Wybierz ocenę", style = MaterialTheme.typography.titleLarge, color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
+
+                        // Standardowe oceny
                         items(standardGrades) { grade ->
                             Row(modifier = Modifier.fillMaxWidth().clickable { onGradeTypeChange(GradeType.STANDARD); onGradeValueChange(grade); showGradeModal = false }.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(selected = uiState.gradeValue == grade && uiState.gradeType == GradeType.STANDARD, onClick = null)
@@ -325,6 +356,8 @@ fun AddEditGradeContent(
                                 Text(if (grade % 1.0 == 0.0) grade.toInt().toString() else grade.toString(), style = MaterialTheme.typography.bodyLarge, color = textColor)
                             }
                         }
+
+                        // Aktywność
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth().clickable {
@@ -338,6 +371,56 @@ fun AddEditGradeContent(
                                 RadioButton(selected = uiState.gradeType == GradeType.ACTIVITY, onClick = null)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text("Aktywność +", style = MaterialTheme.typography.bodyLarge, color = textColor)
+                            }
+                        }
+
+                        // Punkty + Input (Wewnątrz modala)
+                        item {
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            onGradeTypeChange(GradeType.POINTS)
+                                            // Nie zamykamy modala automatycznie, żeby użytkownik mógł wpisać punkty
+                                        }
+                                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(selected = uiState.gradeType == GradeType.POINTS, onClick = null)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text("Punkty", style = MaterialTheme.typography.bodyLarge, color = textColor)
+                                }
+
+                                // INPUT - Widoczny po wybraniu "Punkty"
+                                if (uiState.gradeType == GradeType.POINTS) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 60.dp, end = 24.dp, bottom = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedTextField(
+                                            value = uiState.customGradeValue,
+                                            onValueChange = onCustomGradeChange,
+                                            modifier = Modifier.weight(1f),
+                                            placeholder = { Text("0") },
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                            singleLine = true,
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = primaryColor,
+                                                unfocusedBorderColor = dividerColor
+                                            )
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Button(
+                                            onClick = { showGradeModal = false },
+                                            contentPadding = PaddingValues(horizontal = 16.dp)
+                                        ) {
+                                            Text("OK")
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

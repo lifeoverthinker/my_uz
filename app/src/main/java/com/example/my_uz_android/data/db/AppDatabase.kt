@@ -1,9 +1,11 @@
 package com.example.my_uz_android.data.db
 
+import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import android.content.Context
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.my_uz_android.data.daos.*
 import com.example.my_uz_android.data.models.*
 
@@ -17,7 +19,7 @@ import com.example.my_uz_android.data.models.*
         SettingsEntity::class,
         FavoriteEntity::class
     ],
-    version = 3, // Podniesiono na 3, by obsłużyć zmiany w Settings
+    version = 4, // ZMIANA: Wersja 4
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -33,6 +35,14 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        // MIGRACJA: Dodanie kolumny isPoints do tabeli grades
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Room przechowuje Boolean jako INTEGER (0 = false, 1 = true)
+                db.execSQL("ALTER TABLE grades ADD COLUMN isPoints INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -40,7 +50,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .fallbackToDestructiveMigration() // Resetuje bazę przy zmianie struktury - używaj Eksportu do JSON przed aktualizacją!
+                    .addMigrations(MIGRATION_3_4) // ZMIANA: Rejestracja migracji
+                    .fallbackToDestructiveMigration() // Zabezpieczenie
                     .build()
                 INSTANCE = instance
                 instance

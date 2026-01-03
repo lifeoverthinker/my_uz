@@ -91,21 +91,28 @@ fun GradeListItem(
                     .padding(vertical = 12.dp, horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // SEKCJA 1: Ocena
+                // SEKCJA 1: Ocena / Punkty
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                            .height(32.dp) // Zmienione z size() na height() + minWidth dla punktów
+                            .defaultMinSize(minWidth = 32.dp)
+                            .background(
+                                if(grade.isPoints) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                                CircleShape
+                            )
+                            .padding(horizontal = 8.dp), // Padding dla szerszych liczb
                         contentAlignment = Alignment.Center
                     ) {
+                        val displayValue = if (grade.grade == -1.0) "+" else {
+                            if (grade.grade % 1.0 == 0.0) grade.grade.toInt().toString()
+                            else grade.grade.toString()
+                        }
+
                         Text(
-                            text = if (grade.grade == -1.0) "+" else {
-                                if (grade.grade % 1.0 == 0.0) grade.grade.toInt().toString()
-                                else grade.grade.toString()
-                            },
+                            text = if(grade.isPoints) "$displayValue pkt" else displayValue,
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = if(grade.isPoints) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }
@@ -113,7 +120,7 @@ fun GradeListItem(
                 // SEKCJA 2: Opis
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Text(
-                        text = grade.description ?: "Ocena",
+                        text = grade.description ?: (if (grade.isPoints) "Punkty" else "Ocena"),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
@@ -128,7 +135,8 @@ fun GradeListItem(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (grade.weight.toDouble() != 1.0) {
+                    // Pokaż wagę tylko jeśli to NIE są punkty i waga jest inna niż 1
+                    if (!grade.isPoints && grade.weight.toDouble() != 1.0) {
                         Text(
                             text = "waga: ${grade.weight.toInt()}",
                             style = MaterialTheme.typography.labelSmall,
@@ -139,7 +147,6 @@ fun GradeListItem(
             }
         }
 
-        // ✅ POPRAWKA: Middle Divider (nie dotyka krawędzi dzięki paddingowi)
         HorizontalDivider(
             modifier = Modifier.padding(horizontal = 16.dp),
             thickness = 1.dp,

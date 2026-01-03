@@ -13,7 +13,8 @@ import kotlinx.coroutines.launch
 enum class GradeType {
     STANDARD,
     CUSTOM,
-    ACTIVITY
+    ACTIVITY,
+    POINTS
 }
 
 data class AddEditGradeUiState(
@@ -52,11 +53,9 @@ class AddEditGradeViewModel(
 
         val gradeId = savedStateHandle.get<Int>("gradeId") ?: 0
 
-        // Jeśli gradeId > 0, to edytujemy istniejącą
         if (gradeId > 0) {
             loadGrade(gradeId)
         } else {
-            // Pobieramy dane z nawigacji (dla nowej lub duplikatu)
             val subject = savedStateHandle.get<String>("subject")
             val type = savedStateHandle.get<String>("classType")
             val desc = savedStateHandle.get<String>("description")
@@ -68,7 +67,6 @@ class AddEditGradeViewModel(
         }
     }
 
-    // Dodana metoda, której brakowało w Twoim kodzie
     fun initNewGrade(
         subject: String?,
         type: String?,
@@ -100,7 +98,12 @@ class AddEditGradeViewModel(
         viewModelScope.launch {
             val grade = gradesRepository.getGradeByIdStream(gradeId).first()
             if (grade != null) {
-                val type = if (grade.grade == -1.0) GradeType.ACTIVITY else GradeType.STANDARD
+                val type = when {
+                    grade.isPoints -> GradeType.POINTS
+                    grade.grade == -1.0 -> GradeType.ACTIVITY
+                    else -> GradeType.STANDARD
+                }
+
                 _uiState.update {
                     it.copy(
                         gradeId = grade.id,
@@ -108,6 +111,9 @@ class AddEditGradeViewModel(
                         classType = grade.classType,
                         gradeType = type,
                         gradeValue = if (type == GradeType.STANDARD) grade.grade else null,
+                        customGradeValue = if (type == GradeType.POINTS) {
+                            if (grade.grade % 1.0 == 0.0) grade.grade.toInt().toString() else grade.grade.toString()
+                        } else "",
                         weight = grade.weight.toString(),
                         description = grade.description ?: "",
                         comment = grade.comment ?: "",
@@ -141,7 +147,17 @@ class AddEditGradeViewModel(
 
     fun updateSubjectName(name: String?) { _uiState.update { it.copy(subjectName = name) } }
     fun updateClassType(type: String?) { _uiState.update { it.copy(classType = type) } }
-    fun updateGradeType(type: GradeType) { _uiState.update { it.copy(gradeType = type) } }
+
+    // ZMIANA: Automatyczne ustawianie wagi
+    fun updateGradeType(type: GradeType) {
+        _uiState.update {
+            it.copy(
+                gradeType = type,
+                weight = if (type == GradeType.STANDARD) "1" else "0"
+            )
+        }
+    }
+
     fun updateGradeValue(value: Double?) { _uiState.update { it.copy(gradeValue = value) } }
     fun updateCustomGradeValue(value: String) { _uiState.update { it.copy(customGradeValue = value) } }
     fun updateWeight(weight: String) { _uiState.update { it.copy(weight = weight) } }
@@ -154,14 +170,31 @@ class AddEditGradeViewModel(
             val state = _uiState.value
             if (state.subjectName == null) return@launch
 
-            val finalGrade = when (state.gradeType) {
-                GradeType.STANDARD -> state.gradeValue ?: return@launch
-                GradeType.ACTIVITY -> -1.0
-                GradeType.CUSTOM -> state.customGradeValue.toDoubleOrNull() ?: -1.0
+            var finalGrade = 0.0
+            var isPoints = false
+            var finalWeight = state.weight.toIntOrNull() ?: 1
+
+            when (state.gradeType) {
+                GradeType.STANDARD -> {
+                    finalGrade = state.gradeValue ?: return@launch
+                    isPoints = false
+                }
+                GradeType.ACTIVITY -> {
+                    finalGrade = -1.0
+                    isPoints = false
+                    finalWeight = 0
+                }
+                GradeType.CUSTOM -> {
+                    finalGrade = state.customGradeValue.toDoubleOrNull() ?: -1.0
+                    isPoints = false
+                }
+                GradeType.POINTS -> {
+                    finalGrade = state.customGradeValue.replace(",", ".").toDoubleOrNull() ?: 0.0
+                    isPoints = true
+                    finalWeight = 0
+                }
             }
 
-            val weightInt = state.weight.toIntOrNull() ?: 1
-            // Jeśli edycja to ID z bazy, jeśli duplikacja/nowa to 0
             val idToSave = if (loadedGradeId != null && loadedGradeId != 0) loadedGradeId!! else 0
 
             val entity = GradeEntity(
@@ -169,11 +202,12 @@ class AddEditGradeViewModel(
                 subjectName = state.subjectName,
                 classType = state.classType ?: "",
                 grade = finalGrade,
-                weight = weightInt,
-                description = state.description.ifBlank { "Ocena" },
+                weight = finalWeight,
+                description = state.description.ifBlank { if(isPoints) "Punkty" else "Ocena" },
                 comment = state.comment.ifBlank { null },
                 date = state.date,
-                semester = currentSemesterFromSettings
+                semester = currentSemesterFromSettings,
+                isPoints = isPoints
             )
 
             if (idToSave != 0) {
