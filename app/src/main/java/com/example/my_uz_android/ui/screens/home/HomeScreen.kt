@@ -9,8 +9,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items // ✅ Ważny import
-import androidx.compose.foundation.lazy.itemsIndexed // ✅ Ważny import
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -76,7 +76,7 @@ fun HomeScreen(
                     window.statusBarColor = homeStatusBarColor.toArgb()
                     window.navigationBarColor = homeNavBarColor.toArgb()
                     val insets = WindowCompat.getInsetsController(window, view)
-                    insets.isAppearanceLightStatusBars = false
+                    insets.isAppearanceLightStatusBars = false // Ciemne ikony na jasnym tle w Home (chyba że dark mode)
                     insets.isAppearanceLightNavigationBars = !isDark
                 }
                 onDispose {
@@ -123,26 +123,67 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(bottom = paddingValues.calculateBottomPadding())
             ) {
+                // Tło górnej sekcji (Header)
                 Box(modifier = Modifier.fillMaxWidth().height(300.dp).background(topSectionBackground))
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.fillMaxWidth()) {
+                        // --- HEADER (Poprawiony, aby pasował do TopAppBar) ---
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp).padding(horizontal = 16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding() // 1. Uwzględnia pasek stanu (jak TopAppBar)
+                                .height(72.dp)       // 2. Sztywna wysokość 72dp (jak TopAppBar)
+                                .padding(horizontal = 16.dp), // 3. Marginesy 16dp (jak TopAppBar)
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = uiState.currentDate, style = MaterialTheme.typography.titleSmall, color = headerContentColor)
+                            // Data po lewej (odpowiednik Tytułu)
+                            Text(
+                                text = uiState.currentDate,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = headerContentColor
+                            )
+
+                            // Przyciski po prawej (odpowiednik Actions)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Box(modifier = Modifier.size(48.dp).background(buttonBgColor, CircleShape), contentAlignment = Alignment.Center) {
-                                    IconButton(onClick = { /* Mapa */ }) { Icon(painter = painterResource(id = R.drawable.ic_map), contentDescription = "Mapa", tint = buttonIconColor, modifier = Modifier.size(24.dp)) }
+                                // Przycisk Mapy
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp) // 48dp (TopBarButtonSize)
+                                        .background(buttonBgColor, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    IconButton(onClick = { /* Mapa */ }) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_map),
+                                            contentDescription = "Mapa",
+                                            tint = buttonIconColor,
+                                            modifier = Modifier.size(24.dp) // 24dp (TopBarIconSize)
+                                        )
+                                    }
                                 }
-                                Box(modifier = Modifier.size(48.dp).background(buttonBgColor, CircleShape), contentAlignment = Alignment.Center) {
-                                    IconButton(onClick = onNotificationsClick) { Icon(painter = painterResource(id = R.drawable.ic_mail), contentDescription = "Powiadomienia", tint = buttonIconColor, modifier = Modifier.size(24.dp)) }
+                                // Przycisk Powiadomień
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp) // 48dp
+                                        .background(buttonBgColor, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    IconButton(onClick = onNotificationsClick) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_mail),
+                                            contentDescription = "Powiadomienia",
+                                            tint = buttonIconColor,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
-                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+
+                        // Reszta nagłówka (Cześć imię...)
+                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                             Text(text = uiState.greeting, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold), color = headerContentColor)
                             Text(text = uiState.departmentInfo, style = MaterialTheme.typography.bodySmall, color = subHeaderContentColor)
                         }

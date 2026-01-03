@@ -89,11 +89,16 @@ fun AbsencesScreen(
                 title = { Text("Limit nieobecności") },
                 text = {
                     Column {
-                        Text("Dla: ${ClassTypeUtils.getFullName(limitEditType)}", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Dla: ${ClassTypeUtils.getFullName(limitEditType)}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = limitEditValue,
-                            onValueChange = { if (it.all { char -> char.isDigit() }) limitEditValue = it },
+                            onValueChange = {
+                                if (it.all { char -> char.isDigit() }) limitEditValue = it
+                            },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
                             label = { Text("Maksymalna liczba") }
@@ -126,7 +131,10 @@ fun AbsenceCard(
     onEditAbsenceClick: (AbsenceEntity) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val rotationState by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "rot")
+    val rotationState by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        label = "rot"
+    )
 
     val cardBackgroundColor = MaterialTheme.colorScheme.surfaceContainerLow
     val contentColor = MaterialTheme.colorScheme.onSurface
@@ -206,8 +214,10 @@ fun AbsenceTypeSection(
     val limit = typeGroup.limit
     val isLimitReached = count >= limit
 
-    val counterContainerColor = if (isLimitReached) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-    val counterContentColor = if (isLimitReached) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+    val counterContainerColor =
+        if (isLimitReached) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+    val counterContentColor =
+        if (isLimitReached) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
 
     val fullTypeName = ClassTypeUtils.getFullName(typeGroup.classType)
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -241,10 +251,10 @@ fun AbsenceTypeSection(
                         )
                     )
                     Icon(
-                        imageVector = Icons.Default.Edit,
+                        painter = painterResource(R.drawable.ic_edit),
                         contentDescription = "Edytuj limit",
                         tint = counterContentColor.copy(alpha = 0.8f),
-                        modifier = Modifier.size(12.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
