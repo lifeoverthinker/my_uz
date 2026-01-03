@@ -28,7 +28,7 @@ data class HomeUiState(
     val upcomingClasses: List<ClassEntity> = emptyList(),
     val upcomingTasks: List<TaskEntity> = emptyList(),
     val upcomingEvents: List<EventEntity> = emptyList(),
-    val isLoading: Boolean = false, // To pole steruje wyświetlaniem
+    val isLoading: Boolean = true,
     val currentDate: String = "",
     val tasksMessage: String? = null,
     val classesMessage: String? = null,
@@ -59,7 +59,7 @@ class HomeViewModel(
 
         val isAnonymous = settings?.isAnonymous == true
         val hasGroup = !settings?.selectedGroupCode.isNullOrBlank()
-        val gender = settings?.gender
+        val gender = settings?.gender // STUDENTKA / STUDENT
 
         val (greeting, initials) = when {
             isAnonymous && !hasGroup -> "Witaj w MyUZ!" to ""
@@ -80,10 +80,9 @@ class HomeViewModel(
             }
         }
 
-        val faculty = settings?.faculty
+        // Naprawa departmentInfo - używamy faculty z SettingsEntity
         val departmentInfo = when {
-            isAnonymous && !hasGroup -> "Uniwersytet Zielonogórski"
-            !faculty.isNullOrBlank() -> faculty
+            !settings?.faculty.isNullOrBlank() -> settings?.faculty!!
             else -> "Uniwersytet Zielonogórski"
         }
 
@@ -148,7 +147,7 @@ class HomeViewModel(
             classesMessage = emptyMessage,
             classesDayLabel = dayLabel,
             tasksMessage = if (finalTasks.isEmpty()) "Brak zadań" else "Najbliższe zadania",
-            isLoading = false, // Kiedy dane przyjdą, ustawiamy na false
+            isLoading = false, // Wyłączamy loading dopiero tutaj
             isPlanSelected = isPlanSelected,
             classColorMap = classColorMap,
             isDarkMode = settings?.isDarkMode ?: false
@@ -156,6 +155,6 @@ class HomeViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = HomeUiState(isLoading = true) // <--- KLUCZOWA ZMIANA: Startujemy z loading = true
+        initialValue = HomeUiState(isLoading = true) // Startujemy z true
     )
 }

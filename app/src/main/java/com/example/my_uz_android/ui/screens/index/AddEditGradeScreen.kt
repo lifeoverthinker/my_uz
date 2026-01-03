@@ -61,6 +61,7 @@ fun AddEditGradeScreen(
         if (gradeId != null && gradeId != 0) {
             viewModel.loadGrade(gradeId)
         } else {
+            // Inicjalizacja tylko jeśli to nowy element i nie został jeszcze zainicjalizowany
             if (uiState.subjectName == null) {
                 viewModel.initNewGrade(prefilledSubject, prefilledClassType)
             }
@@ -114,9 +115,7 @@ fun AddEditGradeContent(
     var showGradeModal by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    // ZMIANA: Sortowanie od najwyższej do najniższej
     val standardGrades = listOf(5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0)
-
     val isTypeSelectionEnabled = !uiState.subjectName.isNullOrEmpty()
 
     Surface(color = surfaceColor, modifier = modifier.fillMaxSize().statusBarsPadding()) {
@@ -271,8 +270,7 @@ fun AddEditGradeContent(
                 ) {
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
                         item { Text(text = "Wybierz przedmiot", style = MaterialTheme.typography.titleLarge, color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
-                        items(uiState.availableSubjects.size) { index ->
-                            val (subject, _) = uiState.availableSubjects[index]
+                        items(uiState.availableSubjects) { (subject, _) ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -297,8 +295,7 @@ fun AddEditGradeContent(
                 Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
                         item { Text(text = "Wybierz rodzaj zajęć", style = MaterialTheme.typography.titleLarge, color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
-                        items(availableTypes.size) { index ->
-                            val type = availableTypes[index]
+                        items(availableTypes) { type ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -329,12 +326,11 @@ fun AddEditGradeContent(
                             }
                         }
                         item {
-                            // ZMIANA: Dodano onDescriptionChange("Aktywność") aby automatycznie wypełnić tytuł
                             Row(
                                 modifier = Modifier.fillMaxWidth().clickable {
                                     onGradeTypeChange(GradeType.ACTIVITY)
                                     onCustomGradeChange("+")
-                                    onDescriptionChange("Aktywność") // Automatyczne ustawienie tytułu
+                                    onDescriptionChange("Aktywność")
                                     showGradeModal = false
                                 }.padding(horizontal = 24.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
