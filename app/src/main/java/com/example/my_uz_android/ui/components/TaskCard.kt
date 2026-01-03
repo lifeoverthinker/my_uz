@@ -31,8 +31,10 @@ fun TaskCard(
     val isCompleted = task.isCompleted
 
     val baseBackgroundColor = MaterialTheme.extendedColors.taskCardBackground // pastelowe tło Task
+
+    // ZMIANA: Zamiast alpha (przezroczystości), używamy solidnego koloru surfaceVariant
     val cardBackgroundColor = if (isCompleted)
-        MaterialTheme.extendedColors.grayInactive.copy(alpha = 0.2f)
+        MaterialTheme.colorScheme.surfaceVariant
     else
         baseBackgroundColor
 

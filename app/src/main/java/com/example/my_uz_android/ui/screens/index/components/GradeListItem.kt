@@ -46,7 +46,6 @@ fun GradeListItem(
         }
     )
 
-    // Divider jest częścią Column, ale SwipeToDismissBox jest nad nim
     Column(modifier = modifier) {
         SwipeToDismissBox(
             state = dismissState,
@@ -140,10 +139,11 @@ fun GradeListItem(
             }
         }
 
-        // Divider poza SwipeToDismissBox - nie przesuwa się
+        // ✅ POPRAWKA: Middle Divider (nie dotyka krawędzi dzięki paddingowi)
         HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 16.dp),
             thickness = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
         )
     }
 }

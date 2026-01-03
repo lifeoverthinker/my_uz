@@ -30,7 +30,7 @@ fun PersonalDataScreen(
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val selectedSubgroups by viewModel.selectedSubgroups.collectAsState()
 
-    val sortedSubgroups = selectedSubgroups.sorted()
+    val sortedSubgroups = selectedSubgroups.toList().sorted()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -63,40 +63,52 @@ fun PersonalDataScreen(
         ) {
             PersonalDataGroup(title = "Profil studenta") {
                 DataItem(label = "Imię i nazwisko", value = "$userName $userSurname")
-
-                // ✅ DIVIDER JAK W DRAWERZE
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
-
                 DataItem(
                     label = "Płeć / Forma zwrotu",
-                    value = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student"
-                )
+                    value = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
+                        ?: "Student")
             }
 
             PersonalDataGroup(title = "Przynależność") {
                 DataItem(label = "Grupa dziekańska", value = selectedGroup ?: "Nie wybrano")
 
                 if (sortedSubgroups.isNotEmpty()) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = "Wybrane podgrupy",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
                         FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             sortedSubgroups.forEach { subgroup ->
-                                SuggestionChip(
-                                    onClick = { },
-                                    label = { Text(subgroup, style = MaterialTheme.typography.bodySmall) },
-                                    shape = RoundedCornerShape(12.dp)
-                                )
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(12.dp) // Kwadratowe jak na landing screen
+                                ) {
+                                    Text(
+                                        text = subgroup,
+                                        modifier = Modifier.padding(
+                                            horizontal = 12.dp,
+                                            vertical = 6.dp
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
                             }
                         }
                     }
@@ -120,16 +132,22 @@ fun PersonalDataGroup(title: String, content: @Composable ColumnScope.() -> Unit
             shape = RoundedCornerShape(24.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.fillMaxWidth(),
-            content = { Column(content = content) }
-        )
+            content = { Column(content = content) })
     }
 }
 
 @Composable
 fun DataItem(label: String, value: String) {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = value, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+        )
     }
 }

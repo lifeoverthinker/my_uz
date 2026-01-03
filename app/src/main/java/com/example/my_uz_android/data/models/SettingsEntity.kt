@@ -5,27 +5,33 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "settings")
 data class SettingsEntity(
-    @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
+    @PrimaryKey val id: Int = 1,
+
+    // Dane użytkownika
     val isAnonymous: Boolean = false,
-    val userName: String = "Student",
-    // Usunięto albumNumber zgodnie z życzeniem
+    val userName: String? = null,
+    val firstName: String? = null,
+    val lastName: String? = null,
     val gender: String? = null,
 
-    // Uczelnia
+    // Plan zajęć i Uczelnia
     val selectedGroupCode: String? = null,
+    val selectedGroupName: String? = null,
     val selectedSubgroup: String? = null,
     val faculty: String? = null,
+    val department: String? = null,
     val fieldOfStudy: String? = null,
     val studyMode: String? = null,
-
     val currentSemester: Int = 1,
 
-    // App State
+    // Wygląd i Stan aplikacji
     val isFirstRun: Boolean = true,
     val isDarkMode: Boolean = false,
-    val notificationsEnabled: Boolean = true,
-    val offlineModeEnabled: Boolean = false,
+    val offlineModeEnabled: Boolean = false, // PRZYWRÓCONE
+    val classColorsJson: String = "{}",
 
-    val classColorsJson: String = "{}"
+    // POWIADOMIENIA
+    val notificationsEnabled: Boolean = true,
+    val notificationsTasks: Boolean = true,
+    val notificationsClasses: Boolean = true
 )

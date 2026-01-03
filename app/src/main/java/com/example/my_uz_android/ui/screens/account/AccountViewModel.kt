@@ -51,20 +51,14 @@ class AccountViewModel(
     private val _selectedSubgroups = MutableStateFlow<Set<String>>(emptySet())
     val selectedSubgroups: StateFlow<Set<String>> = _selectedSubgroups.asStateFlow()
 
-    // Pełna lista grup pobrana z serwera
     private val _allGroups = MutableStateFlow<List<String>>(emptyList())
 
-    // Filtrowanie grup
     val filteredGroups: StateFlow<List<String>> = combine(
         _groupSearchQuery,
         _allGroups
     ) { query, allGroups ->
-        if (query.isBlank()) {
-            emptyList()
-        } else {
-            allGroups.filter { it.contains(query, ignoreCase = true) }
-                .take(5) // Sortowanie jest już zrobione przy pobieraniu
-        }
+        if (query.isBlank()) emptyList()
+        else allGroups.filter { it.contains(query, ignoreCase = true) }.take(5)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _isLoading = MutableStateFlow(false)
@@ -84,15 +78,12 @@ class AccountViewModel(
         viewModelScope.launch {
             when (val result = universityRepository.getGroupCodes()) {
                 is NetworkResult.Success -> {
-                    // TUTAJ ZMIANA: Filtrujemy nulle i puste ciągi
                     val groups = (result.data ?: emptyList())
                         .filter { !it.isNullOrBlank() && it != "null" }
                         .sorted()
                     _allGroups.value = groups
                 }
-                else -> {
-                    _allGroups.value = emptyList()
-                }
+                else -> _allGroups.value = emptyList()
             }
         }
     }
@@ -104,7 +95,8 @@ class AccountViewModel(
                 if (settings != null) {
                     currentSettingsEntity = settings
 
-                    val nameParts = settings.userName.split(" ", limit = 2)
+                    // NAPRAWA: Bezpieczne dzielenie imienia i nazwiska
+                    val nameParts = (settings.userName ?: "").trim().split(" ", limit = 2)
                     _userName.value = nameParts.getOrElse(0) { "" }
                     _userSurname.value = nameParts.getOrElse(1) { "" }
 
@@ -121,21 +113,16 @@ class AccountViewModel(
 
                     if (!settings.selectedGroupCode.isNullOrEmpty()) {
                         _selectedGroup.value = settings.selectedGroupCode
-
                         if (_groupSearchQuery.value.isEmpty()) {
                             _groupSearchQuery.value = settings.selectedGroupCode
                         }
-
                         loadSubgroupsForGroup(settings.selectedGroupCode)
-
                         _selectedSubgroups.value = if (!settings.selectedSubgroup.isNullOrEmpty()) {
                             settings.selectedSubgroup.split(",")
                                 .map { it.trim() }
                                 .filter { it.isNotEmpty() }
                                 .toSet()
-                        } else {
-                            emptySet()
-                        }
+                        } else emptySet()
                     }
                 }
                 _isLoading.value = false
@@ -143,17 +130,9 @@ class AccountViewModel(
         }
     }
 
-    fun setUserName(name: String) {
-        _userName.value = name
-    }
-
-    fun setUserSurname(surname: String) {
-        _userSurname.value = surname
-    }
-
-    fun setGender(gender: UserGender) {
-        _selectedGender.value = gender
-    }
+    fun setUserName(name: String) { _userName.value = name }
+    fun setUserSurname(surname: String) { _userSurname.value = surname }
+    fun setGender(gender: UserGender) { _selectedGender.value = gender }
 
     fun setGroupSearchQuery(query: String) {
         _groupSearchQuery.value = query
@@ -175,35 +154,27 @@ class AccountViewModel(
         viewModelScope.launch {
             when (val result = universityRepository.getSubgroups(group)) {
                 is NetworkResult.Success -> {
-                    // Tutaj też opcjonalnie możemy przefiltrować podgrupy, jeśli API zwraca śmieci
                     _availableSubgroups.value = (result.data ?: emptyList())
                         .filter { !it.isNullOrBlank() && it != "null" }
                         .sorted()
                 }
-                else -> {
-                    _availableSubgroups.value = emptyList()
-                }
+                else -> _availableSubgroups.value = emptyList()
             }
         }
     }
 
     fun toggleSubgroup(subgroup: String) {
         val current = _selectedSubgroups.value.toMutableSet()
-        if (current.contains(subgroup)) {
-            current.remove(subgroup)
-        } else {
-            current.add(subgroup)
-        }
+        if (current.contains(subgroup)) current.remove(subgroup)
+        else current.add(subgroup)
         _selectedSubgroups.value = current
     }
 
     fun saveChanges(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
-
             val fullName = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
             val genderString = if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
-
             val subgroupsString = _selectedSubgroups.value.joinToString(", ")
 
             val newSettings = currentSettingsEntity?.copy(
@@ -212,6 +183,7 @@ class AccountViewModel(
                 selectedGroupCode = _selectedGroup.value,
                 selectedSubgroup = subgroupsString
             ) ?: SettingsEntity(
+                id = 1,
                 userName = fullName,
                 gender = genderString,
                 selectedGroupCode = _selectedGroup.value,
@@ -219,7 +191,6 @@ class AccountViewModel(
             )
 
             settingsRepository.insertOrUpdate(newSettings)
-
             _isLoading.value = false
             _isSaved.value = true
             onSuccess()

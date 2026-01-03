@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -123,11 +122,10 @@ fun TasksScreen(
         Scaffold(
             containerColor = backgroundColor,
             topBar = {
-                // ZMIANA: Dodano isNavigationIconFilled = true
                 TopAppBar(
                     title = "Terminarz",
                     navigationIcon = R.drawable.ic_menu,
-                    isNavigationIconFilled = true, // To ustawia szare kółko i poprawny rozmiar ikony
+                    isNavigationIconFilled = true,
                     onNavigationClick = { scope.launch { drawerState.open() } },
                     actions = {
                         if (isSharing || isImporting) {
@@ -266,6 +264,7 @@ fun TasksScreen(
         var codeInput by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface, // BIAŁE TŁO
             title = { Text("Importuj zadania") },
             text = {
                 Column {
@@ -401,8 +400,7 @@ fun DayScheduleRow(
                             TaskCard(
                                 task = task,
                                 modifier = Modifier.fillMaxWidth(),
-                                onTaskClick = { onTaskClick(task.id) },
-                                showDayMarker = false
+                                onTaskClick = { onTaskClick(task.id) }
                             )
                         }
                     )
@@ -416,6 +414,7 @@ fun DayScheduleRow(
 fun ShareCodeDialog(code: String, onDismiss: () -> Unit, onShareSystem: (String) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface, // BIAŁE TŁO
         title = { Text("Zadania udostępnione!") },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
