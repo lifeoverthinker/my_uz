@@ -78,27 +78,24 @@ fun SettingsScreen(
                 onNavigationClick = onBackClick,
                 isNavigationIconFilled = true,
                 actions = {
-                    TextButton(
-                        onClick = { if (uiState.isModified) viewModel.saveSettings() },
-                        enabled = uiState.isModified,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.primary,
-                            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        )
-                    ) {
-                        Text(
-                            text = "Zapisz",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold
+                    if (uiState.isModified) {
+                        TextButton(
+                            onClick = { viewModel.saveSettings() }
+                        ) {
+                            Text(
+                                text = "Zapisz",
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                             )
-                        )
+                        }
                     }
                 }
             )
         }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            // KLUCZOWE: Jeśli trwa ładowanie, nie pokazujemy listy, tylko loader
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(strokeWidth = 3.dp)
@@ -112,7 +109,7 @@ fun SettingsScreen(
                 ) {
                     SettingsHeader("Wygląd")
                     SettingsToggleItem(
-                        iconRes = R.drawable.ic_palette,
+                        iconRes = R.drawable.ic_moon,
                         title = "Ciemny motyw",
                         description = "Dostosuj jasność interfejsu",
                         isChecked = activeSettings?.isDarkMode == true,
@@ -133,14 +130,35 @@ fun SettingsScreen(
                         }
                     }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    SettingsHeader("Powiadomienia")
+                    SettingsToggleItem(
+                        iconRes = R.drawable.ic_bell,
+                        title = "Włącz powiadomienia",
+                        description = "Główny przełącznik powiadomień",
+                        isChecked = activeSettings?.notificationsEnabled == true,
+                        onCheckedChange = { viewModel.toggleNotifications(it) }
                     )
+
+                    if (activeSettings?.notificationsEnabled == true) {
+                        SettingsToggleItem(
+                            iconRes = R.drawable.ic_book_open,
+                            title = "Zadania",
+                            description = "Przypomnienie dzień wcześniej o 8:00",
+                            isChecked = activeSettings.notificationsTasks,
+                            onCheckedChange = { viewModel.toggleTasksNotifications(it) }
+                        )
+                        SettingsToggleItem(
+                            iconRes = R.drawable.ic_clock,
+                            title = "Zajęcia",
+                            description = "15 minut przed rozpoczęciem",
+                            isChecked = activeSettings.notificationsClasses,
+                            onCheckedChange = { viewModel.toggleClassesNotifications(it) }
+                        )
+                    }
 
                     SettingsHeader("Dane i synchronizacja")
                     SettingsToggleItem(
-                        iconRes = R.drawable.ic_check_circle_broken,
+                        iconRes = R.drawable.ic_wifi_off,
                         title = "Tryb offline",
                         description = "Używaj tylko danych lokalnych",
                         isChecked = activeSettings?.offlineModeEnabled == true,
@@ -166,18 +184,11 @@ fun SettingsScreen(
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
-                    Image(
-                        painter = painterResource(R.drawable.settings_rafiki),
-                        contentDescription = null,
-                        modifier = Modifier.height(160.dp).fillMaxWidth().padding(horizontal = 48.dp),
-                        alpha = 0.7f
-                    )
-
                     Text(
                         text = "MyUZ v1.0.0",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
-                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 16.dp, bottom = 32.dp)
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 32.dp)
                     )
                 }
             }
@@ -247,7 +258,7 @@ fun SettingsActionItem(iconRes: Int, title: String, description: String, isDestr
             Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
             Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
+        // Usunięto ikonę strzałki (Chevron Right) zgodnie z prośbą
     }
 }
 
@@ -279,30 +290,52 @@ fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelec
 }
 
 @Composable
-fun DataTypeSelectionDialog(title: String, confirmText: String, initialSelection: Set<BackupDataType>, onDismiss: () -> Unit, onConfirm: (Set<BackupDataType>) -> Unit) {
+fun DataTypeSelectionDialog(
+    title: String,
+    confirmText: String,
+    initialSelection: Set<BackupDataType>,
+    onDismiss: () -> Unit,
+    onConfirm: (Set<BackupDataType>) -> Unit
+) {
     var selection by remember { mutableStateOf(initialSelection) }
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface, // BIAŁE TŁO (zgodne z motywem)
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 BackupDataType.values().forEach { type ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable {
-                            selection = if (selection.contains(type)) selection - type else selection + type
-                        }.padding(vertical = 4.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                selection = if (selection.contains(type)) selection - type else selection + type
+                            }
+                            .padding(vertical = 4.dp)
                     ) {
-                        Checkbox(checked = selection.contains(type), onCheckedChange = {
-                            selection = if (it) selection + type else selection - type
-                        })
+                        Checkbox(
+                            checked = selection.contains(type),
+                            onCheckedChange = { isChecked ->
+                                selection = if (isChecked) selection + type else selection - type
+                            }
+                        )
                         Text(type.displayName, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
         },
-        confirmButton = { Button(onClick = { onConfirm(selection) }) { Text(confirmText) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
+        confirmButton = {
+            Button(onClick = { onConfirm(selection) }) {
+                Text(confirmText)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Anuluj")
+            }
+        }
     )
 }
 
@@ -323,6 +356,8 @@ private suspend fun readBackupFileToPreview(context: Context, uri: Uri, viewMode
         try {
             val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
             content?.let { viewModel.previewBackupFile(it) }
-        } catch (e: Exception) { e.printStackTrace() }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

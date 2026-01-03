@@ -17,7 +17,7 @@ import com.example.my_uz_android.data.models.*
         SettingsEntity::class,
         FavoriteEntity::class
     ],
-    version = 2, // ZMIANA: Podniesiono wersję z 1 na 2
+    version = 3, // Podniesiono na 3, by obsłużyć zmiany w Settings
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -40,7 +40,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .fallbackToDestructiveMigration() // To pozwoli na usunięcie starej bazy i stworzenie nowej v2
+                    .fallbackToDestructiveMigration() // Resetuje bazę przy zmianie struktury - używaj Eksportu do JSON przed aktualizacją!
                     .build()
                 INSTANCE = instance
                 instance

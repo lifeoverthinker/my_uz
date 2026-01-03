@@ -60,7 +60,8 @@ fun AppNavigation(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val showBottomBar = items.any { it.route?.startsWith(it.route) == true } ||
+    // Obsługa podświetlania i widoczności dolnego paska
+    val showBottomBar = items.any { currentRoute?.startsWith(it.route) == true } ||
             currentRoute == "tasks" ||
             currentRoute == "schedule_search" ||
             currentRoute == "schedule_preview"
@@ -100,7 +101,9 @@ fun AppNavigation(
                             val isCalendarSection = screen.route == "calendar" &&
                                     (currentRoute == "tasks" || currentRoute == "schedule_search" || currentRoute == "schedule_preview")
 
-                            val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true || isCalendarSection
+                            val selected = currentDestination?.hierarchy?.any {
+                                it.route?.startsWith(screen.route) == true
+                            } == true || isCalendarSection
 
                             NavigationBarItem(
                                 icon = {
@@ -125,7 +128,6 @@ fun AppNavigation(
                                             saveState = true
                                         }
                                         launchSingleTop = true
-                                        // restoreState = false wymusza powrót do startowego ekranu zakładki (np. Kalendarz zamiast Szukaj)
                                         restoreState = screen.route != Screen.Calendar.route
                                     }
                                 },
@@ -223,7 +225,6 @@ fun AppNavigation(
                 )
             }
 
-            // POPRAWKA: Obsługa parametrów tab dla Indeksu
             composable(
                 route = "index?tab={tab}",
                 arguments = listOf(navArgument("tab") { defaultValue = 0; type = NavType.IntType })
@@ -300,6 +301,7 @@ fun AppNavigation(
 
             composable(route = "edit_task/{taskId}", arguments = listOf(navArgument("taskId") { type = NavType.IntType })) { backStackEntry -> TaskAddEditScreen(taskId = backStackEntry.arguments?.getInt("taskId"), onNavigateBack = { navController.popBackStack() }) }
 
+            // POPRAWKA: Używamy popBackStack(), aby wrócić do poprzedniego ekranu (Indeks lub Lista ocen przedmiotu)
             composable(
                 route = "add_grade?gradeId={gradeId}&subject={subject}&classType={classType}&gradeValue={gradeValue}&weight={weight}&description={description}&comment={comment}",
                 arguments = listOf(
@@ -316,12 +318,7 @@ fun AppNavigation(
                     gradeId = backStackEntry.arguments?.getInt("gradeId"),
                     prefilledSubject = backStackEntry.arguments?.getString("subject"),
                     prefilledClassType = backStackEntry.arguments?.getString("classType"),
-                    onNavigateBack = {
-                        // Powrót do Ocen (tab 0)
-                        navController.navigate("index?tab=0") {
-                            popUpTo("index") { inclusive = true }
-                        }
-                    }
+                    onNavigateBack = { navController.popBackStack() } // Zmiana z navigate na popBackStack
                 )
             }
 
@@ -351,29 +348,23 @@ fun AppNavigation(
                 )
             }
 
+            // POPRAWKA: popBackStack() również tutaj
             composable("add_absence") {
                 AddEditAbsenceScreen(
                     absenceId = null,
                     prefilledSubject = null,
                     prefilledClassType = null,
-                    onNavigateBack = {
-                        navController.navigate("index?tab=1") {
-                            popUpTo("index") { inclusive = true }
-                        }
-                    }
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
+            // POPRAWKA: popBackStack() również tutaj
             composable(route = "edit_grade/{gradeId}", arguments = listOf(navArgument("gradeId") { type = NavType.IntType })) { backStackEntry ->
                 AddEditGradeScreen(
                     gradeId = backStackEntry.arguments?.getInt("gradeId"),
                     prefilledSubject = null,
                     prefilledClassType = null,
-                    onNavigateBack = {
-                        navController.navigate("index?tab=0") {
-                            popUpTo("index") { inclusive = true }
-                        }
-                    }
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
@@ -387,6 +378,7 @@ fun AppNavigation(
                 )
             }
 
+            // POPRAWKA: popBackStack() również tutaj
             composable(
                 route = "add_absence?subject={subject}&classType={classType}&date={date}",
                 arguments = listOf(
@@ -400,22 +392,15 @@ fun AppNavigation(
                     prefilledSubject = backStackEntry.arguments?.getString("subject"),
                     prefilledClassType = backStackEntry.arguments?.getString("classType"),
                     prefilledDate = backStackEntry.arguments?.getLong("date").takeIf { it != 0L },
-                    onNavigateBack = {
-                        navController.navigate("index?tab=1") {
-                            popUpTo("index") { inclusive = true }
-                        }
-                    }
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
+            // POPRAWKA: popBackStack() również tutaj
             composable(route = "edit_absence/{absenceId}", arguments = listOf(navArgument("absenceId") { type = NavType.IntType })) { backStackEntry ->
                 AddEditAbsenceScreen(
                     absenceId = backStackEntry.arguments?.getInt("absenceId"),
-                    onNavigateBack = {
-                        navController.navigate("index?tab=1") {
-                            popUpTo("index") { inclusive = true }
-                        }
-                    }
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }
