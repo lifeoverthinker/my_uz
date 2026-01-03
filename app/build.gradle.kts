@@ -33,6 +33,7 @@ android {
         }
 
         // --- 2. Wstrzykujemy klucze do BuildConfig ---
+        // Są w defaultConfig, więc trafią i do Debug, i do Release.
         val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: ""
         val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: ""
 
@@ -42,7 +43,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Włączamy R8 (optymalizację i zmianę nazw klas)
+            // Dzięki Twojemu nowemu plikowi proguard-rules.pro Supabase będzie działać poprawnie.
+            isMinifyEnabled = true
+
+            // Usuwa nieużywane zasoby (np. grafiki)
+            isShrinkResources = true
+
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -51,7 +58,7 @@ android {
     }
 
     compileOptions {
-        // --- KLUCZOWA ZMIANA: Włączenie desugaringu ---
+        // Włączenie desugaringu (dla starszych Androidów)
         isCoreLibraryDesugaringEnabled = true
 
         sourceCompatibility = JavaVersion.VERSION_17
@@ -75,7 +82,7 @@ android {
 }
 
 dependencies {
-    // --- KLUCZOWA ZMIANA: Dodanie biblioteki desugaringu ---
+    // Biblioteka desugaringu
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
     implementation("androidx.core:core-ktx:1.12.0")
@@ -112,13 +119,13 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // Kalendarz (wersja beta naprawia błąd SnapPositionInLayout)
+    // Kalendarz
     implementation("com.kizitonwose.calendar:core:2.6.0-beta01")
     implementation("com.kizitonwose.calendar:compose:2.6.0-beta01")
 
     implementation("androidx.glance:glance-appwidget:1.1.0")
     implementation("androidx.glance:glance-material3:1.1.0")
-    // WorkManager do odświeżania danych w tle
+    // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     debugImplementation("androidx.glance:glance-preview:1.1.0")
 }

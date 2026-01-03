@@ -1,21 +1,30 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# --- Standardowe reguły Androida ---
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# --- SUPABASE & KTOR & SERIALIZATION ---
+# Zapobiega usuwaniu kodu klienta Supabase i Ktor
+-keep class io.github.jan.supabase.** { *; }
+-keep class io.ktor.** { *; }
+-dontwarn io.github.jan.supabase.**
+-dontwarn io.ktor.**
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Wymagane dla kotlinx.serialization (żeby widział adnotacje @Serializable)
+-keepattributes *Annotation*, InnerClasses, Signature, EnclosingMethod
+-keepclassmembers class ** {
+    @kotlinx.serialization.Serializable <init>(...);
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# --- TWOJE MODELE DANYCH (BARDZO WAŻNE) ---
+# To mówi ProGuardowi: "Nie zmieniaj nazw zmiennych w moich klasach danych",
+# dzięki temu JSON z Supabase ("name": "...") trafi do pola "val name".
+
+# Modele w folderze data/models (np. SettingsEntity, GroupEntity itp.)
+-keepnames class com.example.my_uz_android.data.models.** { *; }
+
+# Ewentualne modele w folderze data (np. TodoItem z SupabaseClient.kt)
+-keepnames class com.example.my_uz_android.data.** { *; }
+
+# --- INNE ---
+# Jeśli używasz Coroutines
+-keep class kotlinx.coroutines.** { *; }
