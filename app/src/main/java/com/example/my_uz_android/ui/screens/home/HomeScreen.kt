@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
@@ -52,7 +53,8 @@ fun HomeScreen(
     onAddAbsenceClick: () -> Unit = {},
     onAddTaskClick: () -> Unit = {}
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    // Użycie collectAsStateWithLifecycle dla lepszej wydajności
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isFabExpanded by remember { mutableStateOf(false) }
 
     MyUZTheme(darkTheme = uiState.isDarkMode) {
@@ -69,6 +71,7 @@ fun HomeScreen(
         val homeStatusBarColor = topSectionBackground
         val homeNavBarColor = MaterialTheme.colorScheme.surface
 
+        // Zarządzanie kolorami systemowymi
         if (!view.isInEditMode) {
             DisposableEffect(isDark) {
                 val window = (view.context as? Activity)?.window
@@ -76,7 +79,7 @@ fun HomeScreen(
                     window.statusBarColor = homeStatusBarColor.toArgb()
                     window.navigationBarColor = homeNavBarColor.toArgb()
                     val insets = WindowCompat.getInsetsController(window, view)
-                    insets.isAppearanceLightStatusBars = false // Ciemne ikony na jasnym tle w Home (chyba że dark mode)
+                    insets.isAppearanceLightStatusBars = false
                     insets.isAppearanceLightNavigationBars = !isDark
                 }
                 onDispose {
@@ -92,175 +95,202 @@ fun HomeScreen(
             }
         }
 
-        Scaffold(
-            floatingActionButton = {
-                UniversalFab(
-                    isExpandable = true,
-                    isExpanded = isFabExpanded,
-                    onMainFabClick = { isFabExpanded = !isFabExpanded },
-                    iconRes = R.drawable.ic_plus,
-                    options = listOf(
-                        FabOption("Dodaj ocenę", R.drawable.ic_trophy) {
-                            isFabExpanded = false
-                            onAddGradeClick()
-                        },
-                        FabOption("Dodaj nieobecność", R.drawable.ic_calendar_minus) {
-                            isFabExpanded = false
-                            onAddAbsenceClick()
-                        },
-                        FabOption("Dodaj zadanie", R.drawable.ic_book_open) {
-                            isFabExpanded = false
-                            onAddTaskClick()
-                        }
-                    )
-                )
-            },
-            containerColor = Color.Transparent
-        ) { paddingValues ->
+        if (uiState.isLoading) {
+            // KLUCZOWE: Zapobieganie mryganiu pustego stanu
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(bottom = paddingValues.calculateBottomPadding())
+                    .background(MaterialTheme.colorScheme.surface),
+                contentAlignment = Alignment.Center
             ) {
-                // Tło górnej sekcji (Header)
-                Box(modifier = Modifier.fillMaxWidth().height(300.dp).background(topSectionBackground))
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        } else {
+            Scaffold(
+                floatingActionButton = {
+                    UniversalFab(
+                        isExpandable = true,
+                        isExpanded = isFabExpanded,
+                        onMainFabClick = { isFabExpanded = !isFabExpanded },
+                        iconRes = R.drawable.ic_plus,
+                        options = listOf(
+                            FabOption("Dodaj ocenę", R.drawable.ic_trophy) {
+                                isFabExpanded = false
+                                onAddGradeClick()
+                            },
+                            FabOption("Dodaj nieobecność", R.drawable.ic_calendar_minus) {
+                                isFabExpanded = false
+                                onAddAbsenceClick()
+                            },
+                            FabOption("Dodaj zadanie", R.drawable.ic_book_open) {
+                                isFabExpanded = false
+                                onAddTaskClick()
+                            }
+                        )
+                    )
+                },
+                containerColor = Color.Transparent
+            ) { paddingValues ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(bottom = paddingValues.calculateBottomPadding())
+                ) {
+                    // Tło górnej sekcji (Header)
+                    Box(modifier = Modifier.fillMaxWidth().height(300.dp).background(topSectionBackground))
 
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        // --- HEADER (Poprawiony, aby pasował do TopAppBar) ---
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .statusBarsPadding() // 1. Uwzględnia pasek stanu (jak TopAppBar)
-                                .height(72.dp)       // 2. Sztywna wysokość 72dp (jak TopAppBar)
-                                .padding(horizontal = 16.dp), // 3. Marginesy 16dp (jak TopAppBar)
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Data po lewej (odpowiednik Tytułu)
-                            Text(
-                                text = uiState.currentDate,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = headerContentColor
-                            )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // --- HEADER ---
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .statusBarsPadding()
+                                    .height(72.dp)
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = uiState.currentDate,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = headerContentColor
+                                )
 
-                            // Przyciski po prawej (odpowiednik Actions)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                // Przycisk Mapy
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp) // 48dp (TopBarButtonSize)
-                                        .background(buttonBgColor, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    IconButton(onClick = { /* Mapa */ }) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_map),
-                                            contentDescription = "Mapa",
-                                            tint = buttonIconColor,
-                                            modifier = Modifier.size(24.dp) // 24dp (TopBarIconSize)
-                                        )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    // Przycisk Mapy
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .background(buttonBgColor, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        IconButton(onClick = { /* Mapa */ }) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_map),
+                                                contentDescription = "Mapa",
+                                                tint = buttonIconColor,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
                                     }
-                                }
-                                // Przycisk Powiadomień
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp) // 48dp
-                                        .background(buttonBgColor, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    IconButton(onClick = onNotificationsClick) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_mail),
-                                            contentDescription = "Powiadomienia",
-                                            tint = buttonIconColor,
-                                            modifier = Modifier.size(24.dp)
-                                        )
+                                    // Przycisk Powiadomień
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .background(buttonBgColor, CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        IconButton(onClick = onNotificationsClick) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_mail),
+                                                contentDescription = "Powiadomienia",
+                                                tint = buttonIconColor,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
+
+                            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Text(text = uiState.greeting, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold), color = headerContentColor)
+                                Text(text = uiState.departmentInfo, style = MaterialTheme.typography.bodySmall, color = subHeaderContentColor)
+                            }
                         }
 
-                        // Reszta nagłówka (Cześć imię...)
-                        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                            Text(text = uiState.greeting, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold), color = headerContentColor)
-                            Text(text = uiState.departmentInfo, style = MaterialTheme.typography.bodySmall, color = subHeaderContentColor)
-                        }
-                    }
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            LazyColumn(contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
+                                if (uiState.isPlanSelected) {
+                                    item {
+                                        UpcomingClasses(
+                                            classes = uiState.upcomingClasses,
+                                            emptyMessage = uiState.classesMessage,
+                                            dayLabel = uiState.classesDayLabel,
+                                            classColorMap = uiState.classColorMap,
+                                            isDarkMode = uiState.isDarkMode,
+                                            onClassClick = onClassClick
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                    }
+                                } else {
+                                    item {
+                                        EmptyStateMessage(
+                                            title = "Wybierz plan zajęć",
+                                            message = "Przejdź do ustawień konta, aby wybrać grupę i podgrupę zajęć",
+                                            iconRes = R.drawable.ic_calendar_check,
+                                            actionText = "Przejdź do ustawień",
+                                            onActionClick = onAccountClick,
+                                            modifier = Modifier.padding(horizontal = 16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(24.dp))
+                                    }
+                                }
 
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-                        color = MaterialTheme.colorScheme.surface
-                    ) {
-                        LazyColumn(contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
-                            if (uiState.isPlanSelected) {
                                 item {
-                                    UpcomingClasses(classes = uiState.upcomingClasses, emptyMessage = uiState.classesMessage, dayLabel = uiState.classesDayLabel, classColorMap = uiState.classColorMap, isDarkMode = uiState.isDarkMode, onClassClick = onClassClick)
+                                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Icon(painter = painterResource(id = R.drawable.ic_book_open), contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
+                                            Text(text = "Zadania", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
+                                        }
+                                        if (uiState.upcomingTasks.isEmpty()) {
+                                            Text(text = "Brak zadań", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                                        } else {
+                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                itemsIndexed(uiState.upcomingTasks) { _, task ->
+                                                    TaskCard(task = task, onTaskClick = { onTaskClick(task.id) }, modifier = Modifier.width(264.dp))
+                                                }
+                                            }
+                                        }
+                                    }
                                     Spacer(modifier = Modifier.height(16.dp))
                                 }
-                            } else {
+
                                 item {
-                                    EmptyStateMessage(title = "Wybierz plan zajęć", message = "Przejdź do ustawień konta, aby wybrać grupę i podgrupę zajęć", iconRes = R.drawable.ic_calendar_check, actionText = "Przejdź do ustawień", onActionClick = onAccountClick, modifier = Modifier.padding(horizontal = 16.dp))
-                                    Spacer(modifier = Modifier.height(24.dp))
-                                }
-                            }
-                            item {
-                                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Icon(painter = painterResource(id = R.drawable.ic_book_open), contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
-                                        Text(text = "Zadania", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
-                                    }
-                                    if (uiState.upcomingTasks.isEmpty()) {
-                                        Text(text = "Brak zadań", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                                    } else {
-                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                            itemsIndexed(uiState.upcomingTasks) { _, task ->
-                                                TaskCard(task = task, onTaskClick = { onTaskClick(task.id) }, modifier = Modifier.width(264.dp))
+                                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Icon(painter = painterResource(id = R.drawable.ic_marker_pin), contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
+                                            Text(text = "Wydarzenia", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
+                                        }
+                                        if (uiState.upcomingEvents.isEmpty()) {
+                                            Text(text = "Brak wydarzeń", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                                        } else {
+                                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                                items(uiState.upcomingEvents) { event ->
+                                                    EventCard(event = event, onClick = { onEventClick(event.id) }, modifier = Modifier.width(264.dp))
+                                                }
                                             }
                                         }
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(16.dp))
-                            }
-                            item {
-                                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Icon(painter = painterResource(id = R.drawable.ic_marker_pin), contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
-                                        Text(text = "Wydarzenia", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
+
+                                item {
+                                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 24.dp), contentAlignment = Alignment.CenterStart) {
+                                        Text(text = "MyUZ 2025", style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline))
                                     }
-                                    if (uiState.upcomingEvents.isEmpty()) {
-                                        Text(text = "Brak wydarzeń", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                                    } else {
-                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                            items(uiState.upcomingEvents) { event ->
-                                                EventCard(event = event, onClick = { onEventClick(event.id) }, modifier = Modifier.width(264.dp))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            item {
-                                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 24.dp), contentAlignment = Alignment.CenterStart) {
-                                    Text(text = "MyUZ 2025", style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline))
                                 }
                             }
                         }
                     }
-                }
 
-                AnimatedVisibility(
-                    visible = isFabExpanded,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.matchParentSize()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.4f))
-                            .clickable { isFabExpanded = false }
-                    )
+                    // Nakładka przy rozwiniętym FAB
+                    AnimatedVisibility(
+                        visible = isFabExpanded,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.matchParentSize()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.4f))
+                                .clickable { isFabExpanded = false }
+                        )
+                    }
                 }
             }
         }

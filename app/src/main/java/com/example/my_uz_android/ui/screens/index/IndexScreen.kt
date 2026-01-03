@@ -1,28 +1,35 @@
 package com.example.my_uz_android.ui.screens.index
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.FabOption
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.index.components.IndexTabs
+import kotlinx.coroutines.launch
 
 @Composable
 fun IndexScreen(
+    initialTab: Int = 0, // DODANO: Obsługa startowej zakładki
     onGradeDetailsClick: (Int) -> Unit,
     onNavigateToClassTypeGrades: (String, String) -> Unit,
     onAddGradeClick: (String?, String?) -> Unit,
     onAddAbsenceClick: (String?, String?) -> Unit,
     onEditAbsenceClick: (Int) -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    // Używamy PagerState, aby wspierać gesty przesuwania i synchronizację z initialTab
+    val pagerState = rememberPagerState(
+        initialPage = initialTab,
+        pageCount = { 2 }
+    )
+    val scope = rememberCoroutineScope()
     var isFabExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -35,20 +42,24 @@ fun IndexScreen(
             ) {
                 Text(
                     text = "Indeks",
-                    // ✅ POPRAWKA: Ujednolicenie z ekranem Konta (było headlineLarge)
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 IndexTabs(
-                    selectedTabIndex = selectedTab,
-                    onTabSelected = { selectedTab = it }
+                    selectedTabIndex = pagerState.currentPage,
+                    onTabSelected = { index ->
+                        scope.launch {
+                            pagerState.animateScrollToPage(index)
+                        }
+                    }
                 )
             }
         },
         floatingActionButton = {
-            val fabOptions = when (selectedTab) {
+            // Dynamicznie dostosowujemy FAB do aktualnie widocznej zakładki w Pagerze
+            val fabOptions = when (pagerState.currentPage) {
                 0 -> listOf(
                     FabOption(
                         label = "Dodaj ocenę",
@@ -86,12 +97,15 @@ fun IndexScreen(
             )
         }
     ) { paddingValues ->
-        Box(
+        // Użycie HorizontalPager zapewnia płynność i zachowanie stanu przy powrotach
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            when (selectedTab) {
+                .padding(paddingValues),
+            userScrollEnabled = true // Pozwala przesuwać palcem między ocenami a nieobecnościami
+        ) { page ->
+            when (page) {
                 0 -> GradesScreen(
                     onGradeDetailsClick = onGradeDetailsClick,
                     onNavigateToClassTypeGrades = onNavigateToClassTypeGrades,
