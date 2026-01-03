@@ -36,15 +36,14 @@ fun TimePicker(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface, // Kolor z Twojego Theme
-            tonalElevation = 0.dp,
+            color = MaterialTheme.colorScheme.surface, // Czyste tło
+            tonalElevation = 0.dp, // Usuwa fioletowy odcień
             modifier = Modifier.wrapContentSize()
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Kolory są mapowane na Twój Theme.kt automatycznie, ale dla pewności zostawiamy explicit mapping
                 androidx.compose.material3.TimePicker(
                     state = timeState,
                     colors = TimePickerDefaults.colors(
@@ -52,7 +51,7 @@ fun TimePicker(
                         clockDialSelectedContentColor = MaterialTheme.colorScheme.onPrimary,
                         clockDialUnselectedContentColor = MaterialTheme.colorScheme.onSurface,
                         selectorColor = MaterialTheme.colorScheme.primary,
-                        containerColor = MaterialTheme.colorScheme.surface,
+                        containerColor = MaterialTheme.colorScheme.surface, // Tło zegara
                         periodSelectorBorderColor = MaterialTheme.colorScheme.outline,
                         periodSelectorSelectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         periodSelectorUnselectedContainerColor = MaterialTheme.colorScheme.surface,
@@ -73,7 +72,6 @@ fun TimePicker(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        // Używamy stylu z Theme (labelLarge ma InterFont)
                         Text("Anuluj", style = MaterialTheme.typography.labelLarge)
                     }
                     Spacer(modifier = Modifier.width(8.dp))

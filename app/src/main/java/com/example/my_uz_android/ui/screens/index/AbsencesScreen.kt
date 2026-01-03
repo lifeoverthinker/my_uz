@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,13 +25,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.AbsenceEntity
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import com.example.my_uz_android.R // Upewnij się, że ten import jest poprawny dla Twojego pakietu
 
 @Composable
 fun AbsencesScreen(
@@ -84,16 +84,33 @@ fun AbsencesScreen(
         }
 
         if (showLimitDialog) {
-            AlertDialog(
-                onDismissRequest = { showLimitDialog = false },
-                title = { Text("Limit nieobecności") },
-                text = {
-                    Column {
+            // ZMIANA: Użycie Dialog + Surface zamiast AlertDialog dla spójnego wyglądu (białe tło)
+            Dialog(onDismissRequest = { showLimitDialog = false }) {
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = MaterialTheme.colorScheme.surface, // Czyste tło (białe/szare)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp)
+                    ) {
                         Text(
-                            "Dla: ${ClassTypeUtils.getFullName(limitEditType)}",
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "Limit nieobecności",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "Dla: ${ClassTypeUtils.getFullName(limitEditType)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         OutlinedTextField(
                             value = limitEditValue,
                             onValueChange = {
@@ -101,23 +118,32 @@ fun AbsencesScreen(
                             },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            label = { Text("Maksymalna liczba") }
+                            label = { Text("Maksymalna liczba") },
+                            modifier = Modifier.fillMaxWidth()
                         )
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            val newLimit = limitEditValue.toIntOrNull() ?: 2
-                            viewModel.updateLimit(limitEditSubject, limitEditType, newLimit)
-                            showLimitDialog = false
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { showLimitDialog = false }) {
+                                Text("Anuluj")
+                            }
+                            TextButton(
+                                onClick = {
+                                    val newLimit = limitEditValue.toIntOrNull() ?: 2
+                                    viewModel.updateLimit(limitEditSubject, limitEditType, newLimit)
+                                    showLimitDialog = false
+                                }
+                            ) {
+                                Text("Zapisz")
+                            }
                         }
-                    ) { Text("Zapisz") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showLimitDialog = false }) { Text("Anuluj") }
+                    }
                 }
-            )
+            }
         }
     }
 }
@@ -214,10 +240,16 @@ fun AbsenceTypeSection(
     val limit = typeGroup.limit
     val isLimitReached = count >= limit
 
-    val counterContainerColor =
-        if (isLimitReached) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-    val counterContentColor =
-        if (isLimitReached) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+    // KOLORY LICZNIKA (Fioletowy gdy OK, Czerwony gdy limit)
+    val counterContainerColor = if (isLimitReached)
+        MaterialTheme.colorScheme.errorContainer
+    else
+        MaterialTheme.colorScheme.primaryContainer
+
+    val counterContentColor = if (isLimitReached)
+        MaterialTheme.colorScheme.onErrorContainer
+    else
+        MaterialTheme.colorScheme.onPrimaryContainer
 
     val fullTypeName = ClassTypeUtils.getFullName(typeGroup.classType)
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -233,30 +265,20 @@ fun AbsenceTypeSection(
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
             )
 
+            // Licznik w kolorowej "pastylce" bez ikonki
             Surface(
                 color = counterContainerColor,
                 shape = RoundedCornerShape(8.dp),
                 onClick = onEditLimit
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "$count/$limit",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = counterContentColor
-                        )
-                    )
-                    Icon(
-                        painter = painterResource(R.drawable.ic_edit),
-                        contentDescription = "Edytuj limit",
-                        tint = counterContentColor.copy(alpha = 0.8f),
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
+                Text(
+                    text = "$count/$limit",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = counterContentColor
+                    ),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
             }
         }
 
@@ -351,19 +373,6 @@ fun AbsenceDateItem(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
-
-            IconButton(
-                onClick = { onDelete(absence) },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_trash),
-                    contentDescription = "Usuń",
-                    // ZMIANA: Używamy koloru z motywu (error lub onSurfaceVariant)
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp)
-                )
             }
         }
     }

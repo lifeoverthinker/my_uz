@@ -43,13 +43,8 @@ fun CalendarScreen(
     val source = uiState.currentSource
     val isMyPlan = source is ScheduleSource.MyPlan
 
-    val rawClasses by produceState(initialValue = emptyList<ClassEntity>(), key1 = source) {
-        if (isMyPlan) {
-            viewModel.myPlanClasses.collect { value = it }
-        } else {
-            viewModel.networkClasses.collect { value = it }
-        }
-    }
+    // Używamy bezpośrednio danych z uiState - brak produceState eliminuje mruganie
+    val rawClasses = uiState.visibleClasses
 
     val planName = uiState.selectedPlanName
     val isTeacher = if (!isMyPlan) {
@@ -183,6 +178,7 @@ fun CalendarScreen(
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
+            // KLUCZOWE: Jeśli trwa ładowanie (inicjalne), pokazujemy loader
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -213,7 +209,7 @@ fun CalendarScreen(
                     onClassClick = onClassClick,
                     onTaskClick = { task -> onTasksClick() },
                     onToggleTaskCompletion = { task -> viewModel.toggleTaskCompletion(task) },
-                    onDeleteTask = { task -> viewModel.deleteTask(task) }, // ✅ Przekazanie metody usuwania
+                    onDeleteTask = { task -> viewModel.deleteTask(task) },
                     modifier = Modifier.padding(innerPadding),
                     showHeader = !isMyPlan
                 )

@@ -76,12 +76,11 @@ fun SettingsScreen(
                 title = "Ustawienia",
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onBackClick,
-                isNavigationIconFilled = true, // Używamy stylu z kółkiem (jak w Terminarzu) dla spójności
+                isNavigationIconFilled = true,
                 actions = {
-                    // PRZYCISK ZAPISZ - widoczny po prawej stronie
                     TextButton(
                         onClick = { if (uiState.isModified) viewModel.saveSettings() },
-                        enabled = uiState.isModified, // Aktywny tylko gdy są zmiany
+                        enabled = uiState.isModified,
                         colors = ButtonDefaults.textButtonColors(
                             contentColor = MaterialTheme.colorScheme.primary,
                             disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
@@ -99,86 +98,87 @@ fun SettingsScreen(
         }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(vertical = 8.dp)
-            ) {
-                SettingsHeader("Wygląd")
-                SettingsToggleItem(
-                    iconRes = R.drawable.ic_palette,
-                    title = "Ciemny motyw",
-                    description = "Dostosuj jasność interfejsu",
-                    isChecked = activeSettings?.isDarkMode == true,
-                    onCheckedChange = { viewModel.toggleDarkMode(it) }
-                )
+            // KLUCZOWE: Jeśli trwa ładowanie, nie pokazujemy listy, tylko loader
+            if (uiState.isLoading) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(strokeWidth = 3.dp)
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .padding(vertical = 8.dp)
+                ) {
+                    SettingsHeader("Wygląd")
+                    SettingsToggleItem(
+                        iconRes = R.drawable.ic_palette,
+                        title = "Ciemny motyw",
+                        description = "Dostosuj jasność interfejsu",
+                        isChecked = activeSettings?.isDarkMode == true,
+                        onCheckedChange = { viewModel.toggleDarkMode(it) }
+                    )
 
-                if (uiState.uniqueClassTypes.isNotEmpty()) {
-                    SettingsHeader("Kolory zajęć")
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        uiState.uniqueClassTypes.forEach { classType ->
-                            val safeClassType = classType.trim()
-                            ClassColorPickerRow(
-                                classType = ClassTypeUtils.getFullName(safeClassType),
-                                selectedColorIndex = uiState.classColorMap[safeClassType] ?: 0,
-                                onColorSelected = { viewModel.updateClassColor(safeClassType, it) }
-                            )
+                    if (uiState.uniqueClassTypes.isNotEmpty()) {
+                        SettingsHeader("Kolory zajęć")
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            uiState.uniqueClassTypes.forEach { classType ->
+                                val safeClassType = classType.trim()
+                                ClassColorPickerRow(
+                                    classType = ClassTypeUtils.getFullName(safeClassType),
+                                    selectedColorIndex = uiState.classColorMap[safeClassType] ?: 0,
+                                    onColorSelected = { viewModel.updateClassColor(safeClassType, it) }
+                                )
+                            }
                         }
                     }
-                }
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
 
-                SettingsHeader("Dane i synchronizacja")
-                SettingsToggleItem(
-                    iconRes = R.drawable.ic_check_circle_broken,
-                    title = "Tryb offline",
-                    description = "Używaj tylko danych lokalnych",
-                    isChecked = activeSettings?.offlineModeEnabled == true,
-                    onCheckedChange = { viewModel.toggleOfflineMode(it) }
-                )
+                    SettingsHeader("Dane i synchronizacja")
+                    SettingsToggleItem(
+                        iconRes = R.drawable.ic_check_circle_broken,
+                        title = "Tryb offline",
+                        description = "Używaj tylko danych lokalnych",
+                        isChecked = activeSettings?.offlineModeEnabled == true,
+                        onCheckedChange = { viewModel.toggleOfflineMode(it) }
+                    )
 
-                SettingsActionItem(
-                    iconRes = R.drawable.ic_export,
-                    title = "Eksportuj dane",
-                    description = "Zapisz kopię do pliku JSON",
-                    onClick = {
-                        exportSelection = BackupDataType.values().toSet()
-                        showExportDialog = true
-                    }
-                )
+                    SettingsActionItem(
+                        iconRes = R.drawable.ic_export,
+                        title = "Eksportuj dane",
+                        description = "Zapisz kopię do pliku JSON",
+                        onClick = {
+                            exportSelection = BackupDataType.values().toSet()
+                            showExportDialog = true
+                        }
+                    )
 
-                SettingsActionItem(
-                    iconRes = R.drawable.ic_import,
-                    title = "Importuj dane",
-                    description = "Przywróć dane z pliku",
-                    isDestructive = true,
-                    onClick = { importLauncher.launch("application/json") }
-                )
+                    SettingsActionItem(
+                        iconRes = R.drawable.ic_import,
+                        title = "Importuj dane",
+                        description = "Przywróć dane z pliku",
+                        isDestructive = true,
+                        onClick = { importLauncher.launch("application/json") }
+                    )
 
-                Spacer(modifier = Modifier.height(32.dp))
-                Image(
-                    painter = painterResource(R.drawable.settings_rafiki),
-                    contentDescription = null,
-                    modifier = Modifier.height(160.dp).fillMaxWidth().padding(horizontal = 48.dp),
-                    alpha = 0.7f
-                )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Image(
+                        painter = painterResource(R.drawable.settings_rafiki),
+                        contentDescription = null,
+                        modifier = Modifier.height(160.dp).fillMaxWidth().padding(horizontal = 48.dp),
+                        alpha = 0.7f
+                    )
 
-                Text(
-                    text = "MyUZ v1.0.0",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 16.dp, bottom = 32.dp)
-                )
-            }
-
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(strokeWidth = 3.dp)
+                    Text(
+                        text = "MyUZ v1.0.0",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 16.dp, bottom = 32.dp)
+                    )
                 }
             }
         }

@@ -24,6 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
@@ -61,7 +62,6 @@ fun TaskAddEditScreen(
         if (taskId != null) {
             viewModel.loadTask(taskId)
         } else {
-            // Obsługa danych z duplikacji
             if (prefilledTitle != null) viewModel.updateTitle(prefilledTitle)
             if (prefilledDesc != null) viewModel.updateDescription(prefilledDesc)
             if (prefilledSubject != null) viewModel.updateClassSubject(prefilledSubject)
@@ -276,29 +276,101 @@ fun TaskAddEditContent(
     if (showTimePickerStart) TimePicker(time = String.format("%02d:%02d", uiState.startTime.hour, uiState.startTime.minute), onTimeSelected = { h, m -> showTimePickerStart = false; onStartTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerStart = false })
     if (showTimePickerEnd) TimePicker(time = String.format("%02d:%02d", uiState.endTime.hour, uiState.endTime.minute), onTimeSelected = { h, m -> showTimePickerEnd = false; onEndTimeChange(LocalTime.of(h, m)) }, onDismiss = { showTimePickerEnd = false })
 
+    // ZMIANA: Dialogi teraz używają stylu spójnego z AddEditGradeScreen (Dialog + Surface)
     if (showSubjectModal) {
-        AlertDialog(
-            onDismissRequest = { showSubjectModal = false },
-            title = { Text("Wybierz przedmiot") },
-            text = {
-                LazyColumn {
-                    item { TextButton(onClick = { onSubjectChange(null); onClassTypeChange(null); showSubjectModal = false }) { Text("Brak") } }
+        Dialog(onDismissRequest = { showSubjectModal = false }) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) {
+                LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
+                    item {
+                        Text(
+                            text = "Wybierz przedmiot",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = textColor,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                        )
+                    }
+
+                    // Opcja "Brak"
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSubjectChange(null)
+                                    onClassTypeChange(null)
+                                    showSubjectModal = false
+                                }
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = uiState.classSubject == null, onClick = null)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Brak", style = MaterialTheme.typography.bodyLarge, color = textColor)
+                        }
+                    }
+
                     items(uiState.availableSubjects) { (sub, _) ->
-                        TextButton(onClick = { onSubjectChange(sub); onClassTypeChange(null); showSubjectModal = false }) { Text(sub) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSubjectChange(sub)
+                                    onClassTypeChange(null)
+                                    showSubjectModal = false
+                                }
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = uiState.classSubject == sub, onClick = null)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(sub, style = MaterialTheme.typography.bodyLarge, color = textColor)
+                        }
                     }
                 }
-            },
-            confirmButton = {}
-        )
+            }
+        }
     }
+
     if (showTypeModal) {
         val types = uiState.availableSubjects.find { it.first == uiState.classSubject }?.second ?: emptyList()
-        AlertDialog(
-            onDismissRequest = { showTypeModal = false },
-            title = { Text("Wybierz rodzaj") },
-            text = { LazyColumn { items(types) { type -> TextButton(onClick = { onClassTypeChange(type); showTypeModal = false }) { Text(ClassTypeUtils.getFullName(type)) } } } },
-            confirmButton = {}
-        )
+        Dialog(onDismissRequest = { showTypeModal = false }) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) {
+                LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
+                    item {
+                        Text(
+                            text = "Wybierz rodzaj",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = textColor,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                        )
+                    }
+                    items(types) { type ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onClassTypeChange(type)
+                                    showTypeModal = false
+                                }
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = uiState.classType == type, onClick = null)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(ClassTypeUtils.getFullName(type), style = MaterialTheme.typography.bodyLarge, color = textColor)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
