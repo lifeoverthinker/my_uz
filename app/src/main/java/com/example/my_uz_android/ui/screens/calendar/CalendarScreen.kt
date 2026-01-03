@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
-import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.CalendarTopAppBar
 import com.example.my_uz_android.ui.components.PreviewTopAppBar
@@ -38,15 +37,11 @@ fun CalendarScreen(
     viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val tasks: List<TaskEntity> by viewModel.tasks.collectAsState(initial = emptyList())
-
     val source = uiState.currentSource
     val isMyPlan = source is ScheduleSource.MyPlan
-
-    // Używamy bezpośrednio danych z uiState - brak produceState eliminuje mruganie
     val rawClasses = uiState.visibleClasses
-
     val planName = uiState.selectedPlanName
+
     val isTeacher = if (!isMyPlan) {
         (source as? ScheduleSource.Favorite)?.type == "teacher" || (source as? ScheduleSource.Preview)?.type == "teacher"
     } else false
@@ -69,11 +64,7 @@ fun CalendarScreen(
     val currentSelectedSubgroups = selectedSubgroups ?: availableSubgroups.toSet()
 
     val displayedClasses = remember(rawClasses, isMyPlan, isTeacher, currentSelectedSubgroups) {
-        if (isMyPlan || isTeacher) {
-            rawClasses
-        } else {
-            rawClasses.filter { currentSelectedSubgroups.contains(it.subgroup ?: "") }
-        }
+        if (isMyPlan || isTeacher) rawClasses else rawClasses.filter { currentSelectedSubgroups.contains(it.subgroup ?: "") }
     }
 
     val currentDate = remember { LocalDate.now(ZoneId.of("Europe/Warsaw")) }
@@ -108,7 +99,7 @@ fun CalendarScreen(
     }
 
     val monthName = visibleMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
+        .replaceFirstChar { it.titlecase(Locale("pl")) }
 
     val calendarTitle = if (visibleMonth.year == YearMonth.now().year) monthName else "$monthName ${visibleMonth.year}"
 
@@ -178,12 +169,12 @@ fun CalendarScreen(
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { innerPadding ->
-            // KLUCZOWE: Jeśli trwa ładowanie (inicjalne), pokazujemy loader
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
+                // ScheduleView - usunięto parametry związane z zadaniami
                 ScheduleView(
                     calendarState = monthState,
                     weekState = weekState,
@@ -204,12 +195,12 @@ fun CalendarScreen(
                         }
                     },
                     classes = displayedClasses,
-                    tasks = tasks,
+                    // tasks = ..., <- USUNIĘTO
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
-                    onTaskClick = { task -> onTasksClick() },
-                    onToggleTaskCompletion = { task -> viewModel.toggleTaskCompletion(task) },
-                    onDeleteTask = { task -> viewModel.deleteTask(task) },
+                    // onTaskClick = ..., <- USUNIĘTO
+                    // onToggleTaskCompletion = ..., <- USUNIĘTO
+                    // onDeleteTask = ..., <- USUNIĘTO
                     modifier = Modifier.padding(innerPadding),
                     showHeader = !isMyPlan
                 )
@@ -230,9 +221,7 @@ fun CalendarScreen(
                 subgroups = availableSubgroups,
                 selectedSubgroups = currentSelectedSubgroups,
                 onDismiss = { showSubgroupFilter = false },
-                onSelectionChange = {
-                    selectedSubgroups = it
-                }
+                onSelectionChange = { selectedSubgroups = it }
             )
         }
     }

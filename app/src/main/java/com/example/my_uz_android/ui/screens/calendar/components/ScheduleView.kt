@@ -8,14 +8,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -26,12 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
-import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.components.ClassCardType
-import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.theme.ClassColorPalette
-import com.example.my_uz_android.ui.theme.InterFontFamily // Dodano import czcionki
+import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
@@ -58,61 +54,32 @@ fun ScheduleView(
     onDateSelected: (LocalDate) -> Unit,
     onToggleView: () -> Unit,
     classes: List<ClassEntity>,
-    tasks: List<TaskEntity>,
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
-    onTaskClick: (TaskEntity) -> Unit,
-    onToggleTaskCompletion: (TaskEntity) -> Unit,
-    onDeleteTask: (TaskEntity) -> Unit,
     modifier: Modifier = Modifier,
     showHeader: Boolean = false
 ) {
-    // Pobieramy zajęcia dla danego dnia
+    // 1. Filtrujemy i sortujemy zajęcia dla wybranego dnia
     val classesForDay = remember(classes, selectedDate) {
         classes.filter { it.date == selectedDate.toString() }.sortedBy { it.startTime }
-    }
-
-    // Pobieramy zadania dla danego dnia
-    val tasksForDay = remember(tasks, selectedDate) {
-        tasks.filter {
-            Instant.ofEpochMilli(it.dueDate).atZone(PolandZone).toLocalDate() == selectedDate
-        }
     }
 
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    // --- SMART SCROLL ---
-    LaunchedEffect(classesForDay, tasksForDay) {
+    // 2. Automatyczne przewijanie do pierwszych zajęć (Smart Scroll)
+    LaunchedEffect(classesForDay) {
         val firstClassMinute = classesForDay.minOfOrNull {
-            val parts = it.startTime.split(":")
-            parts[0].toInt() * 60 + parts[1].toInt()
-        }
-
-        val firstTaskMinute = tasksForDay
-            .filter { !it.isAllDay && !it.dueTime.isNullOrBlank() }
-            .minOfOrNull {
-                try {
-                    val parts = it.dueTime!!.split(":")
-                    parts[0].toInt() * 60 + parts[1].toInt()
-                } catch (e: Exception) {
-                    Int.MAX_VALUE
-                }
+            try {
+                val parts = it.startTime.split(":")
+                parts[0].toInt() * 60 + parts[1].toInt()
+            } catch (e: Exception) {
+                8 * 60 // Domyślnie 8:00
             }
+        } ?: (8 * 60) // Jeśli brak zajęć, też 8:00
 
-        val earliestEventMinute = when {
-            firstClassMinute != null && firstTaskMinute != null -> minOf(firstClassMinute, firstTaskMinute)
-            firstClassMinute != null -> firstClassMinute
-            firstTaskMinute != null -> firstTaskMinute
-            else -> null
-        }
-
-        val targetMinute = if (earliestEventMinute != null) {
-            (earliestEventMinute - 60).coerceAtLeast(0)
-        } else {
-            8 * 60
-        }
-
+        // Przewiń o godzinę wcześniej, żeby było widać kontekst
+        val targetMinute = (firstClassMinute - 60).coerceAtLeast(0)
         scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
     }
 
@@ -121,14 +88,16 @@ fun ScheduleView(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // --- NAGŁÓWEK MIESIĄCA (Zaktualizowany styl) ---
+        // --- NAGŁÓWEK MIESIĄCA ---
         if (showHeader) {
             val visibleMonth = if (isMonthView) {
                 calendarState.firstVisibleMonth.yearMonth
             } else {
                 val weekDays = weekState.firstVisibleWeek.days
-                if (weekDays.isNotEmpty()) weekDays.first().date.let { YearMonth.from(it) } else YearMonth.now(PolandZone)
+                if (weekDays.isNotEmpty()) weekDays.first().date.let { YearMonth.from(it) }
+                else YearMonth.now(PolandZone)
             }
+
             val monthName = visibleMonth.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
                 .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
             val monthTitle = "$monthName ${visibleMonth.year}"
@@ -140,14 +109,13 @@ fun ScheduleView(
                     .clickable { onToggleView() },
                 contentAlignment = Alignment.Center
             ) {
-                // Używamy Row, aby umieścić tekst i ikonkę obok siebie
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         text = monthTitle,
-                        style = TextStyle( // Styl zgodny z CalendarTopAppBar
+                        style = TextStyle(
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 24.sp,
@@ -156,8 +124,6 @@ fun ScheduleView(
                         ),
                         color = MaterialTheme.colorScheme.onBackground
                     )
-
-                    // Ikonka Chevron (20x20dp)
                     Icon(
                         painter = painterResource(if (isMonthView) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
                         contentDescription = null,
@@ -168,6 +134,7 @@ fun ScheduleView(
             }
         }
 
+        // --- NAGŁÓWKI DNI TYGODNIA ---
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
@@ -175,7 +142,12 @@ fun ScheduleView(
             }
         }
 
-        AnimatedContent(targetState = isMonthView, label = "CalendarTransition", modifier = Modifier.padding(horizontal = 16.dp)) { targetIsMonth ->
+        // --- KALENDARZ (MIESIĄC / TYDZIEŃ) ---
+        AnimatedContent(
+            targetState = isMonthView,
+            label = "CalendarTransition",
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) { targetIsMonth ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 Spacer(modifier = Modifier.width(HourColWidth))
                 Box(modifier = Modifier.weight(1f)) {
@@ -210,131 +182,30 @@ fun ScheduleView(
             }
         }
 
+        // --- SIATKA ZAJĘĆ (SCROLLOWALNA) ---
         Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                if (tasksForDay.isNotEmpty()) {
-                    Column(modifier = Modifier.padding(start = HourColWidth + 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)) {
-                        Text(
-                            text = "ZADANIA",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
+            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+
+                // Tło: Linie godzinowe
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    repeat(24) { index -> HourRow(hour = index) }
+                }
+
+                // Zawartość: Karty zajęć
+                Box(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
+                    classesForDay.forEach { classEntity ->
+                        ScheduledClassItem(
+                            classEntity = classEntity,
+                            selectedDate = selectedDate,
+                            classColorMap = classColorMap,
+                            onClassClick = onClassClick
                         )
-                        tasksForDay.forEach { task ->
-                            key(task.id) {
-                                val currentTask by rememberUpdatedState(task)
-                                val dismissState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = { value ->
-                                        when (value) {
-                                            SwipeToDismissBoxValue.StartToEnd -> {
-                                                onToggleTaskCompletion(currentTask)
-                                                false
-                                            }
-                                            SwipeToDismissBoxValue.EndToStart -> {
-                                                onDeleteTask(currentTask)
-                                                true
-                                            }
-                                            else -> false
-                                        }
-                                    }
-                                )
-
-                                LaunchedEffect(currentTask.isCompleted) {
-                                    if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                                        dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-                                    }
-                                }
-
-                                SwipeToDismissBox(
-                                    state = dismissState,
-                                    backgroundContent = {
-                                        val direction = dismissState.dismissDirection
-
-                                        val toggleColor = Color(0xFF4CAF50)
-                                        val toggleIcon = R.drawable.ic_check_square_broken
-                                        val toggleTint = Color.White
-
-                                        val deleteColor = MaterialTheme.colorScheme.errorContainer
-                                        val deleteIcon = R.drawable.ic_trash
-                                        val deleteTint = MaterialTheme.colorScheme.onErrorContainer
-
-                                        val color = when (direction) {
-                                            SwipeToDismissBoxValue.StartToEnd -> toggleColor
-                                            SwipeToDismissBoxValue.EndToStart -> deleteColor
-                                            else -> Color.Transparent
-                                        }
-
-                                        val alignment = when (direction) {
-                                            SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                                            SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                                            else -> Alignment.CenterStart
-                                        }
-
-                                        val icon = when (direction) {
-                                            SwipeToDismissBoxValue.StartToEnd -> toggleIcon
-                                            SwipeToDismissBoxValue.EndToStart -> deleteIcon
-                                            else -> 0
-                                        }
-
-                                        val tint = when (direction) {
-                                            SwipeToDismissBoxValue.StartToEnd -> toggleTint
-                                            SwipeToDismissBoxValue.EndToStart -> deleteTint
-                                            else -> Color.Transparent
-                                        }
-
-                                        Box(
-                                            Modifier
-                                                .fillMaxSize()
-                                                .padding(vertical = 4.dp)
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(color)
-                                                .padding(horizontal = 16.dp),
-                                            contentAlignment = alignment
-                                        ) {
-                                            if (direction != SwipeToDismissBoxValue.Settled && icon != 0) {
-                                                Icon(
-                                                    painter = painterResource(icon),
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(24.dp), // Ikona 24dp
-                                                    tint = tint
-                                                )
-                                            }
-                                        }
-                                    },
-                                    enableDismissFromEndToStart = true,
-                                    enableDismissFromStartToEnd = true,
-                                    content = {
-                                        Box(modifier = Modifier.clickable { onTaskClick(currentTask) }) {
-                                            TaskCard(
-                                                task = currentTask,
-                                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                        HorizontalDivider(modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     }
                 }
 
-                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        repeat(24) { index -> HourRow(hour = index) }
-                    }
-
-                    Box(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
-                        classesForDay.forEach { classEntity ->
-                            ScheduledClassItem(
-                                classEntity = classEntity,
-                                selectedDate = selectedDate,
-                                classColorMap = classColorMap,
-                                onClassClick = onClassClick
-                            )
-                        }
-                    }
-
-                    if (selectedDate == LocalDate.now(PolandZone)) CurrentTimeIndicator()
+                // Wskaźnik aktualnego czasu
+                if (selectedDate == LocalDate.now(PolandZone)) {
+                    CurrentTimeIndicator()
                 }
             }
         }
@@ -498,14 +369,22 @@ fun ScheduledClassItem(
 @Composable
 fun CurrentTimeIndicator() {
     var currentTime by remember { mutableStateOf(LocalTime.now(PolandZone)) }
-    LaunchedEffect(Unit) { while (true) { currentTime = LocalTime.now(PolandZone); delay(60_000) } }
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentTime = LocalTime.now(PolandZone)
+            delay(60_000)
+        }
+    }
+
     val minutesFromMidnight = currentTime.hour * 60 + currentTime.minute
     val topOffset = minutesFromMidnight.dp
-
     val indicatorColor = MaterialTheme.colorScheme.error
 
     Box(
-        modifier = Modifier.fillMaxWidth().offset(y = topOffset).height(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .offset(y = topOffset)
+            .height(12.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         HorizontalDivider(
