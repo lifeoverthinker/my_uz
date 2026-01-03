@@ -28,7 +28,7 @@ data class HomeUiState(
     val upcomingClasses: List<ClassEntity> = emptyList(),
     val upcomingTasks: List<TaskEntity> = emptyList(),
     val upcomingEvents: List<EventEntity> = emptyList(),
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = false, // To pole steruje wyświetlaniem
     val currentDate: String = "",
     val tasksMessage: String? = null,
     val classesMessage: String? = null,
@@ -148,7 +148,7 @@ class HomeViewModel(
             classesMessage = emptyMessage,
             classesDayLabel = dayLabel,
             tasksMessage = if (finalTasks.isEmpty()) "Brak zadań" else "Najbliższe zadania",
-            isLoading = false,
+            isLoading = false, // Kiedy dane przyjdą, ustawiamy na false
             isPlanSelected = isPlanSelected,
             classColorMap = classColorMap,
             isDarkMode = settings?.isDarkMode ?: false
@@ -156,6 +156,6 @@ class HomeViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = HomeUiState()
+        initialValue = HomeUiState(isLoading = true) // <--- KLUCZOWA ZMIANA: Startujemy z loading = true
     )
 }

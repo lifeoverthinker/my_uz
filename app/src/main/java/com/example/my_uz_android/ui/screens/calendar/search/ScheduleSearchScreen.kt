@@ -14,9 +14,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.FavoriteEntity
+import com.example.my_uz_android.ui.components.SearchTopAppBar
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleSearchScreen(
     navController: NavController,
@@ -27,26 +27,11 @@ fun ScheduleSearchScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    TextField(
-                        value = uiState.searchQuery,
-                        onValueChange = searchViewModel::onQueryChange,
-                        placeholder = { Text("Szukaj grupy lub nauczyciela...") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                            unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
-                        )
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(painterResource(R.drawable.ic_chevron_left), null)
-                    }
-                }
+            // ZMIANA: Użycie dedykowanego SearchTopAppBar zamiast domyślnego
+            SearchTopAppBar(
+                query = uiState.searchQuery,
+                onQueryChange = searchViewModel::onQueryChange,
+                onBackClick = { navController.popBackStack() }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -65,7 +50,6 @@ fun ScheduleSearchScreen(
                     SearchListItem(
                         item = item,
                         onClick = {
-                            // Naprawiono: Użycie poprawnej metody ładowania planu
                             calendarViewModel.selectFavoritePlan(
                                 FavoriteEntity(name = item.name, type = item.type, resourceId = item.name)
                             )

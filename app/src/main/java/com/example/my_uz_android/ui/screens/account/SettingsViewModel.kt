@@ -35,12 +35,12 @@ data class BackupData(
 
 data class SettingsUiState(
     val settings: SettingsEntity? = null,
-    val draftSettings: SettingsEntity? = null, // Brudnopis ustawień
+    val draftSettings: SettingsEntity? = null,
     val availableGroups: List<String> = emptyList(),
     val availableSubgroups: List<String> = emptyList(),
     val uniqueClassTypes: List<String> = emptyList(),
     val classColorMap: Map<String, Int> = emptyMap(),
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = false, // Flaga ładowania
     val importMessage: String? = null,
     val backupPreview: BackupData? = null,
     val showImportDialog: Boolean = false,
@@ -58,7 +58,7 @@ class SettingsViewModel(
     private val eventRepository: EventRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    private val _uiState = MutableStateFlow(SettingsUiState(isLoading = true)) // Startujemy z isLoading=true
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
     private val gson = Gson()
 
@@ -100,17 +100,12 @@ class SettingsViewModel(
                     val sourceForColors = currentDraft ?: settings
                     val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
 
-                    // 1. Pobieramy mapę z bazy
                     var colorMap: Map<String, Int> = try {
                         gson.fromJson(sourceForColors?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
                     } catch (e: Exception) {
                         emptyMap()
                     }
 
-                    // 2. NAPRAWA: Jeśli mapa jest pusta (pierwsze uruchomienie),
-                    // generujemy domyślne kolory na podstawie nazwy (hash),
-                    // tak samo jak robi to Terminarz. Dzięki temu w Ustawieniach
-                    // zobaczymy poprawne kolory, a nie same fioletowe.
                     if (colorMap.isEmpty() && uniqueTypes.isNotEmpty()) {
                         colorMap = uniqueTypes.associateWith { type ->
                             abs(type.hashCode()) % ClassColorPalette.size
@@ -123,7 +118,8 @@ class SettingsViewModel(
                         availableGroups = groups,
                         uniqueClassTypes = uniqueTypes,
                         classColorMap = colorMap,
-                        isModified = currentDraft != settings
+                        isModified = currentDraft != settings,
+                        isLoading = false // Dane załadowane, wyłączamy loader
                     )
                 }
             }
@@ -174,11 +170,8 @@ class SettingsViewModel(
     }
 
     fun saveSettings() {
-        // Przy zapisie musimy upewnić się, że 'classColorsJson' w draftSettings
-        // odzwierciedla aktualny stan UI (nawet jeśli to były te auto-generowane kolory).
         var settingsToSave = _uiState.value.draftSettings ?: return
 
-        // Jeśli mapa w UI nie jest pusta, a JSON w settings jest pusty/nieaktualny, nadpisz go
         if (_uiState.value.classColorMap.isNotEmpty()) {
             val newJson = gson.toJson(_uiState.value.classColorMap)
             settingsToSave = settingsToSave.copy(classColorsJson = newJson)
@@ -191,7 +184,7 @@ class SettingsViewModel(
                     isSaved = true,
                     isModified = false,
                     settings = settingsToSave,
-                    draftSettings = settingsToSave // Ważne: zaktualizuj draft po zapisie
+                    draftSettings = settingsToSave
                 )
             }
             delayResetSavedFlag()

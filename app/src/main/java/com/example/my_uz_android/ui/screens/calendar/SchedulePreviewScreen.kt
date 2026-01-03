@@ -29,7 +29,9 @@ fun SchedulePreviewScreen(
     onClassClick: (com.example.my_uz_android.data.models.ClassEntity) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val classes by viewModel.networkClasses.collectAsState()
+
+    // ZMIANA: Pobieramy zajęcia z uiState, a nie z nieistniejącego networkClasses
+    val classes = uiState.visibleClasses
     val classColorMap = uiState.classColorMap
 
     val planName = uiState.selectedPlanName
@@ -132,7 +134,7 @@ fun SchedulePreviewScreen(
                     onClassClick = onClassClick,
                     onTaskClick = {},
                     onToggleTaskCompletion = {},
-                    onDeleteTask = {}, // ✅ Przekazano pustą akcję, aby uniknąć błędu kompilacji
+                    onDeleteTask = {},
                     showHeader = true
                 )
             }

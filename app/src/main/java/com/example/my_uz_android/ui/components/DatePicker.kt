@@ -34,7 +34,6 @@ fun DatePicker(
                     dateState.selectedDateMillis?.let { onDateSelected(it) }
                 }
             ) {
-                // Używamy stylu z Theme (labelLarge ma InterFont)
                 Text("OK", style = MaterialTheme.typography.labelLarge)
             }
         },
@@ -45,13 +44,14 @@ fun DatePicker(
         },
         shape = RoundedCornerShape(28.dp),
         colors = DatePickerDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface // Czyste tło (białe/szare)
         ),
-        tonalElevation = 0.dp
+        tonalElevation = 0.dp // Kluczowe: usuwa fioletową poświatę (tint)
     ) {
         androidx.compose.material3.DatePicker(
             state = dateState,
             colors = DatePickerDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.surface, // Czyste tło dla kalendarza
                 titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 headlineContentColor = MaterialTheme.colorScheme.onSurface,
                 weekdayContentColor = MaterialTheme.colorScheme.onSurface,

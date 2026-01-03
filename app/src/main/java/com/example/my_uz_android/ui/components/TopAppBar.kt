@@ -1,14 +1,10 @@
 package com.example.my_uz_android.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -19,7 +15,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,7 +41,6 @@ fun TopAppBar(
     val buttonBg = MaterialTheme.extendedColors.buttonBackground
     val iconTint = MaterialTheme.extendedColors.iconText
 
-    // Ujednolicona struktura - identyczna jak w Home i Calendar
     Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxWidth()
@@ -54,16 +48,15 @@ fun TopAppBar(
         Row(
             modifier = Modifier
                 .statusBarsPadding()
-                .height(72.dp) // Sztywna wysokość 72dp
+                .height(72.dp)
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Ikona nawigacji
             if (navigationIcon != null) {
                 if (isNavigationIconFilled) {
                     Box(
                         modifier = Modifier
-                            .size(TopBarButtonSize) // 48.dp
+                            .size(TopBarButtonSize)
                             .clip(CircleShape)
                             .background(buttonBg)
                             .clickable(onClick = onNavigationClick),
@@ -88,7 +81,6 @@ fun TopAppBar(
                 Spacer(modifier = Modifier.width(12.dp))
             }
 
-            // Tytuł
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start
@@ -117,7 +109,6 @@ fun TopAppBar(
                 }
             }
 
-            // Akcje (przyciski po prawej)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -159,7 +150,7 @@ fun CalendarTopAppBar(
         ) {
             Box(
                 modifier = Modifier
-                    .size(TopBarButtonSize) // 48.dp
+                    .size(TopBarButtonSize)
                     .clip(CircleShape)
                     .background(buttonBg)
                     .clickable(onClick = onNavigationClick),
@@ -250,7 +241,7 @@ fun TopBarActionIcon(
 ) {
     Box(
         modifier = Modifier
-            .size(TopBarButtonSize) // 48.dp
+            .size(TopBarButtonSize)
             .clip(CircleShape)
             .background(MaterialTheme.extendedColors.buttonBackground)
             .clickable(enabled = !isLoading, onClick = onClick),
@@ -338,64 +329,74 @@ fun PreviewTopAppBar(
 
 @Composable
 fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick: () -> Unit) {
-    val buttonBg = MaterialTheme.extendedColors.buttonBackground
-    val iconColor = MaterialTheme.colorScheme.onSurface
+    // ZMIANA: Ten kolor będzie użyty dla ikony wstecz, ikony X oraz tekstu placeholder
+    // Jest to onSurfaceVariant z przezroczystością 0.6f (jak w placeholderze)
+    val elementsColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
 
-    Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
-        Row(
-            modifier = Modifier
-                .statusBarsPadding()
-                .height(72.dp) // Spójna wysokość 72dp
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.extendedColors.buttonBackground,
+        shadowElevation = 0.dp,
+        tonalElevation = 0.dp
+    ) {
+        Column {
+            Row(
                 modifier = Modifier
-                    .size(TopBarButtonSize) // 48.dp
-                    .clip(CircleShape)
-                    .background(buttonBg)
-                    .clickable(onClick = onBackClick),
-                contentAlignment = Alignment.Center
+                    .statusBarsPadding()
+                    .height(72.dp)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_chevron_left),
-                    contentDescription = "Wstecz",
-                    modifier = Modifier.size(20.dp),
-                    tint = iconColor
-                )
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                if (query.isEmpty()) {
-                    Text(
-                        "Szukaj planu...",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                // Strzałka wstecz
+                Box(
+                    modifier = Modifier
+                        .size(TopBarButtonSize)
+                        .clickable(onClick = onBackClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_chevron_left),
+                        contentDescription = "Wstecz",
+                        modifier = Modifier.size(TopBarIconSize),
+                        tint = elementsColor // ZMIANA KOLORU
                     )
                 }
-                BasicTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    singleLine = true
-                )
-            }
 
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = "Wyczyść"
+                Spacer(Modifier.width(12.dp))
+
+                // Pole tekstowe
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    if (query.isEmpty()) {
+                        Text(
+                            "Szukaj grupy lub nauczyciela...",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = elementsColor // Używamy tej samej zmiennej dla spójności
+                        )
+                    }
+                    BasicTextField(
+                        value = query,
+                        onValueChange = onQueryChange,
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        singleLine = true
                     )
+                }
+
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_x_close),
+                            contentDescription = "Wyczyść",
+                            modifier = Modifier.size(20.dp), // ZMIANA: Zmniejszono ikonę (domyślnie ~24dp)
+                            tint = elementsColor // ZMIANA KOLORU
+                        )
+                    }
                 }
             }
         }
