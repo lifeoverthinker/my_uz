@@ -46,88 +46,85 @@ fun TopAppBar(
     val buttonBg = MaterialTheme.extendedColors.buttonBackground
     val iconTint = MaterialTheme.extendedColors.iconText
 
-    val navigationIconContent: @Composable () -> Unit = {
-        if (navigationIcon != null) {
-            if (isNavigationIconFilled) {
-                Box(
-                    modifier = Modifier
-                        .padding(start = 12.dp)
-                        .size(TopBarButtonSize) // 48.dp - kółko
-                        .clip(CircleShape)
-                        .background(buttonBg)
-                        .clickable(onClick = onNavigationClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = navigationIcon),
-                        contentDescription = "Nawigacja",
-                        modifier = Modifier.size(TopBarIconSize), // 24.dp wewnątrz kółka
-                        tint = iconTint
-                    )
-                }
-            } else {
-                IconButton(onClick = onNavigationClick) {
-                    Icon(
-                        painter = painterResource(id = navigationIcon),
-                        contentDescription = "Nawigacja",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-    }
-
-    val titleContent: @Composable () -> Unit = {
-        Column(
-            modifier = Modifier.padding(start = if (navigationIcon == null || isNavigationIconFilled) 8.dp else 0.dp),
-            horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start
+    // Ujednolicona struktura - identyczna jak w Home i Calendar
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .statusBarsPadding()
+                .height(72.dp) // Sztywna wysokość 72dp
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontFamily = InterFontFamily,
-                    fontWeight = if (isCenterAligned) FontWeight.SemiBold else FontWeight.Normal,
-                    fontSize = 20.sp
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            if (!subtitle.isNullOrEmpty()) {
+            // Ikona nawigacji
+            if (navigationIcon != null) {
+                if (isNavigationIconFilled) {
+                    Box(
+                        modifier = Modifier
+                            .size(TopBarButtonSize) // 48.dp
+                            .clip(CircleShape)
+                            .background(buttonBg)
+                            .clickable(onClick = onNavigationClick),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = navigationIcon),
+                            contentDescription = "Nawigacja",
+                            modifier = Modifier.size(TopBarIconSize),
+                            tint = iconTint
+                        )
+                    }
+                } else {
+                    IconButton(onClick = onNavigationClick) {
+                        Icon(
+                            painter = painterResource(id = navigationIcon),
+                            contentDescription = "Nawigacja",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+
+            // Tytuł
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start
+            ) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontFamily = InterFontFamily,
+                        fontWeight = if (isCenterAligned) FontWeight.SemiBold else FontWeight.Normal,
+                        fontSize = 20.sp
                     ),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                if (!subtitle.isNullOrEmpty()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Akcje (przyciski po prawej)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                actions()
             }
         }
-    }
-
-    val appBarColors = TopAppBarDefaults.topAppBarColors(
-        containerColor = MaterialTheme.colorScheme.background,
-        scrolledContainerColor = MaterialTheme.colorScheme.surface,
-    )
-
-    if (isCenterAligned) {
-        CenterAlignedTopAppBar(
-            title = titleContent,
-            navigationIcon = navigationIconContent,
-            actions = actions,
-            scrollBehavior = scrollBehavior,
-            colors = appBarColors
-        )
-    } else {
-        androidx.compose.material3.TopAppBar(
-            title = titleContent,
-            navigationIcon = navigationIconContent,
-            actions = actions,
-            scrollBehavior = scrollBehavior,
-            colors = appBarColors
-        )
     }
 }
 
@@ -160,7 +157,6 @@ fun CalendarTopAppBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Przycisk nawigacji (Menu/Strzałka) w kółku
             Box(
                 modifier = Modifier
                     .size(TopBarButtonSize) // 48.dp
@@ -174,7 +170,6 @@ fun CalendarTopAppBar(
 
             Spacer(Modifier.width(12.dp))
 
-            // Kolumna z Tytułem (Miesiąc/Rok) i Podtytułem
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -223,7 +218,6 @@ fun CalendarTopAppBar(
                 }
             }
 
-            // Akcje po prawej stronie
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (actions != null) {
                     actions()
@@ -345,17 +339,16 @@ fun PreviewTopAppBar(
 @Composable
 fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick: () -> Unit) {
     val buttonBg = MaterialTheme.extendedColors.buttonBackground
-    val iconColor = MaterialTheme.extendedColors.iconText
+    val iconColor = MaterialTheme.colorScheme.onSurface
 
     Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
         Row(
             modifier = Modifier
                 .statusBarsPadding()
-                .height(72.dp) // Zmiana na 72.dp dla spójności
-                .padding(horizontal = 16.dp), // Padding jak w innych paskach
+                .height(72.dp) // Spójna wysokość 72dp
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Strzałka w tył w kółku (identycznie jak w innych ekranach)
             Box(
                 modifier = Modifier
                     .size(TopBarButtonSize) // 48.dp
@@ -367,14 +360,13 @@ fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick:
                 Icon(
                     painter = painterResource(id = R.drawable.ic_chevron_left),
                     contentDescription = "Wstecz",
-                    modifier = Modifier.size(TopBarIconSize), // 24.dp
+                    modifier = Modifier.size(20.dp),
                     tint = iconColor
                 )
             }
 
             Spacer(Modifier.width(12.dp))
 
-            // Pole tekstowe
             Box(
                 modifier = Modifier
                     .weight(1f)
