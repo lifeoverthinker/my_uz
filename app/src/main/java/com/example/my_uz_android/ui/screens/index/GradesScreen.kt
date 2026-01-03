@@ -25,7 +25,7 @@ fun GradesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Lokalne zarządzanie stanem rozwinięcia kart - proste i skuteczne
+    // Lokalne zarządzanie stanem rozwinięcia kart
     val expandedStates = remember { mutableStateMapOf<String, Boolean>() }
 
     if (uiState.isLoading) {
@@ -42,11 +42,11 @@ fun GradesScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
-            // Odstęp na dole dla FABa z IndexScreen
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
+                // Tutaj wyświetla się główna średnia (już bez punktów, bo przeliczona w VM)
                 AverageCard(
                     label = "Średnia z bieżącego semestru",
                     average = uiState.average
@@ -58,6 +58,7 @@ fun GradesScreen(
                 val isExpanded = expandedStates[subject.name] ?: false
 
                 // Mapowanie modelu z ViewModel na model komponentu UI
+                // Uwaga: subject.types.grades to teraz List<GradeEntity>
                 val mappedClassTypes = subject.types.map { type ->
                     SubjectTypeState(
                         typeName = type.name,

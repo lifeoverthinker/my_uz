@@ -18,7 +18,7 @@ import com.example.my_uz_android.ui.screens.index.components.AverageCard
 import com.example.my_uz_android.ui.screens.index.components.GradeListItem
 import com.example.my_uz_android.ui.screens.index.components.SubjectTypeAppBar
 import com.example.my_uz_android.util.ClassTypeUtils
-import kotlinx.coroutines.launch
+
 @Composable
 fun SubjectGradesScreen(
     subjectName: String,
@@ -34,7 +34,11 @@ fun SubjectGradesScreen(
         it.subjectName == subjectName && it.classType == classType
     }
 
-    val gradesForAvg = filteredGrades.filter { it.grade != -1.0 }
+    // Średnia tylko ze standardowych ocen (gdzie isPoints = false i waga > 0 i grade != -1.0)
+    val gradesForAvg = filteredGrades.filter { !it.isPoints && it.grade != -1.0 && it.weight > 0 }
+
+    // Suma punktów
+    val pointsSum = filteredGrades.filter { it.isPoints }.sumOf { it.grade }
 
     val average = if (gradesForAvg.isNotEmpty()) {
         val sum = gradesForAvg.sumOf { it.grade * it.weight }
@@ -68,11 +72,13 @@ fun SubjectGradesScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
+                // Jedna karta, która wyświetla i średnią, i punkty (jeśli są)
                 AverageCard(
                     label = "Średnia ocen",
-                    average = average
+                    average = average,
+                    pointsSum = if (pointsSum > 0) pointsSum else null
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
             item {
@@ -93,8 +99,7 @@ fun SubjectGradesScreen(
                     )
                 }
             } else {
-                // Zmieniono z uiState.grades na filteredGrades
-                items(filteredGrades, key = { it.id }) { grade -> // Użyj filteredGrades zamiast uiState.grades
+                items(filteredGrades, key = { it.id }) { grade ->
                     GradeListItem(
                         grade = grade,
                         onClick = { onGradeClick(grade.id) },

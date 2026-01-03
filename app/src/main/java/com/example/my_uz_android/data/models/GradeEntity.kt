@@ -14,5 +14,7 @@ data class GradeEntity(
     val description: String?,
     val comment: String? = null,
     val date: Long,
-    val semester: Int = 1
+    val semester: Int = 1,
+    // NOWE POLE: Flaga oznaczająca, czy to są punkty
+    val isPoints: Boolean = false
 )

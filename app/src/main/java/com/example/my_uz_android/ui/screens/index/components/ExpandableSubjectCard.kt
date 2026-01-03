@@ -21,7 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -29,15 +28,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Potrzebne do .sp
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.GradeEntity
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
 
+// ZMIANA: Używamy GradeEntity zamiast GradeItem
 data class SubjectTypeState(
     val typeName: String,
     val average: Double? = null,
-    val grades: List<GradeItem>
+    val grades: List<GradeEntity>
 )
 
 @Composable
@@ -57,7 +57,6 @@ fun ExpandableSubjectCard(
         label = "arrowRotation"
     )
 
-    // Kolory: surfaceContainer (delikatne tło)
     val cardBackgroundColor = MaterialTheme.colorScheme.surfaceContainer
     val contentColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -68,7 +67,7 @@ fun ExpandableSubjectCard(
             .fillMaxWidth()
             .clickable { onExpandClick() },
         color = cardBackgroundColor,
-        shadowElevation = 2.dp, // M3 shadow
+        shadowElevation = 2.dp,
         shape = RoundedCornerShape(8.dp)
     ) {
         Column {
@@ -82,7 +81,6 @@ fun ExpandableSubjectCard(
             ) {
                 Text(
                     text = subjectName,
-                    // bodyLarge: 16sp. Zmieniamy wagę na Medium.
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                     color = contentColor,
                     modifier = Modifier
@@ -103,7 +101,6 @@ fun ExpandableSubjectCard(
                     ) {
                         Text(
                             text = overallAverage?.let { String.format("%.1f", it) } ?: "-",
-                            // titleLarge: 22sp.
                             style = MaterialTheme.typography.titleLarge,
                             color = contentColor,
                             textAlign = TextAlign.Center
@@ -111,7 +108,6 @@ fun ExpandableSubjectCard(
 
                         Text(
                             text = "średnia",
-                            // bodySmall: 12sp.
                             style = MaterialTheme.typography.bodySmall,
                             color = subTextColor,
                             textAlign = TextAlign.Center,
@@ -192,7 +188,6 @@ fun ClassTypeRow(
             ) {
                 Text(
                     text = typeState.typeName,
-                    // titleSmall: 14sp, Medium.
                     style = MaterialTheme.typography.titleSmall,
                     color = textColor
                 )
@@ -209,9 +204,9 @@ fun ClassTypeRow(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         items(typeState.grades) { grade ->
+                            // ZMIANA: Usunięto onGradeClick, bo GradeBubble go nie obsługuje w tej wersji
                             GradeBubble(
-                                grade = grade,
-                                onGradeClick = { }
+                                grade = grade
                             )
                         }
                     }
@@ -224,7 +219,6 @@ fun ClassTypeRow(
             ) {
                 Text(
                     text = typeState.average?.let { String.format("%.1f", it) } ?: "-",
-                    // titleLarge: 22sp.
                     style = MaterialTheme.typography.titleLarge,
                     color = textColor
                 )
@@ -262,7 +256,6 @@ fun ClassTypeRow(
 
                 Text(
                     text = "Dodaj ocenę",
-                    // bodySmall: 12sp. Zmieniamy wagę na Medium.
                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                     color = primaryColor
                 )
@@ -280,8 +273,8 @@ fun ExpandableSubjectCardPreview() {
                 typeName = "WYK",
                 average = 4.5,
                 grades = listOf(
-                    GradeItem(id = 1, value = "4.0"),
-                    GradeItem(id = 2, value = "5.0")
+                    GradeEntity(id = 1, subjectName = "IO", grade = 4.0, weight = 2, description = "Kolokwium", date = 0L, semester = 1),
+                    GradeEntity(id = 2, subjectName = "IO", grade = 5.0, weight = 1, description = "Projekt", date = 0L, semester = 1)
                 )
             )
         )

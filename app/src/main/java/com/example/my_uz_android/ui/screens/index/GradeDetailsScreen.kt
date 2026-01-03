@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.GradeEntity
@@ -45,8 +44,6 @@ fun GradeDetailsScreen(
         },
         onDuplicateClick = {
             grade?.let {
-                // Duplikacja przesyła te same dane (subject, type, grade, weight, desc, comment)
-                // Ale id zostanie nadane jako 0 (nowe) w formularzu docelowym
                 onDuplicateGrade(
                     it.subjectName,
                     it.classType,
@@ -123,7 +120,6 @@ fun GradeDetailsContent(
                                 )
                             }
 
-                            // Menu ujednolicone z stylem terminarza
                             DropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false },
@@ -216,14 +212,16 @@ fun GradeDetailsContent(
                         )
                     }
 
+                    // --- ZMIANA: Obsługa wyświetlania punktów ---
                     val gradeText = when {
+                        grade.isPoints -> if (grade.grade % 1.0 == 0.0) "${grade.grade.toInt()} pkt" else "${grade.grade} pkt"
                         grade.grade == -1.0 -> "Aktywność +"
                         grade.grade % 1.0 == 0.0 -> grade.grade.toInt().toString()
                         else -> grade.grade.toString()
                     }
 
                     DetailSectionGrade(
-                        label = "OCENA",
+                        label = if (grade.isPoints) "PUNKTY" else "OCENA",
                         text = gradeText,
                         iconRes = R.drawable.ic_trophy,
                         iconColor = iconTint,
@@ -231,14 +229,17 @@ fun GradeDetailsContent(
                         labelColor = subTextColor
                     )
 
-                    DetailSectionGrade(
-                        label = "WAGA",
-                        text = grade.weight.toString(),
-                        iconRes = R.drawable.ic_scales,
-                        iconColor = iconTint,
-                        textColor = textColor,
-                        labelColor = subTextColor
-                    )
+                    // Waga (opcjonalnie można ukryć dla punktów, jeśli chcesz - tutaj zostawiam, ale punkty mają wagę 0)
+                    if (!grade.isPoints) {
+                        DetailSectionGrade(
+                            label = "WAGA",
+                            text = grade.weight.toString(),
+                            iconRes = R.drawable.ic_scales,
+                            iconColor = iconTint,
+                            textColor = textColor,
+                            labelColor = subTextColor
+                        )
+                    }
 
                     if (!grade.comment.isNullOrEmpty()) {
                         DetailSectionGrade(
