@@ -30,7 +30,6 @@ fun SchedulePreviewScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // ZMIANA: Pobieramy zajęcia z uiState, a nie z nieistniejącego networkClasses
     val classes = uiState.visibleClasses
     val classColorMap = uiState.classColorMap
 
@@ -129,12 +128,10 @@ fun SchedulePreviewScreen(
                         }
                     },
                     classes = filteredClasses,
-                    tasks = emptyList(),
+                    // USUNIĘTO: tasks = emptyList(),
                     classColorMap = classColorMap,
                     onClassClick = onClassClick,
-                    onTaskClick = {},
-                    onToggleTaskCompletion = {},
-                    onDeleteTask = {},
+                    // USUNIĘTO: onTaskClick, onToggleTaskCompletion, onDeleteTask
                     showHeader = true
                 )
             }
