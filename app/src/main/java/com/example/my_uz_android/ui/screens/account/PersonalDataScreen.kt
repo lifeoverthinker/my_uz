@@ -39,7 +39,7 @@ fun PersonalDataScreen(
                 title = "Dane osobowe",
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onNavigateBack,
-                isNavigationIconFilled = true,
+                isNavigationIconFilled = false,
                 actions = {
                     IconButton(onClick = onNavigateToEdit) {
                         Icon(

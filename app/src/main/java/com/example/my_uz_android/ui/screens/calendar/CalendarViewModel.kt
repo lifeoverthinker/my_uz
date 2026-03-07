@@ -7,6 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.data.models.FavoriteEntity
+import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.FavoritesRepository
@@ -17,7 +18,17 @@ import com.example.my_uz_android.util.NetworkResult
 import com.example.my_uz_android.widget.WidgetWorker
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 sealed interface ScheduleSource {
@@ -30,14 +41,15 @@ data class CalendarUiState(
     val favorites: List<FavoriteEntity> = emptyList(),
     val visibleClasses: List<ClassEntity> = emptyList(),
     val selectedResourceId: String? = null,
-    val selectedPlanName: String = "Mój Plan",
+    val selectedPlanName: String = "M�j Plan",
     val classColorMap: Map<String, Int> = emptyMap(),
     val currentSource: ScheduleSource = ScheduleSource.MyPlan,
+    val availableDirections: List<String> = emptyList(),
+    val activeDirectionCode: String? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
     val isShareLoading: Boolean = false,
     val sharedCode: String? = null,
-    // DODANO: Pole do przechowywania tymczasowych detali dla podglądu (gdy id = -1)
     val temporaryClassDetails: ClassEntity? = null
 )
 
@@ -66,7 +78,23 @@ class CalendarViewModel(
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
         val classColorMap: Map<String, Int> = try {
             gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-        } catch (e: Exception) { emptyMap() }
+        } catch (_: Exception) {
+            emptyMap()
+        }
+
+        val availableDirections = myClasses
+            .map { it.groupCode.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+
+        val fallbackDirection = settings?.selectedGroupCode
+            ?.takeIf { it.isNotBlank() && availableDirections.contains(it) }
+
+        val resolvedActiveDirection = settings?.activeDirectionCode
+            ?.takeIf { it.isNotBlank() && availableDirections.contains(it) }
+            ?: fallbackDirection
+            ?: availableDirections.firstOrNull()
 
         val classesToShow = if (selection.currentSource is ScheduleSource.MyPlan) {
             myClasses
@@ -78,6 +106,8 @@ class CalendarViewModel(
             favorites = favorites,
             classColorMap = classColorMap,
             visibleClasses = classesToShow,
+            availableDirections = if (selection.currentSource is ScheduleSource.MyPlan) availableDirections else emptyList(),
+            activeDirectionCode = if (selection.currentSource is ScheduleSource.MyPlan) resolvedActiveDirection else null,
             isLoading = if (selection.currentSource is ScheduleSource.MyPlan) false else selection.isLoading
         )
     }.stateIn(
@@ -94,15 +124,31 @@ class CalendarViewModel(
 
     private fun observeSettingsAndRefresh() {
         viewModelScope.launch {
-            settingsRepository.getSettingsStream().collect { settings ->
-                val groupCode = settings?.selectedGroupCode
-                val subgroups = settings?.selectedSubgroup?.split(",")?.map { it.trim() } ?: emptyList()
-
-                if (!groupCode.isNullOrBlank()) {
-                    refreshScheduleFromServer(groupCode, subgroups)
+            settingsRepository.getSettingsStream()
+                .map { settings ->
+                    val groupCode = settings?.selectedGroupCode?.trim().orEmpty()
+                    val subgroups = parseSubgroups(settings?.selectedSubgroup)
+                    if (groupCode.isBlank()) {
+                        null
+                    } else {
+                        groupCode to subgroups
+                    }
                 }
-            }
+                .distinctUntilChanged()
+                .collect { config ->
+                    if (config != null) {
+                        refreshScheduleFromServer(config.first, config.second)
+                    }
+                }
         }
+    }
+
+    private fun parseSubgroups(rawSubgroups: String?): List<String> {
+        return rawSubgroups
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?: emptyList()
     }
 
     fun refreshScheduleFromServer(groupCode: String, subgroups: List<String>) {
@@ -117,7 +163,20 @@ class CalendarViewModel(
         }
     }
 
-    // DODANO: Funkcja wymagana przez AppNavigation
+    fun setActiveDirection(directionCode: String) {
+        val normalizedDirection = directionCode.trim()
+        if (normalizedDirection.isEmpty()) return
+
+        viewModelScope.launch {
+            val currentSettings = settingsRepository.getSettingsStream().firstOrNull() ?: SettingsEntity(id = 1)
+            if (currentSettings.activeDirectionCode == normalizedDirection) return@launch
+
+            settingsRepository.insertOrUpdate(
+                currentSettings.copy(activeDirectionCode = normalizedDirection)
+            )
+        }
+    }
+
     fun setTemporaryClassForDetails(classEntity: ClassEntity) {
         _userSelection.update { it.copy(temporaryClassDetails = classEntity) }
     }
@@ -127,7 +186,7 @@ class CalendarViewModel(
             it.copy(
                 currentSource = ScheduleSource.MyPlan,
                 selectedResourceId = null,
-                selectedPlanName = "Mój Plan",
+                selectedPlanName = "M�j Plan",
                 error = null
             )
         }
@@ -173,11 +232,13 @@ class CalendarViewModel(
                         visibleClasses = result.data ?: emptyList(),
                         isLoading = false
                     )
+
                     is NetworkResult.Error -> current.copy(
                         error = result.message,
                         isLoading = false,
                         visibleClasses = emptyList()
                     )
+
                     else -> current.copy(isLoading = false)
                 }
             }
@@ -218,12 +279,12 @@ class CalendarViewModel(
         viewModelScope.launch {
             _userSelection.update { it.copy(isShareLoading = true, error = null) }
             try {
-                val tasksList = tasksRepository.getAllTasks().first()
+                val tasksList = tasksRepository.getAllTasks().firstOrNull().orEmpty()
                 if (tasksList.isNotEmpty()) {
                     val code = tasksRepository.shareTasks(tasksList)
                     _userSelection.update { it.copy(isShareLoading = false, sharedCode = code) }
                 } else {
-                    _userSelection.update { it.copy(isShareLoading = false, error = "Brak zadań") }
+                    _userSelection.update { it.copy(isShareLoading = false, error = "Brak zada�") }
                 }
             } catch (e: Exception) {
                 _userSelection.update { it.copy(isShareLoading = false, error = e.message) }
@@ -235,3 +296,5 @@ class CalendarViewModel(
         _userSelection.update { it.copy(sharedCode = null) }
     }
 }
+
+

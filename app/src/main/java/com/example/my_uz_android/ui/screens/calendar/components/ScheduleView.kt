@@ -1,4 +1,4 @@
-package com.example.my_uz_android.ui.screens.calendar.components
+﻿package com.example.my_uz_android.ui.screens.calendar.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
@@ -43,6 +43,7 @@ import kotlin.math.abs
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
 private val HourColWidth = 56.dp
+private val ColumnSpacing = 4.dp // Usunęłam zduplikowaną zmienną
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -67,15 +68,11 @@ fun ScheduleView(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    // 2. Automatyczne przewijanie do pierwszych zajęć (Smart Scroll)
+    // 2. Automatyczne przewijanie do pierwszych zajęć (Smart Scroll) - NAPRAWIONE
     LaunchedEffect(classesForDay) {
         val firstClassMinute = classesForDay.minOfOrNull {
-            try {
-                val parts = it.startTime.split(":")
-                parts[0].toInt() * 60 + parts[1].toInt()
-            } catch (e: Exception) {
-                8 * 60 // Domyślnie 8:00
-            }
+            val parts = it.startTime.split(":")
+            parts[0].toInt() * 60 + parts[1].toInt()
         } ?: (8 * 60) // Jeśli brak zajęć, też 8:00
 
         // Przewiń o godzinę wcześniej, żeby było widać kontekst
@@ -83,12 +80,14 @@ fun ScheduleView(
         scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
     }
 
+    // Od tego miejsca Twój kod w dół zostaje bez zmian
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // --- NAGŁÓWEK MIESIĄCA ---
+
+        // --- NAGĹĂ“WEK MIESIÄ„CA ---
         if (showHeader) {
             val visibleMonth = if (isMonthView) {
                 calendarState.firstVisibleMonth.yearMonth
@@ -98,8 +97,9 @@ fun ScheduleView(
                 else YearMonth.now(PolandZone)
             }
 
-            val monthName = visibleMonth.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
-                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
+            val monthName =
+                visibleMonth.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
+                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
             val monthTitle = "$monthName ${visibleMonth.year}"
 
             Box(
@@ -134,15 +134,17 @@ fun ScheduleView(
             }
         }
 
-        // --- NAGŁÓWKI DNI TYGODNIA ---
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        // --- NAGĹĂ“WKI DNI TYGODNIA ---
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
                 DaysOfWeekTitle(daysOfWeek = daysOfWeek(firstDayOfWeek = DayOfWeek.MONDAY))
             }
         }
 
-        // --- KALENDARZ (MIESIĄC / TYDZIEŃ) ---
+        // --- KALENDARZ (MIESIÄ„C / TYDZIEĹ) ---
         AnimatedContent(
             targetState = isMonthView,
             label = "CalendarTransition",
@@ -182,17 +184,23 @@ fun ScheduleView(
             }
         }
 
-        // --- SIATKA ZAJĘĆ (SCROLLOWALNA) ---
-        Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        // --- SIATKA ZAJÄÄ† (SCROLLOWALNA) ---
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)) {
 
-                // Tło: Linie godzinowe
+                // TĹ‚o: Linie godzinowe
                 Column(modifier = Modifier.fillMaxWidth()) {
                     repeat(24) { index -> HourRow(hour = index) }
                 }
 
-                // Zawartość: Karty zajęć
-                Box(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
+                // ZawartoĹ›Ä‡: Karty zajÄ™Ä‡
+                Box(modifier = Modifier
+                    .matchParentSize()
+                    .padding(start = HourColWidth)) {
                     classesForDay.forEach { classEntity ->
                         ScheduledClassItem(
                             classEntity = classEntity,
@@ -203,7 +211,7 @@ fun ScheduleView(
                     }
                 }
 
-                // Wskaźnik aktualnego czasu
+                // WskaĹşnik aktualnego czasu
                 if (selectedDate == LocalDate.now(PolandZone)) {
                     CurrentTimeIndicator()
                 }
@@ -217,7 +225,9 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
     Row(modifier = Modifier.fillMaxWidth()) {
         for (dayOfWeek in daysOfWeek) {
             Text(
-                modifier = Modifier.weight(1f).height(24.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(24.dp),
                 text = dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale("pl"))
                     .replaceFirstChar { it.titlecase() }.take(1),
                 textAlign = TextAlign.Center,
@@ -229,7 +239,12 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 }
 
 @Composable
-fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, onClick: (LocalDate) -> Unit) {
+fun CalendarDay(
+    date: LocalDate,
+    isDateInMonth: Boolean,
+    isSelected: Boolean,
+    onClick: (LocalDate) -> Unit
+) {
     val isToday = date == LocalDate.now(PolandZone)
     val primaryColor = MaterialTheme.colorScheme.primary
 
@@ -241,10 +256,16 @@ fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, on
 
     val circleSize = if (isSelected || isToday) 28.dp else 24.dp
     val circleColor = if (isSelected && isDateInMonth) primaryColor else Color.Transparent
-    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, primaryColor, CircleShape) else Modifier
+    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(
+        1.dp,
+        primaryColor,
+        CircleShape
+    ) else Modifier
 
     Box(
-        modifier = Modifier.aspectRatio(1f).padding(2.dp),
+        modifier = Modifier
+            .aspectRatio(1f)
+            .padding(2.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -283,7 +304,9 @@ fun HourRow(hour: Int) {
     val horizontalLineStart = HourColWidth - 8.dp
     val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
-    Box(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .height(rowHeight)) {
         if (hour != 0) {
             HorizontalDivider(
                 modifier = Modifier
@@ -341,10 +364,12 @@ fun ScheduledClassItem(
     val height = durationMinutes.dp
 
     val now = LocalDateTime.now(PolandZone)
-    val classStartDateTime = LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
+    val classStartDateTime =
+        LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
     val isFuture = now.isBefore(classStartDateTime)
 
-    val assignedColorIndex = classColorMap[classEntity.classType] ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
+    val assignedColorIndex = classColorMap[classEntity.classType]
+        ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
     val colorSet = ClassColorPalette.getOrElse(assignedColorIndex) { ClassColorPalette[0] }
 
     Box(
@@ -390,7 +415,9 @@ fun CurrentTimeIndicator() {
         HorizontalDivider(
             color = indicatorColor,
             thickness = 2.dp,
-            modifier = Modifier.fillMaxWidth().padding(start = HourColWidth)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = HourColWidth)
         )
         Box(
             modifier = Modifier

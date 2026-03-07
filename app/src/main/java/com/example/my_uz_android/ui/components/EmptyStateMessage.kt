@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -20,6 +21,8 @@ fun EmptyStateMessage(
     modifier: Modifier = Modifier,
     title: String? = null,
     iconRes: Int? = null,
+    imageVector: ImageVector? = null,
+    hint: String? = null,
     actionText: String? = null,
     onActionClick: (() -> Unit)? = null
 ) {
@@ -34,15 +37,20 @@ fun EmptyStateMessage(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(32.dp)
         ) {
-            if (iconRes != null) {
-                Icon(
+            when {
+                imageVector != null -> Icon(
+                    imageVector = imageVector,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                )
+                iconRes != null -> Icon(
                     painter = painterResource(id = iconRes),
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                 )
-            } else {
-                Icon(
+                else -> Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
@@ -67,6 +75,15 @@ fun EmptyStateMessage(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
+
+            hint?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    textAlign = TextAlign.Center
+                )
+            }
 
             if (actionText != null && onActionClick != null) {
                 Spacer(modifier = Modifier.height(8.dp))

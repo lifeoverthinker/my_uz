@@ -170,6 +170,7 @@ class OnboardingViewModel(
                 userName = "Gość",
                 isAnonymous = true, // Ustawiamy flagę anonimowości
                 selectedGroupCode = null,
+                activeDirectionCode = null,
                 selectedSubgroup = null,
                 gender = null,
                 isFirstRun = false,
@@ -215,6 +216,7 @@ class OnboardingViewModel(
                 userName = fullName,
                 isAnonymous = false,
                 selectedGroupCode = groupCode,
+                activeDirectionCode = groupCode,
                 selectedSubgroup = subgroupsString,
                 gender = genderString,
                 isFirstRun = false,
@@ -232,3 +234,4 @@ class OnboardingViewModel(
         }
     }
 }
+

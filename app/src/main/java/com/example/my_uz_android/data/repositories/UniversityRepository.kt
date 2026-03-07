@@ -15,36 +15,35 @@ import java.time.format.DateTimeFormatter
 
 @Serializable
 data class TeacherDetailsDto(
-    @SerialName("nazwa") val name: String,
+    @SerialName("nazwisko_imie") val name: String, // Zmienione z "nazwa"
     @SerialName("email") val email: String?,
-    @SerialName("instytut") val institute: String?
+    @SerialName("jednostka") val institute: String? // Zmienione z "instytut"
 )
 
 @Serializable
 data class ClassScheduleDto(
-    @SerialName("id") val id: String,
+    @SerialName("uid") val id: String,             // Unikalny ID zajęć
     @SerialName("przedmiot") val subjectName: String,
-    @SerialName("rz") val classType: String,
-    @SerialName("od") val startDateTime: String,
-    @SerialName("do_") val endDateTime: String,
-    @SerialName("miejsce") val room: String?,
-    @SerialName("podgrupa") val subgroup: String?,
-    @SerialName("nauczyciel") val teacher: String?
-    // Usunąłem zagnieżdżone 'nauczyciele', pobieramy to osobno
+    @SerialName("rodzaj_zajec") val classType: String, // Wykłady/Laboratoria
+    @SerialName("poczatek") val startDateTime: String, // ISO timestamp
+    @SerialName("koniec") val endDateTime: String,
+    @SerialName("sala") val room: String?,             // Nowa kolumna 'sala'
+    @SerialName("podgrupa") val subgroup: String?,     // Wyciągnięte z 'PG'
+    @SerialName("nauczyciel") val teacher: String?      // Wyciągnięte z 'SORT'
 )
 
 @Serializable
-data class GroupCodeDto(@SerialName("kod_grupy") val code: String)
+data class GroupCodeDto(@SerialName("grupa_id") val code: String) // Zmiana z kod_grupy na grupa_id
 
 @Serializable
 data class SubgroupDto(@SerialName("podgrupa") val subgroup: String)
 
 @Serializable
-data class TeacherDto(@SerialName("nazwa") val name: String?)
+data class TeacherDto(@SerialName("nazwisko_imie") val name: String?) // Zmienione z "nazwa"
 
 @Serializable
 data class GroupDetailsDto(
-    @SerialName("tryb_studiow") val studyMode: String?,
+    @SerialName("tryb") val studyMode: String?, // Zmienione z "tryb_studiow" zgodnie z tabelą grupy
     @SerialName("kierunki") val fieldInfo: FieldOfStudyDto?
 )
 
@@ -54,13 +53,31 @@ data class FieldOfStudyDto(
     @SerialName("nazwa") val name: String?
 )
 
+@Serializable
+data class TeacherClassScheduleDto(
+    @SerialName("uid") val id: String,
+    @SerialName("przedmiot") val subjectName: String,
+    @SerialName("rodzaj_zajec") val classType: String?,
+    @SerialName("poczatek") val startDateTime: String,
+    @SerialName("koniec") val endDateTime: String,
+    @SerialName("sala") val room: String?,
+    @SerialName("grupy") val groups: String?
+)
+
+@Serializable
+data class TeacherIdDto(
+    @SerialName("external_id") val id: String,
+    @SerialName("email") val email: String?,
+    @SerialName("jednostka") val institute: String?
+)
+
 // --- REPOSITORY ---
 
 class UniversityRepository(private val supabase: Postgrest) {
 
-    // Pobieramy tylko kolumny z tabeli zajecia_grupy, bez JOINa
+    // Poprawione nazwy kolumn zgodnie ze schematem SQL scrapera
     private val scheduleColumns = Columns.list(
-        "id", "przedmiot", "rz", "od", "do_", "miejsce", "podgrupa", "nauczyciel"
+        "uid", "przedmiot", "rodzaj_zajec", "poczatek", "koniec", "sala", "podgrupa", "nauczyciel", "id_semestru"
     )
 
     suspend fun searchGroups(query: String): NetworkResult<List<String>> {
@@ -75,7 +92,6 @@ class UniversityRepository(private val supabase: Postgrest) {
                 .sorted()
             NetworkResult.Success(result)
         } catch (e: Exception) {
-            Log.e("UniversityRepo", "Błąd wyszukiwania grup: $query", e)
             NetworkResult.Error("Błąd wyszukiwania grup.")
         }
     }
@@ -83,8 +99,8 @@ class UniversityRepository(private val supabase: Postgrest) {
     suspend fun searchTeachers(query: String): NetworkResult<List<String>> {
         return try {
             val result = supabase.from("nauczyciele")
-                .select(columns = Columns.list("nazwa")) {
-                    filter { ilike("nazwa", "%$query%") }
+                .select(columns = Columns.list("nazwisko_imie")) { // Zmiana na nazwisko_imie
+                    filter { ilike("nazwisko_imie", "%$query%") }
                 }
                 .decodeList<TeacherDto>()
                 .mapNotNull { it.name }
@@ -92,23 +108,32 @@ class UniversityRepository(private val supabase: Postgrest) {
                 .sorted()
             NetworkResult.Success(result)
         } catch (e: Exception) {
-            Log.e("UniversityRepo", "Błąd wyszukiwania nauczycieli: $query", e)
             NetworkResult.Error("Błąd wyszukiwania nauczycieli.")
+        }
+    }
+
+    suspend fun getGroupCodes(): NetworkResult<List<String>> {
+        return try {
+            val result = supabase.from("grupy")
+                .select(columns = Columns.list("grupa_id"))
+                .decodeList<GroupCodeDto>()
+                .map { it.code }
+                .distinct()
+                .sorted()
+            NetworkResult.Success(result)
+        } catch (e: Exception) {
+            NetworkResult.Error("Błąd pobierania grup.")
         }
     }
 
     suspend fun getSubgroups(groupCode: String): NetworkResult<List<String>> {
         return try {
-            val grupaId = getGrupaId(groupCode) ?: return NetworkResult.Error("Nie znaleziono grupy.")
             val result = supabase.from("zajecia_grupy")
                 .select(columns = Columns.list("podgrupa")) {
-                    filter {
-                        eq("grupa_id", grupaId)
-                    }
+                    filter { eq("grupa_id", groupCode) }
                 }
                 .decodeList<SubgroupDto>()
-                .map { it.subgroup }
-                // Nie filtrujemy tutaj pustych, bo chcemy wiedzieć czy jest "Cała grupa"
+                .map { it.subgroup ?: "" }
                 .distinct()
                 .sorted()
             NetworkResult.Success(result)
@@ -119,85 +144,88 @@ class UniversityRepository(private val supabase: Postgrest) {
 
     suspend fun getSchedule(groupCode: String, subgroups: List<String>): NetworkResult<List<ClassEntity>> {
         return try {
-            val grupaId = getGrupaId(groupCode) ?: return NetworkResult.Error("Nie znaleziono ID grupy.")
-
-            // 1. Pobierz plan zajęć
-            val scheduleDto = supabase.from("zajecia_grupy")
+            val dtoList = supabase.from("zajecia_grupy")
                 .select(columns = scheduleColumns) {
-                    filter {
-                        eq("grupa_id", grupaId)
-                        neq("rz", "E")
-                        if (subgroups.isNotEmpty()) {
-                            or {
-                                eq("podgrupa", "")
-                                filter("podgrupa", FilterOperator.IS, "null")
-                                isIn("podgrupa", subgroups)
-                            }
-                        }
-                    }
+                    filter { eq("grupa_id", groupCode) }
                 }
                 .decodeList<ClassScheduleDto>()
 
-            // 2. Pobierz szczegóły nauczycieli dla pobranych zajęć
-            val teacherDetailsMap = fetchTeacherDetails(scheduleDto.mapNotNull { it.teacher })
+            val filteredList = if (subgroups.isNotEmpty()) {
+                dtoList.filter { it.subgroup.isNullOrBlank() || subgroups.contains(it.subgroup) }
+            } else {
+                dtoList
+            }
 
-            NetworkResult.Success(mapDtoToEntity(scheduleDto, groupCode, teacherDetailsMap))
+            val teacherNames = filteredList.mapNotNull { it.teacher }.distinct()
+            val teacherMap = fetchTeacherDetails(teacherNames)
+
+            NetworkResult.Success(mapDtoToEntity(filteredList, groupCode, teacherMap))
         } catch (e: Exception) {
-            Log.e("UniversityRepo", "Błąd pobierania planu", e)
-            NetworkResult.Error("Nie udało się pobrać planu.")
+            NetworkResult.Error("Błąd pobierania planu zajęć.")
         }
     }
 
     suspend fun getScheduleForTeacher(teacherName: String): NetworkResult<List<ClassEntity>> {
         return try {
-            // 1. Pobierz plan
-            val scheduleDto = supabase.from("zajecia_grupy")
-                .select(columns = scheduleColumns) {
-                    filter {
-                        ilike("nauczyciel", "%$teacherName%")
-                        neq("rz", "E")
-                    }
+            val teachers = supabase.from("nauczyciele")
+                .select(columns = Columns.list("external_id", "email", "jednostka")) {
+                    filter { eq("nazwisko_imie", teacherName) }
                 }
-                .decodeList<ClassScheduleDto>()
+                .decodeList<TeacherIdDto>()
 
-            // 2. Pobierz szczegóły (email, instytut)
-            val teacherDetailsMap = fetchTeacherDetails(scheduleDto.mapNotNull { it.teacher })
+            val teacherInfo = teachers.firstOrNull() ?: return NetworkResult.Error("Nie znaleziono nauczyciela.")
 
-            NetworkResult.Success(mapDtoToEntity(scheduleDto, "Nauczyciel: $teacherName", teacherDetailsMap))
+            val dtoList = supabase.from("zajecia_nauczyciela")
+                .select() { filter { eq("nauczyciel_id", teacherInfo.id) } }
+                .decodeList<TeacherClassScheduleDto>()
+
+            val entities = dtoList.mapNotNull { dto ->
+                try {
+                    val startDT = LocalDateTime.parse(dto.startDateTime)
+                    val endDT = LocalDateTime.parse(dto.endDateTime)
+                    ClassEntity(
+                        supabaseId = dto.id,
+                        subjectName = dto.subjectName,
+                        classType = dto.classType ?: "Inne",
+                        startTime = startDT.format(DateTimeFormatter.ofPattern("HH:mm")),
+                        endTime = endDT.format(DateTimeFormatter.ofPattern("HH:mm")),
+                        dayOfWeek = startDT.dayOfWeek.value,
+                        date = startDT.toLocalDate().toString(),
+                        groupCode = dto.groups ?: "",
+                        subgroup = null,
+                        teacherName = teacherName,
+                        teacherEmail = teacherInfo.email,
+                        teacherInstitute = teacherInfo.institute,
+                        room = dto.room ?: "Brak sali"
+                    )
+                } catch (e: Exception) { null }
+            }.sortedWith(compareBy({ it.date }, { it.startTime }))
+
+            NetworkResult.Success(entities)
         } catch (e: Exception) {
-            NetworkResult.Error("Nie udało się pobrać planu nauczyciela.")
+            NetworkResult.Error("Błąd pobierania planu nauczyciela.")
         }
     }
 
-    // Funkcja pomocnicza do "dociągania" danych nauczycieli
+    // Pomocnicza do pobierania detali nauczyciela (email, jednostka)
     private suspend fun fetchTeacherDetails(teacherNames: List<String>): Map<String, TeacherDetailsDto> {
         if (teacherNames.isEmpty()) return emptyMap()
-
         return try {
             val uniqueNames = teacherNames.distinct()
             supabase.from("nauczyciele")
-                .select(columns = Columns.list("nazwa", "email", "instytut")) {
+                .select(columns = Columns.list("nazwisko_imie", "email", "jednostka")) {
                     filter {
-                        isIn("nazwa", uniqueNames)
+                        isIn("nazwisko_imie", uniqueNames)
                     }
                 }
                 .decodeList<TeacherDetailsDto>()
                 .associateBy { it.name }
         } catch (e: Exception) {
-            Log.e("UniversityRepo", "Błąd pobierania detali nauczycieli", e)
             emptyMap()
         }
     }
 
-    private suspend fun getGrupaId(groupCode: String): String? {
-        val result = supabase.from("grupy")
-            .select(columns = Columns.list("id")) {
-                filter { eq("kod_grupy", groupCode) }
-            }
-            .decodeSingleOrNull<Map<String, String>>()
-        return result?.get("id")
-    }
-
+    // Pozostała logika mapDtoToEntity powinna używać nowych nazw pól z ClassScheduleDto
     private fun mapDtoToEntity(
         dtoList: List<ClassScheduleDto>,
         groupCode: String,
@@ -205,10 +233,10 @@ class UniversityRepository(private val supabase: Postgrest) {
     ): List<ClassEntity> {
         return dtoList.mapNotNull { dto ->
             try {
-                val startDT = LocalDateTime.parse(dto.startDateTime.replace(" ", "T"))
-                val endDT = LocalDateTime.parse(dto.endDateTime.replace(" ", "T"))
+                // ISO format z bazy: "2024-03-07T13:00:00"
+                val startDT = LocalDateTime.parse(dto.startDateTime)
+                val endDT = LocalDateTime.parse(dto.endDateTime)
 
-                // Pobierz detale z mapy, jeśli istnieją
                 val teacherInfo = teacherMap[dto.teacher]
 
                 ClassEntity(
@@ -220,58 +248,27 @@ class UniversityRepository(private val supabase: Postgrest) {
                     dayOfWeek = startDT.dayOfWeek.value,
                     date = startDT.toLocalDate().toString(),
                     groupCode = groupCode,
-                    subgroup = dto.subgroup, // null zostanie zamieniony na "" w UI
+                    subgroup = dto.subgroup,
                     teacherName = dto.teacher ?: "Brak danych",
-                    teacherEmail = teacherInfo?.email,       // Teraz poprawnie zmapowane
-                    teacherInstitute = teacherInfo?.institute, // Teraz poprawnie zmapowane
+                    teacherEmail = teacherInfo?.email,
+                    teacherInstitute = teacherInfo?.institute, // Teraz pobierane z 'jednostka'
                     room = dto.room ?: "Brak sali"
                 )
             } catch (e: Exception) { null }
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
-            .distinctBy { "${it.date}_${it.startTime}_${it.subjectName}_${it.room}" }
     }
 
-    // Pozostałe metody (getGroupDetails, getGroupCodes, getTeachers) bez zmian...
     suspend fun getGroupDetails(groupCode: String): NetworkResult<GroupDetailsDto> {
         return try {
             val details = supabase.from("grupy")
-                .select(columns = Columns.raw("tryb_studiow, kierunki(wydzial, nazwa)")) {
-                    filter { eq("kod_grupy", groupCode) }
+                .select(columns = Columns.raw("tryb, kierunki(wydzial, nazwa)")) { // Zmiana tryb_studiow na tryb
+                    filter { eq("grupa_id", groupCode) }
                 }
                 .decodeSingleOrNull<GroupDetailsDto>()
             if (details != null) NetworkResult.Success(details)
             else NetworkResult.Error("Brak szczegółów grupy.")
         } catch (e: Exception) {
             NetworkResult.Error("Błąd pobierania szczegółów.")
-        }
-    }
-
-    suspend fun getGroupCodes(): NetworkResult<List<String>> {
-        return try {
-            val codes = supabase.from("grupy")
-                .select(columns = Columns.list("kod_grupy"))
-                .decodeList<GroupCodeDto>()
-                .map { it.code }
-                .distinct()
-                .sorted()
-            NetworkResult.Success(codes)
-        } catch (e: Exception) {
-            NetworkResult.Error("Nie udało się pobrać listy grup.")
-        }
-    }
-
-    suspend fun getTeachers(): NetworkResult<List<String>> {
-        return try {
-            val teachers = supabase.from("nauczyciele")
-                .select(columns = Columns.list("nazwa"))
-                .decodeList<TeacherDto>()
-                .mapNotNull { it.name }
-                .filter { it.isNotBlank() }
-                .distinct()
-                .sorted()
-            NetworkResult.Success(teachers)
-        } catch (e: Exception) {
-            NetworkResult.Error("Nie udało się pobrać listy nauczycieli.")
         }
     }
 }

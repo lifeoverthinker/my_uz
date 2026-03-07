@@ -115,7 +115,8 @@ object AppViewModelProvider {
         initializer {
             AccountViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
-                universityRepository = myUZApplication().container.universityRepository
+                universityRepository = myUZApplication().container.universityRepository,
+                classRepository = myUZApplication().container.classRepository
             )
         }
 
@@ -161,3 +162,4 @@ object AppViewModelProvider {
 
 fun CreationExtras.myUZApplication(): MyUZApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)
+

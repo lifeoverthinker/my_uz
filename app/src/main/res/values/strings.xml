@@ -34,6 +34,10 @@
     <string name="label_status">STATUS</string>
     <string name="none">Brak</string>
 
+    <string name="calendar_empty_title">Brak zajęć</string>
+    <string name="calendar_empty_description">Na wybrany dzień nie masz zaplanowanych zajęć.</string>
+    <string name="calendar_empty_hint">Wybierz inny dzień lub użyj ikony kalendarza u góry.</string>
+
     <string name="tasks_screen_title">Terminarz</string>
     <string name="tasks_empty_title">Brak zadań</string>
     <string name="tasks_today">Dziś</string>

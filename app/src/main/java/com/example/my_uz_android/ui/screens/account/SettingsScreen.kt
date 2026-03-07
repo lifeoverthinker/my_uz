@@ -76,7 +76,7 @@ fun SettingsScreen(
                 title = "Ustawienia",
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onBackClick,
-                isNavigationIconFilled = true,
+                isNavigationIconFilled = false,
                 actions = {
                     if (uiState.isModified) {
                         TextButton(

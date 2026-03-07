@@ -28,7 +28,7 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
                 title = "O aplikacji",
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onBackClick,
-                isNavigationIconFilled = true
+                isNavigationIconFilled = false
             )
         }
     ) { paddingValues ->

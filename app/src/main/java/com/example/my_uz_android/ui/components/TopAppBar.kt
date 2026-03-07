@@ -38,7 +38,6 @@ fun TopAppBar(
     isNavigationIconFilled: Boolean = false,
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
-    val buttonBg = MaterialTheme.extendedColors.buttonBackground
     val iconTint = MaterialTheme.extendedColors.iconText
 
     Surface(
@@ -58,7 +57,7 @@ fun TopAppBar(
                         modifier = Modifier
                             .size(TopBarButtonSize)
                             .clip(CircleShape)
-                            .background(buttonBg)
+                            .background(MaterialTheme.extendedColors.buttonBackground)
                             .clickable(onClick = onNavigationClick),
                         contentAlignment = Alignment.Center
                     ) {
@@ -134,7 +133,6 @@ fun CalendarTopAppBar(
     isShareLoading: Boolean = false,
     actions: (@Composable RowScope.() -> Unit)? = null
 ) {
-    val buttonBg = MaterialTheme.extendedColors.buttonBackground
     val iconColor = MaterialTheme.extendedColors.iconText
 
     Surface(
@@ -152,7 +150,7 @@ fun CalendarTopAppBar(
                 modifier = Modifier
                     .size(TopBarButtonSize)
                     .clip(CircleShape)
-                    .background(buttonBg)
+                    .background(MaterialTheme.extendedColors.buttonBackground)
                     .clickable(onClick = onNavigationClick),
                 contentAlignment = Alignment.Center
             ) {
@@ -274,7 +272,6 @@ fun PreviewTopAppBar(
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit
 ) {
-    val buttonBg = MaterialTheme.extendedColors.buttonBackground
     val iconColor = MaterialTheme.extendedColors.iconText
 
     Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxWidth()) {
@@ -285,15 +282,13 @@ fun PreviewTopAppBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(TopBarButtonSize)
-                    .clip(CircleShape)
-                    .background(buttonBg)
-                    .clickable(onClick = onBackClick),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(painterResource(R.drawable.ic_chevron_left), null, Modifier.size(TopBarIconSize), iconColor)
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_left),
+                    contentDescription = null,
+                    modifier = Modifier.size(TopBarIconSize),
+                    tint = iconColor
+                )
             }
 
             Spacer(Modifier.width(12.dp))
@@ -329,8 +324,6 @@ fun PreviewTopAppBar(
 
 @Composable
 fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick: () -> Unit) {
-    // ZMIANA: Ten kolor będzie użyty dla ikony wstecz, ikony X oraz tekstu placeholder
-    // Jest to onSurfaceVariant z przezroczystością 0.6f (jak w placeholderze)
     val elementsColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
 
     Surface(
@@ -347,7 +340,6 @@ fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick:
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Strzałka wstecz
                 Box(
                     modifier = Modifier
                         .size(TopBarButtonSize)
@@ -358,13 +350,12 @@ fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick:
                         painter = painterResource(id = R.drawable.ic_chevron_left),
                         contentDescription = "Wstecz",
                         modifier = Modifier.size(TopBarIconSize),
-                        tint = elementsColor // ZMIANA KOLORU
+                        tint = elementsColor
                     )
                 }
 
                 Spacer(Modifier.width(12.dp))
 
-                // Pole tekstowe
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -375,7 +366,7 @@ fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick:
                         Text(
                             "Szukaj grupy lub nauczyciela...",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = elementsColor // Używamy tej samej zmiennej dla spójności
+                            color = elementsColor
                         )
                     }
                     BasicTextField(
@@ -393,8 +384,8 @@ fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick:
                         Icon(
                             painter = painterResource(id = R.drawable.ic_x_close),
                             contentDescription = "Wyczyść",
-                            modifier = Modifier.size(20.dp), // ZMIANA: Zmniejszono ikonę (domyślnie ~24dp)
-                            tint = elementsColor // ZMIANA KOLORU
+                            modifier = Modifier.size(20.dp),
+                            tint = elementsColor
                         )
                     }
                 }

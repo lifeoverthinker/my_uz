@@ -17,6 +17,7 @@ data class SettingsEntity(
     // Plan zajęć i Uczelnia
     val selectedGroupCode: String? = null,
     val selectedGroupName: String? = null,
+    val activeDirectionCode: String? = null,
     val selectedSubgroup: String? = null,
     val faculty: String? = null,
     val department: String? = null,
@@ -24,13 +25,17 @@ data class SettingsEntity(
     val studyMode: String? = null,
     val currentSemester: Int = 1,
 
+    // Multi-kierunek (Dodatkowe kierunki i stan dla indeksu)
+    val additionalGroupCodes: String = "",
+    val activeIndexDirectionCode: String? = null,
+
     // Wygląd i Stan aplikacji
     val isFirstRun: Boolean = true,
     val isDarkMode: Boolean = false,
-    val offlineModeEnabled: Boolean = false, // PRZYWRÓCONE
+    val offlineModeEnabled: Boolean = false,
     val classColorsJson: String = "{}",
 
-    // POWIADOMIENIA
+    // Powiadomienia
     val notificationsEnabled: Boolean = true,
     val notificationsTasks: Boolean = true,
     val notificationsClasses: Boolean = true
