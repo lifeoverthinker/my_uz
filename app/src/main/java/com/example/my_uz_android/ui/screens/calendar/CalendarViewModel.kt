@@ -30,7 +30,6 @@ data class CalendarUiState(
     val currentSource: ScheduleSource = ScheduleSource.MyPlan,
     val isLoading: Boolean = false,
     val error: String? = null,
-    // DODANE: Stan kalendarza przeniesiony z UI
     val selectedDate: LocalDate = LocalDate.now(ZoneId.of("Europe/Warsaw")),
     val isMonthView: Boolean = false
 )
@@ -49,8 +48,6 @@ class CalendarViewModel(
     private val _selectedGroups = MutableStateFlow<Set<String>>(emptySet())
     private val _previewState = MutableStateFlow<List<ClassEntity>>(emptyList())
     private val _currentSource = MutableStateFlow<ScheduleSource>(ScheduleSource.MyPlan)
-
-    // DODANE: Strumienie trzymające wybrany dzień i widok
     private val _selectedDate = MutableStateFlow(LocalDate.now(ZoneId.of("Europe/Warsaw")))
     private val _isMonthView = MutableStateFlow(false)
 
@@ -81,9 +78,22 @@ class CalendarViewModel(
             gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
         } catch (_: Exception) { emptyMap() }
 
+        // NAPRAWA: Złączenie głównego kierunku i dodatkowych, aby filtry działały!
+        val allCoursesForUi = mutableListOf<UserCourseEntity>()
+        settings?.selectedGroupCode?.let { mainCode ->
+            allCoursesForUi.add(
+                UserCourseEntity(
+                    id = -1, // Sztuczne ID dla głównej grupy
+                    groupCode = mainCode,
+                    fieldOfStudy = settings.fieldOfStudy ?: mainCode,
+                    semester = settings.currentSemester
+                )
+            )
+        }
+        allCoursesForUi.addAll(courses)
+
         val activeCodes = if (selectedCodes.isEmpty()) {
-            val codes = courses.map { it.groupCode }.toMutableSet()
-            if (!settings?.selectedGroupCode.isNullOrBlank()) codes.add(settings!!.selectedGroupCode!!)
+            val codes = allCoursesForUi.map { it.groupCode }.toMutableSet()
             codes
         } else {
             selectedCodes
@@ -101,7 +111,7 @@ class CalendarViewModel(
         }
 
         CalendarUiState(
-            userCourses = courses,
+            userCourses = allCoursesForUi, // Przekazujemy pełną listę
             selectedGroupCodes = activeCodes,
             favorites = favorites,
             visibleClasses = classesToShow,
@@ -157,12 +167,6 @@ class CalendarViewModel(
         }
     }
 
-    // DODANE: Metody do zarządzania stanem kalendarza
-    fun setSelectedDate(date: LocalDate) {
-        _selectedDate.value = date
-    }
-
-    fun setMonthView(isMonth: Boolean) {
-        _isMonthView.value = isMonth
-    }
+    fun setSelectedDate(date: LocalDate) { _selectedDate.value = date }
+    fun setMonthView(isMonth: Boolean) { _isMonthView.value = isMonth }
 }

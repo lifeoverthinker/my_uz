@@ -1,9 +1,10 @@
 package com.example.my_uz_android.ui.screens.calendar
 
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +31,8 @@ import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
+import androidx.compose.ui.res.painterResource
+import com.example.my_uz_android.R
 
 @Composable
 fun CalendarScreen(
@@ -71,7 +74,6 @@ fun CalendarScreenContent(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Zmienne czerpane ze stanu zamiast lokalnego `remember`
     val selectedDate = uiState.selectedDate
     val isMonthView = uiState.isMonthView
 
@@ -94,6 +96,7 @@ fun CalendarScreenContent(
     )
 
     var swipeDirection by remember { mutableStateOf<DaySwipeDirection?>(null) }
+    var isFilterExpanded by remember { mutableStateOf(false) }
 
     fun navigateDay(offsetDays: Long, direction: DaySwipeDirection) {
         val newDate = selectedDate.plusDays(offsetDays)
@@ -182,23 +185,45 @@ fun CalendarScreenContent(
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
 
-                // MULTI-KIERUNEK: Chipsy wyśrodkowane nad kalendarzem
+                // MULTI-KIERUNEK: Spójne menu w formie dropdownu identyczne jak w indeksie
                 if (uiState.userCourses.size > 1) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.Center,
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        uiState.userCourses.forEach { course ->
-                            FilterChip(
-                                selected = uiState.selectedGroupCodes.contains(course.groupCode),
-                                onClick = { onToggleGroupVisibility(course.groupCode) },
-                                label = { Text(course.fieldOfStudy ?: course.groupCode) },
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
+                        Box {
+                            IconButton(onClick = { isFilterExpanded = true }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_filter_funnel), // <-- TWOJA IKONA
+                                    contentDescription = "Filtruj kierunki",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = isFilterExpanded,
+                                onDismissRequest = { isFilterExpanded = false }
+                            ) {
+                                uiState.userCourses.forEach { course ->
+                                    val isSelected = uiState.selectedGroupCodes.contains(course.groupCode)
+                                    DropdownMenuItem(
+                                        text = { Text(course.fieldOfStudy ?: course.groupCode) },
+                                        trailingIcon = {
+                                            if (isSelected) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Wybrane",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        },
+                                        onClick = { onToggleGroupVisibility(course.groupCode) }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -206,12 +231,12 @@ fun CalendarScreenContent(
                 ScheduleView(
                     calendarState = monthState,
                     weekState = weekState,
-                    selectedDate = selectedDate, // Używa daty ze stanu
-                    isMonthView = isMonthView,   // Używa widoku ze stanu
+                    selectedDate = selectedDate,
+                    isMonthView = isMonthView,
                     swipeDirection = swipeDirection,
                     onDateSelected = { date ->
                         swipeDirection = null
-                        onDateSelected(date)     // Wysłanie nowej daty do ViewModelu
+                        onDateSelected(date)
                     },
                     onToggleView = { onToggleMonthView(!isMonthView) },
                     classes = uiState.visibleClasses,
@@ -234,10 +259,11 @@ fun CalendarScreenPreview() {
                 selectedDate = LocalDate.now(),
                 isMonthView = false,
                 userCourses = listOf(
-                    // Poprawiony typ dla semester (usunięte cudzysłowy)
-                    UserCourseEntity(id = 1, groupCode = "12IN", fieldOfStudy = "Informatyka", semester = 1)
+                    UserCourseEntity(id = 1, groupCode = "12IN", fieldOfStudy = "Informatyka", semester = 1),
+                    UserCourseEntity(id = 2, groupCode = "34MA", fieldOfStudy = "Matematyka", semester = 3)
                 ),
-                visibleClasses = emptyList() // Zaślepka braku zajęć, opcjonalnie dodaj mockowany obiekt ClassEntity
+                selectedGroupCodes = setOf("12IN"),
+                visibleClasses = emptyList()
             ),
             onSearchClick = {},
             onAccountClick = {},

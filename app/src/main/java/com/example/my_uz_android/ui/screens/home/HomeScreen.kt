@@ -238,7 +238,12 @@ fun HomeScreen(
                                             Text(text = "Zadania", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
                                         }
                                         if (uiState.upcomingTasks.isEmpty()) {
-                                            Text(text = "Brak zadań", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                                            EmptyStateMessage(
+                                                title = "Wszystko zrobione!",
+                                                message = "Brak nadchodzących zadań. Masz czas dla siebie.",
+                                                imageSize = 0.dp, // Wymusza tryb kompaktowy i ukrywa miejsce na ikonę
+                                                modifier = Modifier.padding(vertical = 4.dp)
+                                            )
                                         } else {
                                             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                                 itemsIndexed(uiState.upcomingTasks) { _, task ->
@@ -257,7 +262,12 @@ fun HomeScreen(
                                             Text(text = "Wydarzenia", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
                                         }
                                         if (uiState.upcomingEvents.isEmpty()) {
-                                            Text(text = "Brak wydarzeń", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                                            EmptyStateMessage(
+                                                title = "Cisza w eterze",
+                                                message = "W najbliższym czasie nie ma żadnych wydarzeń na uczelni.",
+                                                imageSize = 0.dp,
+                                                modifier = Modifier.padding(vertical = 4.dp)
+                                            )
                                         } else {
                                             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                                 items(uiState.upcomingEvents) { event ->

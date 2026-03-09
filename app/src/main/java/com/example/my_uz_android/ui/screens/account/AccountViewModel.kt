@@ -259,7 +259,14 @@ class AccountViewModel(
         val finalMod = if (detailsRes is NetworkResult.Success) detailsRes.data?.studyMode ?: "" else ""
         val finalSem = if (detailsRes is NetworkResult.Success) detailsRes.data?.semester?.filter { it.isDigit() }?.take(1)?.toIntOrNull() ?: 1 else 1
 
-        userCourseRepository.updateUserCourse(tempCourse.copy(fieldOfStudy = finalField, faculty = finalFac, studyMode = finalMod, semester = finalSem))
+        // NAPRAWA: Pobieramy obiekt z bazy, by uzyskać wygenerowane ID i prawidłowo zaktualizować rekord
+        val currentCourses = userCourseRepository.getAllUserCoursesStream().first()
+        val courseToUpdate = currentCourses.find { it.groupCode == code }
+        if (courseToUpdate != null) {
+            userCourseRepository.updateUserCourse(courseToUpdate.copy(fieldOfStudy = finalField, faculty = finalFac, studyMode = finalMod, semester = finalSem))
+        } else {
+            userCourseRepository.updateUserCourse(tempCourse.copy(fieldOfStudy = finalField, faculty = finalFac, studyMode = finalMod, semester = finalSem))
+        }
 
         val subgroupsRes = subgroupsDef.await()
         if (subgroupsRes is NetworkResult.Success) _additionalSubgroupsMap.update { it + (code to (subgroupsRes.data ?: emptyList()).filterNotNull().sorted()) }

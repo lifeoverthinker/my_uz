@@ -15,6 +15,7 @@ import com.example.my_uz_android.ui.components.EmptyStateMessage
 import com.example.my_uz_android.ui.screens.index.components.AverageCard
 import com.example.my_uz_android.ui.screens.index.components.ExpandableSubjectCard
 import com.example.my_uz_android.ui.screens.index.components.SubjectTypeState
+import com.example.my_uz_android.R
 
 @Composable
 fun GradesScreen(
@@ -33,10 +34,14 @@ fun GradesScreen(
             CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     } else if (uiState.subjects.isEmpty()) {
-        EmptyStateMessage(
-            message = "Brak przedmiotów w indeksie.\nUpewnij się, że wybrałeś plan zajęć w ustawieniach.",
-            modifier = Modifier.padding(16.dp)
-        )
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            EmptyStateMessage(
+                title = "Brak ocen",
+                message = "Nie znaleźliśmy żadnych przedmiotów w indeksie.\nUpewnij się, że poprawnie wybrałeś plan zajęć w ustawieniach.",
+                iconRes = R.drawable.grades_rafiki,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
     } else {
         LazyColumn(
             modifier = Modifier
@@ -83,6 +88,22 @@ fun GradesScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
+        }
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun GradesScreenEmptyPreview() {
+    com.example.my_uz_android.ui.theme.MyUZTheme {
+        // Symulacja pustego ekranu
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            EmptyStateMessage(
+                title = "Brak ocen",
+                message = "Nie znaleźliśmy żadnych przedmiotów w indeksie.\nUpewnij się, że poprawnie wybrałeś plan zajęć w ustawieniach.",
+                iconRes = R.drawable.grades_rafiki,
+                modifier = Modifier.padding(16.dp)
+            )
         }
     }
 }

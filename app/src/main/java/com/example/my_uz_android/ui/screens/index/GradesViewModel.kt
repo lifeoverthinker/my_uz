@@ -30,7 +30,6 @@ data class GradesUiState(
     val average: Double? = null,
     val isLoading: Boolean = false,
     val allGrades: List<GradeEntity> = emptyList(),
-    // Nowe pola do filtrowania kierunków
     val userCourses: List<UserCourseEntity> = emptyList(),
     val selectedGroupCodes: Set<String> = emptySet()
 )
@@ -39,7 +38,7 @@ class GradesViewModel(
     private val gradesRepository: GradesRepository,
     private val classRepository: ClassRepository,
     private val settingsRepository: SettingsRepository,
-    private val userCourseRepository: UserCourseRepository // Dodane do repo
+    private val userCourseRepository: UserCourseRepository
 ) : ViewModel() {
 
     private val _selectedGroups = MutableStateFlow<Set<String>>(emptySet())
@@ -52,19 +51,29 @@ class GradesViewModel(
         _selectedGroups
     ) { grades, allClasses, courses, settings, selectedGroups ->
 
-        // 1. Zbieranie aktywnych kodów grup
+        // NAPRAWA: Złączenie głównego kierunku i dodatkowych, aby filtry działały!
+        val allCoursesForUi = mutableListOf<UserCourseEntity>()
+        settings?.selectedGroupCode?.let { mainCode ->
+            allCoursesForUi.add(
+                UserCourseEntity(
+                    id = -1,
+                    groupCode = mainCode,
+                    fieldOfStudy = settings.fieldOfStudy ?: mainCode,
+                    semester = settings.currentSemester
+                )
+            )
+        }
+        allCoursesForUi.addAll(courses)
+
         val activeCodes = if (selectedGroups.isEmpty()) {
-            val codes = courses.map { it.groupCode }.toMutableSet()
-            if (!settings?.selectedGroupCode.isNullOrBlank()) codes.add(settings!!.selectedGroupCode!!)
+            val codes = allCoursesForUi.map { it.groupCode }.toMutableSet()
             codes
         } else {
             selectedGroups
         }
 
-        // 2. Filtrowanie klas tylko dla zaznaczonych grup
         val classesForSelectedGroups = allClasses.filter { activeCodes.contains(it.groupCode) }
 
-        // 3. Generowanie przedmiotów na bazie przefiltrowanych klas
         val subjectsFromSchedule = classesForSelectedGroups
             .groupBy { it.subjectName }
             .map { (subjectName, subjectClasses) ->
@@ -99,7 +108,7 @@ class GradesViewModel(
         }
 
         val allGradesForAverage = grades.filter {
-            subjectsFromSchedule.any { s -> s.first == it.subjectName } // Zlicza tylko do średniej tych wybranych kierunków
+            subjectsFromSchedule.any { s -> s.first == it.subjectName }
                     && !it.isPoints && it.grade != -1.0 && it.weight > 0
         }
 
@@ -114,7 +123,7 @@ class GradesViewModel(
             average = overallAverage,
             isLoading = false,
             allGrades = grades,
-            userCourses = courses,
+            userCourses = allCoursesForUi, // Przekazujemy pełną listę do filtrów
             selectedGroupCodes = activeCodes
         )
     }

@@ -15,6 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.MyUZTheme
@@ -29,11 +30,10 @@ fun PersonalDataScreen(
     val userSurname by viewModel.userSurname.collectAsState()
     val selectedGender by viewModel.selectedGender.collectAsState()
     val selectedGroup by viewModel.selectedGroup.collectAsState()
-
-    // Pobieramy podgrupy Głównej Grupy
     val selectedSubgroups by viewModel.mainSelectedSubgroups.collectAsState()
 
-    val additionalGroups by viewModel.additionalGroups.collectAsState()
+    // NAPRAWA: Zbieramy całe obiekty kursów zamiast tylko tekstów (kodów)
+    val additionalCourses by viewModel.additionalUserCourses.collectAsState()
 
     PersonalDataScreenContent(
         userName = userName,
@@ -41,7 +41,7 @@ fun PersonalDataScreen(
         selectedGender = selectedGender,
         selectedGroup = selectedGroup,
         selectedSubgroups = selectedSubgroups,
-        additionalGroups = additionalGroups,
+        additionalCourses = additionalCourses,
         onNavigateBack = onNavigateBack,
         onNavigateToEdit = onNavigateToEdit
     )
@@ -55,7 +55,7 @@ fun PersonalDataScreenContent(
     selectedGender: UserGender?,
     selectedGroup: String?,
     selectedSubgroups: Set<String>,
-    additionalGroups: List<String>,
+    additionalCourses: List<UserCourseEntity>,
     onNavigateBack: () -> Unit,
     onNavigateToEdit: () -> Unit
 ) {
@@ -110,7 +110,6 @@ fun PersonalDataScreenContent(
             PersonalDataGroup(title = "Zapisane grupy") {
                 DataItem(label = "Grupa główna", value = selectedGroup ?: "Brak przypisanej grupy")
 
-                // PRZYWRÓCONE PODGRUPY
                 if (sortedSubgroups.isNotEmpty()) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -136,10 +135,7 @@ fun PersonalDataScreenContent(
                                 ) {
                                     Text(
                                         text = subgroup,
-                                        modifier = Modifier.padding(
-                                            horizontal = 12.dp,
-                                            vertical = 6.dp
-                                        ),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
                                         color = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
@@ -149,15 +145,47 @@ fun PersonalDataScreenContent(
                     }
                 }
 
-                if (additionalGroups.isNotEmpty()) {
+                // NAPRAWA: Rozbudowane wyświetlanie dla grup dodatkowych
+                if (additionalCourses.isNotEmpty()) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
-                    DataItem(
-                        label = "Grupy dodatkowe",
-                        value = additionalGroups.joinToString(separator = "\n")
-                    )
+
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "Grupy dodatkowe",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        additionalCourses.forEachIndexed { index, course ->
+                            Column(modifier = Modifier.padding(bottom = if (index < additionalCourses.size - 1) 16.dp else 0.dp)) {
+                                Text(
+                                    text = course.groupCode,
+                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = course.fieldOfStudy ?: "Brak danych",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+
+                                val subgroups = course.selectedSubgroup?.split(",")?.filter { it.isNotBlank() }
+                                if (!subgroups.isNullOrEmpty()) {
+                                    Text(
+                                        text = "Podgrupy: ${subgroups.joinToString(", ")}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -200,9 +228,6 @@ fun DataItem(label: String, value: String) {
     }
 }
 
-// ==========================================
-// PREVIEW
-// ==========================================
 @Preview(showBackground = true)
 @Composable
 fun PersonalDataScreenPreview() {
@@ -213,7 +238,10 @@ fun PersonalDataScreenPreview() {
             selectedGender = UserGender.STUDENT,
             selectedGroup = "11-INF-ZI-S",
             selectedSubgroups = setOf("L1", "C2"),
-            additionalGroups = listOf("12-MAT-S", "14-FIZ-N"),
+            additionalCourses = listOf(
+                UserCourseEntity(id = 1, groupCode = "12-MAT-S", fieldOfStudy = "Matematyka stosowana", selectedSubgroup = "L1,W"),
+                UserCourseEntity(id = 2, groupCode = "14-FIZ-N", fieldOfStudy = "Fizyka techniczna", selectedSubgroup = "")
+            ),
             onNavigateBack = {},
             onNavigateToEdit = {}
         )

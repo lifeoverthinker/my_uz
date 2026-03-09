@@ -33,7 +33,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.example.my_uz_android.R // Upewnij się, że ten import jest poprawny dla Twojego pakietu
-
+import com.example.my_uz_android.ui.components.EmptyStateMessage
 @Composable
 fun AbsencesScreen(
     viewModel: AbsencesViewModel,
@@ -50,11 +50,11 @@ fun AbsencesScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         if (absencesState.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "Brak nieobecności.\nDodaj pierwszą przyciskiem +",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                EmptyStateMessage(
+                    title = "Czyste konto!",
+                    message = "Brak nieobecności do wyświetlenia.\nOby tak dalej! Jeśli jednak musisz, dodaj ją przyciskiem +",
+                    iconRes = R.drawable.college_students_rafiki,
+                    modifier = Modifier.padding(16.dp)
                 )
             }
         } else {
@@ -374,6 +374,21 @@ fun AbsenceDateItem(
                     )
                 }
             }
+        }
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun AbsencesScreenEmptyPreview() {
+    com.example.my_uz_android.ui.theme.MyUZTheme {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            com.example.my_uz_android.ui.components.EmptyStateMessage(
+                title = "Czyste konto!",
+                message = "Brak nieobecności do wyświetlenia.\nOby tak dalej! Jeśli jednak musisz, dodaj ją przyciskiem +",
+                iconRes = R.drawable.college_students_rafiki,
+                modifier = Modifier.padding(16.dp)
+            )
         }
     }
 }

@@ -239,32 +239,11 @@ private fun DayTimelineContent(
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                    modifier = Modifier.size(56.dp)
-                )
-
-                Text(
-                    text = "Brak zajęć",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-
-                Text(
-                    text = "Czas na odpoczynek lub naukę własną.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
+            com.example.my_uz_android.ui.components.EmptyStateMessage(
+                title = "Brak zajęć",
+                message = "Czas na odpoczynek lub naukę własną.\nW tym dniu nie masz wpisanych żadnych ćwiczeń ani wykładów.",
+                iconRes = R.drawable.calendar_rafiki
+            )
         }
     } else {
         Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
@@ -493,5 +472,19 @@ fun CurrentTimeIndicator() {
                 .clip(CircleShape)
                 .background(indicatorColor)
         )
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun ScheduleViewEmptyDayPreview() {
+    com.example.my_uz_android.ui.theme.MyUZTheme {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            com.example.my_uz_android.ui.components.EmptyStateMessage(
+                title = "Brak zajęć",
+                message = "Czas na odpoczynek lub naukę własną.\nW tym dniu nie masz wpisanych żadnych ćwiczeń ani wykładów.",
+                iconRes = R.drawable.calendar_rafiki
+            )
+        }
     }
 }

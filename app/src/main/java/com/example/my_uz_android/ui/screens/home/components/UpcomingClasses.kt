@@ -73,10 +73,11 @@ fun UpcomingClasses(
         }
 
         if (classes.isEmpty()) {
-            Text(
-                text = emptyMessage ?: "Brak zajęć",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            com.example.my_uz_android.ui.components.EmptyStateMessage(
+                title = "Czas na odpoczynek",
+                message = emptyMessage ?: "Dzisiaj nie masz żadnych zajęć.",
+                imageSize = 0.dp,
+                modifier = Modifier.padding(vertical = 4.dp)
             )
         } else {
             LazyRow(
@@ -103,6 +104,23 @@ fun UpcomingClasses(
                     )
                 }
             }
+        }
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
+@Composable
+fun UpcomingClassesEmptyPreview() {
+    com.example.my_uz_android.ui.theme.MyUZTheme {
+        Surface {
+            UpcomingClasses(
+                classes = emptyList(),
+                emptyMessage = "Dzisiaj masz wolne! Brak zajęć do wyświetlenia.",
+                dayLabel = "Dzisiaj",
+                classColorMap = emptyMap(),
+                isDarkMode = false,
+                onClassClick = {}
+            )
         }
     }
 }
