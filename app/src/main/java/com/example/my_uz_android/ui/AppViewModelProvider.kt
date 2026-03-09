@@ -70,7 +70,9 @@ object AppViewModelProvider {
             GradesViewModel(
                 gradesRepository = myUZApplication().container.gradesRepository,
                 classRepository = myUZApplication().container.classRepository,
-                settingsRepository = myUZApplication().container.settingsRepository
+                settingsRepository = myUZApplication().container.settingsRepository,
+                // DODANO BRAKUJĄCE REPOZYTORIUM:
+                userCourseRepository = myUZApplication().container.userCourseRepository
             )
         }
 
@@ -93,7 +95,10 @@ object AppViewModelProvider {
         initializer {
             AbsencesViewModel(
                 absenceRepository = myUZApplication().container.absenceRepository,
-                classRepository = myUZApplication().container.classRepository
+                classRepository = myUZApplication().container.classRepository,
+                // DODANO BRAKUJĄCE REPOZYTORIA:
+                settingsRepository = myUZApplication().container.settingsRepository,
+                userCourseRepository = myUZApplication().container.userCourseRepository
             )
         }
 
@@ -116,7 +121,8 @@ object AppViewModelProvider {
             AccountViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
                 universityRepository = myUZApplication().container.universityRepository,
-                classRepository = myUZApplication().container.classRepository
+                classRepository = myUZApplication().container.classRepository,
+                userCourseRepository = myUZApplication().container.userCourseRepository
             )
         }
 
@@ -146,6 +152,7 @@ object AppViewModelProvider {
                 favoritesRepository = myUZApplication().container.favoritesRepository,
                 classRepository = myUZApplication().container.classRepository,
                 settingsRepository = myUZApplication().container.settingsRepository,
+                userCourseRepository = myUZApplication().container.userCourseRepository,
                 universityRepository = myUZApplication().container.universityRepository,
                 tasksRepository = myUZApplication().container.tasksRepository
             )
@@ -162,4 +169,3 @@ object AppViewModelProvider {
 
 fun CreationExtras.myUZApplication(): MyUZApplication =
     (this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as MyUZApplication)
-

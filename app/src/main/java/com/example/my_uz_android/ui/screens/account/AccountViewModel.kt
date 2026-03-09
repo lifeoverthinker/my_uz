@@ -2,280 +2,340 @@ package com.example.my_uz_android.ui.screens.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.data.models.SettingsEntity
+import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
+import com.example.my_uz_android.data.repositories.UserCourseRepository
 import com.example.my_uz_android.util.NetworkResult
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class AccountViewModel(
     private val settingsRepository: SettingsRepository,
     private val universityRepository: UniversityRepository,
-    private val classRepository: ClassRepository
+    private val classRepository: ClassRepository,
+    private val userCourseRepository: UserCourseRepository
 ) : ViewModel() {
 
     private val _userName = MutableStateFlow("")
-    val userName: StateFlow<String> = _userName.asStateFlow()
-
+    val userName = _userName.asStateFlow()
     private val _userSurname = MutableStateFlow("")
-    val userSurname: StateFlow<String> = _userSurname.asStateFlow()
-
+    val userSurname = _userSurname.asStateFlow()
     private val _selectedGender = MutableStateFlow<UserGender?>(null)
-    val selectedGender: StateFlow<UserGender?> = _selectedGender.asStateFlow()
-
+    val selectedGender = _selectedGender.asStateFlow()
     private val _isAnonymous = MutableStateFlow(false)
-    val isAnonymous: StateFlow<Boolean> = _isAnonymous.asStateFlow()
+    val isAnonymous = _isAnonymous.asStateFlow()
 
+    // --- ZMIENNE WIDOKU (Aktywny kierunek, używane w AccountScreen) ---
     private val _faculty = MutableStateFlow("")
-    val faculty: StateFlow<String> = _faculty.asStateFlow()
-
+    val faculty = _faculty.asStateFlow()
     private val _fieldOfStudy = MutableStateFlow("")
-    val fieldOfStudy: StateFlow<String> = _fieldOfStudy.asStateFlow()
-
+    val fieldOfStudy = _fieldOfStudy.asStateFlow()
     private val _studyMode = MutableStateFlow("")
-    val studyMode: StateFlow<String> = _studyMode.asStateFlow()
+    val studyMode = _studyMode.asStateFlow()
+    private val _selectedSubgroups = MutableStateFlow<Set<String>>(emptySet())
+    val selectedSubgroups = _selectedSubgroups.asStateFlow()
 
-    private val _groupSearchQuery = MutableStateFlow("")
-    val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
+    // --- ZMIENNE EDYCJI (Główna grupa, używane w EditPersonalDataScreen) ---
+    private val _mainFaculty = MutableStateFlow("")
+    val mainFaculty = _mainFaculty.asStateFlow()
+    private val _mainFieldOfStudy = MutableStateFlow("")
+    val mainFieldOfStudy = _mainFieldOfStudy.asStateFlow()
+    private val _mainStudyMode = MutableStateFlow("")
+    val mainStudyMode = _mainStudyMode.asStateFlow()
+    private val _mainSelectedSubgroups = MutableStateFlow<Set<String>>(emptySet())
+    val mainSelectedSubgroups = _mainSelectedSubgroups.asStateFlow()
 
     private val _selectedGroup = MutableStateFlow<String?>(null)
-    val selectedGroup: StateFlow<String?> = _selectedGroup.asStateFlow()
-
+    val selectedGroup = _selectedGroup.asStateFlow()
     private val _availableSubgroups = MutableStateFlow<List<String>>(emptyList())
-    val availableSubgroups: StateFlow<List<String>> = _availableSubgroups.asStateFlow()
+    val availableSubgroups = _availableSubgroups.asStateFlow()
 
-    private val _selectedSubgroups = MutableStateFlow<Set<String>>(emptySet())
-    val selectedSubgroups: StateFlow<Set<String>> = _selectedSubgroups.asStateFlow()
+    private val _additionalUserCourses = MutableStateFlow<List<UserCourseEntity>>(emptyList())
+    val additionalUserCourses = _additionalUserCourses.asStateFlow()
+    val additionalGroups = _additionalUserCourses.map { c -> c.map { it.groupCode } }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Obsługa dodatkowych kierunków
-    private val _additionalGroups = MutableStateFlow<List<String>>(emptyList())
-    val additionalGroups: StateFlow<List<String>> = _additionalGroups.asStateFlow()
+    private val _additionalSubgroupsMap = MutableStateFlow<Map<String, List<String>>>(emptyMap())
+    val additionalSubgroupsMap = _additionalSubgroupsMap.asStateFlow()
 
     private val _availableDirections = MutableStateFlow<List<String>>(emptyList())
-    val availableDirections: StateFlow<List<String>> = _availableDirections.asStateFlow()
-
+    val availableDirections = _availableDirections.asStateFlow()
     private val _activeDirection = MutableStateFlow<String?>(null)
-    val activeDirection: StateFlow<String?> = _activeDirection.asStateFlow()
+    val activeDirection = _activeDirection.asStateFlow()
+
+    private val _directionToFieldMap = MutableStateFlow<Map<String, String>>(emptyMap())
+    val directionToFieldMap = _directionToFieldMap.asStateFlow()
 
     private val _allGroups = MutableStateFlow<List<String>>(emptyList())
-
-    val filteredGroups: StateFlow<List<String>> = combine(
-        _groupSearchQuery,
-        _allGroups
-    ) { query, allGroups ->
-        if (query.isBlank()) {
-            emptyList()
-        } else {
-            allGroups.filter { it.contains(query, ignoreCase = true) }.take(5)
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allGroups = _allGroups.asStateFlow()
+    private val _groupSearchQuery = MutableStateFlow("")
+    val groupSearchQuery = _groupSearchQuery.asStateFlow()
+    val filteredGroups = _groupSearchQuery.map { q -> if (q.isBlank()) emptyList() else _allGroups.value.filter { it.contains(q, true) }.take(5) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    val isLoading = _isLoading.asStateFlow()
+    private val _loadingSubgroupsFor = MutableStateFlow<Set<String>>(emptySet())
+    val loadingSubgroupsFor = _loadingSubgroupsFor.asStateFlow()
 
-    private val _isSaved = MutableStateFlow(false)
-    val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
-
-    private var currentSettingsEntity: SettingsEntity? = null
+    private var currentSettings: SettingsEntity? = null
+    private var isEditingProfile = false
 
     init {
-        loadCurrentData()
         loadAllGroups()
+        loadCurrentData()
     }
 
-    private fun loadAllGroups() {
-        viewModelScope.launch {
-            when (val result = universityRepository.getGroupCodes()) {
-                is NetworkResult.Success -> {
-                    val groups = (result.data ?: emptyList())
-                        .filter { !it.isNullOrBlank() && it != "null" }
-                        .sorted()
-                    _allGroups.value = groups
-                }
-                else -> _allGroups.value = emptyList()
-            }
-        }
+    private fun loadAllGroups() = viewModelScope.launch {
+        val res = universityRepository.getGroupCodes()
+        if (res is NetworkResult.Success) _allGroups.value = (res.data ?: emptyList()).filterNotNull().sorted()
     }
 
-    private fun loadCurrentData() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            combine(
-                settingsRepository.getSettingsStream(),
-                classRepository.getAllClassesStream()
-            ) { settings, classes ->
-                settings to classes
-            }.collect { (settings, classes) ->
+    private fun loadCurrentData() = viewModelScope.launch {
+        _isLoading.value = true
+        combine(settingsRepository.getSettingsStream(), userCourseRepository.getAllUserCoursesStream()) { s, c -> s to c }
+            .collect { (settings, courses) ->
                 if (settings != null) {
-                    currentSettingsEntity = settings
+                    currentSettings = settings
 
-                    val nameParts = (settings.userName ?: "").trim().split(" ", limit = 2)
-                    _userName.value = nameParts.getOrElse(0) { "" }
-                    _userSurname.value = nameParts.getOrElse(1) { "" }
-
-                    _isAnonymous.value = settings.isAnonymous
-                    _faculty.value = settings.faculty ?: ""
-                    _fieldOfStudy.value = settings.fieldOfStudy ?: ""
-                    _studyMode.value = settings.studyMode ?: ""
-
-                    _selectedGender.value = when (settings.gender?.lowercase()) {
-                        "studentka" -> UserGender.STUDENTKA
-                        "student" -> UserGender.STUDENT
-                        else -> UserGender.STUDENT
-                    }
-
-                    // Wczytanie dodatkowych kierunków
-                    _additionalGroups.value = settings.additionalGroupCodes
-                        .split(",")
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-
-                    val directionsFromClasses = classes
-                        .map { it.groupCode.trim() }
-                        .filter { it.isNotBlank() }
-                        .distinct()
-                        .sorted()
-
-                    val fallbackDirections = if (directionsFromClasses.isNotEmpty()) {
-                        directionsFromClasses
-                    } else {
-                        listOfNotNull(settings.selectedGroupCode?.trim()).filter { it.isNotBlank() }
-                    }
-                    _availableDirections.value = fallbackDirections
-
-                    val resolvedActiveDirection = settings.activeDirectionCode
-                        ?.takeIf { it.isNotBlank() && fallbackDirections.contains(it) }
-                        ?: settings.selectedGroupCode?.takeIf { !it.isNullOrBlank() && fallbackDirections.contains(it) }
-                        ?: fallbackDirections.firstOrNull()
-                    _activeDirection.value = resolvedActiveDirection
-
-                    if (!settings.selectedGroupCode.isNullOrEmpty()) {
+                    if (!isEditingProfile) {
+                        val parts = (settings.userName ?: "").split(" ", limit = 2)
+                        _userName.value = parts.getOrElse(0) { "" }
+                        _userSurname.value = parts.getOrElse(1) { "" }
+                        _selectedGender.value = if (settings.gender == "Studentka") UserGender.STUDENTKA else UserGender.STUDENT
+                        _isAnonymous.value = settings.isAnonymous
                         _selectedGroup.value = settings.selectedGroupCode
-                        if (_groupSearchQuery.value.isEmpty()) {
-                            _groupSearchQuery.value = settings.selectedGroupCode
+
+                        _mainFaculty.value = settings.faculty ?: ""
+                        _mainFieldOfStudy.value = settings.fieldOfStudy ?: ""
+                        _mainStudyMode.value = settings.studyMode ?: ""
+                        if (settings.selectedGroupCode != null) {
+                            if (_availableSubgroups.value.isEmpty()) {
+                                launch { loadSubgroupsForGroup(settings.selectedGroupCode!!) }
+                            }
+                            _mainSelectedSubgroups.value = settings.selectedSubgroup?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
                         }
-                        loadSubgroupsForGroup(settings.selectedGroupCode)
-                        _selectedSubgroups.value = if (!settings.selectedSubgroup.isNullOrEmpty()) {
-                            settings.selectedSubgroup.split(",")
-                                .map { it.trim() }
-                                .filter { it.isNotEmpty() }
-                                .toSet()
-                        } else {
-                            emptySet()
+                    }
+
+                    val activeDir = settings.activeDirectionCode ?: settings.selectedGroupCode
+                    _activeDirection.value = activeDir
+
+                    if (activeDir == settings.selectedGroupCode) {
+                        _faculty.value = settings.faculty ?: ""
+                        _fieldOfStudy.value = settings.fieldOfStudy ?: ""
+                        _studyMode.value = settings.studyMode ?: ""
+                        _selectedSubgroups.value = settings.selectedSubgroup?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
+                    } else {
+                        val activeCourse = courses.find { it.groupCode == activeDir }
+                        if (activeCourse != null) {
+                            _faculty.value = activeCourse.faculty ?: ""
+                            _fieldOfStudy.value = activeCourse.fieldOfStudy ?: ""
+                            _studyMode.value = activeCourse.studyMode ?: ""
+                            _selectedSubgroups.value = activeCourse.selectedSubgroup?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
                         }
+                    }
+
+                    val map = mutableMapOf<String, String>()
+                    if (settings.selectedGroupCode != null) {
+                        map[settings.selectedGroupCode!!] = settings.fieldOfStudy ?: ""
+                    }
+                    courses.forEach { map[it.groupCode] = it.fieldOfStudy ?: "" }
+                    _directionToFieldMap.value = map
+
+                    val directions = mutableListOf<String>()
+                    settings.selectedGroupCode?.let { directions.add(it) }
+                    directions.addAll(courses.map { it.groupCode })
+                    _availableDirections.value = directions.distinct()
+                }
+
+                _additionalUserCourses.value = courses
+                courses.forEach {
+                    if (!_additionalSubgroupsMap.value.containsKey(it.groupCode)) {
+                        launch { loadSubgroupsForAdditional(it.groupCode) }
                     }
                 }
                 _isLoading.value = false
             }
+    }
+
+    // Nowa funkcja do bezpiecznego anulowania edycji profilu
+    fun cancelEdit() {
+        isEditingProfile = false
+        currentSettings?.let { settings ->
+            val parts = (settings.userName ?: "").split(" ", limit = 2)
+            _userName.value = parts.getOrElse(0) { "" }
+            _userSurname.value = parts.getOrElse(1) { "" }
+            _selectedGender.value = if (settings.gender == "Studentka") UserGender.STUDENTKA else UserGender.STUDENT
+            _selectedGroup.value = settings.selectedGroupCode
+            _mainFaculty.value = settings.faculty ?: ""
+            _mainFieldOfStudy.value = settings.fieldOfStudy ?: ""
+            _mainStudyMode.value = settings.studyMode ?: ""
+            _mainSelectedSubgroups.value = settings.selectedSubgroup?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
         }
     }
 
-    fun setUserName(name: String) { _userName.value = name }
-    fun setUserSurname(surname: String) { _userSurname.value = surname }
-    fun setGender(gender: UserGender) { _selectedGender.value = gender }
+    fun setUserName(n: String) { isEditingProfile = true; _userName.update { n } }
+    fun setUserSurname(s: String) { isEditingProfile = true; _userSurname.update { s } }
+    fun setGender(g: UserGender) { isEditingProfile = true; _selectedGender.update { g } }
+    fun setGroupSearchQuery(q: String) = _groupSearchQuery.update { q }
 
-    fun setGroupSearchQuery(query: String) {
-        _groupSearchQuery.value = query
-        if (query.isBlank()) {
-            _selectedGroup.value = null
-            _availableSubgroups.value = emptyList()
-            _selectedSubgroups.value = emptySet()
-        }
+    fun setActiveDirection(code: String) = viewModelScope.launch {
+        currentSettings?.let { settingsRepository.insertOrUpdate(it.copy(activeDirectionCode = code)) }
     }
 
-    fun selectGroup(group: String) {
-        _selectedGroup.value = group
-        _groupSearchQuery.value = group
-        _selectedSubgroups.value = emptySet()
-        loadSubgroupsForGroup(group)
-    }
+    fun selectGroup(g: String) {
+        if (_selectedGroup.value == null) {
+            isEditingProfile = true
+            _selectedGroup.value = g
+            _groupSearchQuery.value = ""
 
-    fun addAdditionalGroup(group: String) {
-        val current = _additionalGroups.value.toMutableList()
-        if (group.isNotBlank() && !current.contains(group) && group != _selectedGroup.value) {
-            current.add(group)
-            _additionalGroups.value = current
-        }
-    }
+            viewModelScope.launch {
+                _loadingSubgroupsFor.update { it + g }
+                val detailsDef = async { universityRepository.getGroupDetails(g) }
+                val subgroupsDef = async { universityRepository.getSubgroups(g) }
 
-    fun removeAdditionalGroup(group: String) {
-        val current = _additionalGroups.value.toMutableList()
-        current.remove(group)
-        _additionalGroups.value = current
-    }
-
-    private fun loadSubgroupsForGroup(group: String) {
-        viewModelScope.launch {
-            when (val result = universityRepository.getSubgroups(group)) {
-                is NetworkResult.Success -> {
-                    _availableSubgroups.value = (result.data ?: emptyList())
-                        .filter { !it.isNullOrBlank() && it != "null" }
-                        .sorted()
+                val detailsRes = detailsDef.await()
+                if (detailsRes is NetworkResult.Success) {
+                    _mainFaculty.value = detailsRes.data?.fieldInfo?.faculty ?: ""
+                    _mainFieldOfStudy.value = detailsRes.data?.fieldInfo?.name ?: g
+                    _mainStudyMode.value = detailsRes.data?.studyMode ?: ""
+                } else {
+                    _mainFieldOfStudy.value = g
                 }
-                else -> _availableSubgroups.value = emptyList()
+
+                val subgroupsRes = subgroupsDef.await()
+                if (subgroupsRes is NetworkResult.Success) _availableSubgroups.value = (subgroupsRes.data ?: emptyList()).filterNotNull().sorted()
+                _mainSelectedSubgroups.value = emptySet()
+                _loadingSubgroupsFor.update { it - g }
+            }
+        } else {
+            addAdditionalGroup(g)
+            _groupSearchQuery.value = ""
+        }
+    }
+
+    fun clearMainGroup() {
+        isEditingProfile = true
+        _selectedGroup.value = null
+        _mainSelectedSubgroups.value = emptySet()
+        _mainFaculty.value = ""
+        _mainFieldOfStudy.value = ""
+        _mainStudyMode.value = ""
+    }
+
+    private suspend fun loadSubgroupsForGroup(g: String) {
+        _loadingSubgroupsFor.update { it + g }
+        val res = universityRepository.getSubgroups(g)
+        if (res is NetworkResult.Success) _availableSubgroups.value = (res.data ?: emptyList()).filterNotNull().sorted()
+        _loadingSubgroupsFor.update { it - g }
+    }
+
+    fun toggleMainSubgroup(s: String) {
+        isEditingProfile = true
+        _mainSelectedSubgroups.update { current ->
+            val newSet = current.toMutableSet()
+            if (newSet.contains(s)) newSet.remove(s) else newSet.add(s)
+            newSet
+        }
+    }
+
+    fun addAdditionalGroup(code: String) = viewModelScope.launch {
+        if (code == _selectedGroup.value || _additionalUserCourses.value.any { it.groupCode == code }) return@launch
+
+        val tempCourse = UserCourseEntity(groupCode = code, fieldOfStudy = "Wczytywanie...", selectedSubgroup = "", faculty = "", studyMode = "", semester = 1)
+        userCourseRepository.insertUserCourse(tempCourse)
+
+        _loadingSubgroupsFor.update { it + code }
+        val detailsDef = async { universityRepository.getGroupDetails(code) }
+        val subgroupsDef = async { universityRepository.getSubgroups(code) }
+
+        val detailsRes = detailsDef.await()
+        val finalField = if (detailsRes is NetworkResult.Success) detailsRes.data?.fieldInfo?.name ?: code else code
+        val finalFac = if (detailsRes is NetworkResult.Success) detailsRes.data?.fieldInfo?.faculty ?: "" else ""
+        val finalMod = if (detailsRes is NetworkResult.Success) detailsRes.data?.studyMode ?: "" else ""
+        val finalSem = if (detailsRes is NetworkResult.Success) detailsRes.data?.semester?.filter { it.isDigit() }?.take(1)?.toIntOrNull() ?: 1 else 1
+
+        userCourseRepository.updateUserCourse(tempCourse.copy(fieldOfStudy = finalField, faculty = finalFac, studyMode = finalMod, semester = finalSem))
+
+        val subgroupsRes = subgroupsDef.await()
+        if (subgroupsRes is NetworkResult.Success) _additionalSubgroupsMap.update { it + (code to (subgroupsRes.data ?: emptyList()).filterNotNull().sorted()) }
+        _loadingSubgroupsFor.update { it - code }
+    }
+
+    private suspend fun loadSubgroupsForAdditional(code: String) {
+        _loadingSubgroupsFor.update { it + code }
+        val res = universityRepository.getSubgroups(code)
+        if (res is NetworkResult.Success) _additionalSubgroupsMap.update { it + (code to (res.data ?: emptyList()).filterNotNull().sorted()) }
+        _loadingSubgroupsFor.update { it - code }
+    }
+
+    fun removeAdditionalCourse(c: UserCourseEntity) = viewModelScope.launch { userCourseRepository.deleteUserCourse(c) }
+
+    fun updateAdditionalSubgroup(course: UserCourseEntity, subgroup: String) = viewModelScope.launch {
+        val current = course.selectedSubgroup?.split(",")?.filter { it.isNotBlank() }?.toMutableSet() ?: mutableSetOf()
+        if (current.contains(subgroup)) current.remove(subgroup) else current.add(subgroup)
+        userCourseRepository.updateUserCourse(course.copy(selectedSubgroup = current.joinToString(",")))
+    }
+
+    fun saveChanges(onSuccess: () -> Unit) = viewModelScope.launch {
+        _isLoading.value = true
+        val full = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
+        val gen = if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
+
+        var fFac = _mainFaculty.value
+        var fField = _mainFieldOfStudy.value
+        var fMod = _mainStudyMode.value
+        val fSem = currentSettings?.currentSemester ?: 1
+
+        if (fFac.isBlank() && _selectedGroup.value != null) {
+            val res = universityRepository.getGroupDetails(_selectedGroup.value!!)
+            if (res is NetworkResult.Success) {
+                fFac = res.data?.fieldInfo?.faculty ?: ""
+                fField = res.data?.fieldInfo?.name ?: _selectedGroup.value!!
+                fMod = res.data?.studyMode ?: ""
             }
         }
-    }
 
-    fun toggleSubgroup(subgroup: String) {
-        val current = _selectedSubgroups.value.toMutableSet()
-        if (current.contains(subgroup)) {
-            current.remove(subgroup)
-        } else {
-            current.add(subgroup)
+        val mainSubgroups = _mainSelectedSubgroups.value.joinToString(",")
+
+        // Zabezpieczenie: Jeśli zmieniono grupę główną, od razu robimy ją aktywną
+        val previousMainGroup = currentSettings?.selectedGroupCode
+        val newMainGroup = _selectedGroup.value
+        val newActiveDir = if (previousMainGroup != newMainGroup) newMainGroup else (_activeDirection.value ?: newMainGroup)
+
+        // KLUCZOWE: Zdejmujemy flagę zanim zaczniemy zapis, aby baza mogła bez przeszkód zaktualizować interfejs natychmiastowo!
+        isEditingProfile = false
+
+        val settings = currentSettings?.copy(
+            userName = full, gender = gen, selectedGroupCode = newMainGroup,
+            selectedSubgroup = mainSubgroups,
+            faculty = fFac, fieldOfStudy = fField, studyMode = fMod, currentSemester = fSem,
+            isAnonymous = false, activeDirectionCode = newActiveDir
+        ) ?: SettingsEntity(
+            id = 1, userName = full, currentSemester = fSem,
+            faculty = fFac, fieldOfStudy = fField, studyMode = fMod, gender = gen,
+            selectedGroupCode = newMainGroup, selectedSubgroup = mainSubgroups,
+            isAnonymous = false, activeDirectionCode = newActiveDir
+        )
+
+        settingsRepository.insertOrUpdate(settings)
+
+        val allClasses = mutableListOf<ClassEntity>()
+        newMainGroup?.let { code ->
+            val res = universityRepository.getSchedule(code, mainSubgroups.split(",").filter { it.isNotBlank() })
+            if (res is NetworkResult.Success) allClasses.addAll(res.data ?: emptyList())
         }
-        _selectedSubgroups.value = current
-    }
-
-    fun setActiveDirection(directionCode: String) {
-        val normalizedDirection = directionCode.trim()
-        if (normalizedDirection.isEmpty()) return
-
-        viewModelScope.launch {
-            val current = currentSettingsEntity ?: SettingsEntity(id = 1)
-            if (current.activeDirectionCode == normalizedDirection) return@launch
-            settingsRepository.insertOrUpdate(current.copy(activeDirectionCode = normalizedDirection))
+        for (c in _additionalUserCourses.value) {
+            val subs = c.selectedSubgroup?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+            val res = universityRepository.getSchedule(c.groupCode, subs)
+            if (res is NetworkResult.Success) allClasses.addAll(res.data ?: emptyList())
         }
-    }
-
-    fun saveChanges(onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val fullName = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
-            val genderString = if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
-            val subgroupsString = _selectedSubgroups.value.joinToString(",")
-            val additionalGroupsString = _additionalGroups.value.joinToString(",")
-
-            val newSettings = currentSettingsEntity?.copy(
-                userName = fullName,
-                gender = genderString,
-                selectedGroupCode = _selectedGroup.value,
-                activeDirectionCode = _selectedGroup.value, // Resetujemy aktywny kierunek po zapisie głównego
-                selectedSubgroup = subgroupsString,
-                additionalGroupCodes = additionalGroupsString
-            ) ?: SettingsEntity(
-                id = 1,
-                userName = fullName,
-                gender = genderString,
-                selectedGroupCode = _selectedGroup.value,
-                activeDirectionCode = _selectedGroup.value,
-                selectedSubgroup = subgroupsString,
-                additionalGroupCodes = additionalGroupsString
-            )
-
-            settingsRepository.insertOrUpdate(newSettings)
-            _isLoading.value = false
-            _isSaved.value = true
-            onSuccess()
-            _isSaved.value = false
-        }
+        classRepository.updateClasses(allClasses.distinctBy { it.supabaseId })
+        _isLoading.value = false
+        onSuccess()
     }
 }

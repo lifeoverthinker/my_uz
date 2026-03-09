@@ -7,11 +7,11 @@ import androidx.room.PrimaryKey
 data class UserCourseEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val groupCode: String,
-    val selectedSubgroup: String? = null,
-    val colorHex: String? = null,
-    val fieldOfStudy: String? = null,
-    val faculty: String? = null,
-    val studyMode: String? = null,
-    val semester: Int? = null
+    val groupCode: String,          // To jest Twoje "groupId" (unikalny kod grupy z UZ)
+    val fieldOfStudy: String? = null, // To jest Twoje "courseName" (np. Informatyka)
+    val selectedSubgroup: String? = null, // Podgrupa wybrana przez użytkownika (np. "Lab 1")
+    val colorHex: String? = null,     // Kolor przypisany do całego kierunku
+    val faculty: String? = null,      // Wydział (opcjonalnie, do ładnego wyświetlania)
+    val studyMode: String? = null,    // Tryb (stacjonarne/niestacjonarne)
+    val semester: Int? = null         // Semestr
 )

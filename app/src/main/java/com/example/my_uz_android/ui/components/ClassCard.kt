@@ -56,9 +56,10 @@ fun ClassCard(
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val titleColor = Color(0xFF1D192B)
-    val detailsColor = Color(0xFF494949)
-    val avatarTextColor = Color(0xFFFFFBFE)
+    // POPRAWKA: Automatyczne kolory dostosowujące się do motywu z MaterialTheme zamiast sztywnych HEXów
+    val titleColor = MaterialTheme.colorScheme.onSurface
+    val detailsColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val avatarTextColor = Color.White // Wymuszenie bieli dla najlepszego kontrastu z kolorem kółka
 
     val isPast = remember(classItem) {
         try {
@@ -196,6 +197,7 @@ fun ClassCard(
     }
 }
 
+// ... Previews zostawione tak jak było (zmienione kolory odzwierciedlą się same w środowisku) ...
 @Preview(showBackground = true, name = "ClassCard • HOME")
 @Composable
 private fun ClassCardHomePreview() {

@@ -15,13 +15,10 @@ class MyUZApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Zmieniono na DefaultAppContainer zgodnie z Twoim projektem
+        // Tutaj inicjalizujemy nasz naprawiony DefaultAppContainer
         container = DefaultAppContainer(this)
 
-        // 1. Tworzymy kanały powiadomień (wymagane od Android 8.0)
         NotificationHelper.createNotificationChannels(this)
-
-        // 2. Rejestrujemy Workera sprawdzającego terminy co 15 minut
         setupNotificationWork()
     }
 

@@ -15,8 +15,6 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.theme.ClassColorPalette
-import com.example.my_uz_android.ui.theme.extendedColors
-import com.example.my_uz_android.ui.theme.getClassAccentColor
 import kotlin.math.abs
 
 @Composable
@@ -25,12 +23,10 @@ fun UpcomingClasses(
     emptyMessage: String?,
     dayLabel: String?,
     classColorMap: Map<String, Int>,
-    isDarkMode: Boolean, // POPRAWKA: Dodajemy parametr zamiast isSystemInDarkTheme()
+    isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     onClassClick: (Int) -> Unit
 ) {
-    val classCardColor = MaterialTheme.extendedColors.classCardBackground
-
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -87,16 +83,21 @@ fun UpcomingClasses(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(classes) { classItem ->
+                    // 1. Pobieramy indeks koloru po classType (dokładnie jak w kalendarzu!)
                     val colorIndex = classColorMap[classItem.classType]
                         ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
 
-                    // Używamy przekazanego isDarkMode dla akcentu zajęć
-                    val accentColor = getClassAccentColor(colorIndex, isDarkMode)
+                    // 2. Wyciągamy zestaw kolorów z palety
+                    val colorSet = ClassColorPalette.getOrElse(colorIndex) { ClassColorPalette[0] }
+
+                    // 3. Dopasowujemy do trybu jasnego / ciemnego
+                    val bgColor = if (isDarkMode) colorSet.darkBg else colorSet.lightBg
+                    val accentColor = if (isDarkMode) colorSet.darkAccent else colorSet.lightAccent
 
                     ClassCard(
                         classItem = classItem,
-                        backgroundColor = classCardColor,
-                        accentColor = accentColor,
+                        backgroundColor = bgColor,     // Teraz karta na Home używa dedykowanego tła pastelowego/ciemnego!
+                        accentColor = accentColor,     // Akcent kółka również bierze się z palety
                         onClick = { onClassClick(classItem.id) },
                         modifier = Modifier.width(264.dp)
                     )

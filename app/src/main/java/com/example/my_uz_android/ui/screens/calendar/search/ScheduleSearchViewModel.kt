@@ -6,138 +6,103 @@ import com.example.my_uz_android.data.models.FavoriteEntity
 import com.example.my_uz_android.data.repositories.FavoritesRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.util.NetworkResult
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.util.Locale
 
-data class SearchResultItem(
-    val name: String,
-    val type: String, // "group" lub "teacher"
-    val isFavorite: Boolean = false
-)
-
-data class ScheduleSearchUiState(
+// 1. Zdefiniowanie struktury, której dokładnie oczekuje ekran UI
+data class SearchUiState(
     val searchQuery: String = "",
     val searchResults: List<SearchResultItem> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val searchType: SearchType = SearchType.GROUP
 )
+
+// 2. Zmiana nazwy na SearchResultItem (tego szuka plik ScheduleSearchScreen.kt)
+data class SearchResultItem(
+    val name: String,
+    val type: String, // Ustawione jako String, bo ekran sprawdza: item.type == "group"
+    val isFavorite: Boolean = false
+)
+
+enum class SearchType { GROUP, TEACHER }
 
 class ScheduleSearchViewModel(
     private val universityRepository: UniversityRepository,
     private val favoritesRepository: FavoritesRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ScheduleSearchUiState())
-    val uiState: StateFlow<ScheduleSearchUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(SearchUiState())
+    val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    private var searchJob: Job? = null
-
-    /**
-     * Wywoływane przy każdej zmianie tekstu w wyszukiwarce
-     */
-    fun onQueryChange(newQuery: String) {
-        _uiState.update { it.copy(searchQuery = newQuery) }
-
-        searchJob?.cancel()
-        if (newQuery.length >= 2) {
-            searchJob = viewModelScope.launch {
-                delay(300) // Czekamy chwilę, aby nie wysyłać zapytań przy każdym kliknięciu klawisza
-                performSearch(newQuery)
-            }
-        } else {
-            _uiState.update { it.copy(searchResults = emptyList(), isLoading = false) }
-        }
-    }
-
-    /**
-     * Główna logika wyszukiwania korzystająca z ILIKE w bazie danych
-     */
-    private suspend fun performSearch(query: String) {
-        _uiState.update { it.copy(isLoading = true) }
-
-        // Wykonujemy zapytania do bazy danych (Supabase)
-        val groupsResult = universityRepository.searchGroups(query)
-        val teachersResult = universityRepository.searchTeachers(query)
-
-        // Pobieramy aktualne ulubione z bazy lokalnej (Room)
-        val favorites = favoritesRepository.getAllFavoritesStream().firstOrNull() ?: emptyList()
-
-        // Mapujemy wyniki grup
-        val groupItems = if (groupsResult is NetworkResult.Success) {
-            (groupsResult.data ?: emptyList())
-                // TUTAJ ZMIANA: Filtrujemy śmieciowe dane (null, "", "null") z wyników wyszukiwania
-                .filter { !it.isNullOrBlank() && it != "null" }
-                .map { name ->
-                    SearchResultItem(
-                        name = name,
-                        type = "group",
-                        isFavorite = favorites.any { it.name == name && it.type == "group" }
-                    )
-                }
-        } else emptyList()
-
-        // Mapujemy wyniki nauczycieli
-        val teacherItems = if (teachersResult is NetworkResult.Success) {
-            (teachersResult.data ?: emptyList())
-                .filter { !it.isNullOrBlank() && it != "null" } // Dla pewności też tutaj
-                .map { name ->
-                    SearchResultItem(
-                        name = name,
-                        type = "teacher",
-                        isFavorite = favorites.any { it.name == name && it.type == "teacher" }
-                    )
-                }
-        } else emptyList()
-
-        // Łączymy wyniki i sortujemy alfabetycznie
-        val combinedResults = (groupItems + teacherItems).sortedBy { it.name }
-
-        _uiState.update { it.copy(
-            searchResults = combinedResults,
-            isLoading = false
-        ) }
-    }
-
-    /**
-     * Dodawanie/Usuwanie z ulubionych
-     */
-    fun toggleFavorite(item: SearchResultItem) {
+    init {
+        // Nasłuchiwanie zmian w ulubionych, aby na bieżąco odświeżać ikonki serduszek
         viewModelScope.launch {
-            val favorites = favoritesRepository.getAllFavoritesStream().firstOrNull() ?: emptyList()
-            val existing = favorites.find { it.name == item.name && it.type == item.type }
-
-            if (existing != null) {
-                favoritesRepository.delete(existing)
-            } else {
-                val favorite = FavoriteEntity(
-                    name = item.name,
-                    type = item.type,
-                    resourceId = item.name // resourceId używane do pobierania planu
-                )
-                favoritesRepository.insert(favorite)
-            }
-
-            // Odświeżamy listę wyników, aby zaktualizować stan ikonek serca
-            val currentQuery = _uiState.value.searchQuery
-            if (currentQuery.length >= 2) {
-                performSearch(currentQuery)
+            favoritesRepository.favoritesStream.collect { favorites ->
+                _uiState.update { state ->
+                    state.copy(
+                        searchResults = state.searchResults.map { res ->
+                            res.copy(isFavorite = favorites.any { it.resourceId == res.name })
+                        }
+                    )
+                }
             }
         }
     }
 
-    /**
-     * Pomocnicza funkcja do normalizacji tekstu (opcjonalnie używana lokalnie)
-     */
-    private fun normalizeText(input: String): String {
-        val original = charArrayOf('ą', 'ć', 'ę', 'ł', 'ń', 'ó', 'ś', 'ź', 'ż', 'Ą', 'Ć', 'Ę', 'Ł', 'Ń', 'Ó', 'Ś', 'Ź', 'Ż')
-        val normalized = charArrayOf('a', 'c', 'e', 'l', 'n', 'o', 's', 'z', 'z', 'a', 'c', 'e', 'l', 'n', 'o', 's', 'z', 'z')
-        var result = input
-        for (i in original.indices) {
-            result = result.replace(original[i], normalized[i])
+    fun onQueryChange(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        if (query.length >= 2) performSearch(query) else _uiState.update { it.copy(searchResults = emptyList()) }
+    }
+
+    fun onTypeChange(type: SearchType) {
+        _uiState.update { it.copy(searchType = type, searchResults = emptyList()) }
+        if (_uiState.value.searchQuery.length >= 2) performSearch(_uiState.value.searchQuery)
+    }
+
+    private fun performSearch(query: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+
+            val typeEnum = _uiState.value.searchType
+            val typeString = if (typeEnum == SearchType.GROUP) "group" else "teacher"
+
+            val result = if (typeEnum == SearchType.GROUP) {
+                universityRepository.searchGroups(query)
+            } else {
+                universityRepository.searchTeachers(query)
+            }
+
+            if (result is NetworkResult.Success) {
+                val favorites = favoritesRepository.favoritesStream.first()
+                val results = (result.data ?: emptyList()).map { name ->
+                    SearchResultItem(
+                        name = name,
+                        type = typeString,
+                        isFavorite = favorites.any { it.resourceId == name }
+                    )
+                }
+                _uiState.update { it.copy(searchResults = results, isLoading = false) }
+            } else {
+                _uiState.update { it.copy(isLoading = false, searchResults = emptyList()) }
+            }
         }
-        return result.lowercase(Locale.getDefault())
+    }
+
+    fun toggleFavorite(result: SearchResultItem) {
+        viewModelScope.launch {
+            if (result.isFavorite) {
+                // Usuwamy za pomocą dodanej w kroku 1 metody
+                favoritesRepository.deleteFavoriteByResourceId(result.name)
+            } else {
+                // FIX: Dodaliśmy brakujące resourceId, o które krzyczał Android Studio
+                favoritesRepository.insertFavorite(
+                    FavoriteEntity(
+                        name = result.name,
+                        type = result.type,
+                        resourceId = result.name
+                    )
+                )
+            }
+        }
     }
 }

@@ -16,6 +16,7 @@ interface AppContainer {
     val absenceRepository: AbsenceRepository
     val eventRepository: EventRepository
     val favoritesRepository: FavoritesRepository
+    val userCourseRepository: UserCourseRepository // Nasz nowy kierunek
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -24,14 +25,17 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         AppDatabase.getDatabase(context)
     }
 
-    // POPRAWKA: Jawny typ SupabaseClient
-    private val supabase: SupabaseClient by lazy { provideSupabaseClient() }
+    // Inicjalizacja Supabase
+    private val supabase: SupabaseClient by lazy {
+        provideSupabaseClient()
+    }
 
     override val settingsRepository: SettingsRepository by lazy {
         SettingsRepository(database.settingsDao())
     }
 
     override val universityRepository: UniversityRepository by lazy {
+        // UniversityRepository potrzebuje wtyczki postgrest
         UniversityRepository(supabase.postgrest)
     }
 
@@ -40,6 +44,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val tasksRepository: TasksRepository by lazy {
+        // TasksRepository potrzebuje DAO i całego klienta Supabase do eksportu
         TasksRepository(database.tasksDao(), supabase)
     }
 
@@ -57,5 +62,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val favoritesRepository: FavoritesRepository by lazy {
         FavoritesRepository(database.favoritesDao())
+    }
+
+    override val userCourseRepository: UserCourseRepository by lazy {
+        UserCourseRepository(database.userCourseDao())
     }
 }

@@ -10,6 +10,7 @@ interface ClassDao {
     @Query("SELECT * FROM classes ORDER BY dayOfWeek ASC, startTime ASC")
     fun getAllClasses(): Flow<List<ClassEntity>>
 
+    // TA FUNKCJA WRÓCIŁA, BY EKRAN GŁÓWNY MÓGŁ POBIERAĆ ZAJĘCIA NA DZIŚ
     @Query("SELECT * FROM classes WHERE dayOfWeek = :dayOfWeek ORDER BY startTime ASC")
     fun getClassesForDay(dayOfWeek: Int): Flow<List<ClassEntity>>
 
@@ -19,8 +20,12 @@ interface ClassDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(classes: List<ClassEntity>)
 
+    // TA FUNKCJA WRÓCIŁA
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(classEntity: ClassEntity)
+
+    @Query("DELETE FROM classes WHERE groupCode = :groupCode")
+    suspend fun deleteByGroupCode(groupCode: String)
 
     @Query("DELETE FROM classes")
     suspend fun deleteAll()

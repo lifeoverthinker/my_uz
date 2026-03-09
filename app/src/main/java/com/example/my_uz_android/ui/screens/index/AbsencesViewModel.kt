@@ -3,12 +3,16 @@ package com.example.my_uz_android.ui.screens.index
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.AbsenceEntity
+import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.SettingsEntity
+import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.repositories.AbsenceRepository
 import com.example.my_uz_android.data.repositories.ClassRepository
+import com.example.my_uz_android.data.repositories.SettingsRepository
+import com.example.my_uz_android.data.repositories.UserCourseRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// ✅ Klasy danych potrzebne dla listy
 data class SubjectAbsences(
     val subjectName: String,
     val types: List<AbsenceTypeGroup>
@@ -28,32 +32,53 @@ sealed interface AbsencesUiState {
 
 class AbsencesViewModel(
     private val absenceRepository: AbsenceRepository,
-    private val classRepository: ClassRepository
+    private val classRepository: ClassRepository,
+    private val settingsRepository: SettingsRepository,
+    private val userCourseRepository: UserCourseRepository
 ) : ViewModel() {
 
     private val _limits = MutableStateFlow<Map<String, Int>>(emptyMap())
+    private val _selectedGroups = MutableStateFlow<Set<String>>(emptySet())
 
-    // Potrzebne do odświeżania widoku
     private val _uiState = MutableStateFlow<AbsencesUiState>(AbsencesUiState.Loading)
     val uiState: StateFlow<AbsencesUiState> = _uiState.asStateFlow()
 
+    @Suppress("UNCHECKED_CAST")
     private val absencesDataFlow: Flow<List<SubjectAbsences>> = combine(
         absenceRepository.getAllAbsencesStream(),
-        classRepository.getAllClassesStream(), // Trigger odświeżania przy zmianie planu
-        _limits
-    ) { absences, _, limits ->
-        absences.groupBy { it.subjectName }
+        classRepository.getAllClassesStream(),
+        _limits,
+        userCourseRepository.getAllUserCoursesStream(),
+        settingsRepository.getSettingsStream(),
+        _selectedGroups
+    ) { args: Array<Any?> ->
+        val absences = args[0] as List<AbsenceEntity>
+        val allClasses = args[1] as List<ClassEntity>
+        val limits = args[2] as Map<String, Int>
+        val courses = args[3] as List<UserCourseEntity>
+        val settings = args[4] as SettingsEntity?
+        val selectedGroups = args[5] as Set<String>
+
+        val activeCodes = if (selectedGroups.isEmpty()) {
+            val codes = courses.map { it.groupCode }.toMutableSet()
+            if (!settings?.selectedGroupCode.isNullOrBlank()) codes.add(settings!!.selectedGroupCode!!)
+            codes
+        } else {
+            selectedGroups
+        }
+
+        // Filtrowanie planu po kierunku
+        val validSubjectNames = allClasses.filter { activeCodes.contains(it.groupCode) }.map { it.subjectName }.toSet()
+
+        val filteredAbsences = absences.filter { validSubjectNames.contains(it.subjectName) }
+
+        filteredAbsences.groupBy { it.subjectName }
             .map { (subjectName, subjectAbsences) ->
                 val typeGroups = subjectAbsences.groupBy { it.classType ?: "Inne" }
                     .map { (type, typeList) ->
                         val limitKey = "$subjectName|$type"
                         val currentLimit = limits[limitKey] ?: 2
-
-                        AbsenceTypeGroup(
-                            classType = type,
-                            absences = typeList.sortedBy { it.date },
-                            limit = currentLimit
-                        )
+                        AbsenceTypeGroup(classType = type, absences = typeList.sortedBy { it.date }, limit = currentLimit)
                     }.sortedBy { it.classType }
 
                 SubjectAbsences(subjectName, typeGroups)
@@ -62,28 +87,22 @@ class AbsencesViewModel(
 
     init {
         viewModelScope.launch {
-            absencesDataFlow
-                .catch { e ->
-                    _uiState.value = AbsencesUiState.Error(e.message ?: "Wystąpił błąd")
-                }
-                .collect { data ->
-                    _uiState.value = AbsencesUiState.Success(data)
-                }
+            absencesDataFlow.catch { e -> _uiState.value = AbsencesUiState.Error(e.message ?: "Wystąpił błąd") }
+                .collect { data -> _uiState.value = AbsencesUiState.Success(data) }
         }
     }
 
-    // Dla kompatybilności z UI (jeśli UI używa collectAsState na liście)
-    val absencesState: StateFlow<List<SubjectAbsences>> = _uiState
-        .map { state ->
-            if (state is AbsencesUiState.Success) state.data else emptyList()
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun deleteAbsence(absence: AbsenceEntity) {
-        viewModelScope.launch {
-            absenceRepository.deleteAbsence(absence)
-        }
+    fun toggleGroupVisibility(groupCode: String) {
+        val current = _selectedGroups.value.toMutableSet()
+        if (current.contains(groupCode)) current.remove(groupCode) else current.add(groupCode)
+        _selectedGroups.value = current
     }
+
+    val absencesState: StateFlow<List<SubjectAbsences>> = _uiState.map { state ->
+        if (state is AbsencesUiState.Success) state.data else emptyList()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun deleteAbsence(absence: AbsenceEntity) = viewModelScope.launch { absenceRepository.deleteAbsence(absence) }
 
     fun updateLimit(subjectName: String, classType: String, newLimit: Int) {
         val key = "$subjectName|$classType"

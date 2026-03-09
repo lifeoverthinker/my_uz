@@ -1,83 +1,52 @@
 package com.example.my_uz_android.ui.screens.index.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
+@OptIn(ExperimentalMaterial3Api::class) // <-- DODANO ADNOTACJĘ
 @Composable
 fun IndexTabs(
     selectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    // PrimaryTabRow z MD3 zapewnia elegancki wygląd, ale wymaga zgody na eksperymentalne API
+    PrimaryTabRow(
+        selectedTabIndex = selectedTabIndex,
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.primary
     ) {
-        IndexTabItem(
-            text = "Oceny",
-            isSelected = selectedTabIndex == 0,
+        Tab(
+            selected = selectedTabIndex == 0,
             onClick = { onTabSelected(0) },
-            modifier = Modifier.weight(1f)
+            text = {
+                Text(
+                    text = "Oceny",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = if (selectedTabIndex == 0) FontWeight.Bold else FontWeight.Normal
+                    )
+                )
+            }
         )
-
-        IndexTabItem(
-            text = "Nieobecności",
-            isSelected = selectedTabIndex == 1,
+        Tab(
+            selected = selectedTabIndex == 1,
             onClick = { onTabSelected(1) },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-fun IndexTabItem(
-    text: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // Używamy kolorów systemowych z Theme.kt
-    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent
-    val textColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-    val borderColor = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outline
-    val borderWidth = if (isSelected) 0.dp else 1.dp
-
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(backgroundColor)
-            .border(width = borderWidth, color = borderColor, shape = RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            // bodySmall w Type.kt: 12sp, Normal. Nadpisujemy kolorem.
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
-            ),
-            color = textColor,
-            textAlign = TextAlign.Center
+            text = {
+                Text(
+                    text = "Nieobecności",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = if (selectedTabIndex == 1) FontWeight.Bold else FontWeight.Normal
+                    )
+                )
+            }
         )
     }
 }

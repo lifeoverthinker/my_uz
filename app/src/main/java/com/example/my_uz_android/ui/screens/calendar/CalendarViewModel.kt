@@ -3,33 +3,15 @@ package com.example.my_uz_android.ui.screens.calendar
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import com.example.my_uz_android.data.models.ClassEntity
-import com.example.my_uz_android.data.models.FavoriteEntity
-import com.example.my_uz_android.data.models.SettingsEntity
-import com.example.my_uz_android.data.models.TaskEntity
-import com.example.my_uz_android.data.repositories.ClassRepository
-import com.example.my_uz_android.data.repositories.FavoritesRepository
-import com.example.my_uz_android.data.repositories.SettingsRepository
-import com.example.my_uz_android.data.repositories.TasksRepository
-import com.example.my_uz_android.data.repositories.UniversityRepository
+import com.example.my_uz_android.data.models.*
+import com.example.my_uz_android.data.repositories.*
 import com.example.my_uz_android.util.NetworkResult
-import com.example.my_uz_android.widget.WidgetWorker
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 
 sealed interface ScheduleSource {
     data object MyPlan : ScheduleSource
@@ -38,19 +20,19 @@ sealed interface ScheduleSource {
 }
 
 data class CalendarUiState(
+    val userCourses: List<UserCourseEntity> = emptyList(),
+    val selectedGroupCodes: Set<String> = emptySet(),
     val favorites: List<FavoriteEntity> = emptyList(),
     val visibleClasses: List<ClassEntity> = emptyList(),
+    val selectedPlanName: String = "Mój Plan",
     val selectedResourceId: String? = null,
-    val selectedPlanName: String = "M�j Plan",
     val classColorMap: Map<String, Int> = emptyMap(),
     val currentSource: ScheduleSource = ScheduleSource.MyPlan,
-    val availableDirections: List<String> = emptyList(),
-    val activeDirectionCode: String? = null,
-    val isLoading: Boolean = true,
+    val isLoading: Boolean = false,
     val error: String? = null,
-    val isShareLoading: Boolean = false,
-    val sharedCode: String? = null,
-    val temporaryClassDetails: ClassEntity? = null
+    // DODANE: Stan kalendarza przeniesiony z UI
+    val selectedDate: LocalDate = LocalDate.now(ZoneId.of("Europe/Warsaw")),
+    val isMonthView: Boolean = false
 )
 
 class CalendarViewModel(
@@ -58,243 +40,129 @@ class CalendarViewModel(
     private val favoritesRepository: FavoritesRepository,
     private val classRepository: ClassRepository,
     private val settingsRepository: SettingsRepository,
+    private val userCourseRepository: UserCourseRepository,
     private val universityRepository: UniversityRepository,
     private val tasksRepository: TasksRepository
 ) : AndroidViewModel(application) {
 
     private val gson = Gson()
+    private val _selectedGroups = MutableStateFlow<Set<String>>(emptySet())
+    private val _previewState = MutableStateFlow<List<ClassEntity>>(emptyList())
+    private val _currentSource = MutableStateFlow<ScheduleSource>(ScheduleSource.MyPlan)
 
-    private val _userSelection = MutableStateFlow(
-        CalendarUiState(isLoading = true)
-    )
+    // DODANE: Strumienie trzymające wybrany dzień i widok
+    private val _selectedDate = MutableStateFlow(LocalDate.now(ZoneId.of("Europe/Warsaw")))
+    private val _isMonthView = MutableStateFlow(false)
 
+    @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<CalendarUiState> = combine(
-        _userSelection,
+        userCourseRepository.getAllUserCoursesStream(),
         classRepository.getAllClassesStream(),
-        favoritesRepository.getAllFavoritesStream(),
-        settingsRepository.getSettingsStream()
-    ) { selection, myClasses, favorites, settings ->
+        favoritesRepository.favoritesStream,
+        settingsRepository.getSettingsStream(),
+        _selectedGroups,
+        _currentSource,
+        _previewState,
+        _selectedDate,
+        _isMonthView
+    ) { args: Array<Any?> ->
+        val courses = args[0] as List<UserCourseEntity>
+        val myClasses = args[1] as List<ClassEntity>
+        val favorites = args[2] as List<FavoriteEntity>
+        val settings = args[3] as SettingsEntity?
+        val selectedCodes = args[4] as Set<String>
+        val source = args[5] as ScheduleSource
+        val previewClasses = args[6] as List<ClassEntity>
+        val selectedDate = args[7] as LocalDate
+        val isMonthView = args[8] as Boolean
 
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
-        val classColorMap: Map<String, Int> = try {
+        val colorMap: Map<String, Int> = try {
             gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-        } catch (_: Exception) {
-            emptyMap()
-        }
+        } catch (_: Exception) { emptyMap() }
 
-        val availableDirections = myClasses
-            .map { it.groupCode.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
-
-        val fallbackDirection = settings?.selectedGroupCode
-            ?.takeIf { it.isNotBlank() && availableDirections.contains(it) }
-
-        val resolvedActiveDirection = settings?.activeDirectionCode
-            ?.takeIf { it.isNotBlank() && availableDirections.contains(it) }
-            ?: fallbackDirection
-            ?: availableDirections.firstOrNull()
-
-        val classesToShow = if (selection.currentSource is ScheduleSource.MyPlan) {
-            myClasses
+        val activeCodes = if (selectedCodes.isEmpty()) {
+            val codes = courses.map { it.groupCode }.toMutableSet()
+            if (!settings?.selectedGroupCode.isNullOrBlank()) codes.add(settings!!.selectedGroupCode!!)
+            codes
         } else {
-            selection.visibleClasses
+            selectedCodes
         }
 
-        selection.copy(
+        val classesToShow = when (source) {
+            is ScheduleSource.MyPlan -> myClasses.filter { activeCodes.contains(it.groupCode) }
+            else -> previewClasses
+        }
+
+        val resourceId = when (source) {
+            is ScheduleSource.Favorite -> source.resourceId
+            is ScheduleSource.Preview -> source.resourceId
+            else -> null
+        }
+
+        CalendarUiState(
+            userCourses = courses,
+            selectedGroupCodes = activeCodes,
             favorites = favorites,
-            classColorMap = classColorMap,
             visibleClasses = classesToShow,
-            availableDirections = if (selection.currentSource is ScheduleSource.MyPlan) availableDirections else emptyList(),
-            activeDirectionCode = if (selection.currentSource is ScheduleSource.MyPlan) resolvedActiveDirection else null,
-            isLoading = if (selection.currentSource is ScheduleSource.MyPlan) false else selection.isLoading
+            classColorMap = colorMap,
+            currentSource = source,
+            selectedResourceId = resourceId,
+            selectedPlanName = when (source) {
+                is ScheduleSource.MyPlan -> "Mój Plan"
+                is ScheduleSource.Favorite -> source.name
+                is ScheduleSource.Preview -> source.name
+            },
+            isLoading = false,
+            selectedDate = selectedDate,
+            isMonthView = isMonthView
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = CalendarUiState(isLoading = true)
-    )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CalendarUiState(isLoading = true))
 
-    val tasks: Flow<List<TaskEntity>> = tasksRepository.getAllTasks()
-
-    init {
-        observeSettingsAndRefresh()
-    }
-
-    private fun observeSettingsAndRefresh() {
-        viewModelScope.launch {
-            settingsRepository.getSettingsStream()
-                .map { settings ->
-                    val groupCode = settings?.selectedGroupCode?.trim().orEmpty()
-                    val subgroups = parseSubgroups(settings?.selectedSubgroup)
-                    if (groupCode.isBlank()) {
-                        null
-                    } else {
-                        groupCode to subgroups
-                    }
-                }
-                .distinctUntilChanged()
-                .collect { config ->
-                    if (config != null) {
-                        refreshScheduleFromServer(config.first, config.second)
-                    }
-                }
-        }
-    }
-
-    private fun parseSubgroups(rawSubgroups: String?): List<String> {
-        return rawSubgroups
-            ?.split(",")
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
-            ?: emptyList()
-    }
-
-    fun refreshScheduleFromServer(groupCode: String, subgroups: List<String>) {
-        viewModelScope.launch {
-            val result = universityRepository.getSchedule(groupCode, subgroups)
-            if (result is NetworkResult.Success) {
-                classRepository.deleteAllClasses()
-                classRepository.insertClasses(result.data ?: emptyList())
-                val request = OneTimeWorkRequestBuilder<WidgetWorker>().build()
-                WorkManager.getInstance(application).enqueue(request)
-            }
-        }
-    }
-
-    fun setActiveDirection(directionCode: String) {
-        val normalizedDirection = directionCode.trim()
-        if (normalizedDirection.isEmpty()) return
-
-        viewModelScope.launch {
-            val currentSettings = settingsRepository.getSettingsStream().firstOrNull() ?: SettingsEntity(id = 1)
-            if (currentSettings.activeDirectionCode == normalizedDirection) return@launch
-
-            settingsRepository.insertOrUpdate(
-                currentSettings.copy(activeDirectionCode = normalizedDirection)
-            )
-        }
+    fun toggleGroupVisibility(groupCode: String) {
+        val current = _selectedGroups.value.toMutableSet()
+        if (current.contains(groupCode)) current.remove(groupCode) else current.add(groupCode)
+        _selectedGroups.value = current
     }
 
     fun setTemporaryClassForDetails(classEntity: ClassEntity) {
-        _userSelection.update { it.copy(temporaryClassDetails = classEntity) }
+        classRepository.setTemporaryClass(classEntity)
     }
 
-    fun selectMyPlan() {
-        _userSelection.update {
-            it.copy(
-                currentSource = ScheduleSource.MyPlan,
-                selectedResourceId = null,
-                selectedPlanName = "M�j Plan",
-                error = null
-            )
+    fun selectMyPlan() { _currentSource.value = ScheduleSource.MyPlan }
+
+    fun toggleFavorite(name: String, type: String) {
+        viewModelScope.launch {
+            val existing = uiState.value.favorites.find { it.name == name }
+            if (existing != null) favoritesRepository.deleteFavorite(existing)
+            else favoritesRepository.insertFavorite(FavoriteEntity(resourceId = name, name = name, type = type))
         }
     }
 
     fun selectFavoritePlan(favorite: FavoriteEntity) {
-        _userSelection.update {
-            it.copy(
-                currentSource = ScheduleSource.Favorite(favorite.resourceId, favorite.name, favorite.type),
-                selectedResourceId = favorite.resourceId,
-                selectedPlanName = favorite.name,
-                isLoading = true,
-                error = null
-            )
-        }
+        _currentSource.value = ScheduleSource.Favorite(favorite.resourceId, favorite.name, favorite.type)
         loadNetworkSchedule(favorite.name, favorite.type)
     }
 
     fun selectPreviewPlan(name: String, type: String) {
-        _userSelection.update {
-            it.copy(
-                currentSource = ScheduleSource.Preview(name, name, type),
-                selectedResourceId = name,
-                selectedPlanName = name,
-                isLoading = true,
-                error = null
-            )
-        }
+        _currentSource.value = ScheduleSource.Preview(name, name, type)
         loadNetworkSchedule(name, type)
     }
 
     private fun loadNetworkSchedule(name: String, type: String) {
         viewModelScope.launch {
-            val result = if (type.equals("teacher", ignoreCase = true)) {
-                universityRepository.getScheduleForTeacher(name)
-            } else {
-                universityRepository.getSchedule(name, emptyList())
-            }
-
-            _userSelection.update { current ->
-                when (result) {
-                    is NetworkResult.Success -> current.copy(
-                        visibleClasses = result.data ?: emptyList(),
-                        isLoading = false
-                    )
-
-                    is NetworkResult.Error -> current.copy(
-                        error = result.message,
-                        isLoading = false,
-                        visibleClasses = emptyList()
-                    )
-
-                    else -> current.copy(isLoading = false)
-                }
-            }
+            val result = if (type == "teacher") universityRepository.getScheduleForTeacher(name)
+            else universityRepository.getSchedule(name, emptyList())
+            if (result is NetworkResult.Success) _previewState.value = result.data ?: emptyList()
         }
     }
 
-    fun toggleFavorite(name: String, type: String) {
-        viewModelScope.launch {
-            val currentFavorites = uiState.value.favorites
-            val existing = currentFavorites.find { it.name == name }
-
-            if (existing != null) {
-                favoritesRepository.delete(existing)
-            } else {
-                val newFav = FavoriteEntity(
-                    resourceId = name,
-                    name = name,
-                    type = type
-                )
-                favoritesRepository.insert(newFav)
-            }
-        }
+    // DODANE: Metody do zarządzania stanem kalendarza
+    fun setSelectedDate(date: LocalDate) {
+        _selectedDate.value = date
     }
 
-    fun toggleTaskCompletion(task: TaskEntity) {
-        viewModelScope.launch {
-            tasksRepository.updateTask(task.copy(isCompleted = !task.isCompleted))
-        }
-    }
-
-    fun deleteTask(task: TaskEntity) {
-        viewModelScope.launch {
-            tasksRepository.deleteTask(task)
-        }
-    }
-
-    fun shareCalendarTasks() {
-        viewModelScope.launch {
-            _userSelection.update { it.copy(isShareLoading = true, error = null) }
-            try {
-                val tasksList = tasksRepository.getAllTasks().firstOrNull().orEmpty()
-                if (tasksList.isNotEmpty()) {
-                    val code = tasksRepository.shareTasks(tasksList)
-                    _userSelection.update { it.copy(isShareLoading = false, sharedCode = code) }
-                } else {
-                    _userSelection.update { it.copy(isShareLoading = false, error = "Brak zada�") }
-                }
-            } catch (e: Exception) {
-                _userSelection.update { it.copy(isShareLoading = false, error = e.message) }
-            }
-        }
-    }
-
-    fun clearSharedCode() {
-        _userSelection.update { it.copy(sharedCode = null) }
+    fun setMonthView(isMonth: Boolean) {
+        _isMonthView.value = isMonth
     }
 }
-
-

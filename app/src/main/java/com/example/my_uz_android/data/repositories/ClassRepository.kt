@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.flowOf
 
 class ClassRepository(private val classDao: ClassDao) {
 
-    // Przechowuje zajęcia "podglądane", które nie są w bazie danych
     private var temporaryClass: ClassEntity? = null
 
     fun setTemporaryClass(classEntity: ClassEntity) {
@@ -20,7 +19,6 @@ class ClassRepository(private val classDao: ClassDao) {
         classDao.getClassesForDay(dayOfWeek)
 
     fun getClassByIdStream(id: Int): Flow<ClassEntity?> {
-        // Jeśli ID to -1, zwracamy zajęcia z pamięci
         return if (id == -1) {
             flowOf(temporaryClass)
         } else {
@@ -28,13 +26,19 @@ class ClassRepository(private val classDao: ClassDao) {
         }
     }
 
+    suspend fun updateClasses(classes: List<ClassEntity>) {
+        classDao.deleteAll()
+        classDao.insertAll(classes)
+    }
+
+    suspend fun syncGroupClasses(groupCode: String, newClasses: List<ClassEntity>) {
+        classDao.deleteByGroupCode(groupCode)
+        classDao.insertAll(newClasses)
+    }
+
     suspend fun insertClasses(classes: List<ClassEntity>) = classDao.insertAll(classes)
-
     suspend fun insertClass(classEntity: ClassEntity) = classDao.insert(classEntity)
-
     suspend fun deleteAllClasses() = classDao.deleteAll()
-
     suspend fun deleteClass(classEntity: ClassEntity) = classDao.delete(classEntity)
-
     suspend fun updateClass(classEntity: ClassEntity) = classDao.update(classEntity)
 }

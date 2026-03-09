@@ -4,27 +4,18 @@ import com.example.my_uz_android.data.daos.FavoritesDao
 import com.example.my_uz_android.data.models.FavoriteEntity
 import kotlinx.coroutines.flow.Flow
 
-class FavoritesRepository(
-    private val favoritesDao: FavoritesDao
-) {
-    // Główna metoda
-    fun getAllFavoritesStream(): Flow<List<FavoriteEntity>> = favoritesDao.getAllFavoritesStream()
+class FavoritesRepository(private val favoritesDao: FavoritesDao) {
 
-    // ✅ FIX: Dodano alias, o który prosi kompilator
-    fun getAllFavorites(): Flow<List<FavoriteEntity>> = favoritesDao.getAllFavoritesStream()
+    // Poprawiona nazwa: getAllFavoritesStream zamiast getAllFavorites
+    val favoritesStream: Flow<List<FavoriteEntity>> = favoritesDao.getAllFavoritesStream()
 
-    suspend fun addFavorite(name: String, type: String, resourceId: String) {
-        val entity = FavoriteEntity(name = name, type = type, resourceId = resourceId)
-        favoritesDao.insertFavorite(entity)
-    }
+    // Poprawiona nazwa: insertFavorite zamiast insert
+    suspend fun insertFavorite(favorite: FavoriteEntity) = favoritesDao.insertFavorite(favorite)
 
-    // ✅ FIX: Aliasy dla insert/delete, jeśli gdzieś są używane bezpośrednio
-    suspend fun insert(entity: FavoriteEntity) = favoritesDao.insertFavorite(entity)
-    suspend fun delete(entity: FavoriteEntity) = favoritesDao.deleteFavorite(entity)
+    // Poprawiona nazwa: deleteFavorite zamiast delete
+    suspend fun deleteFavorite(favorite: FavoriteEntity) = favoritesDao.deleteFavorite(favorite)
 
-    suspend fun removeFavorite(resourceId: String) {
+    // Poprawiona metoda dopasowana do DAO (usuwanie po resourceId)
+    suspend fun deleteFavoriteByResourceId(resourceId: String) =
         favoritesDao.deleteByResourceId(resourceId)
-    }
-
-    suspend fun isFavorite(resourceId: String): Boolean = favoritesDao.isFavorite(resourceId)
 }

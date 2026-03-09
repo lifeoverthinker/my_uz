@@ -11,13 +11,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.theme.MyUZTheme
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun PersonalDataScreen(
     onNavigateBack: () -> Unit,
@@ -28,18 +29,48 @@ fun PersonalDataScreen(
     val userSurname by viewModel.userSurname.collectAsState()
     val selectedGender by viewModel.selectedGender.collectAsState()
     val selectedGroup by viewModel.selectedGroup.collectAsState()
-    val selectedSubgroups by viewModel.selectedSubgroups.collectAsState()
 
+    // Pobieramy podgrupy Głównej Grupy
+    val selectedSubgroups by viewModel.mainSelectedSubgroups.collectAsState()
+
+    val additionalGroups by viewModel.additionalGroups.collectAsState()
+
+    PersonalDataScreenContent(
+        userName = userName,
+        userSurname = userSurname,
+        selectedGender = selectedGender,
+        selectedGroup = selectedGroup,
+        selectedSubgroups = selectedSubgroups,
+        additionalGroups = additionalGroups,
+        onNavigateBack = onNavigateBack,
+        onNavigateToEdit = onNavigateToEdit
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun PersonalDataScreenContent(
+    userName: String,
+    userSurname: String,
+    selectedGender: UserGender?,
+    selectedGroup: String?,
+    selectedSubgroups: Set<String>,
+    additionalGroups: List<String>,
+    onNavigateBack: () -> Unit,
+    onNavigateToEdit: () -> Unit
+) {
     val sortedSubgroups = selectedSubgroups.toList().sorted()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = "Dane osobowe",
-                navigationIcon = R.drawable.ic_chevron_left,
-                onNavigationClick = onNavigateBack,
-                isNavigationIconFilled = false,
+                title = { Text("Dane osobowe") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(painterResource(R.drawable.ic_chevron_left), "Wróć", tint = MaterialTheme.colorScheme.onBackground)
+                    }
+                },
                 actions = {
                     IconButton(onClick = onNavigateToEdit) {
                         Icon(
@@ -49,7 +80,10 @@ fun PersonalDataScreen(
                             modifier = Modifier.size(22.dp)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { innerPadding ->
@@ -69,13 +103,14 @@ fun PersonalDataScreen(
                 )
                 DataItem(
                     label = "Płeć / Forma zwrotu",
-                    value = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
-                        ?: "Student")
+                    value = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student"
+                )
             }
 
-            PersonalDataGroup(title = "Przynależność") {
-                DataItem(label = "Grupa dziekańska", value = selectedGroup ?: "Nie wybrano")
+            PersonalDataGroup(title = "Zapisane grupy") {
+                DataItem(label = "Grupa główna", value = selectedGroup ?: "Brak przypisanej grupy")
 
+                // PRZYWRÓCONE PODGRUPY
                 if (sortedSubgroups.isNotEmpty()) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -97,7 +132,7 @@ fun PersonalDataScreen(
                             sortedSubgroups.forEach { subgroup ->
                                 Surface(
                                     color = MaterialTheme.colorScheme.secondaryContainer,
-                                    shape = RoundedCornerShape(12.dp) // Kwadratowe jak na landing screen
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
                                         text = subgroup,
@@ -113,6 +148,17 @@ fun PersonalDataScreen(
                         }
                     }
                 }
+
+                if (additionalGroups.isNotEmpty()) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    DataItem(
+                        label = "Grupy dodatkowe",
+                        value = additionalGroups.joinToString(separator = "\n")
+                    )
+                }
             }
         }
     }
@@ -127,12 +173,13 @@ fun PersonalDataGroup(title: String, content: @Composable ColumnScope.() -> Unit
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
         )
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
+        OutlinedCard(
             shape = RoundedCornerShape(24.dp),
-            tonalElevation = 1.dp,
+            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = CardDefaults.outlinedCardBorder(),
             modifier = Modifier.fillMaxWidth(),
-            content = { Column(content = content) })
+            content = { Column(content = content) }
+        )
     }
 }
 
@@ -147,7 +194,28 @@ fun DataItem(label: String, value: String) {
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+// ==========================================
+// PREVIEW
+// ==========================================
+@Preview(showBackground = true)
+@Composable
+fun PersonalDataScreenPreview() {
+    MyUZTheme {
+        PersonalDataScreenContent(
+            userName = "Jan",
+            userSurname = "Kowalski",
+            selectedGender = UserGender.STUDENT,
+            selectedGroup = "11-INF-ZI-S",
+            selectedSubgroups = setOf("L1", "C2"),
+            additionalGroups = listOf("12-MAT-S", "14-FIZ-N"),
+            onNavigateBack = {},
+            onNavigateToEdit = {}
         )
     }
 }

@@ -1,7 +1,13 @@
 ﻿package com.example.my_uz_android.ui.screens.calendar.components
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,6 +15,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -26,6 +35,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.components.ClassCardType
+import com.example.my_uz_android.ui.screens.calendar.DaySwipeDirection
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.kizitonwose.calendar.compose.CalendarState
@@ -43,7 +53,6 @@ import kotlin.math.abs
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
 private val HourColWidth = 56.dp
-private val ColumnSpacing = 4.dp // Usunęłam zduplikowaną zmienną
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +61,7 @@ fun ScheduleView(
     weekState: WeekCalendarState,
     selectedDate: LocalDate,
     isMonthView: Boolean,
+    swipeDirection: DaySwipeDirection? = null,
     onDateSelected: (LocalDate) -> Unit,
     onToggleView: () -> Unit,
     classes: List<ClassEntity>,
@@ -60,7 +70,6 @@ fun ScheduleView(
     modifier: Modifier = Modifier,
     showHeader: Boolean = false
 ) {
-    // 1. Filtrujemy i sortujemy zajęcia dla wybranego dnia
     val classesForDay = remember(classes, selectedDate) {
         classes.filter { it.date == selectedDate.toString() }.sortedBy { it.startTime }
     }
@@ -68,26 +77,29 @@ fun ScheduleView(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    // 2. Automatyczne przewijanie do pierwszych zajęć (Smart Scroll) - NAPRAWIONE
     LaunchedEffect(classesForDay) {
-        val firstClassMinute = classesForDay.minOfOrNull {
-            val parts = it.startTime.split(":")
-            parts[0].toInt() * 60 + parts[1].toInt()
-        } ?: (8 * 60) // Jeśli brak zajęć, też 8:00
+        if (classesForDay.isNotEmpty()) {
+            val firstClassMinute = classesForDay.minOfOrNull {
+                try {
+                    val parts = it.startTime.split(":")
+                    parts[0].toInt() * 60 + parts[1].toInt()
+                } catch (e: Exception) {
+                    8 * 60
+                }
+            } ?: (8 * 60)
 
-        // Przewiń o godzinę wcześniej, żeby było widać kontekst
-        val targetMinute = (firstClassMinute - 60).coerceAtLeast(0)
-        scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
+            val targetMinute = (firstClassMinute - 60).coerceAtLeast(0)
+            scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
+        } else {
+            scrollState.scrollTo(0)
+        }
     }
 
-    // Od tego miejsca Twój kod w dół zostaje bez zmian
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-
-        // --- NAGĹĂ“WEK MIESIÄ„CA ---
         if (showHeader) {
             val visibleMonth = if (isMonthView) {
                 calendarState.firstVisibleMonth.yearMonth
@@ -97,9 +109,8 @@ fun ScheduleView(
                 else YearMonth.now(PolandZone)
             }
 
-            val monthName =
-                visibleMonth.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
-                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
+            val monthName = visibleMonth.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
+                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
             val monthTitle = "$monthName ${visibleMonth.year}"
 
             Box(
@@ -134,84 +145,153 @@ fun ScheduleView(
             }
         }
 
-        // --- NAGĹĂ“WKI DNI TYGODNIA ---
-        Row(modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
                 DaysOfWeekTitle(daysOfWeek = daysOfWeek(firstDayOfWeek = DayOfWeek.MONDAY))
             }
         }
 
-        // --- KALENDARZ (MIESIÄ„C / TYDZIEĹ) ---
-        AnimatedContent(
-            targetState = isMonthView,
-            label = "CalendarTransition",
-            modifier = Modifier.padding(horizontal = 16.dp)
-        ) { targetIsMonth ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Spacer(modifier = Modifier.width(HourColWidth))
-                Box(modifier = Modifier.weight(1f)) {
-                    if (targetIsMonth) {
-                        HorizontalCalendar(
-                            state = calendarState,
-                            dayContent = { day ->
-                                CalendarDay(
-                                    date = day.date,
-                                    isDateInMonth = day.position == DayPosition.MonthDate,
-                                    isSelected = selectedDate == day.date,
-                                    onClick = onDateSelected
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    } else {
-                        WeekCalendar(
-                            state = weekState,
-                            dayContent = { day ->
-                                CalendarDay(
-                                    date = day.date,
-                                    isDateInMonth = true,
-                                    isSelected = selectedDate == day.date,
-                                    onClick = onDateSelected
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
+        // GÓRA (week/month) bez animacji dnia
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            Spacer(modifier = Modifier.width(HourColWidth))
+            Box(modifier = Modifier.weight(1f)) {
+                if (isMonthView) {
+                    HorizontalCalendar(
+                        state = calendarState,
+                        dayContent = { day ->
+                            CalendarDay(
+                                date = day.date,
+                                isDateInMonth = day.position == DayPosition.MonthDate,
+                                isSelected = selectedDate == day.date,
+                                onClick = onDateSelected
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    WeekCalendar(
+                        state = weekState,
+                        dayContent = { day ->
+                            CalendarDay(
+                                date = day.date,
+                                isDateInMonth = true,
+                                isSelected = selectedDate == day.date,
+                                onClick = onDateSelected
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
 
-        // --- SIATKA ZAJÄÄ† (SCROLLOWALNA) ---
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)) {
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)) {
+        // DÓŁ (plan dnia) z delikatną animacją przy swipe
+        AnimatedContent(
+            targetState = selectedDate,
+            transitionSpec = {
+                val isNext = swipeDirection != DaySwipeDirection.PREVIOUS
+                val enterOffset: (Int) -> Int = { fullWidth -> if (isNext) fullWidth / 10 else -fullWidth / 10 }
+                val exitOffset: (Int) -> Int = { fullWidth -> if (isNext) -fullWidth / 10 else fullWidth / 10 }
 
-                // TĹ‚o: Linie godzinowe
+                ContentTransform(
+                    targetContentEnter = slideInHorizontally(
+                        animationSpec = tween(160),
+                        initialOffsetX = enterOffset
+                    ) + fadeIn(animationSpec = tween(160)),
+                    initialContentExit = slideOutHorizontally(
+                        animationSpec = tween(140),
+                        targetOffsetX = exitOffset
+                    ) + fadeOut(animationSpec = tween(140))
+                )
+            },
+            label = "DayOnlyTransition",
+            modifier = Modifier.fillMaxSize()
+        ) { animatedDate ->
+            // Pobieramy zajęcia tylko dla animowanego dnia
+            val animatedClassesForDay = remember(classes, animatedDate) {
+                classes.filter { it.date == animatedDate.toString() }.sortedBy { it.startTime }
+            }
+
+            DayTimelineContent(
+                selectedDate = animatedDate,
+                classesForDay = animatedClassesForDay,
+                classColorMap = classColorMap,
+                onClassClick = onClassClick,
+                scrollState = scrollState
+            )
+        }
+    }
+}
+
+@Composable
+private fun DayTimelineContent(
+    selectedDate: LocalDate,
+    classesForDay: List<ClassEntity>,
+    classColorMap: Map<String, Int>,
+    onClassClick: (ClassEntity) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState
+) {
+    if (classesForDay.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                    modifier = Modifier.size(56.dp)
+                )
+
+                Text(
+                    text = "Brak zajęć",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "Czas na odpoczynek lub naukę własną.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    } else {
+        Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     repeat(24) { index -> HourRow(hour = index) }
                 }
 
-                // ZawartoĹ›Ä‡: Karty zajÄ™Ä‡
-                Box(modifier = Modifier
-                    .matchParentSize()
-                    .padding(start = HourColWidth)) {
-                    classesForDay.forEach { classEntity ->
+                // TUTAJ JEST TWOJA NOWA SIATKA OBLICZAJĄCA NAKŁADANIE ZAJĘĆ
+                BoxWithConstraints(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
+                    val eventLayouts = remember(classesForDay) {
+                        com.example.my_uz_android.util.calculateEventLayouts(classesForDay)
+                    }
+
+                    eventLayouts.forEach { layoutInfo ->
                         ScheduledClassItem(
-                            classEntity = classEntity,
+                            classEntity = layoutInfo.classEntity,
                             selectedDate = selectedDate,
                             classColorMap = classColorMap,
+                            colIndex = layoutInfo.colIndex,
+                            totalCols = layoutInfo.totalCols,
+                            maxWidthDp = maxWidth,
                             onClassClick = onClassClick
                         )
                     }
                 }
 
-                // WskaĹşnik aktualnego czasu
                 if (selectedDate == LocalDate.now(PolandZone)) {
                     CurrentTimeIndicator()
                 }
@@ -225,9 +305,7 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
     Row(modifier = Modifier.fillMaxWidth()) {
         for (dayOfWeek in daysOfWeek) {
             Text(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(24.dp),
+                modifier = Modifier.weight(1f).height(24.dp),
                 text = dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale("pl"))
                     .replaceFirstChar { it.titlecase() }.take(1),
                 textAlign = TextAlign.Center,
@@ -239,12 +317,7 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 }
 
 @Composable
-fun CalendarDay(
-    date: LocalDate,
-    isDateInMonth: Boolean,
-    isSelected: Boolean,
-    onClick: (LocalDate) -> Unit
-) {
+fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, onClick: (LocalDate) -> Unit) {
     val isToday = date == LocalDate.now(PolandZone)
     val primaryColor = MaterialTheme.colorScheme.primary
 
@@ -256,16 +329,10 @@ fun CalendarDay(
 
     val circleSize = if (isSelected || isToday) 28.dp else 24.dp
     val circleColor = if (isSelected && isDateInMonth) primaryColor else Color.Transparent
-    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(
-        1.dp,
-        primaryColor,
-        CircleShape
-    ) else Modifier
+    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, primaryColor, CircleShape) else Modifier
 
     Box(
-        modifier = Modifier
-            .aspectRatio(1f)
-            .padding(2.dp),
+        modifier = Modifier.aspectRatio(1f).padding(2.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -304,9 +371,7 @@ fun HourRow(hour: Int) {
     val horizontalLineStart = HourColWidth - 8.dp
     val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
-    Box(modifier = Modifier
-        .fillMaxWidth()
-        .height(rowHeight)) {
+    Box(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
         if (hour != 0) {
             HorizontalDivider(
                 modifier = Modifier
@@ -352,6 +417,9 @@ fun ScheduledClassItem(
     classEntity: ClassEntity,
     selectedDate: LocalDate,
     classColorMap: Map<String, Int>,
+    colIndex: Int,
+    totalCols: Int,
+    maxWidthDp: androidx.compose.ui.unit.Dp,
     onClassClick: (ClassEntity) -> Unit
 ) {
     val startParts = classEntity.startTime.split(":")
@@ -363,20 +431,21 @@ fun ScheduledClassItem(
     val topOffset = startMinutes.dp
     val height = durationMinutes.dp
 
+    val columnWidth = maxWidthDp / totalCols
+    val startXOffset = columnWidth * colIndex
+
     val now = LocalDateTime.now(PolandZone)
-    val classStartDateTime =
-        LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
+    val classStartDateTime = LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
     val isFuture = now.isBefore(classStartDateTime)
 
-    val assignedColorIndex = classColorMap[classEntity.classType]
-        ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
+    val assignedColorIndex = classColorMap[classEntity.classType] ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
     val colorSet = ClassColorPalette.getOrElse(assignedColorIndex) { ClassColorPalette[0] }
 
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 2.dp)
-            .offset(y = topOffset)
+            .width(columnWidth)
+            .padding(bottom = 2.dp, end = 4.dp)
+            .offset(x = startXOffset, y = topOffset)
             .height(height)
     ) {
         ClassCard(
@@ -415,9 +484,7 @@ fun CurrentTimeIndicator() {
         HorizontalDivider(
             color = indicatorColor,
             thickness = 2.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = HourColWidth)
+            modifier = Modifier.fillMaxWidth().padding(start = HourColWidth)
         )
         Box(
             modifier = Modifier
