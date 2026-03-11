@@ -280,7 +280,7 @@ fun HomeScreen(
 
                                 item {
                                     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 24.dp), contentAlignment = Alignment.CenterStart) {
-                                        Text(text = "MyUZ 2025", style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline))
+                                        Text(text = "MyUZ 2026", style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline))
                                     }
                                 }
                             }

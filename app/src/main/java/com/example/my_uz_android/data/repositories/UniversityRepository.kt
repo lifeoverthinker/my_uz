@@ -186,25 +186,43 @@ class UniversityRepository(private val supabase: Postgrest) {
 
     suspend fun getScheduleForTeacher(teacherName: String): NetworkResult<List<ClassEntity>> {
         return try {
+            // Używamy ilike i trim, aby dopasować nazwisko nawet jeśli ma spacje na końcu/początku
             val teachers = supabase.from("nauczyciele").select(columns = Columns.list("external_id", "email", "jednostka")) {
-                filter { eq("nazwisko_imie", teacherName) }
+                filter { ilike("nazwisko_imie", teacherName.trim()) }
             }.decodeList<TeacherIdDto>()
-            val info = teachers.firstOrNull() ?: return NetworkResult.Error("Nie znaleziono.")
-            val dtoList = supabase.from("zajecia_nauczyciela").select { filter { eq("nauczyciel_id", info.id) } }.decodeList<TeacherClassScheduleDto>()
+
+            val info = teachers.firstOrNull() ?: return NetworkResult.Error("Nie znaleziono nauczyciela o tym nazwisku.")
+
+            // Pobieramy zajęcia korzystając z uzyskanego ID zewnętrznego
+            val dtoList = supabase.from("zajecia_nauczyciela").select {
+                filter { eq("nauczyciel_id", info.id) }
+            }.decodeList<TeacherClassScheduleDto>()
+
             val entities = dtoList.mapNotNull { dto ->
                 val startDT = parseDateSafe(dto.startDateTime) ?: return@mapNotNull null
                 val endDT = parseDateSafe(dto.endDateTime) ?: return@mapNotNull null
                 ClassEntity(
-                    supabaseId = dto.id, subjectName = dto.subjectName, classType = dto.classType ?: "Inne",
+                    supabaseId = dto.id,
+                    subjectName = dto.subjectName,
+                    classType = dto.classType ?: "Inne",
                     startTime = startDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                     endTime = endDT.format(DateTimeFormatter.ofPattern("HH:mm")),
-                    dayOfWeek = startDT.dayOfWeek.value, date = startDT.toLocalDate().toString(),
-                    groupCode = dto.groups ?: "", subgroup = null, teacherName = teacherName,
-                    teacherEmail = info.email, teacherInstitute = info.institute, room = dto.room ?: "Brak"
+                    dayOfWeek = startDT.dayOfWeek.value,
+                    date = startDT.toLocalDate().toString(),
+                    groupCode = dto.groups ?: "",
+                    subgroup = null,
+                    teacherName = teacherName,
+                    teacherEmail = info.email,
+                    teacherInstitute = info.institute,
+                    room = dto.room ?: "Brak"
                 )
             }.sortedWith(compareBy({ it.date }, { it.startTime }))
+
             NetworkResult.Success(entities)
-        } catch (e: Exception) { NetworkResult.Error("Błąd.") }
+        } catch (e: Exception) {
+            Log.e("UniversityRepository", "Błąd pobierania planu nauczyciela: ${e.message}", e)
+            NetworkResult.Error("Błąd serwera przy pobieraniu planu.")
+        }
     }
 
     suspend fun getGroupDetails(groupCode: String): NetworkResult<GroupDetailsDto> {
