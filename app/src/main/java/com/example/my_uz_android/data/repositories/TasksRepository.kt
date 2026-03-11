@@ -21,6 +21,11 @@ class TasksRepository(
 
     suspend fun insertTask(task: TaskEntity) = tasksDao.insert(task)
 
+    // ✅ DODANE: Metoda do zapisu listy zadań (wykorzystywana przy imporcie)
+    suspend fun insertTasks(tasks: List<TaskEntity>) {
+        tasks.forEach { tasksDao.insert(it) }
+    }
+
     suspend fun updateTask(task: TaskEntity) = tasksDao.update(task)
 
     suspend fun deleteTask(task: TaskEntity) = tasksDao.delete(task)

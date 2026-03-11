@@ -4,16 +4,17 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
@@ -31,12 +32,11 @@ import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
-import androidx.compose.ui.res.painterResource
-import com.example.my_uz_android.R
 
 @Composable
 fun CalendarScreen(
     onNavigateBack: () -> Unit = {},
+    onOpenDrawer: () -> Unit,
     onSearchClick: () -> Unit,
     onTasksClick: () -> Unit,
     onAccountClick: () -> Unit,
@@ -46,8 +46,14 @@ fun CalendarScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // NAPRAWA: Automatycznie resetuje kalendarz z wyszukiwanego podglądu do "Mój Plan" po powrocie do tego widoku
+    LaunchedEffect(Unit) {
+        viewModel.selectMyPlan()
+    }
+
     CalendarScreenContent(
         uiState = uiState,
+        onOpenDrawer = onOpenDrawer,
         onSearchClick = onSearchClick,
         onAccountClick = onAccountClick,
         onClassClick = {
@@ -64,6 +70,7 @@ fun CalendarScreen(
 @Composable
 fun CalendarScreenContent(
     uiState: CalendarUiState,
+    onOpenDrawer: () -> Unit,
     onSearchClick: () -> Unit,
     onAccountClick: () -> Unit,
     onClassClick: (ClassEntity) -> Unit,
@@ -132,7 +139,7 @@ fun CalendarScreenContent(
             CalendarTopAppBar(
                 title = calendarTitle,
                 isExpanded = isMonthView,
-                onNavigationClick = onAccountClick,
+                onNavigationClick = onOpenDrawer, // Poprawne podpięcie pod hamburger menu
                 onSearchClick = onSearchClick,
                 onTitleClick = { onToggleMonthView(!isMonthView) },
                 onAddClick = {
@@ -184,8 +191,6 @@ fun CalendarScreenContent(
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-
-                // MULTI-KIERUNEK: Spójne menu w formie dropdownu identyczne jak w indeksie
                 if (uiState.userCourses.size > 1) {
                     Row(
                         modifier = Modifier
@@ -197,7 +202,7 @@ fun CalendarScreenContent(
                         Box {
                             IconButton(onClick = { isFilterExpanded = true }) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_filter_funnel), // <-- TWOJA IKONA
+                                    painter = painterResource(id = R.drawable.ic_filter_funnel),
                                     contentDescription = "Filtruj kierunki",
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
@@ -265,6 +270,7 @@ fun CalendarScreenPreview() {
                 selectedGroupCodes = setOf("12IN"),
                 visibleClasses = emptyList()
             ),
+            onOpenDrawer = {},
             onSearchClick = {},
             onAccountClick = {},
             onClassClick = {},

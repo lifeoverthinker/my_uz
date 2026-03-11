@@ -149,7 +149,8 @@ fun AccountScreenContent(
         ) {
             ProfileSection(
                 userName = "$userName $userSurname".trim(),
-                userTitle = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student",
+                userTitle = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
+                    ?: "Student",
                 isAnonymous = isAnonymous
             )
 
@@ -348,9 +349,12 @@ private fun StudyDirectionsSection(
                         label = "Wydział",
                         value = faculty
                     )
+
                     StudySingleColumnItem(
                         label = "Podgrupy",
-                        value = if (subgroups.isNotEmpty()) subgroups.sorted().joinToString(", ") else "-"
+                        // NAPRAWA: Sortowanie alfabetyczne i łączenie przecinkiem ze spacją
+                        value = if (subgroups.isNotEmpty()) subgroups.toList().sorted()
+                            .joinToString(", ") else "-"
                     )
                 }
             }

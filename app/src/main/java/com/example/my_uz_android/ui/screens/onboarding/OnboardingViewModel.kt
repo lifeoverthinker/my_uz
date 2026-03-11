@@ -80,6 +80,7 @@ class OnboardingViewModel(
                         .sorted()
                     _allGroups.value = groups
                 }
+
                 else -> {
                     _allGroups.value = emptyList()
                 }
@@ -140,6 +141,7 @@ class OnboardingViewModel(
                         .sorted()
                     _availableSubgroups.value = subgroups
                 }
+
                 else -> {
                     _availableSubgroups.value = emptyList()
                 }
@@ -185,6 +187,7 @@ class OnboardingViewModel(
     }
 
     // Funkcja Zapisu - zachowana oryginalna logika (pobieranie szczegółów grupy)
+// Funkcja Zapisu
     fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -208,8 +211,11 @@ class OnboardingViewModel(
             val currentSettings = settingsRepository.getSettingsStream().firstOrNull()
 
             val fullName = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
-            val genderString = if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
-            val subgroupsString = _selectedSubgroups.value.joinToString(", ")
+            val genderString =
+                if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
+
+            // NAPRAWA: Zapis bez spacji między przecinkami, tak aby multiselect w AccountViewModel widział je poprawnie
+            val subgroupsString = _selectedSubgroups.value.joinToString(",")
 
             val newSettings = SettingsEntity(
                 id = currentSettings?.id ?: 0,
@@ -221,7 +227,6 @@ class OnboardingViewModel(
                 gender = genderString,
                 isFirstRun = false,
                 isDarkMode = currentSettings?.isDarkMode ?: false,
-                // Zapisujemy pobrane dane
                 faculty = fetchedFaculty,
                 fieldOfStudy = fetchedFieldOfStudy,
                 studyMode = fetchedStudyMode

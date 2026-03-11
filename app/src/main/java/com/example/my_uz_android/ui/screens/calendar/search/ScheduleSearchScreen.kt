@@ -4,18 +4,23 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.FavoriteEntity
+import com.example.my_uz_android.ui.components.EmptyStateMessage
 import com.example.my_uz_android.ui.components.SearchTopAppBar
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
+import com.example.my_uz_android.ui.theme.MyUZTheme
 
 @Composable
 fun ScheduleSearchScreen(
@@ -25,13 +30,34 @@ fun ScheduleSearchScreen(
 ) {
     val uiState by searchViewModel.uiState.collectAsState()
 
+    ScheduleSearchContent(
+        uiState = uiState,
+        onQueryChange = searchViewModel::onQueryChange,
+        onBackClick = { navController.popBackStack() },
+        onItemClick = { item ->
+            calendarViewModel.selectFavoritePlan(
+                FavoriteEntity(name = item.name, type = item.type, resourceId = item.name)
+            )
+            navController.navigate("schedule_preview")
+        },
+        onFavoriteClick = { searchViewModel.toggleFavorite(it) }
+    )
+}
+
+@Composable
+fun ScheduleSearchContent(
+    uiState: SearchUiState,
+    onQueryChange: (String) -> Unit,
+    onBackClick: () -> Unit,
+    onItemClick: (SearchResultItem) -> Unit,
+    onFavoriteClick: (SearchResultItem) -> Unit
+) {
     Scaffold(
         topBar = {
-            // ZMIANA: Użycie dedykowanego SearchTopAppBar zamiast domyślnego
             SearchTopAppBar(
                 query = uiState.searchQuery,
-                onQueryChange = searchViewModel::onQueryChange,
-                onBackClick = { navController.popBackStack() }
+                onQueryChange = onQueryChange,
+                onBackClick = onBackClick
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -45,23 +71,46 @@ fun ScheduleSearchScreen(
                 )
             }
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(uiState.searchResults) { item ->
-                    SearchListItem(
-                        item = item,
-                        onClick = {
-                            calendarViewModel.selectFavoritePlan(
-                                FavoriteEntity(name = item.name, type = item.type, resourceId = item.name)
+            val groups = uiState.searchResults.filter { it.type == "group" }
+            val teachers = uiState.searchResults.filter { it.type == "teacher" }
+
+            if (!uiState.isLoading && uiState.searchQuery.isNotEmpty() && uiState.searchResults.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    EmptyStateMessage(
+                        title = "Brak wyników",
+                        message = "Nie znaleziono planów dla podanego hasła. Spróbuj zmienić zapytanie.",
+                        imageVector = Icons.Default.Search // Dodano zgodnie z prośbą z wykorzystaniem ikony
+                    )
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    if (groups.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Grupy",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                             )
-                            navController.navigate("schedule_preview")
-                        },
-                        onFavoriteClick = { searchViewModel.toggleFavorite(item) }
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                    )
+                        }
+                        items(groups) { item ->
+                            SearchListItem(item, { onItemClick(item) }, { onFavoriteClick(item) })
+                        }
+                    }
+
+                    if (teachers.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Nauczyciele",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                            )
+                        }
+                        items(teachers) { item ->
+                            SearchListItem(item, { onItemClick(item) }, { onFavoriteClick(item) })
+                        }
+                    }
                 }
             }
         }
@@ -115,5 +164,43 @@ fun SearchListItem(
                 tint = if (item.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ScheduleSearchScreenResultsPreview() {
+    MyUZTheme {
+        ScheduleSearchContent(
+            uiState = SearchUiState(
+                searchQuery = "Kowalski",
+                searchResults = listOf(
+                    SearchResultItem("311-EA-ZI", "group", false),
+                    SearchResultItem("Jan Kowalski", "teacher", true),
+                    SearchResultItem("Adam Kowal", "teacher", false)
+                )
+            ),
+            onQueryChange = {},
+            onBackClick = {},
+            onItemClick = {},
+            onFavoriteClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ScheduleSearchScreenEmptyPreview() {
+    MyUZTheme {
+        ScheduleSearchContent(
+            uiState = SearchUiState(
+                searchQuery = "Zxcvbnm",
+                searchResults = emptyList()
+            ),
+            onQueryChange = {},
+            onBackClick = {},
+            onItemClick = {},
+            onFavoriteClick = {}
+        )
     }
 }

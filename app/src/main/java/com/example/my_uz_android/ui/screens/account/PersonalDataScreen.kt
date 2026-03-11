@@ -68,7 +68,11 @@ fun PersonalDataScreenContent(
                 title = { Text("Dane osobowe") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(painterResource(R.drawable.ic_chevron_left), "Wróć", tint = MaterialTheme.colorScheme.onBackground)
+                        Icon(
+                            painterResource(R.drawable.ic_chevron_left),
+                            "Wróć",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
                     }
                 },
                 actions = {
@@ -103,7 +107,8 @@ fun PersonalDataScreenContent(
                 )
                 DataItem(
                     label = "Płeć / Forma zwrotu",
-                    value = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student"
+                    value = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
+                        ?: "Student"
                 )
             }
 
@@ -130,14 +135,17 @@ fun PersonalDataScreenContent(
                         ) {
                             sortedSubgroups.forEach { subgroup ->
                                 Surface(
-                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    color = MaterialTheme.colorScheme.primaryContainer, // Poprawione na kolor z motywu
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
                                         text = subgroup,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        modifier = Modifier.padding(
+                                            horizontal = 12.dp,
+                                            vertical = 6.dp
+                                        ),
                                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer // Poprawiony kontrast
                                     )
                                 }
                             }
@@ -174,7 +182,10 @@ fun PersonalDataScreenContent(
                                     modifier = Modifier.padding(top = 2.dp)
                                 )
 
-                                val subgroups = course.selectedSubgroup?.split(",")?.filter { it.isNotBlank() }
+                                // NAPRAWA: Zapewnienie rozdzielenia spacji i sortowania alfabetycznego (jak w koncie gł.)
+                                val subgroups =
+                                    course.selectedSubgroup?.split(",")?.map { it.trim() }
+                                        ?.filter { it.isNotBlank() }?.sorted()
                                 if (!subgroups.isNullOrEmpty()) {
                                     Text(
                                         text = "Podgrupy: ${subgroups.joinToString(", ")}",
@@ -239,8 +250,18 @@ fun PersonalDataScreenPreview() {
             selectedGroup = "11-INF-ZI-S",
             selectedSubgroups = setOf("L1", "C2"),
             additionalCourses = listOf(
-                UserCourseEntity(id = 1, groupCode = "12-MAT-S", fieldOfStudy = "Matematyka stosowana", selectedSubgroup = "L1,W"),
-                UserCourseEntity(id = 2, groupCode = "14-FIZ-N", fieldOfStudy = "Fizyka techniczna", selectedSubgroup = "")
+                UserCourseEntity(
+                    id = 1,
+                    groupCode = "12-MAT-S",
+                    fieldOfStudy = "Matematyka stosowana",
+                    selectedSubgroup = "L1,W"
+                ),
+                UserCourseEntity(
+                    id = 2,
+                    groupCode = "14-FIZ-N",
+                    fieldOfStudy = "Fizyka techniczna",
+                    selectedSubgroup = ""
+                )
             ),
             onNavigateBack = {},
             onNavigateToEdit = {}

@@ -44,7 +44,7 @@ data class TeacherDto(@SerialName("nazwisko_imie") val name: String?)
 @Serializable
 data class GroupDetailsDto(
     @SerialName("tryb") val studyMode: String?,
-    @SerialName("semestr") val semester: String?, // Zmieniono na String zgodnie z SQL
+    @SerialName("semestr") val semester: String?,
     @SerialName("kierunki") val fieldInfo: FieldOfStudyDto?
 )
 
@@ -116,6 +116,15 @@ class UniversityRepository(private val supabase: Postgrest) {
         } catch (e: Exception) { NetworkResult.Error("Błąd wyszukiwania nauczycieli.") }
     }
 
+    suspend fun getAllTeachers(): NetworkResult<List<String>> {
+        return try {
+            val result = supabase.from("nauczyciele").select(columns = Columns.list("nazwisko_imie"))
+                .decodeList<TeacherDto>().mapNotNull { it.name }.distinct().sorted()
+            NetworkResult.Success(result)
+        } catch (e: Exception) {
+            NetworkResult.Error("Błąd pobierania nauczycieli.")
+        }
+    }
     suspend fun getGroupCodes(): NetworkResult<List<String>> {
         return try {
             val result = supabase.from("grupy").select(columns = Columns.list("nazwa"))
@@ -129,8 +138,16 @@ class UniversityRepository(private val supabase: Postgrest) {
             val grupaId = getGrupaId(groupCode) ?: return NetworkResult.Error("Nie znaleziono grupy.")
             val result = supabase.from("zajecia_grupy").select(columns = Columns.list("podgrupa")) {
                 filter { eq("grupa_id", grupaId) }
-            }.decodeList<SubgroupDto>().mapNotNull { it.subgroup }.filter { it.isNotBlank() }.distinct().sorted()
-            NetworkResult.Success(result)
+            }.decodeList<SubgroupDto>()
+
+            // Ignorujemy zepsute wpisy takie jak "empty", "brak", "-" aby nie pokazywały się jako opcje wyboru podgrupy
+            val safeSubgroups = result.mapNotNull { it.subgroup }
+                .map { it.trim() }
+                .filter { it.isNotBlank() && !it.equals("empty", ignoreCase = true) && it != "-" && !it.equals("brak", ignoreCase = true) }
+                .distinct()
+                .sorted()
+
+            NetworkResult.Success(safeSubgroups)
         } catch (e: Exception) { NetworkResult.Error("Błąd podgrup.") }
     }
 
@@ -141,13 +158,30 @@ class UniversityRepository(private val supabase: Postgrest) {
                 filter { eq("grupa_id", grupaId) }
             }.decodeList<ClassScheduleDto>()
 
-            val filtered = if (subgroups.isNotEmpty()) {
-                dtoList.filter { it.subgroup.isNullOrBlank() || subgroups.contains(it.subgroup) }
-            } else dtoList
+            val safeSubgroups = subgroups.map { it.trim() }.filter { it.isNotBlank() }
 
-            val teacherMap = fetchTeacherDetails(filtered.mapNotNull { it.teacher }.distinct())
-            NetworkResult.Success(mapDtoToEntity(filtered, groupCode, teacherMap))
-        } catch (e: Exception) { NetworkResult.Error("Błąd planu.") }
+            val filtered = if (safeSubgroups.isNotEmpty()) {
+                dtoList.filter { dto ->
+                    val sub = dto.subgroup?.trim()?.lowercase()
+                    // Przepuszczamy faktycznie puste ORAZ te z fałszywym "empty" wpisanym w bazę
+                    val isCommonClass = sub.isNullOrBlank() || sub == "empty" || sub == "-" || sub == "brak"
+
+                    isCommonClass || safeSubgroups.contains(dto.subgroup?.trim())
+                }
+            } else {
+                dtoList
+            }
+
+            val teacherNames = filtered.mapNotNull { it.teacher?.trim() }.filter { it.isNotBlank() }.distinct()
+            val teacherMap = fetchTeacherDetails(teacherNames)
+
+            val entities = mapDtoToEntity(filtered, groupCode, teacherMap)
+            NetworkResult.Success(entities)
+
+        } catch (e: Exception) {
+            Log.e("UniversityRepository", "Błąd pobierania planu", e)
+            NetworkResult.Error("Błąd planu: ${e.message}")
+        }
     }
 
     suspend fun getScheduleForTeacher(teacherName: String): NetworkResult<List<ClassEntity>> {
@@ -208,10 +242,9 @@ class UniversityRepository(private val supabase: Postgrest) {
                 startTime = startDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                 endTime = endDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                 dayOfWeek = startDT.dayOfWeek.value,
-                date = startDT.toLocalDate().toString(), // Format ISO do Kalendarza
+                date = startDT.toLocalDate().toString(),
                 groupCode = groupCode,
                 subgroup = dto.subgroup,
-                // Wyświetlamy dokładnie to, co jest w kolumnie nauczyciel (Tytuł Nazwisko Imię)
                 teacherName = dto.teacher ?: "Brak danych",
                 teacherEmail = teacherMap[dto.teacher]?.email,
                 teacherInstitute = teacherMap[dto.teacher]?.institute,

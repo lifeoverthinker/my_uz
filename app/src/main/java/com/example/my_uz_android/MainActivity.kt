@@ -33,6 +33,8 @@ class MainActivity : ComponentActivity() {
                 val startDest = if (currentSettings.isFirstRun) "landing" else Screen.Main.route
 
                 MyUZTheme(darkTheme = isDark) {
+                    // Wywołujemy AppNavigation całkowicie bez parametrów od szuflady,
+                    // ponieważ obsługuje to teraz sam AppNavigation!
                     AppNavigation(startDestination = startDest)
                 }
             } else {

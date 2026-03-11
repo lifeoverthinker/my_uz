@@ -11,16 +11,18 @@ class GradesRepository(private val gradesDao: GradesDao) {
     fun getGradesForSubjectStream(subject: String): Flow<List<GradeEntity>> =
         gradesDao.getGradesForSubject(subject)
 
-    // ✅ DODANE: Pobierz pojedynczą ocenę po ID
     fun getGradeByIdStream(id: Int): Flow<GradeEntity?> = gradesDao.getGradeById(id)
 
     suspend fun insertGrade(grade: GradeEntity) = gradesDao.insertGrade(grade)
 
-    // ✅ DODANE: Aktualizuj ocenę
+    // ✅ DODANE: Metoda do zapisu listy ocen (wykorzystywana przy imporcie)
+    suspend fun insertGrades(grades: List<GradeEntity>) {
+        grades.forEach { gradesDao.insertGrade(it) }
+    }
+
     suspend fun updateGrade(grade: GradeEntity) = gradesDao.updateGrade(grade)
 
     suspend fun deleteGrade(grade: GradeEntity) = gradesDao.deleteGrade(grade)
 
-    // ✅ DODANE: Usuń wszystkie oceny
     suspend fun deleteAllGrades() = gradesDao.deleteAll()
 }

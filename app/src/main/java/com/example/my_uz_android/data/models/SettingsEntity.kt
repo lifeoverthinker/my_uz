@@ -1,20 +1,26 @@
+// java/com/example/my_uz_android/data/models/SettingsEntity.kt
+
 package com.example.my_uz_android.data.models
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+enum class ThemeMode(val displayName: String) {
+    LIGHT("Jasny"),
+    DARK("Ciemny"),
+    SYSTEM("Systemowy")
+}
+
 @Entity(tableName = "settings")
 data class SettingsEntity(
     @PrimaryKey val id: Int = 1,
 
-    // Dane użytkownika
+    // ... (zachowaj poprzednie pola: userName, firstName, itd.)
     val isAnonymous: Boolean = false,
     val userName: String? = null,
     val firstName: String? = null,
     val lastName: String? = null,
     val gender: String? = null,
-
-    // Plan zajęć i Uczelnia
     val selectedGroupCode: String? = null,
     val selectedGroupName: String? = null,
     val activeDirectionCode: String? = null,
@@ -24,19 +30,18 @@ data class SettingsEntity(
     val fieldOfStudy: String? = null,
     val studyMode: String? = null,
     val currentSemester: Int = 1,
-
-    // Multi-kierunek (Dodatkowe kierunki i stan dla indeksu)
     val additionalGroupCodes: String = "",
     val activeIndexDirectionCode: String? = null,
-
-    // Wygląd i Stan aplikacji
     val isFirstRun: Boolean = true,
     val isDarkMode: Boolean = false,
+    val themeMode: String = ThemeMode.SYSTEM.name,
     val offlineModeEnabled: Boolean = false,
     val classColorsJson: String = "{}",
 
-    // Powiadomienia
+    // Powiadomienia - ROZSZERZONE
     val notificationsEnabled: Boolean = true,
     val notificationsTasks: Boolean = true,
-    val notificationsClasses: Boolean = true
+    val notificationsClasses: Boolean = true,
+    val notificationsScheduleChanges: Boolean = true, // NOWE
+    val notificationsExams: Boolean = true           // NOWE
 )

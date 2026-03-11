@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,12 +23,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.ThemeMode
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.screens.account.components.ThemeSelector
 import com.example.my_uz_android.ui.theme.ClassColorPalette
+import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,16 +49,10 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val activeSettings = uiState.draftSettings ?: uiState.settings
+    val activeSettings = uiState.settings
 
     var showExportDialog by remember { mutableStateOf(false) }
     var exportSelection by remember { mutableStateOf(BackupDataType.values().toSet()) }
-
-    LaunchedEffect(uiState.isSaved) {
-        if (uiState.isSaved) {
-            Toast.makeText(context, "Zapisano ustawienia", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -78,18 +75,19 @@ fun SettingsScreen(
                 onNavigationClick = onBackClick,
                 isNavigationIconFilled = false,
                 actions = {
-                    if (uiState.isModified) {
-                        TextButton(
-                            onClick = { viewModel.saveSettings() }
-                        ) {
-                            Text(
-                                text = "Zapisz",
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            )
-                        }
+                    AnimatedVisibility(
+                        visible = uiState.isSaved,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_check),
+                            contentDescription = "Zapisano",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(end = 16.dp)
+                                .size(24.dp)
+                        )
                     }
                 }
             )
@@ -108,13 +106,25 @@ fun SettingsScreen(
                         .padding(vertical = 8.dp)
                 ) {
                     SettingsHeader("Wygląd")
-                    SettingsToggleItem(
-                        iconRes = R.drawable.ic_moon,
-                        title = "Ciemny motyw",
-                        description = "Dostosuj jasność interfejsu",
-                        isChecked = activeSettings?.isDarkMode == true,
-                        onCheckedChange = { viewModel.toggleDarkMode(it) }
-                    )
+
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(
+                            text = "Motyw aplikacji",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        val currentTheme = try {
+                            ThemeMode.valueOf(activeSettings?.themeMode ?: ThemeMode.SYSTEM.name)
+                        } catch (e: Exception) {
+                            ThemeMode.SYSTEM
+                        }
+
+                        ThemeSelector(
+                            selectedTheme = currentTheme,
+                            onThemeSelected = { viewModel.setThemeMode(it) }
+                        )
+                    }
 
                     if (uiState.uniqueClassTypes.isNotEmpty()) {
                         SettingsHeader("Kolory zajęć")
@@ -233,7 +243,10 @@ fun SettingsHeader(title: String) {
 @Composable
 fun SettingsToggleItem(iconRes: Int, title: String, description: String, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!isChecked) }.padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!isChecked) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         SettingsIconContainer(iconRes)
@@ -249,7 +262,10 @@ fun SettingsToggleItem(iconRes: Int, title: String, description: String, isCheck
 @Composable
 fun SettingsActionItem(iconRes: Int, title: String, description: String, isDestructive: Boolean = false, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         SettingsIconContainer(iconRes, isDestructive)
@@ -258,7 +274,6 @@ fun SettingsActionItem(iconRes: Int, title: String, description: String, isDestr
             Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
             Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        // Usunięto ikonę strzałki (Chevron Right) zgodnie z prośbą
     }
 }
 
@@ -279,7 +294,16 @@ fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelec
             ClassColorPalette.forEachIndexed { index, colorSet ->
                 val isSelected = index == selectedColorIndex
                 Box(
-                    modifier = Modifier.size(36.dp).clip(CircleShape).background(colorSet.lightBg).border(width = if (isSelected) 2.dp else 0.dp, color = if (isSelected) colorSet.lightAccent else Color.Transparent, shape = CircleShape).clickable { onColorSelected(index) },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(colorSet.lightBg)
+                        .border(
+                            width = if (isSelected) 2.dp else 0.dp,
+                            color = if (isSelected) colorSet.lightAccent else Color.Transparent,
+                            shape = CircleShape
+                        )
+                        .clickable { onColorSelected(index) },
                     contentAlignment = Alignment.Center
                 ) {
                     if (isSelected) Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = colorSet.lightAccent, modifier = Modifier.size(18.dp))
@@ -300,7 +324,7 @@ fun DataTypeSelectionDialog(
     var selection by remember { mutableStateOf(initialSelection) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface, // BIAŁE TŁO (zgodne z motywem)
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -358,6 +382,27 @@ private suspend fun readBackupFileToPreview(context: Context, uri: Uri, viewMode
             content?.let { viewModel.previewBackupFile(it) }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SettingsScreenPreview() {
+    MyUZTheme {
+        Column(modifier = Modifier.fillMaxSize().padding(vertical = 8.dp)) {
+            SettingsHeader("Wygląd")
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    text = "Motyw aplikacji",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                ThemeSelector(selectedTheme = ThemeMode.SYSTEM, onThemeSelected = {})
+            }
+            SettingsHeader("Powiadomienia")
+            SettingsToggleItem(iconRes = R.drawable.ic_bell, title = "Włącz powiadomienia", description = "Opis testowy", isChecked = true, onCheckedChange = {})
         }
     }
 }

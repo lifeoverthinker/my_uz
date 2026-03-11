@@ -14,6 +14,11 @@ class EventRepository(private val eventDao: EventDao) {
 
     suspend fun insertEvent(event: EventEntity) = eventDao.insert(event)
 
+    // ✅ DODANE: Metoda do zapisu listy wydarzeń (wykorzystywana przy imporcie)
+    suspend fun insertEvents(events: List<EventEntity>) {
+        events.forEach { eventDao.insert(it) }
+    }
+
     suspend fun updateEvent(event: EventEntity) = eventDao.update(event)
 
     suspend fun deleteEvent(event: EventEntity) = eventDao.delete(event)

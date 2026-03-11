@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.*
 import com.example.my_uz_android.data.repositories.*
 import com.example.my_uz_android.ui.theme.ClassColorPalette
-import com.example.my_uz_android.util.NetworkResult
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +14,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
-// Enum definiujący typy danych do backupu
 enum class BackupDataType(val displayName: String) {
     SETTINGS("Ustawienia aplikacji"),
     CLASSES("Plan zajęć"),
@@ -36,15 +34,13 @@ data class BackupData(
 
 data class SettingsUiState(
     val settings: SettingsEntity? = null,
-    val draftSettings: SettingsEntity? = null,
     val uniqueClassTypes: List<String> = emptyList(),
     val classColorMap: Map<String, Int> = emptyMap(),
     val isLoading: Boolean = false,
     val importMessage: String? = null,
     val backupPreview: BackupData? = null,
     val showImportDialog: Boolean = false,
-    val isSaved: Boolean = false,
-    val isModified: Boolean = false
+    val isSaved: Boolean = false
 )
 
 class SettingsViewModel(
@@ -79,33 +75,26 @@ class SettingsViewModel(
 
                 Pair(settings, uniqueTypes)
             }.collect { (settings, uniqueTypes) ->
+                val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
+                var colorMap: Map<String, Int> = try {
+                    gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
+                } catch (e: Exception) {
+                    emptyMap()
+                }
+
+                if (colorMap.isEmpty() && uniqueTypes.isNotEmpty() && settings != null) {
+                    colorMap = uniqueTypes.associateWith { type ->
+                        abs(type.hashCode()) % ClassColorPalette.size
+                    }
+                    val newJson = gson.toJson(colorMap)
+                    settingsRepository.insertOrUpdate(settings.copy(classColorsJson = newJson))
+                }
+
                 _uiState.update { currentState ->
-                    var currentDraft = currentState.draftSettings ?: settings
-                    val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
-
-                    // 1. Pobierz obecną mapę
-                    var colorMap: Map<String, Int> = try {
-                        gson.fromJson(currentDraft?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-                    } catch (e: Exception) {
-                        emptyMap()
-                    }
-
-                    // 2. Jeśli pusta, wylosuj i od razu zaktualizuj obiekt draftu
-                    if (colorMap.isEmpty() && uniqueTypes.isNotEmpty()) {
-                        colorMap = uniqueTypes.associateWith { type ->
-                            abs(type.hashCode()) % ClassColorPalette.size
-                        }
-                        val newJson = gson.toJson(colorMap)
-                        currentDraft = currentDraft?.copy(classColorsJson = newJson)
-                            ?: SettingsEntity(id = 1, classColorsJson = newJson)
-                    }
-
                     currentState.copy(
                         settings = settings,
-                        draftSettings = currentDraft,
                         uniqueClassTypes = uniqueTypes,
                         classColorMap = colorMap,
-                        isModified = currentDraft != settings,
                         isLoading = false
                     )
                 }
@@ -113,67 +102,73 @@ class SettingsViewModel(
         }
     }
 
+    private fun triggerSaveFeedback() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaved = true) }
+            delay(1500)
+            _uiState.update { it.copy(isSaved = false) }
+        }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        val current = _uiState.value.settings ?: return
+        viewModelScope.launch {
+            settingsRepository.insertOrUpdate(current.copy(themeMode = mode.name))
+            triggerSaveFeedback()
+        }
+    }
+
     fun updateClassColor(classType: String, colorIndex: Int) {
-        val currentDraft = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
+        val current = _uiState.value.settings ?: return
         val currentMap = _uiState.value.classColorMap.toMutableMap()
         currentMap[classType.trim()] = colorIndex
 
         val newJson = gson.toJson(currentMap)
-        updateDraft(currentDraft.copy(classColorsJson = newJson))
-    }
-
-    private fun updateDraft(newSettings: SettingsEntity) {
-        val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
-        val colorMap: Map<String, Int> = try {
-            gson.fromJson(newSettings.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-        } catch (e: Exception) {
-            emptyMap()
-        }
-
-        _uiState.update {
-            it.copy(
-                draftSettings = newSettings,
-                classColorMap = colorMap,
-                isSaved = false,
-                isModified = newSettings != it.settings
-            )
+        viewModelScope.launch {
+            settingsRepository.insertOrUpdate(current.copy(classColorsJson = newJson))
+            triggerSaveFeedback()
         }
     }
 
     fun toggleOfflineMode(enabled: Boolean) {
-        val current = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
-        updateDraft(current.copy(offlineModeEnabled = enabled))
+        val current = _uiState.value.settings ?: return
+        viewModelScope.launch {
+            settingsRepository.insertOrUpdate(current.copy(offlineModeEnabled = enabled))
+            triggerSaveFeedback()
+        }
     }
 
     fun toggleDarkMode(enabled: Boolean) {
-        val current = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
-        updateDraft(current.copy(isDarkMode = enabled))
+        // Zostawione dla kompatybilności wstecznej (opcjonalnie)
+        val current = _uiState.value.settings ?: return
+        val newTheme = if (enabled) ThemeMode.DARK.name else ThemeMode.LIGHT.name
+        viewModelScope.launch {
+            settingsRepository.insertOrUpdate(current.copy(isDarkMode = enabled, themeMode = newTheme))
+            triggerSaveFeedback()
+        }
     }
 
     fun toggleNotifications(enabled: Boolean) {
-        val current = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
-        updateDraft(current.copy(notificationsEnabled = enabled))
+        val current = _uiState.value.settings ?: return
+        viewModelScope.launch {
+            settingsRepository.insertOrUpdate(current.copy(notificationsEnabled = enabled))
+            triggerSaveFeedback()
+        }
     }
 
     fun toggleTasksNotifications(enabled: Boolean) {
-        val current = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
-        updateDraft(current.copy(notificationsTasks = enabled))
+        val current = _uiState.value.settings ?: return
+        viewModelScope.launch {
+            settingsRepository.insertOrUpdate(current.copy(notificationsTasks = enabled))
+            triggerSaveFeedback()
+        }
     }
 
     fun toggleClassesNotifications(enabled: Boolean) {
-        val current = _uiState.value.draftSettings ?: _uiState.value.settings ?: return
-        updateDraft(current.copy(notificationsClasses = enabled))
-    }
-
-    fun saveSettings() {
-        val settingsToSave = _uiState.value.draftSettings ?: return
+        val current = _uiState.value.settings ?: return
         viewModelScope.launch {
-            settingsRepository.insertOrUpdate(settingsToSave)
-            _uiState.update {
-                it.copy(isSaved = true, isModified = false, settings = settingsToSave, draftSettings = settingsToSave)
-            }
-            delay(2000)
-            _uiState.update { it.copy(isSaved = false) }
+            settingsRepository.insertOrUpdate(current.copy(notificationsClasses = enabled))
+            triggerSaveFeedback()
         }
     }
 
@@ -213,7 +208,18 @@ class SettingsViewModel(
                     classRepository.deleteAllClasses()
                     classRepository.insertClasses(data.classes)
                 }
-                // ... (reszta importu jak w poprzednim pliku)
+                if (selectedTypes.contains(BackupDataType.TASKS)) {
+                    tasksRepository.insertTasks(data.tasks)
+                }
+                if (selectedTypes.contains(BackupDataType.GRADES)) {
+                    gradesRepository.insertGrades(data.grades)
+                }
+                if (selectedTypes.contains(BackupDataType.ABSENCES)) {
+                    absenceRepository.insertAbsences(data.absences)
+                }
+                if (selectedTypes.contains(BackupDataType.EVENTS)) {
+                    eventRepository.insertEvents(data.events)
+                }
                 withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isLoading = false, importMessage = "Import zakończony") }
                 }
