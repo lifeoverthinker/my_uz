@@ -1,17 +1,18 @@
 package com.example.my_uz_android.ui.screens.calendar.search
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -79,7 +80,7 @@ fun ScheduleSearchContent(
                     EmptyStateMessage(
                         title = "Brak wyników",
                         message = "Nie znaleziono planów dla podanego hasła. Spróbuj zmienić zapytanie.",
-                        imageVector = Icons.Default.Search // Dodano zgodnie z prośbą z wykorzystaniem ikony
+                        iconRes = R.drawable.paper_map_rafiki
                     )
                 }
             } else {
@@ -145,24 +146,38 @@ fun SearchListItem(
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+
             Text(
                 text = if (item.type == "group") "Grupa studencka" else "Nauczyciel",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
 
         IconButton(onClick = onFavoriteClick) {
-            Icon(
-                painter = painterResource(
-                    id = if (item.isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart
-                ),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = if (item.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-            )
+            AnimatedContent(
+                targetState = item.isFavorite,
+                transitionSpec = {
+                    (fadeIn(tween(220)) + scaleIn(initialScale = 0.8f))
+                        .togetherWith(fadeOut(tween(110)))
+                },
+                label = "FavoriteAnimation"
+            ) { isFavorite ->
+                Icon(
+                    painter = painterResource(
+                        id = if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                )
+            }
         }
     }
 }
@@ -176,8 +191,8 @@ fun ScheduleSearchScreenResultsPreview() {
                 searchQuery = "Kowalski",
                 searchResults = listOf(
                     SearchResultItem("311-EA-ZI", "group", false),
-                    SearchResultItem("Jan Kowalski", "teacher", true),
-                    SearchResultItem("Adam Kowal", "teacher", false)
+                    SearchResultItem("Jan Kowalski", "teacher", true, "j.kowalski@uz.zgora.pl", "Instytut Informatyki"),
+                    SearchResultItem("Adam Kowal", "teacher", false, null, "Wydział Mechaniczny")
                 )
             ),
             onQueryChange = {},

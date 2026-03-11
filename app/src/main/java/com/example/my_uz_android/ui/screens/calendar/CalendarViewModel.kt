@@ -51,6 +51,9 @@ class CalendarViewModel(
     private val _selectedDate = MutableStateFlow(LocalDate.now(ZoneId.of("Europe/Warsaw")))
     private val _isMonthView = MutableStateFlow(false)
 
+    // NOWE: Stan ładowania danych z sieci (Supabase)
+    private val _isLoadingNetwork = MutableStateFlow(false)
+
     @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<CalendarUiState> = combine(
         userCourseRepository.getAllUserCoursesStream(),
@@ -61,7 +64,8 @@ class CalendarViewModel(
         _currentSource,
         _previewState,
         _selectedDate,
-        _isMonthView
+        _isMonthView,
+        _isLoadingNetwork // Dodano 10. argument
     ) { args: Array<Any?> ->
         val courses = args[0] as List<UserCourseEntity>
         val myClasses = args[1] as List<ClassEntity>
@@ -72,18 +76,19 @@ class CalendarViewModel(
         val previewClasses = args[6] as List<ClassEntity>
         val selectedDate = args[7] as LocalDate
         val isMonthView = args[8] as Boolean
+        val isLoadingNet = args[9] as Boolean // Odczyt stanu ładowania
 
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
         val colorMap: Map<String, Int> = try {
             gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
         } catch (_: Exception) { emptyMap() }
 
-        // NAPRAWA: Złączenie głównego kierunku i dodatkowych, aby filtry działały!
+        // DZIAŁAJĄCA FUNKCJONALNOŚĆ: Łączenie grup
         val allCoursesForUi = mutableListOf<UserCourseEntity>()
         settings?.selectedGroupCode?.let { mainCode ->
             allCoursesForUi.add(
                 UserCourseEntity(
-                    id = -1, // Sztuczne ID dla głównej grupy
+                    id = -1,
                     groupCode = mainCode,
                     fieldOfStudy = settings.fieldOfStudy ?: mainCode,
                     semester = settings.currentSemester
@@ -93,12 +98,12 @@ class CalendarViewModel(
         allCoursesForUi.addAll(courses)
 
         val activeCodes = if (selectedCodes.isEmpty()) {
-            val codes = allCoursesForUi.map { it.groupCode }.toMutableSet()
-            codes
+            allCoursesForUi.map { it.groupCode }.toMutableSet()
         } else {
             selectedCodes
         }
 
+        // DZIAŁAJĄCA FUNKCJONALNOŚĆ: Wybór zajęć do wyświetlenia
         val classesToShow = when (source) {
             is ScheduleSource.MyPlan -> myClasses.filter { activeCodes.contains(it.groupCode) }
             else -> previewClasses
@@ -111,7 +116,7 @@ class CalendarViewModel(
         }
 
         CalendarUiState(
-            userCourses = allCoursesForUi, // Przekazujemy pełną listę
+            userCourses = allCoursesForUi,
             selectedGroupCodes = activeCodes,
             favorites = favorites,
             visibleClasses = classesToShow,
@@ -123,7 +128,7 @@ class CalendarViewModel(
                 is ScheduleSource.Favorite -> source.name
                 is ScheduleSource.Preview -> source.name
             },
-            isLoading = false,
+            isLoading = isLoadingNet, // Przekazanie stanu ładowania do UI
             selectedDate = selectedDate,
             isMonthView = isMonthView
         )
@@ -159,11 +164,23 @@ class CalendarViewModel(
         loadNetworkSchedule(name, type)
     }
 
+    // NAPRAWIONE: Teraz funkcja zarządza stanem isLoading, aby UI wiedziało, że pobiera dane
     private fun loadNetworkSchedule(name: String, type: String) {
         viewModelScope.launch {
-            val result = if (type == "teacher") universityRepository.getScheduleForTeacher(name)
-            else universityRepository.getSchedule(name, emptyList())
-            if (result is NetworkResult.Success) _previewState.value = result.data ?: emptyList()
+            _isLoadingNetwork.value = true
+            try {
+                val result = if (type == "teacher") {
+                    universityRepository.getScheduleForTeacher(name)
+                } else {
+                    universityRepository.getSchedule(name, emptyList())
+                }
+
+                if (result is NetworkResult.Success) {
+                    _previewState.value = result.data ?: emptyList()
+                }
+            } finally {
+                _isLoadingNetwork.value = false
+            }
         }
     }
 

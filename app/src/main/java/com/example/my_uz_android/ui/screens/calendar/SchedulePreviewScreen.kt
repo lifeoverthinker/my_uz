@@ -59,7 +59,9 @@ fun SchedulePreviewScreen(
 
     // Logika wyciągania danych nauczyciela do TopAppBar i Dialogu
     val teacherData = remember(classes) {
-        classes.firstOrNull { it.teacherName?.isNotBlank() == true }
+        classes.firstOrNull {
+            !it.teacherEmail.isNullOrBlank() || !it.teacherInstitute.isNullOrBlank()
+        } ?: classes.firstOrNull { it.teacherName?.isNotBlank() == true }
     }
 
     SchedulePreviewScreenContent(
@@ -239,8 +241,8 @@ fun SchedulePreviewScreenContent(
         TeacherInfoDialog(
             onDismiss = { showTeacherInfo = false },
             fullName = teacherData?.teacherName ?: planName,
-            department = teacherData?.teacherInstitute ?: "",
-            email = teacherData?.teacherEmail ?: ""
+            department = teacherData?.teacherInstitute ?: "Brak informacji o jednostce",
+            email = teacherData?.teacherEmail ?: "Brak adresu e-mail"
         )
     }
 

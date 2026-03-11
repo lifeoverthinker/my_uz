@@ -67,7 +67,7 @@ data class TeacherClassScheduleDto(
 
 @Serializable
 data class TeacherIdDto(
-    @SerialName("external_id") val id: String,
+    @SerialName("id") val id: String?, // <-- Zmiana: zamieniono "external_id" na "id"
     @SerialName("email") val email: String?,
     @SerialName("jednostka") val institute: String?
 )
@@ -186,16 +186,25 @@ class UniversityRepository(private val supabase: Postgrest) {
 
     suspend fun getScheduleForTeacher(teacherName: String): NetworkResult<List<ClassEntity>> {
         return try {
-            // Używamy ilike i trim, aby dopasować nazwisko nawet jeśli ma spacje na końcu/początku
-            val teachers = supabase.from("nauczyciele").select(columns = Columns.list("external_id", "email", "jednostka")) {
-                filter { ilike("nazwisko_imie", teacherName.trim()) }
+            // Pobieramy WSZYSTKIE rekordy dla tego nazwiska (zmieniono zapytanie na kolumnę "id" zamiast "external_id")
+            val teachers = supabase.from("nauczyciele").select(columns = Columns.list("id", "email", "jednostka")) {
+                filter { eq("nazwisko_imie", teacherName.trim()) }
             }.decodeList<TeacherIdDto>()
 
-            val info = teachers.firstOrNull() ?: return NetworkResult.Error("Nie znaleziono nauczyciela o tym nazwisku.")
+            if (teachers.isEmpty()) return NetworkResult.Error("Nie znaleziono nauczyciela o tym nazwisku.")
 
-            // Pobieramy zajęcia korzystając z uzyskanego ID zewnętrznego
+            // Agregacja danych (łączy maile i instytuty ze wszystkich wpisów)
+            val aggregatedEmail = teachers.mapNotNull { it.email }.filter { it.isNotBlank() }.distinct().joinToString(" • ")
+            val aggregatedInstitute = teachers.mapNotNull { it.institute }.filter { it.isNotBlank() }.distinct().joinToString(" • ")
+
+            // Pobieramy ID ze wszystkich jednostek (tylko te, które nie są nullem)
+            val teacherIds = teachers.mapNotNull { it.id }.filter { it.isNotBlank() }.distinct()
+
+            if (teacherIds.isEmpty()) return NetworkResult.Success(emptyList())
+
+            // Pobieramy zajęcia korzystając z uzyskanych ID zewnętrznych (IN)
             val dtoList = supabase.from("zajecia_nauczyciela").select {
-                filter { eq("nauczyciel_id", info.id) }
+                filter { isIn("nauczyciel_id", teacherIds) }
             }.decodeList<TeacherClassScheduleDto>()
 
             val entities = dtoList.mapNotNull { dto ->
@@ -212,8 +221,8 @@ class UniversityRepository(private val supabase: Postgrest) {
                     groupCode = dto.groups ?: "",
                     subgroup = null,
                     teacherName = teacherName,
-                    teacherEmail = info.email,
-                    teacherInstitute = info.institute,
+                    teacherEmail = aggregatedEmail.ifBlank { null },
+                    teacherInstitute = aggregatedInstitute.ifBlank { null },
                     room = dto.room ?: "Brak"
                 )
             }.sortedWith(compareBy({ it.date }, { it.startTime }))
@@ -238,9 +247,18 @@ class UniversityRepository(private val supabase: Postgrest) {
     private suspend fun fetchTeacherDetails(teacherNames: List<String>): Map<String, TeacherDetailsDto> {
         if (teacherNames.isEmpty()) return emptyMap()
         return try {
-            supabase.from("nauczyciele").select(columns = Columns.list("nazwisko_imie", "email", "jednostka")) {
+            val list = supabase.from("nauczyciele").select(columns = Columns.list("nazwisko_imie", "email", "jednostka")) {
                 filter { isIn("nazwisko_imie", teacherNames) }
-            }.decodeList<TeacherDetailsDto>().associateBy { it.name }
+            }.decodeList<TeacherDetailsDto>()
+
+            // Grupujemy po nazwisku i łączymy wszystkie niepuste maile oraz instytuty
+            list.groupBy { it.name }.mapValues { (name, dtos) ->
+                TeacherDetailsDto(
+                    name = name,
+                    email = dtos.mapNotNull { it.email }.filter { it.isNotBlank() }.distinct().joinToString(" • ").ifBlank { null },
+                    institute = dtos.mapNotNull { it.institute }.filter { it.isNotBlank() }.distinct().joinToString(" • ").ifBlank { null }
+                )
+            }
         } catch (e: Exception) { emptyMap() }
     }
 
@@ -269,5 +287,25 @@ class UniversityRepository(private val supabase: Postgrest) {
                 room = dto.room ?: "Brak"
             )
         }.sortedWith(compareBy({ it.date }, { it.startTime }))
+    }
+
+    suspend fun getAllTeachersWithDetails(): NetworkResult<List<TeacherDetailsDto>> {
+        return try {
+            val result = supabase.from("nauczyciele")
+                .select(columns = Columns.list("nazwisko_imie", "email", "jednostka"))
+                .decodeList<TeacherDetailsDto>()
+
+            val aggregated = result.groupBy { it.name }.map { (name, dtos) ->
+                TeacherDetailsDto(
+                    name = name,
+                    email = dtos.mapNotNull { it.email }.filter { it.isNotBlank() }.distinct().joinToString(" • ").ifBlank { null },
+                    institute = dtos.mapNotNull { it.institute }.filter { it.isNotBlank() }.distinct().joinToString(" • ").ifBlank { null }
+                )
+            }.sortedBy { it.name }
+
+            NetworkResult.Success(aggregated)
+        } catch (e: Exception) {
+            NetworkResult.Error("Błąd pobierania danych nauczycieli.")
+        }
     }
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.FavoriteEntity
 import com.example.my_uz_android.data.repositories.FavoritesRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
+import com.example.my_uz_android.data.repositories.TeacherDetailsDto
 import com.example.my_uz_android.util.NetworkResult
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.*
@@ -20,7 +21,9 @@ data class SearchUiState(
 data class SearchResultItem(
     val name: String,
     val type: String,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    val email: String? = null,
+    val institute: String? = null
 )
 
 class ScheduleSearchViewModel(
@@ -31,12 +34,10 @@ class ScheduleSearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    // Lokalne "słowniki" do szybkiego przeszukiwania offline
     private var allGroups: List<String> = emptyList()
-    private var allTeachers: List<String> = emptyList()
+    private var allTeachers: List<TeacherDetailsDto> = emptyList()
 
     init {
-        // Nasłuchiwanie ulubionych
         viewModelScope.launch {
             favoritesRepository.favoritesStream.collect { favorites ->
                 _uiState.update { state ->
@@ -49,12 +50,11 @@ class ScheduleSearchViewModel(
             }
         }
 
-        // Pobranie wszystkich danych przy uruchomieniu ekranu
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
             val groupsDeferred = async { universityRepository.getGroupCodes() }
-            val teachersDeferred = async { universityRepository.getAllTeachers() }
+            val teachersDeferred = async { universityRepository.getAllTeachersWithDetails() }
 
             val groupsRes = groupsDeferred.await()
             val teachersRes = teachersDeferred.await()
@@ -64,7 +64,6 @@ class ScheduleSearchViewModel(
 
             _uiState.update { it.copy(isLoading = false) }
 
-            // Jeśli użytkownik wpisał coś zanim dane się załadowały, ponawiamy wyszukiwanie
             if (_uiState.value.searchQuery.isNotEmpty()) {
                 performSearch(_uiState.value.searchQuery)
             }
@@ -73,24 +72,29 @@ class ScheduleSearchViewModel(
 
     fun onQueryChange(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-        if (query.isNotEmpty()) {
-            performSearch(query)
-        } else {
-            _uiState.update { it.copy(searchResults = emptyList()) }
-        }
+        performSearch(query) // Zmiana: Szukamy zawsze, nawet dla pustego stringa (choć w performSearch to obsłużymy)
     }
 
-    // Funkcja czyszcząca tekst: usuwa polskie znaki, białe znaki i zamienia na małe litery
     private fun String.normalizeForSearch(): String {
-        val normalized = Normalizer.normalize(this, Normalizer.Form.NFD)
+        // Ręczna zamiana polskich znaków dla pewności, szczególnie dla ł/Ł
+        val manual = this.lowercase()
+            .replace("ł", "l")
+            .replace("ą", "a")
+            .replace("ć", "c")
+            .replace("ę", "e")
+            .replace("ń", "n")
+            .replace("ó", "o")
+            .replace("ś", "s")
+            .replace("ź", "z")
+            .replace("ż", "z")
+
+        val normalized = Normalizer.normalize(manual, Normalizer.Form.NFD)
         return "\\p{InCombiningDiacriticalMarks}+".toRegex()
             .replace(normalized, "")
-            .lowercase()
     }
 
     private fun performSearch(query: String) {
         viewModelScope.launch {
-            // Rozbijamy wpisane zapytanie na osobne słowa
             val searchWords = query.normalizeForSearch().split("\\s+".toRegex()).filter { it.isNotBlank() }
             if (searchWords.isEmpty()) {
                 _uiState.update { it.copy(searchResults = emptyList()) }
@@ -100,23 +104,30 @@ class ScheduleSearchViewModel(
             val favorites = favoritesRepository.favoritesStream.first()
             val results = mutableListOf<SearchResultItem>()
 
-            // Szukamy w grupach: każde słowo z zapytania musi znajdować się w nazwie grupy
+            // Szukanie w grupach od pierwszego znaku
             val matchedGroups = allGroups.filter { group ->
                 val normalizedGroup = group.normalizeForSearch()
                 searchWords.all { word -> normalizedGroup.contains(word) }
-            }.take(30) // Ograniczamy do 30 wyników, by nie blokować interfejsu przy np. wpisaniu litery "a"
+            }.take(30)
 
-            // Szukamy w nauczycielach: każde słowo z zapytania musi znajdować się w godności nauczyciela
+            // Szukanie w nauczycielach
             val matchedTeachers = allTeachers.filter { teacher ->
-                val normalizedTeacher = teacher.normalizeForSearch()
+                val normalizedTeacher = teacher.name.normalizeForSearch()
                 searchWords.all { word -> normalizedTeacher.contains(word) }
             }.take(30)
 
             results.addAll(matchedGroups.map { name ->
                 SearchResultItem(name, "group", favorites.any { it.resourceId == name })
             })
-            results.addAll(matchedTeachers.map { name ->
-                SearchResultItem(name, "teacher", favorites.any { it.resourceId == name })
+
+            results.addAll(matchedTeachers.map { t ->
+                SearchResultItem(
+                    name = t.name,
+                    type = "teacher",
+                    isFavorite = favorites.any { it.resourceId == t.name },
+                    email = t.email,
+                    institute = t.institute
+                )
             })
 
             _uiState.update { it.copy(searchResults = results) }

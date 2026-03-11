@@ -311,10 +311,24 @@ class AccountViewModel(
     }
 
     fun removeAdditionalCourse(c: UserCourseEntity) = viewModelScope.launch {
+        // 1. Usuwamy plan z bazy
         userCourseRepository.deleteUserCourse(c)
+
+        // 2. Jeśli usuwany plan był tym aktualnie wybranym do podglądu, wracamy do planu głównego
+        if (_activeDirection.value == c.groupCode) {
+            _activeDirection.value = _selectedGroup.value
+            currentSettings?.let { settings ->
+                settingsRepository.insertOrUpdate(settings.copy(activeDirectionCode = _selectedGroup.value))
+            }
+        }
+
+        // 3. Natychmiastowe wyrzucenie z lokalnej listy, aby AutoSave nie pobrał znów dla niego zajęć
+        _additionalUserCourses.update { list -> list.filter { it.groupCode != c.groupCode } }
+
+        // 4. Wymuszenie zapisu i odświeżenia zajęć
         _triggerSave.tryEmit(Unit)
     }
-
+    
     fun updateAdditionalSubgroup(course: UserCourseEntity, subgroup: String) {
         isEditingProfile = true
         val currentSet = course.selectedSubgroup
