@@ -33,6 +33,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import kotlin.math.abs
+import com.example.my_uz_android.navigation.Screen
 
 @Composable
 fun SchedulePreviewScreen(
@@ -79,8 +80,8 @@ fun SchedulePreviewScreen(
                 if (isTeacher) "teacher" else "group"
             )
         },
-        onClassClick = { classId ->
-            navController.navigate("${Screen.ClassDetails.route}/${classEntity.id}?isTeacherPlan=true")
+        onClassClick = { entity -> // Zmieniono nazwę parametru na 'entity'
+            navController.navigate("${Screen.ClassDetails.route}/${entity.id}?isTeacherPlan=true")
         })
 }
 

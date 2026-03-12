@@ -37,7 +37,7 @@ class ClassRepository(private val classDao: ClassDao) {
     }
 
     suspend fun insertClasses(classes: List<ClassEntity>) = classDao.insertAll(classes)
-    suspend fun insertClass(classEntity: ClassEntity) = classDao.insert(classEntity)
+    suspend fun insertClass(classEntity: ClassEntity) = classDao.insertClass(classEntity)
     suspend fun deleteAllClasses() = classDao.deleteAll()
     suspend fun deleteClass(classEntity: ClassEntity) = classDao.delete(classEntity)
     suspend fun updateClass(classEntity: ClassEntity) = classDao.update(classEntity)

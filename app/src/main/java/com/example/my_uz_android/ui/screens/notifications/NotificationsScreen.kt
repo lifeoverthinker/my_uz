@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -14,16 +16,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.NotificationEntity
 import com.example.my_uz_android.ui.components.EmptyStateMessage
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
-    viewModel: NotificationsViewModel, // Potrzebujesz prostego VM nasłuchującego Flow z NotificationDao
+    viewModel: NotificationsViewModel,
     onNavigateBack: () -> Unit
 ) {
+    // Kluczowa poprawka: jawny typ i collectAsState
     val notifications by viewModel.notifications.collectAsState(initial = emptyList())
 
     Scaffold(
@@ -32,36 +37,23 @@ fun NotificationsScreen(
                 title = { Text("Powiadomienia") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(painterResource(id = R.drawable.ic_arrow_left), contentDescription = "Wróć")
+                        // Użycie ikony systemowej zamiast ic_arrow_left
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Wróć")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
-                )
+                }
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .padding(paddingValues)
-        ) {
+        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             if (notifications.isEmpty()) {
                 EmptyStateMessage(
                     title = "Brak powiadomień",
-                    message = "Na ten moment nie ma żadnych zmian w planie ani nowych komunikatów.",
-                    iconRes = R.drawable.hello_rafiki, // Wymagany Asset z Rafikim
+                    message = "Nie masz jeszcze żadnych powiadomień.",
+                    iconRes = R.drawable.ic_mail, // Używamy ikony maila jako zastępczej
                     modifier = Modifier.align(Alignment.Center)
                 )
             } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(notifications) { notification ->
                         NotificationCard(
                             title = notification.title,

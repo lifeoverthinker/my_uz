@@ -44,6 +44,8 @@ import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 import com.example.my_uz_android.ui.theme.extendedColors
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
+import com.example.my_uz_android.ui.screens.notifications.NotificationsScreen
+import com.example.my_uz_android.ui.screens.notifications.NotificationsViewModel
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)

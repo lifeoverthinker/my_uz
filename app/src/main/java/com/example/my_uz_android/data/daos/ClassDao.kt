@@ -22,7 +22,7 @@ interface ClassDao {
 
     // TA FUNKCJA WRÓCIŁA
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(classEntity: ClassEntity)
+    suspend fun insertClass(classEntity: ClassEntity)
 
     @Query("DELETE FROM classes WHERE groupCode = :groupCode")
     suspend fun deleteByGroupCode(groupCode: String)

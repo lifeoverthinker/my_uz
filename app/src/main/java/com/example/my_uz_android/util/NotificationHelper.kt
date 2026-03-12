@@ -19,7 +19,7 @@ object NotificationHelper {
     private const val CHANNEL_NAME = "Powiadomienia i Zmiany MyUZ"
 
     // Tworzy kanał (wymagane od Androida 8.0 Oreo)
-    private fun createNotificationChannel(context: Context) {
+    fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
@@ -39,7 +39,7 @@ object NotificationHelper {
             }
         }
 
-        createNotificationChannel(context)
+        createNotificationChannels(context)
 
         // Intencja uruchamiająca aplikację po kliknięciu powiadomienia
         val intent = Intent(context, MainActivity::class.java).apply {

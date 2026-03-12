@@ -104,15 +104,16 @@ class ScheduleSearchViewModel(
             val favorites = favoritesRepository.favoritesStream.first()
             val results = mutableListOf<SearchResultItem>()
 
-            // Szukanie w grupach od pierwszego znaku
+            // Szukanie w grupach
             val matchedGroups = allGroups.filter { group ->
                 val normalizedGroup = group.normalizeForSearch()
                 searchWords.all { word -> normalizedGroup.contains(word) }
             }.take(30)
 
-            // Szukanie w nauczycielach
+            // POPRAWKA: Szukanie w nauczycielach (bezpieczna obsługa nulli)
             val matchedTeachers = allTeachers.filter { teacher ->
-                val normalizedTeacher = teacher.name.normalizeForSearch()
+                val safeName = teacher.name ?: return@filter false // Pomijamy, jeśli nie ma imienia
+                val normalizedTeacher = safeName.normalizeForSearch()
                 searchWords.all { word -> normalizedTeacher.contains(word) }
             }.take(30)
 
@@ -120,11 +121,13 @@ class ScheduleSearchViewModel(
                 SearchResultItem(name, "group", favorites.any { it.resourceId == name })
             })
 
-            results.addAll(matchedTeachers.map { t ->
+            // POPRAWKA: Bezpieczne mapowanie nauczycieli na wyniki wyszukiwania
+            results.addAll(matchedTeachers.mapNotNull { t ->
+                val safeName = t.name ?: return@mapNotNull null // Pomijamy, jeśli null
                 SearchResultItem(
-                    name = t.name,
+                    name = safeName,
                     type = "teacher",
-                    isFavorite = favorites.any { it.resourceId == t.name },
+                    isFavorite = favorites.any { it.resourceId == safeName },
                     email = t.email,
                     institute = t.institute
                 )

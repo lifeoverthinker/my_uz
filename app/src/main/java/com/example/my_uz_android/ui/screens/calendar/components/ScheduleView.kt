@@ -229,6 +229,7 @@ fun ScheduleView(
             DayTimelineContent(
                 selectedDate = animatedDate,
                 classesForDay = animatedClassesForDay,
+                tasks = tasks,
                 classColorMap = classColorMap,
                 onClassClick = onClassClick,
                 scrollState = scrollState
@@ -241,32 +242,62 @@ fun ScheduleView(
 private fun DayTimelineContent(
     selectedDate: LocalDate,
     classesForDay: List<ClassEntity>,
+    tasks: List<TaskEntity>, // <-- DODANO
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
     scrollState: androidx.compose.foundation.ScrollState
 ) {
-    if (classesForDay.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.Center
-        ) {
+    // Filtrowanie zadań na dany dzień
+    val tasksForDay = remember(tasks, selectedDate) {
+        tasks.filter {
+            val taskDate = java.time.Instant.ofEpochMilli(it.dueDate)
+                .atZone(java.time.ZoneId.of("Europe/Warsaw")).toLocalDate()
+            taskDate == selectedDate
+        }
+    }
+
+    if (classesForDay.isEmpty() && tasksForDay.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
             com.example.my_uz_android.ui.components.EmptyStateMessage(
-                title = "Brak zajęć",
-                message = "Czas na odpoczynek lub naukę własną.\nW tym dniu nie masz wpisanych żadnych ćwiczeń ani wykładów.",
+                title = "Brak planów",
+                message = "W tym dniu nie masz żadnych zajęć ani zadań. Ciesz się wolnym czasem!",
                 iconRes = R.drawable.calendar_rafiki
             )
         }
     } else {
-        Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            // --- SEKACJA ZADAŃ NA DZIŚ (ETAP 4) ---
+            if (tasksForDay.isNotEmpty()) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Zadania na dziś",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    tasksForDay.forEach { task ->
+                        TaskCard(
+                            task = task,
+                            onTaskClick = { /* Przejdź do detali jeśli chcesz */ },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    // Poprawiony HorizontalDivider
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
+            // --- PLAN ZAJĘĆ ---
             Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     repeat(24) { index -> HourRow(hour = index) }
                 }
 
-                // TUTAJ JEST TWOJA NOWA SIATKA OBLICZAJĄCA NAKŁADANIE ZAJĘĆ
-                BoxWithConstraints(modifier = Modifier.matchParentSize().padding(start = HourColWidth)) {
+                BoxWithConstraints(modifier = Modifier.matchParentSize().padding(start = 56.dp)) {
                     val eventLayouts = remember(classesForDay) {
                         com.example.my_uz_android.util.calculateEventLayouts(classesForDay)
                     }
@@ -284,14 +315,13 @@ private fun DayTimelineContent(
                     }
                 }
 
-                if (selectedDate == LocalDate.now(PolandZone)) {
+                if (selectedDate == LocalDate.now(java.time.ZoneId.of("Europe/Warsaw"))) {
                     CurrentTimeIndicator()
                 }
             }
         }
     }
 }
-
 @Composable
 fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
     Row(modifier = Modifier.fillMaxWidth()) {

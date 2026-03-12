@@ -274,7 +274,7 @@ class AccountViewModel(
         val finalField = if (detailsRes is NetworkResult.Success) detailsRes.data?.fieldInfo?.name ?: code else code
         val finalFac = if (detailsRes is NetworkResult.Success) detailsRes.data?.fieldInfo?.faculty ?: "" else ""
         val finalMod = if (detailsRes is NetworkResult.Success) detailsRes.data?.studyMode ?: "" else ""
-        val finalSem = if (detailsRes is NetworkResult.Success) detailsRes.data?.semester?.filter { it.isDigit() }?.take(1)?.toIntOrNull() ?: 1 else 1
+        val finalSem = if (detailsRes is NetworkResult.Success) detailsRes.data?.semester ?: 1 else 1
 
         val currentCourses = userCourseRepository.getAllUserCoursesStream().first()
         val courseToUpdate = currentCourses.find { it.groupCode == code }

@@ -17,6 +17,7 @@ interface AppContainer {
     val eventRepository: EventRepository
     val favoritesRepository: FavoritesRepository
     val userCourseRepository: UserCourseRepository // Nasz nowy kierunek
+    val notificationDao: com.example.my_uz_android.data.daos.NotificationDao
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -66,5 +67,9 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val userCourseRepository: UserCourseRepository by lazy {
         UserCourseRepository(database.userCourseDao())
+    }
+
+    override val notificationDao: com.example.my_uz_android.data.daos.NotificationDao by lazy {
+        database.notificationDao()
     }
 }

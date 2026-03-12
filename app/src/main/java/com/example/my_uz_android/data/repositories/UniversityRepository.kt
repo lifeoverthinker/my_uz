@@ -10,66 +10,68 @@ import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+// --- DTO (Kuloodporne, wszystkie pola opcjonalne z domyślnym null) ---
+
 @Serializable
 data class TeacherDetailsDto(
-    @SerialName("nazwisko_imie") val name: String,
-    @SerialName("email") val email: String?,
-    @SerialName("jednostka") val institute: String?
+    @SerialName("nazwisko_imie") val name: String? = null,
+    @SerialName("email") val email: String? = null,
+    @SerialName("jednostka") val institute: String? = null
 )
 
 @Serializable
 data class ClassScheduleDto(
-    @SerialName("uid") val id: String,
-    @SerialName("przedmiot") val subjectName: String,
-    @SerialName("rodzaj_zajec") val classType: String?,
-    @SerialName("poczatek") val startDateTime: String?,
-    @SerialName("koniec") val endDateTime: String?,
-    @SerialName("sala") val room: String?,
-    @SerialName("podgrupa") val subgroup: String?,
-    @SerialName("nauczyciel") val teacher: String?
+    @SerialName("uid") val id: String? = null, // UID to tekst (String)
+    @SerialName("przedmiot") val subjectName: String? = null,
+    @SerialName("rodzaj_zajec") val classType: String? = null,
+    @SerialName("poczatek") val startDateTime: String? = null,
+    @SerialName("koniec") val endDateTime: String? = null,
+    @SerialName("sala") val room: String? = null,
+    @SerialName("podgrupa") val subgroup: String? = null,
+    @SerialName("nauczyciel") val teacher: String? = null
 )
 
 @Serializable
-data class GroupCodeDto(@SerialName("nazwa") val code: String?)
+data class GroupCodeDto(@SerialName("nazwa") val code: String? = null)
 
 @Serializable
-data class GroupIdDto(@SerialName("grupa_id") val id: String?)
+data class GroupIdDto(@SerialName("grupa_id") val id: Int? = null) // ID to liczba (Int)
 
 @Serializable
-data class SubgroupDto(@SerialName("podgrupa") val subgroup: String?)
+data class SubgroupDto(@SerialName("podgrupa") val subgroup: String? = null)
 
 @Serializable
-data class TeacherDto(@SerialName("nazwisko_imie") val name: String?)
+data class TeacherDto(@SerialName("nazwisko_imie") val name: String? = null)
 
 @Serializable
 data class GroupDetailsDto(
-    @SerialName("tryb") val studyMode: String?,
-    @SerialName("semestr") val semester: String?,
-    @SerialName("kierunki") val fieldInfo: FieldOfStudyDto?
+    @SerialName("tryb") val studyMode: String? = null,
+    @SerialName("semestr") val semester: Int? = null, // Zgodnie z bazą: liczba lub null
+    @SerialName("kierunki") val fieldInfo: FieldOfStudyDto? = null
 )
 
 @Serializable
 data class FieldOfStudyDto(
-    @SerialName("wydzial") val faculty: String?,
-    @SerialName("nazwa") val name: String?
+    @SerialName("wydzial") val faculty: String? = null,
+    @SerialName("nazwa") val name: String? = null
 )
 
 @Serializable
 data class TeacherClassScheduleDto(
-    @SerialName("uid") val id: String,
-    @SerialName("przedmiot") val subjectName: String,
-    @SerialName("rodzaj_zajec") val classType: String?,
-    @SerialName("poczatek") val startDateTime: String?,
-    @SerialName("koniec") val endDateTime: String?,
-    @SerialName("sala") val room: String?,
-    @SerialName("grupy") val groups: String?
+    @SerialName("uid") val id: String? = null,
+    @SerialName("przedmiot") val subjectName: String? = null,
+    @SerialName("rodzaj_zajec") val classType: String? = null,
+    @SerialName("poczatek") val startDateTime: String? = null,
+    @SerialName("koniec") val endDateTime: String? = null,
+    @SerialName("sala") val room: String? = null,
+    @SerialName("grupy") val groups: String? = null
 )
 
 @Serializable
 data class TeacherIdDto(
-    @SerialName("id") val id: String?, // <-- Zmiana: zamieniono "external_id" na "id"
-    @SerialName("email") val email: String?,
-    @SerialName("jednostka") val institute: String?
+    @SerialName("id") val id: String? = null,
+    @SerialName("email") val email: String? = null,
+    @SerialName("jednostka") val institute: String? = null
 )
 
 class UniversityRepository(private val supabase: Postgrest) {
@@ -89,13 +91,17 @@ class UniversityRepository(private val supabase: Postgrest) {
         }
     }
 
-    private suspend fun getGrupaId(groupName: String): String? {
+    // Zwracamy Int?, ponieważ "grupa_id" w bazie jest typem Integer
+    private suspend fun getGrupaId(groupName: String): Int? {
         return try {
             val result = supabase.from("grupy").select(columns = Columns.list("grupa_id")) {
                 filter { eq("nazwa", groupName) }
             }.decodeList<GroupIdDto>()
             result.firstOrNull()?.id
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            Log.e("UniversityRepository", "Błąd pobierania ID grupy: ${e.message}", e)
+            null
+        }
     }
 
     suspend fun searchGroups(query: String): NetworkResult<List<String>> {
@@ -125,25 +131,28 @@ class UniversityRepository(private val supabase: Postgrest) {
             NetworkResult.Error("Błąd pobierania nauczycieli.")
         }
     }
+
     suspend fun getGroupCodes(): NetworkResult<List<String>> {
         return try {
             val result = supabase.from("grupy").select(columns = Columns.list("nazwa"))
                 .decodeList<GroupCodeDto>().mapNotNull { it.code }.distinct().sorted()
             NetworkResult.Success(result)
-        } catch (e: Exception) { NetworkResult.Error("Błąd pobierania grup.") }
+        } catch (e: Exception) {
+            Log.e("UniversityRepository", "Błąd pobierania listy grup: ${e.message}", e)
+            NetworkResult.Error("Błąd pobierania grup.")
+        }
     }
 
     suspend fun getSubgroups(groupCode: String): NetworkResult<List<String>> {
         return try {
             val grupaId = getGrupaId(groupCode) ?: return NetworkResult.Error("Nie znaleziono grupy.")
             val result = supabase.from("zajecia_grupy").select(columns = Columns.list("podgrupa")) {
-                filter { eq("grupa_id", grupaId) }
+                filter { eq("grupa_id", grupaId) } // Prawidłowe porównanie Int z Int
             }.decodeList<SubgroupDto>()
 
-            // Ignorujemy zepsute wpisy takie jak "empty", "brak", "-" aby nie pokazywały się jako opcje wyboru podgrupy
             val safeSubgroups = result.mapNotNull { it.subgroup }
                 .map { it.trim() }
-                .filter { it.isNotBlank() && !it.equals("empty", ignoreCase = true) && it != "-" && !it.equals("brak", ignoreCase = true) }
+                .filter { it.isNotBlank() && !it.equals("empty", ignoreCase = true) && it != "-" && !it.equals("brak", ignoreCase = true) && !it.equals("all", ignoreCase = true) }
                 .distinct()
                 .sorted()
 
@@ -154,18 +163,18 @@ class UniversityRepository(private val supabase: Postgrest) {
     suspend fun getSchedule(groupCode: String, subgroups: List<String>): NetworkResult<List<ClassEntity>> {
         return try {
             val grupaId = getGrupaId(groupCode) ?: return NetworkResult.Error("Nie znaleziono grupy.")
+
             val dtoList = supabase.from("zajecia_grupy").select(columns = scheduleColumns) {
-                filter { eq("grupa_id", grupaId) }
+                filter { eq("grupa_id", grupaId) } // Prawidłowe porównanie Int z Int
             }.decodeList<ClassScheduleDto>()
 
             val safeSubgroups = subgroups.map { it.trim() }.filter { it.isNotBlank() }
 
             val filtered = if (safeSubgroups.isNotEmpty()) {
                 dtoList.filter { dto ->
-                    val sub = dto.subgroup?.trim()?.lowercase()
-                    // Przepuszczamy faktycznie puste ORAZ te z fałszywym "empty" wpisanym w bazę
-                    val isCommonClass = sub.isNullOrBlank() || sub == "empty" || sub == "-" || sub == "brak"
-
+                    val sub = dto.subgroup?.trim()?.uppercase()
+                    // ALL (Wykłady i Seminaria) przepuszczamy zawsze
+                    val isCommonClass = sub.isNullOrBlank() || sub == "EMPTY" || sub == "-" || sub == "BRAK" || sub == "ALL"
                     isCommonClass || safeSubgroups.contains(dto.subgroup?.trim())
                 }
             } else {
@@ -176,6 +185,7 @@ class UniversityRepository(private val supabase: Postgrest) {
             val teacherMap = fetchTeacherDetails(teacherNames)
 
             val entities = mapDtoToEntity(filtered, groupCode, teacherMap)
+            Log.d("UniversityRepository", "Pomyślnie przeparsowano ${entities.size} zajęć.")
             NetworkResult.Success(entities)
 
         } catch (e: Exception) {
@@ -186,23 +196,18 @@ class UniversityRepository(private val supabase: Postgrest) {
 
     suspend fun getScheduleForTeacher(teacherName: String): NetworkResult<List<ClassEntity>> {
         return try {
-            // Pobieramy WSZYSTKIE rekordy dla tego nazwiska (zmieniono zapytanie na kolumnę "id" zamiast "external_id")
             val teachers = supabase.from("nauczyciele").select(columns = Columns.list("id", "email", "jednostka")) {
                 filter { eq("nazwisko_imie", teacherName.trim()) }
             }.decodeList<TeacherIdDto>()
 
             if (teachers.isEmpty()) return NetworkResult.Error("Nie znaleziono nauczyciela o tym nazwisku.")
 
-            // Agregacja danych (łączy maile i instytuty ze wszystkich wpisów)
             val aggregatedEmail = teachers.mapNotNull { it.email }.filter { it.isNotBlank() }.distinct().joinToString(" • ")
             val aggregatedInstitute = teachers.mapNotNull { it.institute }.filter { it.isNotBlank() }.distinct().joinToString(" • ")
 
-            // Pobieramy ID ze wszystkich jednostek (tylko te, które nie są nullem)
             val teacherIds = teachers.mapNotNull { it.id }.filter { it.isNotBlank() }.distinct()
-
             if (teacherIds.isEmpty()) return NetworkResult.Success(emptyList())
 
-            // Pobieramy zajęcia korzystając z uzyskanych ID zewnętrznych (IN)
             val dtoList = supabase.from("zajecia_nauczyciela").select {
                 filter { isIn("nauczyciel_id", teacherIds) }
             }.decodeList<TeacherClassScheduleDto>()
@@ -211,8 +216,8 @@ class UniversityRepository(private val supabase: Postgrest) {
                 val startDT = parseDateSafe(dto.startDateTime) ?: return@mapNotNull null
                 val endDT = parseDateSafe(dto.endDateTime) ?: return@mapNotNull null
                 ClassEntity(
-                    supabaseId = dto.id,
-                    subjectName = dto.subjectName,
+                    supabaseId = dto.id ?: java.util.UUID.randomUUID().toString(),
+                    subjectName = dto.subjectName ?: "Brak nazwy",
                     classType = dto.classType ?: "Inne",
                     startTime = startDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                     endTime = endDT.format(DateTimeFormatter.ofPattern("HH:mm")),
@@ -241,7 +246,10 @@ class UniversityRepository(private val supabase: Postgrest) {
                     filter { eq("nazwa", groupCode) }
                 }.decodeList<GroupDetailsDto>()
             details.firstOrNull()?.let { NetworkResult.Success(it) } ?: NetworkResult.Error("Brak danych.")
-        } catch (e: Exception) { NetworkResult.Error("Błąd komunikacji z bazą.") }
+        } catch (e: Exception) {
+            Log.e("UniversityRepository", "Błąd detali grupy: ${e.message}", e)
+            NetworkResult.Error("Błąd komunikacji z bazą.")
+        }
     }
 
     private suspend fun fetchTeacherDetails(teacherNames: List<String>): Map<String, TeacherDetailsDto> {
@@ -251,8 +259,7 @@ class UniversityRepository(private val supabase: Postgrest) {
                 filter { isIn("nazwisko_imie", teacherNames) }
             }.decodeList<TeacherDetailsDto>()
 
-            // Grupujemy po nazwisku i łączymy wszystkie niepuste maile oraz instytuty
-            list.groupBy { it.name }.mapValues { (name, dtos) ->
+            list.groupBy { it.name ?: "" }.filterKeys { it.isNotBlank() }.mapValues { (name, dtos) ->
                 TeacherDetailsDto(
                     name = name,
                     email = dtos.mapNotNull { it.email }.filter { it.isNotBlank() }.distinct().joinToString(" • ").ifBlank { null },
@@ -271,16 +278,19 @@ class UniversityRepository(private val supabase: Postgrest) {
             val startDT = parseDateSafe(dto.startDateTime) ?: return@mapNotNull null
             val endDT = parseDateSafe(dto.endDateTime) ?: return@mapNotNull null
 
+            val rawSub = dto.subgroup?.trim()
+            val isCommon = rawSub.isNullOrBlank() || rawSub.equals("empty", ignoreCase = true) || rawSub == "-" || rawSub.equals("brak", ignoreCase = true) || rawSub.equals("all", ignoreCase = true)
+
             ClassEntity(
-                supabaseId = dto.id,
-                subjectName = dto.subjectName,
+                supabaseId = dto.id ?: java.util.UUID.randomUUID().toString(),
+                subjectName = dto.subjectName ?: "Brak nazwy",
                 classType = dto.classType ?: "Inne",
                 startTime = startDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                 endTime = endDT.format(DateTimeFormatter.ofPattern("HH:mm")),
                 dayOfWeek = startDT.dayOfWeek.value,
                 date = startDT.toLocalDate().toString(),
                 groupCode = groupCode,
-                subgroup = dto.subgroup,
+                subgroup = if (isCommon) null else rawSub, // Maskowanie "ALL"
                 teacherName = dto.teacher ?: "Brak danych",
                 teacherEmail = teacherMap[dto.teacher]?.email,
                 teacherInstitute = teacherMap[dto.teacher]?.institute,
@@ -295,7 +305,7 @@ class UniversityRepository(private val supabase: Postgrest) {
                 .select(columns = Columns.list("nazwisko_imie", "email", "jednostka"))
                 .decodeList<TeacherDetailsDto>()
 
-            val aggregated = result.groupBy { it.name }.map { (name, dtos) ->
+            val aggregated = result.groupBy { it.name ?: "" }.filterKeys { it.isNotBlank() }.map { (name, dtos) ->
                 TeacherDetailsDto(
                     name = name,
                     email = dtos.mapNotNull { it.email }.filter { it.isNotBlank() }.distinct().joinToString(" • ").ifBlank { null },
