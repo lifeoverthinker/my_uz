@@ -40,6 +40,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.height
 
 enum class ClassCardType {
     HOME,
@@ -53,6 +54,7 @@ fun ClassCard(
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     accentColor: Color = MaterialTheme.colorScheme.primary,
     showBadge: Boolean = true,
+    hasDeadlines: Boolean = false, // <-- DODANO (przekaż true, jeśli w czasie zajęć wypada deadline zadania)
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -158,37 +160,47 @@ fun ClassCard(
             Spacer(modifier = Modifier.width(16.dp))
 
             if (showBadge) {
-                when (type) {
-                    ClassCardType.HOME -> {
-                        val letter = classItem.classType.firstOrNull()?.uppercase() ?: "A"
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(accentColor)
-                        ) {
-                            Text(
-                                text = letter,
-                                style = TextStyle(
-                                    fontFamily = InterFontFamily,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 16.sp,
-                                    lineHeight = 24.sp,
-                                    letterSpacing = 0.15.sp,
-                                    color = avatarTextColor
-                                ),
-                                textAlign = TextAlign.Center
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    when (type) {
+                        ClassCardType.HOME -> {
+                            val letter = classItem.classType.firstOrNull()?.uppercase() ?: "A"
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(accentColor)
+                            ) {
+                                Text(
+                                    text = letter,
+                                    style = TextStyle(
+                                        fontFamily = InterFontFamily,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 16.sp,
+                                        color = avatarTextColor
+                                    ),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                        ClassCardType.CALENDAR -> {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(accentColor)
                             )
                         }
                     }
 
-                    ClassCardType.CALENDAR -> {
+                    // UX: Wyświetlanie kropki zadania/deadline'u pod znaczkiem
+                    if (hasDeadlines) {
+                        Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(6.dp)
                                 .clip(CircleShape)
-                                .background(accentColor)
+                                .background(MaterialTheme.colorScheme.error) // Czerwona kropka dla deadline'u
                         )
                     }
                 }

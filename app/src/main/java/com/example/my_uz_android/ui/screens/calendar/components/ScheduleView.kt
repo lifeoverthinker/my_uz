@@ -33,8 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.components.ClassCardType
+import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.screens.calendar.DaySwipeDirection
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.example.my_uz_android.ui.theme.InterFontFamily
@@ -65,6 +67,7 @@ fun ScheduleView(
     onDateSelected: (LocalDate) -> Unit,
     onToggleView: () -> Unit,
     classes: List<ClassEntity>,
+    tasks: List<TaskEntity>, // <-- DODANO LISTĘ ZADAŃ
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
     modifier: Modifier = Modifier,
@@ -160,10 +163,16 @@ fun ScheduleView(
                     HorizontalCalendar(
                         state = calendarState,
                         dayContent = { day ->
+                            // Pobieranie zadań dla danego dnia
+                            val dayTasks = tasks.filter {
+                                val taskDate = Instant.ofEpochMilli(it.dueDate).atZone(PolandZone).toLocalDate()
+                                taskDate == day.date
+                            }
                             CalendarDay(
                                 date = day.date,
                                 isDateInMonth = day.position == DayPosition.MonthDate,
                                 isSelected = selectedDate == day.date,
+                                tasksForDay = dayTasks, // <-- DODANO
                                 onClick = onDateSelected
                             )
                         },
@@ -173,10 +182,15 @@ fun ScheduleView(
                     WeekCalendar(
                         state = weekState,
                         dayContent = { day ->
+                            val dayTasks = tasks.filter {
+                                val taskDate = Instant.ofEpochMilli(it.dueDate).atZone(PolandZone).toLocalDate()
+                                taskDate == day.date
+                            }
                             CalendarDay(
                                 date = day.date,
                                 isDateInMonth = true,
                                 isSelected = selectedDate == day.date,
+                                tasksForDay = dayTasks, // <-- DODANO
                                 onClick = onDateSelected
                             )
                         },
@@ -185,7 +199,6 @@ fun ScheduleView(
                 }
             }
         }
-
         // DÓŁ (plan dnia) z delikatną animacją przy swipe
         AnimatedContent(
             targetState = selectedDate,
@@ -296,9 +309,16 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 }
 
 @Composable
-fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, onClick: (LocalDate) -> Unit) {
+fun CalendarDay(
+    date: LocalDate,
+    isDateInMonth: Boolean,
+    isSelected: Boolean,
+    tasksForDay: List<TaskEntity> = emptyList(), // DODANO
+    onClick: (LocalDate) -> Unit
+) {
     val isToday = date == LocalDate.now(PolandZone)
     val primaryColor = MaterialTheme.colorScheme.primary
+    val errorColor = MaterialTheme.colorScheme.error
 
     val textColor = if (isDateInMonth) {
         if (isSelected) MaterialTheme.colorScheme.onPrimary
@@ -309,6 +329,10 @@ fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, on
     val circleSize = if (isSelected || isToday) 28.dp else 24.dp
     val circleColor = if (isSelected && isDateInMonth) primaryColor else Color.Transparent
     val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, primaryColor, CircleShape) else Modifier
+
+    // Wyznaczanie kropek zadań (maks. 3 dla czytelności)
+    val hasExam = tasksForDay.any { it.title.contains("kolokwium", ignoreCase = true) || it.title.contains("egzamin", ignoreCase = true) }
+    val normalTasksCount = tasksForDay.count { !it.title.contains("kolokwium", ignoreCase = true) && !it.title.contains("egzamin", ignoreCase = true) }
 
     Box(
         modifier = Modifier.aspectRatio(1f).padding(2.dp),
@@ -337,6 +361,19 @@ fun CalendarDay(date: LocalDate, isDateInMonth: Boolean, isSelected: Boolean, on
                     color = textColor,
                     textAlign = TextAlign.Center
                 )
+            }
+
+            // KROPKI POD DATĄ
+            Row(
+                modifier = Modifier.padding(top = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                if (hasExam) {
+                    Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(errorColor))
+                }
+                repeat(minOf(normalTasksCount, if (hasExam) 2 else 3)) {
+                    Box(modifier = Modifier.size(4.dp).clip(CircleShape).background(if (isSelected) MaterialTheme.colorScheme.onPrimary else primaryColor))
+                }
             }
         }
     }

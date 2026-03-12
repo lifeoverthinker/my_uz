@@ -24,6 +24,7 @@ data class CalendarUiState(
     val selectedGroupCodes: Set<String> = emptySet(),
     val favorites: List<FavoriteEntity> = emptyList(),
     val visibleClasses: List<ClassEntity> = emptyList(),
+    val tasks: List<TaskEntity> = emptyList(),
     val selectedPlanName: String = "Mój Plan",
     val selectedResourceId: String? = null,
     val classColorMap: Map<String, Int> = emptyMap(),
@@ -65,7 +66,8 @@ class CalendarViewModel(
         _previewState,
         _selectedDate,
         _isMonthView,
-        _isLoadingNetwork // Dodano 10. argument
+        _isLoadingNetwork, // Dodano 10. argument
+        tasksRepository.getAllTasks()
     ) { args: Array<Any?> ->
         val courses = args[0] as List<UserCourseEntity>
         val myClasses = args[1] as List<ClassEntity>
@@ -77,6 +79,7 @@ class CalendarViewModel(
         val selectedDate = args[7] as LocalDate
         val isMonthView = args[8] as Boolean
         val isLoadingNet = args[9] as Boolean // Odczyt stanu ładowania
+        val tasks = args[10] as List<TaskEntity>
 
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
         val colorMap: Map<String, Int> = try {
@@ -120,6 +123,7 @@ class CalendarViewModel(
             selectedGroupCodes = activeCodes,
             favorites = favorites,
             visibleClasses = classesToShow,
+            tasks = tasks,
             classColorMap = colorMap,
             currentSource = source,
             selectedResourceId = resourceId,

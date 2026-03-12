@@ -245,6 +245,7 @@ fun CalendarScreenContent(
                     },
                     onToggleView = { onToggleMonthView(!isMonthView) },
                     classes = uiState.visibleClasses,
+                    tasks = uiState.tasks,
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
                     modifier = Modifier.weight(1f),
@@ -268,7 +269,8 @@ fun CalendarScreenPreview() {
                     UserCourseEntity(id = 2, groupCode = "34MA", fieldOfStudy = "Matematyka", semester = 3)
                 ),
                 selectedGroupCodes = setOf("12IN"),
-                visibleClasses = emptyList()
+                visibleClasses = emptyList(),
+                tasks = emptyList()
             ),
             onOpenDrawer = {},
             onSearchClick = {},

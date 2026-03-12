@@ -16,9 +16,10 @@ import com.example.my_uz_android.data.models.*
         EventEntity::class,
         SettingsEntity::class,
         FavoriteEntity::class,
-        UserCourseEntity::class // Nasza nowa tabela
+        UserCourseEntity::class,
+        NotificationEntity::class // DODANE: Encja powiadomień
     ],
-    version = 7, // Podbita wersja
+    version = 9, // Podbita wersja (zmień na 8, skoro znowu zmieniamy schemat)
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,6 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun settingsDao(): SettingsDao
     abstract fun favoritesDao(): FavoritesDao
     abstract fun userCourseDao(): UserCourseDao
+    abstract fun notificationDao(): NotificationDao // DODANE: DAO powiadomień
 
     companion object {
         @Volatile

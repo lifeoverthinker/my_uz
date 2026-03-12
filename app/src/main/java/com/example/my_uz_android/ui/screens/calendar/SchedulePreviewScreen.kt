@@ -79,8 +79,9 @@ fun SchedulePreviewScreen(
                 if (isTeacher) "teacher" else "group"
             )
         },
-        onClassClick = onClassClick
-    )
+        onClassClick = { classId ->
+            navController.navigate("${Screen.ClassDetails.route}/${classEntity.id}?isTeacherPlan=true")
+        })
 }
 
 @Composable
@@ -194,7 +195,10 @@ fun SchedulePreviewScreenContent(
                                 if (accumulatedDx < 0) {
                                     navigateDay(offsetDays = 1, direction = DaySwipeDirection.NEXT)
                                 } else {
-                                    navigateDay(offsetDays = -1, direction = DaySwipeDirection.PREVIOUS)
+                                    navigateDay(
+                                        offsetDays = -1,
+                                        direction = DaySwipeDirection.PREVIOUS
+                                    )
                                 }
                             }
                         }
@@ -228,6 +232,7 @@ fun SchedulePreviewScreenContent(
                         }
                     },
                     classes = filteredClasses,
+                    tasks = emptyList(), // <--- DODAJ TĘ LINIJKĘ
                     classColorMap = classColorMap,
                     onClassClick = onClassClick,
                     showHeader = true,

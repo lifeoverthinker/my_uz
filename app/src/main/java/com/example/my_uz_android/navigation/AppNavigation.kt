@@ -53,8 +53,8 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val iconR
 
     data object GradeDetails : Screen("grade_details", "Szczegóły oceny", 0)
     data object AddEditGrade : Screen("add_grade", "Dodaj/Edytuj ocenę", 0)
+    data object ClassDetails : Screen("class_details", "Szczegóły zajęć", 0) // <--- DODAJ TĘ LINIJKĘ
 }
-
 @Composable
 fun AppNavigation(
     startDestination: String = "landing",
@@ -220,6 +220,7 @@ fun AppNavigation(
                         onTaskClick = { taskId -> navController.navigate("task_details/$taskId") },
                         onAccountClick = { navController.navigate(Screen.Account.route) },
                         onCalendarClick = { navController.navigate(Screen.Calendar.route) },
+                        onNotificationsClick = { navController.navigate("notifications") }, // PODPIĘCIE EKRANU
                         onAddGradeClick = { navController.navigate("add_grade") },
                         onAddAbsenceClick = { navController.navigate("add_absence") },
                         onAddTaskClick = { navController.navigate("add_task") }
@@ -250,7 +251,8 @@ fun AppNavigation(
                 }
 
                 composable("schedule_search") {
-                    val searchViewModel: ScheduleSearchViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val searchViewModel: ScheduleSearchViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     ScheduleSearchScreen(
                         navController = navController,
                         searchViewModel = searchViewModel,
@@ -312,13 +314,28 @@ fun AppNavigation(
                 composable("edit_personal_data") { EditPersonalDataScreen(onNavigateBack = { navController.popBackStack() }) }
                 composable("settings") { SettingsScreen(onBackClick = { navController.popBackStack() }) }
                 composable("about_app") { AboutAppScreen(onBackClick = { navController.popBackStack() }) }
+
                 composable(
-                    "class_details/{classId}",
-                    arguments = listOf(navArgument("classId") { type = NavType.IntType })
-                ) { ClassDetailsScreen(onBackClick = { navController.popBackStack() }) }
-                composable(
-                    "event_details/{eventId}",
-                    arguments = listOf(navArgument("eventId") { type = NavType.IntType })
+                    route = "${Screen.ClassDetails.route}/{classId}?isTeacherPlan={isTeacherPlan}",
+                    arguments = listOf(
+                        navArgument("classId") { type = NavType.IntType },
+                        navArgument("isTeacherPlan") {
+                            type = NavType.BoolType
+                            defaultValue = false
+                        }
+                    )
+                ) { backStackEntry ->
+                    val isTeacherPlan = backStackEntry.arguments?.getBoolean("isTeacherPlan") ?: false
+
+                    ClassDetailsScreen(
+                        onBackClick = { navController.popBackStack() },
+                        isTeacherPlan = isTeacherPlan
+                    )
+                }
+
+                composable (
+                        "event_details/{eventId}",
+                arguments = listOf(navArgument("eventId") { type = NavType.IntType })
                 ) { EventDetailsScreen(onBackClick = { navController.popBackStack() }) }
 
                 composable(
@@ -482,6 +499,15 @@ fun AppNavigation(
                 ) { backStackEntry ->
                     AddEditAbsenceScreen(
                         absenceId = backStackEntry.arguments?.getInt("absenceId"),
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                composable("notifications") {
+                    val notificationsViewModel: NotificationsViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
+                    NotificationsScreen(
+                        viewModel = notificationsViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
