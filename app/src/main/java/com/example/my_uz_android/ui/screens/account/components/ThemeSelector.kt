@@ -5,17 +5,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ThemeMode
 
 @Composable
@@ -35,19 +32,32 @@ fun ThemeSelector(
             val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
             val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
 
+            // Zamiana enum na czytelny tekst
+            val themeName = when (mode.name) {
+                "LIGHT" -> "Jasny"
+                "DARK" -> "Ciemny"
+                else -> "System"
+            }
+
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(bgColor)
-                    .border(width = if (isSelected) 2.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(12.dp))
+                    // POPRAWIONE OBRAMOWANIE (stała grubość 1.dp, kolor zależny od zaznaczenia)
+                    .border(
+                        width = 1.dp,
+                        color = borderColor,
+                        shape = RoundedCornerShape(12.dp)
+                    )
                     .clickable { onThemeSelected(mode) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = mode.displayName,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal),
+                    text = themeName,
+                    fontWeight = FontWeight.Medium, // Lżejszy tekst, tak jak chciałaś
+                    style = MaterialTheme.typography.bodyMedium,
                     color = contentColor
                 )
             }

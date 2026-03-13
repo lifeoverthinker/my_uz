@@ -2,12 +2,13 @@ package com.example.my_uz_android.ui.screens.index.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.data.models.GradeEntity
@@ -17,7 +18,7 @@ fun GradeBubble(
     grade: GradeEntity,
     modifier: Modifier = Modifier
 ) {
-    // Rozpoznajemy typ na podstawie encji
+    // Rozpoznajemy typ na podstawie encji (Logika zachowana!)
     val isPoints = grade.isPoints
     val value = grade.grade
 
@@ -43,9 +44,10 @@ fun GradeBubble(
     Box(
         modifier = modifier
             .height(32.dp) // Stała wysokość
-            .defaultMinSize(minWidth = 32.dp) // Minimalna szerokość dla małych ocen
-            .background(containerColor, CircleShape)
-            .padding(horizontal = 8.dp), // Padding dla dłuższych tekstów (np. "15 pkt")
+            .defaultMinSize(minWidth = 36.dp) // Minimalna szerokość
+            .clip(RoundedCornerShape(8.dp)) // Zmiana na "pigułkę" pasującą do reszty
+            .background(containerColor)
+            .padding(horizontal = 12.dp), // Większy padding, by pigułka lepiej wyglądała
         contentAlignment = Alignment.Center
     ) {
         Text(

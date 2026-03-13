@@ -1,6 +1,6 @@
 package com.example.my_uz_android.ui.screens.calendar
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -11,9 +11,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.my_uz_android.R
@@ -33,7 +33,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import kotlin.math.abs
-import com.example.my_uz_android.navigation.Screen
 
 @Composable
 fun SchedulePreviewScreen(
@@ -43,11 +42,8 @@ fun SchedulePreviewScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Upewniamy się, że bierzemy zajęcia z uiState,
-    // które ViewModel powinien przefiltrować dla aktualnego źródła (Source)
     val classes = uiState.visibleClasses
     val classColorMap = uiState.classColorMap
-
     val planName = uiState.selectedPlanName
     val isFavorite = uiState.favorites.any { it.name == planName }
 
@@ -58,7 +54,6 @@ fun SchedulePreviewScreen(
     }
     val isTeacher = type == "teacher"
 
-    // Logika wyciągania danych nauczyciela do TopAppBar i Dialogu
     val teacherData = remember(classes) {
         classes.firstOrNull {
             !it.teacherEmail.isNullOrBlank() || !it.teacherInstitute.isNullOrBlank()
@@ -80,15 +75,17 @@ fun SchedulePreviewScreen(
                 if (isTeacher) "teacher" else "group"
             )
         },
-        onClassClick = { entity -> // Zmieniono nazwę parametru na 'entity'
-            navController.navigate("${Screen.ClassDetails.route}/${entity.id}?isTeacherPlan=true")
-        })
+        onClassClick = { classEntity ->
+            viewModel.setTemporaryClassForDetails(classEntity)
+            navController.navigate("class_details/-1?isTeacherPlan=$isTeacher")
+        }
+    )
 }
 
 @Composable
 fun SchedulePreviewScreenContent(
     classes: List<ClassEntity>,
-    classColorMap: Map<String, Int>, // Poprawiono typ na Int
+    classColorMap: Map<String, Int>,
     planName: String,
     isFavorite: Boolean,
     isTeacher: Boolean,
@@ -105,12 +102,18 @@ fun SchedulePreviewScreenContent(
         classes.map { it.subgroup ?: "" }.distinct().sorted()
     }
 
-    var selectedSubgroups by remember(availableSubgroups) {
-        mutableStateOf(availableSubgroups.toSet())
+    // Fix filtrów: Inicjalizacja podgrup dopiero gdy dane faktycznie dotrą
+    var selectedSubgroups by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(availableSubgroups) {
+        if (selectedSubgroups.isEmpty() && availableSubgroups.isNotEmpty()) {
+            selectedSubgroups = availableSubgroups.toSet()
+        }
     }
 
     val filteredClasses = remember(classes, selectedSubgroups) {
-        classes.filter { selectedSubgroups.contains(it.subgroup ?: "") }
+        if (selectedSubgroups.isEmpty()) classes
+        else classes.filter { selectedSubgroups.contains(it.subgroup ?: "") }
     }
 
     val currentDate = remember { LocalDate.now(ZoneId.of("Europe/Warsaw")) }
@@ -137,7 +140,6 @@ fun SchedulePreviewScreenContent(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Funkcja do nawigacji pomiędzy dniami za pomocą gestu
     fun navigateDay(offsetDays: Long, direction: DaySwipeDirection) {
         val newDate = selectedDate.plusDays(offsetDays)
         if (newDate == selectedDate) return
@@ -170,7 +172,8 @@ fun SchedulePreviewScreenContent(
         },
         containerColor = MaterialTheme.colorScheme.surface
     ) { innerPadding ->
-        Column(
+        Crossfade(
+            targetState = isLoading,
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
@@ -196,19 +199,44 @@ fun SchedulePreviewScreenContent(
                                 if (accumulatedDx < 0) {
                                     navigateDay(offsetDays = 1, direction = DaySwipeDirection.NEXT)
                                 } else {
-                                    navigateDay(
-                                        offsetDays = -1,
-                                        direction = DaySwipeDirection.PREVIOUS
-                                    )
+                                    navigateDay(offsetDays = -1, direction = DaySwipeDirection.PREVIOUS)
                                 }
                             }
                         }
                     )
-                }
-        ) {
-            if (isLoading) {
+                },
+            label = "ScheduleLoadingTransition"
+        ) { loading ->
+            if (loading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 3.dp
+                    )
+                }
+            } else if (classes.isEmpty()) {
+                // Tymczasowy, bezpieczny "Empty State" bez użycia zewnętrznego komponentu
+                Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_info_circle),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = "Brak zajęć",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "W wybranym planie nie znaleziono żadnych zaplanowanych zajęć.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
             } else {
                 ScheduleView(
@@ -233,11 +261,12 @@ fun SchedulePreviewScreenContent(
                         }
                     },
                     classes = filteredClasses,
-                    tasks = emptyList(), // <--- DODAJ TĘ LINIJKĘ
+                    tasks = emptyList(),
                     classColorMap = classColorMap,
                     onClassClick = onClassClick,
+                    isTeacherPlan = isTeacher, // Przekazujemy flagę do widoku planu
                     showHeader = true,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -270,14 +299,14 @@ fun SchedulePreviewScreenPreview() {
             classes = listOf(
                 ClassEntity(
                     id = 1,
-                    subjectName = "Programowanie Obiektowe", // Poprawione z 'title'
-                    classType = "Wykład", // Poprawione z 'type'
+                    subjectName = "Programowanie Obiektowe",
+                    classType = "Wykład",
                     teacherName = "Dr inż. Jan Kowalski",
                     room = "A-2 101",
                     startTime = "08:15",
                     endTime = "09:45",
                     date = LocalDate.now().toString(),
-                    dayOfWeek = 1, // Poprawione na Int
+                    dayOfWeek = 1,
                     groupCode = "12IN",
                     subgroup = "L1"
                 )
@@ -286,19 +315,7 @@ fun SchedulePreviewScreenPreview() {
             planName = "Dr inż. Jan Kowalski",
             isFavorite = false,
             isTeacher = true,
-            teacherData = ClassEntity(
-                id = 0,
-                subjectName = "", // Poprawione
-                classType = "", // Poprawione
-                teacherName = "Dr inż. Jan Kowalski",
-                room = "",
-                startTime = "",
-                endTime = "",
-                date = "",
-                dayOfWeek = 1, // Poprawione na Int
-                groupCode = "",
-                subgroup = null // Dodano by uniknąć błędów
-            ),
+            teacherData = null,
             isLoading = false,
             onBackClick = {},
             onFavoriteClick = {},

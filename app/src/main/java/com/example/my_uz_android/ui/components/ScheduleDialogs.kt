@@ -42,10 +42,15 @@ fun SubgroupFilterDialog(
                 if (subgroups.isEmpty()) {
                     Text(
                         text = "Brak zdefiniowanych podgrup w pobranym planie.",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 16.dp)
                     )
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxHeight(0.4f).fillMaxWidth()) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxHeight(0.4f)
+                            .fillMaxWidth()
+                    ) {
                         items(subgroups) { subgroup ->
                             val isSelected = selectedSubgroups.contains(subgroup)
                             val displayName = if (subgroup.isBlank()) "Cała grupa" else subgroup
@@ -57,14 +62,21 @@ fun SubgroupFilterDialog(
                                         val new = if (isSelected) selectedSubgroups - subgroup else selectedSubgroups + subgroup
                                         onSelectionChange(new)
                                     }
-                                    .padding(vertical = 4.dp),
+                                    .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Checkbox(checked = isSelected, onCheckedChange = null)
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = null,
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
                                 Spacer(Modifier.width(12.dp))
                                 Text(
                                     text = displayName,
-                                    style = MaterialTheme.typography.bodyLarge
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -75,7 +87,7 @@ fun SubgroupFilterDialog(
         confirmButtonText = "Gotowe",
         dismissButton = {
             TextButton(onClick = { onSelectionChange(subgroups.toSet()) }) {
-                Text("Wszystkie", style = MaterialTheme.typography.labelLarge)
+                Text("Wszystkie", style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary))
             }
         }
     )
@@ -96,6 +108,7 @@ fun TeacherInfoDialog(
         content = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 DialogInfoSection(label = "Dane nauczyciela", value = fullName)
+
                 val deptDisplay = if (department.isNotBlank()) department else "Brak informacji o jednostce"
                 DialogInfoSection(label = "Instytut / Katedra", value = deptDisplay)
 
@@ -111,10 +124,14 @@ fun TeacherInfoDialog(
                             }
                         },
                         shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-                        modifier = Modifier.fillMaxWidth()
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), // Subtelniejsze tło
+                        modifier = Modifier.fillMaxWidth(),
+                        tonalElevation = 0.dp
                     ) {
-                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_mail),
                                 contentDescription = null,
@@ -160,18 +177,27 @@ private fun BaseScheduleDialog(
         title = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp // Google Calendar style size
+                ),
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = content,
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(confirmButtonText, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                Text(
+                    text = confirmButtonText,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         },
         dismissButton = dismissButton,
         shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp // Kluczowe dla płaskiego wyglądu
     )
 }
 
@@ -180,7 +206,8 @@ private fun DialogLabel(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Medium
     )
 }
 
@@ -192,7 +219,7 @@ private fun DialogInfoSection(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
-            lineHeight = 24.sp
+            lineHeight = 22.sp
         )
     }
 }

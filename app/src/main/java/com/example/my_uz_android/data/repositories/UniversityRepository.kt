@@ -46,7 +46,7 @@ data class TeacherDto(@SerialName("nazwisko_imie") val name: String? = null)
 @Serializable
 data class GroupDetailsDto(
     @SerialName("tryb") val studyMode: String? = null,
-    @SerialName("semestr") val semester: Int? = null, // Zgodnie z bazą: liczba lub null
+    @SerialName("semestr") val semester: String? = null, // ZMIANA NA String?
     @SerialName("kierunki") val fieldInfo: FieldOfStudyDto? = null
 )
 

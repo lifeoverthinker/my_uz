@@ -1,11 +1,11 @@
 package com.example.my_uz_android.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import java.time.LocalTime
@@ -35,28 +35,34 @@ fun TimePicker(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface, // Czyste tło
-            tonalElevation = 0.dp, // Usuwa fioletowy odcień
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 0.dp,
             modifier = Modifier.wrapContentSize()
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Tytuł modala jak w MD3
+                Text(
+                    text = "Wybierz godzinę",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .align(Alignment.Start)
+                        .padding(bottom = 20.dp)
+                )
+
                 androidx.compose.material3.TimePicker(
                     state = timeState,
                     colors = TimePickerDefaults.colors(
-                        clockDialColor = MaterialTheme.colorScheme.surfaceVariant,
+                        clockDialColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         clockDialSelectedContentColor = MaterialTheme.colorScheme.onPrimary,
                         clockDialUnselectedContentColor = MaterialTheme.colorScheme.onSurface,
                         selectorColor = MaterialTheme.colorScheme.primary,
-                        containerColor = MaterialTheme.colorScheme.surface, // Tło zegara
-                        periodSelectorBorderColor = MaterialTheme.colorScheme.outline,
-                        periodSelectorSelectedContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        periodSelectorUnselectedContainerColor = MaterialTheme.colorScheme.surface,
-                        periodSelectorSelectedContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                        periodSelectorUnselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        // Kolory prostokątów z cyframi (góra)
                         timeSelectorSelectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                         timeSelectorUnselectedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         timeSelectorSelectedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -72,7 +78,7 @@ fun TimePicker(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Anuluj", style = MaterialTheme.typography.labelLarge)
+                        Text("Anuluj", color = MaterialTheme.colorScheme.outline)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     TextButton(
@@ -80,7 +86,10 @@ fun TimePicker(
                             onTimeSelected(timeState.hour, timeState.minute)
                         }
                     ) {
-                        Text("OK", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            text = "OK",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                        )
                     }
                 }
             }

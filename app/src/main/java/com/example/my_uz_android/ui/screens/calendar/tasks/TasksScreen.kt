@@ -208,7 +208,7 @@ fun TasksScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Image(
-                                painter = painterResource(id = R.drawable.time_rafiki),
+                                painter = painterResource(id = R.drawable.time_flies_rafiki),
                                 contentDescription = null,
                                 modifier = Modifier.size(220.dp)
                             )

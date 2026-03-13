@@ -19,12 +19,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Import sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.extendedColors
+import androidx.compose.ui.graphics.Color
 
+// Podmień całą główną funkcję EventDetailsScreen
 @Composable
 fun EventDetailsScreen(
     onBackClick: () -> Unit,
@@ -33,7 +34,7 @@ fun EventDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val event = uiState.eventEntity
 
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
+    val surfaceColor = MaterialTheme.colorScheme.surface
     val textColor = MaterialTheme.colorScheme.onSurface
     val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
     val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -41,7 +42,6 @@ fun EventDetailsScreen(
 
     Surface(
         color = surfaceColor,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
@@ -51,16 +51,11 @@ fun EventDetailsScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            // Header
+            // --- HEADER ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
-                    .pointerInput(Unit) {
-                        detectVerticalDragGestures { _, dragAmount ->
-                            if (dragAmount > 10) onBackClick()
-                        }
-                    },
+                    .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -74,6 +69,7 @@ fun EventDetailsScreen(
                 }
             }
 
+            // --- ZAWARTOŚĆ ---
             if (uiState.isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -96,7 +92,7 @@ fun EventDetailsScreen(
                             Box(
                                 modifier = Modifier
                                     .size(18.dp)
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
                                     .background(accentColor)
                             )
                         }
@@ -106,8 +102,7 @@ fun EventDetailsScreen(
                         Column {
                             Text(
                                 text = event.title,
-                                // headlineMedium: 28sp, Normal
-                                style = MaterialTheme.typography.headlineMedium,
+                                style = MaterialTheme.typography.titleLarge,
                                 color = textColor,
                                 modifier = Modifier.padding(bottom = 4.dp)
                             )
@@ -120,7 +115,7 @@ fun EventDetailsScreen(
 
                             Text(
                                 text = dateTimeText,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                                 color = subTextColor
                             )
                         }
@@ -156,7 +151,7 @@ fun EventDetailsScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         text = "Nie znaleziono wydarzenia",
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = subTextColor
                     )
                 }
@@ -164,7 +159,6 @@ fun EventDetailsScreen(
         }
     }
 }
-
 @Composable
 private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
     Box(
@@ -213,7 +207,7 @@ private fun DetailSection(
 
             Text(
                 text = text,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = textColor
             )
         }

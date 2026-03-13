@@ -26,8 +26,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -40,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,8 +52,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.MyUZTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     onBackClick: () -> Unit,
@@ -95,6 +101,7 @@ fun AccountScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreenContent(
     userName: String,
@@ -125,18 +132,11 @@ fun AccountScreenContent(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 16.dp, start = 16.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Text(
-                    text = "Konto",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
+            TopAppBar(
+                title = "Konto",
+                navigationIcon = null,
+                isCenterAligned = false
+            )
         }
     ) { paddingValues ->
         Column(
@@ -167,43 +167,50 @@ fun AccountScreenContent(
                 onDirectionSelected = onDirectionSelected
             )
 
-            // ZARZĄDZANIE KONTEM - czyste tło, bez narzuconych kart
+            // ZARZĄDZANIE KONTEM - Spójne wypełnione karty (Filled Cards)
             Column(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
+                modifier = Modifier.fillMaxWidth()
             ) {
                 SectionTitle(text = "Zarządzanie kontem")
 
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    AccountOptionItem(
-                        iconRes = R.drawable.ic_user,
-                        label = "Dane osobowe",
-                        onClick = onPersonalDataClick
-                    )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                        AccountOptionItem(
+                            iconRes = R.drawable.ic_user,
+                            label = "Dane osobowe",
+                            onClick = onPersonalDataClick
+                        )
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                    )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        )
 
-                    AccountOptionItem(
-                        iconRes = R.drawable.ic_settings,
-                        label = "Ustawienia",
-                        onClick = onSettingsClick
-                    )
+                        AccountOptionItem(
+                            iconRes = R.drawable.ic_settings,
+                            label = "Ustawienia",
+                            onClick = onSettingsClick
+                        )
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                    )
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        )
 
-                    AccountOptionItem(
-                        iconRes = R.drawable.ic_info_circle,
-                        label = "O aplikacji",
-                        onClick = onAboutClick
-                    )
+                        AccountOptionItem(
+                            iconRes = R.drawable.ic_info_circle,
+                            label = "O aplikacji",
+                            onClick = onAboutClick
+                        )
+                    }
                 }
             }
 
@@ -267,7 +274,6 @@ private fun StudyDirectionsSection(
                         onDismissRequest = { isDropdownExpanded = false }
                     ) {
                         fallbackDirections.forEach { direction ->
-                            // Wykorzystujemy mapę do poprawnego podpisania kierunku w DropdownMenu
                             val directionName = directionToFieldMap[direction] ?: fieldOfStudy
                             DropdownMenuItem(
                                 text = { Text("$directionName | $direction") },
@@ -282,6 +288,7 @@ private fun StudyDirectionsSection(
             }
         }
 
+        // Oddychająca, wypelniona karta w stylu Classroom
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
@@ -352,7 +359,6 @@ private fun StudyDirectionsSection(
 
                     StudySingleColumnItem(
                         label = "Podgrupy",
-                        // NAPRAWA: Sortowanie alfabetyczne i łączenie przecinkiem ze spacją
                         value = if (subgroups.isNotEmpty()) subgroups.toList().sorted()
                             .joinToString(", ") else "-"
                     )
@@ -407,37 +413,32 @@ fun AccountOptionItem(
     label: String,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 16.dp, horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+    ListItem(
+        headlineContent = {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+            )
+        },
+        leadingContent = {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface
+        },
+        trailingContent = {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_chevron_right),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-        Icon(
-            painter = painterResource(id = R.drawable.ic_chevron_right),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable { onClick() }
+    )
 }
 
 @Composable

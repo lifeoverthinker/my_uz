@@ -8,15 +8,19 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +29,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -67,34 +70,49 @@ fun ScheduleView(
     onDateSelected: (LocalDate) -> Unit,
     onToggleView: () -> Unit,
     classes: List<ClassEntity>,
-    tasks: List<TaskEntity>, // <-- DODANO LISTĘ ZADAŃ
+    tasks: List<TaskEntity>,
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
+    isTeacherPlan: Boolean = false,
+    availableDirections: List<String> = emptyList(),
+    selectedDirections: Set<String> = emptySet(),
+    onDirectionToggled: (String, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     showHeader: Boolean = false
 ) {
-    val classesForDay = remember(classes, selectedDate) {
-        classes.filter { it.date == selectedDate.toString() }.sortedBy { it.startTime }
-    }
-
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    LaunchedEffect(classesForDay) {
-        if (classesForDay.isNotEmpty()) {
-            val firstClassMinute = classesForDay.minOfOrNull {
-                try {
-                    val parts = it.startTime.split(":")
-                    parts[0].toInt() * 60 + parts[1].toInt()
-                } catch (e: Exception) {
-                    8 * 60
-                }
-            } ?: (8 * 60)
+    // Zmienna, która pilnuje, by auto-scroll wykonał się tylko RAZ przy wejściu w ekran
+    var hasPerformedInitialScroll by remember { mutableStateOf(false) }
 
-            val targetMinute = (firstClassMinute - 60).coerceAtLeast(0)
+    LaunchedEffect(Unit) {
+        if (!hasPerformedInitialScroll) {
+            val isToday = selectedDate == LocalDate.now(PolandZone)
+            val classesForToday = classes.filter { it.date == selectedDate.toString() }
+
+            val targetMinute = if (isToday) {
+                // Jeśli wchodzimy dzisiaj, scrolluj do obecnej godziny - 30 min (żeby linia była widoczna)
+                val now = LocalTime.now(PolandZone)
+                (now.hour * 60 + now.minute - 30).coerceAtLeast(0)
+            } else if (classesForToday.isNotEmpty()) {
+                // Jeśli wchodzimy w inny dzień i są zajęcia, scrolluj do pierwszych zajęć
+                val firstClassMinute = classesForToday.minOfOrNull {
+                    try {
+                        val parts = it.startTime.split(":")
+                        parts[0].toInt() * 60 + parts[1].toInt()
+                    } catch (e: Exception) {
+                        8 * 60
+                    }
+                } ?: (8 * 60)
+                (firstClassMinute - 60).coerceAtLeast(0)
+            } else {
+                // Domyślnie 8:00
+                8 * 60
+            }
+
             scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
-        } else {
-            scrollState.scrollTo(0)
+            hasPerformedInitialScroll = true
         }
     }
 
@@ -148,6 +166,14 @@ fun ScheduleView(
             }
         }
 
+        if (availableDirections.isNotEmpty()) {
+            CalendarFilterRow(
+                availableDirections = availableDirections,
+                selectedDirections = selectedDirections,
+                onDirectionToggled = onDirectionToggled
+            )
+        }
+
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
@@ -155,7 +181,6 @@ fun ScheduleView(
             }
         }
 
-        // GÓRA (week/month) bez animacji dnia
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
@@ -163,7 +188,6 @@ fun ScheduleView(
                     HorizontalCalendar(
                         state = calendarState,
                         dayContent = { day ->
-                            // Pobieranie zadań dla danego dnia
                             val dayTasks = tasks.filter {
                                 val taskDate = Instant.ofEpochMilli(it.dueDate).atZone(PolandZone).toLocalDate()
                                 taskDate == day.date
@@ -172,8 +196,12 @@ fun ScheduleView(
                                 date = day.date,
                                 isDateInMonth = day.position == DayPosition.MonthDate,
                                 isSelected = selectedDate == day.date,
-                                tasksForDay = dayTasks, // <-- DODANO
-                                onClick = onDateSelected
+                                tasksForDay = dayTasks,
+                                onClick = {
+                                    // Jeśli klikamy "Dziś" z innego dnia, możemy wymusić scroll
+                                    if (it == LocalDate.now(PolandZone)) hasPerformedInitialScroll = false
+                                    onDateSelected(it)
+                                }
                             )
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -190,8 +218,11 @@ fun ScheduleView(
                                 date = day.date,
                                 isDateInMonth = true,
                                 isSelected = selectedDate == day.date,
-                                tasksForDay = dayTasks, // <-- DODANO
-                                onClick = onDateSelected
+                                tasksForDay = dayTasks,
+                                onClick = {
+                                    if (it == LocalDate.now(PolandZone)) hasPerformedInitialScroll = false
+                                    onDateSelected(it)
+                                }
                             )
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -199,29 +230,29 @@ fun ScheduleView(
                 }
             }
         }
-        // DÓŁ (plan dnia) z delikatną animacją przy swipe
+
+        // Klasyczna animacja Google Calendar (poziome przesuwanie ekranu całego dnia)
         AnimatedContent(
             targetState = selectedDate,
             transitionSpec = {
                 val isNext = swipeDirection != DaySwipeDirection.PREVIOUS
-                val enterOffset: (Int) -> Int = { fullWidth -> if (isNext) fullWidth / 10 else -fullWidth / 10 }
-                val exitOffset: (Int) -> Int = { fullWidth -> if (isNext) -fullWidth / 10 else fullWidth / 10 }
+                val enterOffset: (Int) -> Int = { fullWidth -> if (isNext) fullWidth else -fullWidth }
+                val exitOffset: (Int) -> Int = { fullWidth -> if (isNext) -fullWidth else fullWidth }
 
-                ContentTransform(
-                    targetContentEnter = slideInHorizontally(
-                        animationSpec = tween(160),
-                        initialOffsetX = enterOffset
-                    ) + fadeIn(animationSpec = tween(160)),
-                    initialContentExit = slideOutHorizontally(
-                        animationSpec = tween(140),
+                // Używamy togetherWith z Compose 1.5+ zamiast with
+                (slideInHorizontally(
+                    animationSpec = tween(300),
+                    initialOffsetX = enterOffset
+                ) + fadeIn(animationSpec = tween(300))).togetherWith(
+                    slideOutHorizontally(
+                        animationSpec = tween(300),
                         targetOffsetX = exitOffset
-                    ) + fadeOut(animationSpec = tween(140))
+                    ) + fadeOut(animationSpec = tween(300))
                 )
             },
             label = "DayOnlyTransition",
             modifier = Modifier.fillMaxSize()
         ) { animatedDate ->
-            // Pobieramy zajęcia tylko dla animowanego dnia
             val animatedClassesForDay = remember(classes, animatedDate) {
                 classes.filter { it.date == animatedDate.toString() }.sortedBy { it.startTime }
             }
@@ -232,7 +263,53 @@ fun ScheduleView(
                 tasks = tasks,
                 classColorMap = classColorMap,
                 onClassClick = onClassClick,
-                scrollState = scrollState
+                isTeacherPlan = isTeacherPlan,
+                scrollState = scrollState // Przekazujemy ten sam scrollState, więc pozycja zostaje!
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CalendarFilterRow(
+    availableDirections: List<String>,
+    selectedDirections: Set<String>,
+    onDirectionToggled: (String, Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(availableDirections) { direction ->
+            val isSelected = selectedDirections.contains(direction)
+            FilterChip(
+                selected = isSelected,
+                onClick = { onDirectionToggled(direction, !isSelected) },
+                label = {
+                    Text(
+                        text = direction,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                },
+                leadingIcon = if (isSelected) {
+                    {
+                        Icon(
+                            imageVector = Icons.Filled.Done,
+                            contentDescription = "Zaznaczone",
+                            modifier = Modifier.size(FilterChipDefaults.IconSize)
+                        )
+                    }
+                } else null,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                shape = RoundedCornerShape(16.dp)
             )
         }
     }
@@ -242,12 +319,12 @@ fun ScheduleView(
 private fun DayTimelineContent(
     selectedDate: LocalDate,
     classesForDay: List<ClassEntity>,
-    tasks: List<TaskEntity>, // <-- DODANO
+    tasks: List<TaskEntity>,
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
+    isTeacherPlan: Boolean,
     scrollState: androidx.compose.foundation.ScrollState
 ) {
-    // Filtrowanie zadań na dany dzień
     val tasksForDay = remember(tasks, selectedDate) {
         tasks.filter {
             val taskDate = java.time.Instant.ofEpochMilli(it.dueDate)
@@ -266,7 +343,6 @@ private fun DayTimelineContent(
         }
     } else {
         Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-            // --- SEKACJA ZADAŃ NA DZIŚ (ETAP 4) ---
             if (tasksForDay.isNotEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -280,18 +356,17 @@ private fun DayTimelineContent(
                     tasksForDay.forEach { task ->
                         TaskCard(
                             task = task,
-                            onTaskClick = { /* Przejdź do detali jeśli chcesz */ },
+                            onTaskClick = { /* Przejdź do detali */ },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-                    // Poprawiony HorizontalDivider
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 8.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
                 }
             }
-            // --- PLAN ZAJĘĆ ---
+
             Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     repeat(24) { index -> HourRow(hour = index) }
@@ -310,7 +385,8 @@ private fun DayTimelineContent(
                             colIndex = layoutInfo.colIndex,
                             totalCols = layoutInfo.totalCols,
                             maxWidthDp = maxWidth,
-                            onClassClick = onClassClick
+                            onClassClick = onClassClick,
+                            isTeacherPlan = isTeacherPlan
                         )
                     }
                 }
@@ -322,6 +398,7 @@ private fun DayTimelineContent(
         }
     }
 }
+
 @Composable
 fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
     Row(modifier = Modifier.fillMaxWidth()) {
@@ -343,7 +420,7 @@ fun CalendarDay(
     date: LocalDate,
     isDateInMonth: Boolean,
     isSelected: Boolean,
-    tasksForDay: List<TaskEntity> = emptyList(), // DODANO
+    tasksForDay: List<TaskEntity> = emptyList(),
     onClick: (LocalDate) -> Unit
 ) {
     val isToday = date == LocalDate.now(PolandZone)
@@ -360,7 +437,6 @@ fun CalendarDay(
     val circleColor = if (isSelected && isDateInMonth) primaryColor else Color.Transparent
     val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, primaryColor, CircleShape) else Modifier
 
-    // Wyznaczanie kropek zadań (maks. 3 dla czytelności)
     val hasExam = tasksForDay.any { it.title.contains("kolokwium", ignoreCase = true) || it.title.contains("egzamin", ignoreCase = true) }
     val normalTasksCount = tasksForDay.count { !it.title.contains("kolokwium", ignoreCase = true) && !it.title.contains("egzamin", ignoreCase = true) }
 
@@ -393,7 +469,6 @@ fun CalendarDay(
                 )
             }
 
-            // KROPKI POD DATĄ
             Row(
                 modifier = Modifier.padding(top = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
@@ -466,7 +541,8 @@ fun ScheduledClassItem(
     colIndex: Int,
     totalCols: Int,
     maxWidthDp: androidx.compose.ui.unit.Dp,
-    onClassClick: (ClassEntity) -> Unit
+    onClassClick: (ClassEntity) -> Unit,
+    isTeacherPlan: Boolean = false
 ) {
     val startParts = classEntity.startTime.split(":")
     val startMinutes = startParts[0].toInt() * 60 + startParts[1].toInt()
@@ -500,6 +576,7 @@ fun ScheduledClassItem(
             backgroundColor = colorSet.lightBg,
             accentColor = colorSet.lightAccent,
             showBadge = isFuture,
+            isTeacherPlan = isTeacherPlan,
             onClick = { onClassClick(classEntity) },
             modifier = Modifier.fillMaxSize()
         )
@@ -539,19 +616,5 @@ fun CurrentTimeIndicator() {
                 .clip(CircleShape)
                 .background(indicatorColor)
         )
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
-@Composable
-fun ScheduleViewEmptyDayPreview() {
-    com.example.my_uz_android.ui.theme.MyUZTheme {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            com.example.my_uz_android.ui.components.EmptyStateMessage(
-                title = "Brak zajęć",
-                message = "Czas na odpoczynek lub naukę własną.\nW tym dniu nie masz wpisanych żadnych ćwiczeń ani wykładów.",
-                iconRes = R.drawable.calendar_rafiki
-            )
-        }
     }
 }

@@ -37,6 +37,7 @@ import com.example.my_uz_android.util.ClassTypeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.luminance
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -306,7 +307,19 @@ fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelec
                         .clickable { onColorSelected(index) },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isSelected) Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = colorSet.lightAccent, modifier = Modifier.size(18.dp))
+                    if (isSelected) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_check),
+                            contentDescription = null,
+                            // --- TUTAJ JEST ZMIANA ---
+                            tint = if (colorSet.lightBg.luminance() > 0.5f) {
+                                MaterialTheme.colorScheme.onSurface // Ciemny ptaszek dla jasnego kółka
+                            } else {
+                                MaterialTheme.colorScheme.surface // Jasny ptaszek dla ciemnego kółka
+                            },
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }

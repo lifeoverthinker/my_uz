@@ -1,14 +1,8 @@
 package com.example.my_uz_android.ui.screens.index
 
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -16,449 +10,221 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.DatePicker
-import com.example.my_uz_android.util.ClassTypeUtils
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import com.example.my_uz_android.ui.screens.calendar.tasks.FormRow
+import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditGradeScreen(
-    gradeId: Int?,
-    prefilledSubject: String? = null,
-    prefilledClassType: String? = null,
-    onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier,
+    onDismiss: () -> Unit,
     viewModel: AddEditGradeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isSaved by viewModel.isSaved.collectAsState()
-    val context = LocalContext.current
+    var showTypeModal by remember { mutableStateOf(false) }
 
     LaunchedEffect(isSaved) {
         if (isSaved) {
-            Toast.makeText(context, "Zapisano zmiany", Toast.LENGTH_SHORT).show()
-            onNavigateBack()
+            onDismiss()
         }
     }
 
-    LaunchedEffect(gradeId, prefilledSubject, prefilledClassType) {
-        if (gradeId != null && gradeId != 0) {
-            viewModel.loadGrade(gradeId)
+    val gradeInput = when (uiState.gradeType) {
+        GradeType.STANDARD -> if (uiState.customGradeValue.isNotBlank()) {
+            uiState.customGradeValue
         } else {
-            if (uiState.subjectName == null) {
-                viewModel.initNewGrade(prefilledSubject, prefilledClassType)
-            }
+            formatGradeValue(uiState.gradeValue)
         }
+        GradeType.ACTIVITY -> "+"
+        GradeType.CUSTOM,
+        GradeType.POINTS -> uiState.customGradeValue
     }
 
-    AddEditGradeContent(
-        uiState = uiState,
-        onNavigateBack = onNavigateBack,
-        onSaveGrade = viewModel::saveGrade,
-        onSubjectChange = viewModel::updateSubjectName,
-        onClassTypeChange = viewModel::updateClassType,
-        onGradeTypeChange = viewModel::updateGradeType,
-        onGradeValueChange = viewModel::updateGradeValue,
-        onCustomGradeChange = viewModel::updateCustomGradeValue,
-        onWeightChange = viewModel::updateWeight,
-        onDescriptionChange = viewModel::updateDescription,
-        onCommentChange = viewModel::updateComment,
-        onDateChange = viewModel::updateDate,
-        modifier = modifier
-    )
-}
+    val canSave = when (uiState.gradeType) {
+        GradeType.ACTIVITY -> true
+        GradeType.STANDARD -> uiState.gradeValue != null
+        GradeType.CUSTOM,
+        GradeType.POINTS -> uiState.customGradeValue.isNotBlank()
+    }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddEditGradeContent(
-    uiState: AddEditGradeUiState,
-    onNavigateBack: () -> Unit,
-    onSaveGrade: () -> Unit,
-    onSubjectChange: (String?) -> Unit,
-    onClassTypeChange: (String?) -> Unit,
-    onGradeTypeChange: (GradeType) -> Unit,
-    onGradeValueChange: (Double?) -> Unit,
-    onCustomGradeChange: (String) -> Unit,
-    onWeightChange: (String) -> Unit,
-    onDescriptionChange: (String) -> Unit,
-    onCommentChange: (String) -> Unit,
-    onDateChange: (Long) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant
-    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-    val primaryColor = MaterialTheme.colorScheme.primary
-
-    val quickTitles = listOf("Kolokwium", "Egzamin", "Kartkówka", "Wejściówka", "Projekt", "Aktywność", "Zadanie")
-    var showSubjectModal by remember { mutableStateOf(false) }
-    var showTypeModal by remember { mutableStateOf(false) }
-    var showGradeModal by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
-
-    val standardGrades = listOf(5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0)
-    val isTypeSelectionEnabled = !uiState.subjectName.isNullOrEmpty()
-
-    Surface(color = surfaceColor, modifier = modifier.fillMaxSize().statusBarsPadding()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // HEADER
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(modifier = Modifier.size(40.dp).clip(CircleShape).clickable { onNavigateBack() }, contentAlignment = Alignment.Center) {
-                    Icon(painter = painterResource(id = R.drawable.ic_x_close), contentDescription = "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
-                }
-                Button(
-                    onClick = onSaveGrade,
-                    enabled = uiState.subjectName != null,
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = primaryColor, contentColor = MaterialTheme.colorScheme.onPrimary),
-                    contentPadding = PaddingValues(horizontal = 24.dp),
-                    modifier = Modifier.height(40.dp)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.surface,
+            topBar = {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .height(64.dp)
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(stringResource(R.string.btn_save), style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    IconButton(onClick = onDismiss) {
+                        Icon(painterResource(R.drawable.ic_x_close), "Anuluj")
+                    }
+                    Button(
+                        onClick = { viewModel.saveGrade(); onDismiss() },
+                        enabled = canSave,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text("Zapisz")
+                    }
                 }
             }
-
-            Column(modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp), verticalAlignment = Alignment.Top) {
-                    Box(modifier = Modifier.size(48.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Box(modifier = Modifier.weight(1f).padding(vertical = 4.dp)) {
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 72.dp)
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.width(40.dp))
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (gradeInput.isEmpty()) {
+                            Text(
+                                text = "Ocena (np. 5.0, Zal, 12pkt)",
+                                style = TextStyle(fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                        }
                         BasicTextField(
-                            value = uiState.description,
-                            onValueChange = onDescriptionChange,
-                            textStyle = MaterialTheme.typography.headlineMedium.copy(color = textColor),
-                            cursorBrush = SolidColor(primaryColor),
-                            decorationBox = { innerTextField ->
-                                if (uiState.description.isEmpty()) {
-                                    Text(text = "Dodaj tytuł", style = MaterialTheme.typography.headlineMedium.copy(color = textColor.copy(alpha = 0.4f)))
+                            value = gradeInput,
+                            onValueChange = { value ->
+                                when (uiState.gradeType) {
+                                    GradeType.STANDARD -> {
+                                        viewModel.updateCustomGradeValue(value)
+                                        viewModel.updateGradeValue(value.replace(",", ".").toDoubleOrNull())
+                                    }
+                                    GradeType.CUSTOM,
+                                    GradeType.POINTS -> viewModel.updateCustomGradeValue(value)
+                                    GradeType.ACTIVITY -> Unit
                                 }
-                                innerTextField()
                             },
+                            textStyle = TextStyle(fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            readOnly = uiState.gradeType == GradeType.ACTIVITY,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = dividerColor)
-                Spacer(modifier = Modifier.height(16.dp))
 
-                LazyRow(contentPadding = PaddingValues(horizontal = 76.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(quickTitles) { title ->
-                        val isSelected = uiState.description == title
-                        Surface(
-                            onClick = { onDescriptionChange(title) },
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) primaryColor else Color.Transparent,
-                            border = if (!isSelected) androidx.compose.foundation.BorderStroke(1.dp, dividerColor) else null,
-                            modifier = Modifier.height(32.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp)) {
-                                Text(text = title, style = MaterialTheme.typography.labelMedium, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else textColor)
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider(color = dividerColor)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                CommonRowGrade(iconRes = R.drawable.ic_calendar, iconTint = iconTint) {
-                    Box(modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }.padding(vertical = 12.dp)) {
-                        Text(text = formatDateLong(uiState.date), style = MaterialTheme.typography.bodyLarge, color = textColor)
-                    }
-                }
-                HorizontalDivider(color = dividerColor)
-
-                CommonRowGrade(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
-                    Row(modifier = Modifier.fillMaxWidth().clickable { showSubjectModal = true }.padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = uiState.subjectName ?: "Wybierz przedmiot", style = MaterialTheme.typography.bodyLarge, color = if (uiState.subjectName == null) subTextColor else textColor)
-                        Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
-                    }
-                }
-                HorizontalDivider(color = dividerColor)
-
-                CommonRowGrade(iconRes = R.drawable.ic_graduation_hat, iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(alpha = 0.4f)) {
-                    Row(modifier = Modifier.fillMaxWidth().clickable(enabled = isTypeSelectionEnabled) { showTypeModal = true }.padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć", style = MaterialTheme.typography.bodyLarge, color = if (!isTypeSelectionEnabled) subTextColor.copy(alpha = 0.4f) else if (uiState.classType == null) subTextColor else textColor)
-                        Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))
-                    }
-                }
-                HorizontalDivider(color = dividerColor)
-
-                // --- SEKCJA WARTOŚCI OCENY ---
-                CommonRowGrade(iconRes = R.drawable.ic_trophy, iconTint = iconTint) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showGradeModal = true }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val gradeText = when (uiState.gradeType) {
-                            GradeType.STANDARD -> uiState.gradeValue?.let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() } ?: "Wybierz ocenę"
-                            GradeType.ACTIVITY -> "Aktywność +"
-                            GradeType.POINTS -> if (uiState.customGradeValue.isNotEmpty()) "${uiState.customGradeValue} pkt" else "Punkty (wpisz)"
-                            else -> "Wybierz ocenę"
-                        }
-
-                        // Kolorowanie tekstu (wyszarzony jeśli brak wyboru)
-                        val isPlaceholder = (uiState.gradeValue == null && uiState.gradeType == GradeType.STANDARD) ||
-                                (uiState.gradeType == GradeType.POINTS && uiState.customGradeValue.isEmpty())
-
-                        Text(
-                            text = gradeText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (isPlaceholder) subTextColor else textColor
-                        )
-                        Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
-                    }
-                }
-                HorizontalDivider(color = dividerColor)
-
-                // --- WAGA (Zawsze widoczna, ale nieaktywna dla punktów/aktywności) ---
-                CommonRowGrade(iconRes = R.drawable.ic_scales, iconTint = iconTint) {
-                    val isWeightEnabled = uiState.gradeType == GradeType.STANDARD
-                    OutlinedTextField(
-                        value = uiState.weight,
-                        onValueChange = onWeightChange,
-                        label = { Text("Waga") },
-                        enabled = isWeightEnabled,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = textColor,
-                            unfocusedTextColor = textColor,
-                            disabledTextColor = textColor.copy(alpha = 0.5f),
-                            disabledLabelColor = subTextColor.copy(alpha = 0.5f),
-                            disabledBorderColor = dividerColor.copy(alpha = 0.5f)
-                        ),
-                        modifier = Modifier.fillMaxWidth()
+                FormRow(iconRes = R.drawable.ic_info_circle, onClick = { showTypeModal = true }) {
+                    Text(
+                        text = gradeTypeLabel(uiState.gradeType),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                HorizontalDivider(color = dividerColor)
 
-                CommonRowGrade(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
-                    Box(modifier = Modifier.padding(vertical = 12.dp)) {
+                FormRow(iconRes = R.drawable.ic_menu) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        if (uiState.description.isEmpty()) {
+                            Text(text = "Tytuł / Opis (np. Kolokwium)", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         BasicTextField(
-                            value = uiState.comment,
-                            onValueChange = onCommentChange,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
-                            cursorBrush = SolidColor(primaryColor),
-                            decorationBox = { innerTextField ->
-                                if (uiState.comment.isEmpty()) Text(text = "Dodaj opis", style = MaterialTheme.typography.bodyLarge.copy(color = subTextColor))
-                                innerTextField()
-                            },
+                            value = uiState.description,
+                            onValueChange = viewModel::updateDescription,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
-                HorizontalDivider(color = dividerColor)
-                Spacer(modifier = Modifier.height(100.dp))
-            }
-        }
 
-        // --- MODALE ---
-
-        if (showDatePicker) {
-            DatePicker(
-                date = uiState.date,
-                onDateSelected = { millis -> onDateChange(millis); showDatePicker = false },
-                onDismiss = { showDatePicker = false }
-            )
-        }
-
-        if (showSubjectModal) {
-            Dialog(onDismissRequest = { showSubjectModal = false }) {
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) {
-                    LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item { Text(text = "Wybierz przedmiot", style = MaterialTheme.typography.titleLarge, color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
-                        items(uiState.availableSubjects) { (subject, _) ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSubjectChange(subject); onClassTypeChange(null); showSubjectModal = false }
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = uiState.subjectName == subject, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(subject, style = MaterialTheme.typography.bodyLarge, color = textColor)
-                            }
+                FormRow(iconRes = R.drawable.ic_scales) {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        if (uiState.weight.isEmpty()) {
+                            Text(text = "Waga (opcjonalnie)", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        BasicTextField(
+                            value = uiState.weight,
+                            onValueChange = viewModel::updateWeight,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
         }
 
         if (showTypeModal) {
-            val selectedSubject = uiState.availableSubjects.find { it.first == uiState.subjectName }
-            val availableTypes = selectedSubject?.second ?: emptyList()
-            Dialog(onDismissRequest = { showTypeModal = false }) {
-                Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item { Text(text = "Wybierz rodzaj zajęć", style = MaterialTheme.typography.titleLarge, color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
-                        items(availableTypes) { type ->
+            AlertDialog(
+                onDismissRequest = { showTypeModal = false },
+                title = { Text("Wybierz typ", style = MaterialTheme.typography.titleLarge) },
+                text = {
+                    Column {
+                        val availableTypes = listOf(GradeType.STANDARD, GradeType.CUSTOM, GradeType.POINTS)
+                        availableTypes.forEach { type ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { onClassTypeChange(type); showTypeModal = false }
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                    .clickable { viewModel.updateGradeType(type); showTypeModal = false }
+                                    .padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                RadioButton(selected = uiState.classType == type, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(ClassTypeUtils.getFullName(type), style = MaterialTheme.typography.bodyLarge, color = textColor)
+                                RadioButton(selected = uiState.gradeType == type, onClick = null)
+                                Spacer(Modifier.width(12.dp))
+                                Text(gradeTypeLabel(type), style = MaterialTheme.typography.bodyLarge)
                             }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.updateGradeType(GradeType.ACTIVITY)
+                                    viewModel.updateCustomGradeValue("+")
+                                    viewModel.updateDescription("Aktywność")
+                                    showTypeModal = false
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = uiState.gradeType == GradeType.ACTIVITY, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text("Aktywność +", style = MaterialTheme.typography.bodyLarge)
                         }
                     }
-                }
-            }
-        }
-
-        if (showGradeModal) {
-            Dialog(onDismissRequest = { showGradeModal = false }) {
-                Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    // Używamy Column zamiast LazyColumn wewnątrz dialogu dla lepszej kontroli nad widocznością inputu,
-                    // ale LazyColumn też jest OK. Tutaj dla uproszczenia lista itemów.
-                    LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item { Text(text = "Wybierz ocenę", style = MaterialTheme.typography.titleLarge, color = textColor, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) }
-
-                        // Standardowe oceny
-                        items(standardGrades) { grade ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable { onGradeTypeChange(GradeType.STANDARD); onGradeValueChange(grade); showGradeModal = false }.padding(horizontal = 24.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(selected = uiState.gradeValue == grade && uiState.gradeType == GradeType.STANDARD, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(if (grade % 1.0 == 0.0) grade.toInt().toString() else grade.toString(), style = MaterialTheme.typography.bodyLarge, color = textColor)
-                            }
-                        }
-
-                        // Aktywność
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().clickable {
-                                    onGradeTypeChange(GradeType.ACTIVITY)
-                                    onCustomGradeChange("+")
-                                    onDescriptionChange("Aktywność")
-                                    showGradeModal = false
-                                }.padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = uiState.gradeType == GradeType.ACTIVITY, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text("Aktywność +", style = MaterialTheme.typography.bodyLarge, color = textColor)
-                            }
-                        }
-
-                        // Punkty + Input (Wewnątrz modala)
-                        item {
-                            Column {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            onGradeTypeChange(GradeType.POINTS)
-                                            // Nie zamykamy modala automatycznie, żeby użytkownik mógł wpisać punkty
-                                        }
-                                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(selected = uiState.gradeType == GradeType.POINTS, onClick = null)
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text("Punkty", style = MaterialTheme.typography.bodyLarge, color = textColor)
-                                }
-
-                                // INPUT - Widoczny po wybraniu "Punkty"
-                                if (uiState.gradeType == GradeType.POINTS) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 60.dp, end = 24.dp, bottom = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        OutlinedTextField(
-                                            value = uiState.customGradeValue,
-                                            onValueChange = onCustomGradeChange,
-                                            modifier = Modifier.weight(1f),
-                                            placeholder = { Text("0") },
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            singleLine = true,
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                focusedBorderColor = primaryColor,
-                                                unfocusedBorderColor = dividerColor
-                                            )
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Button(
-                                            onClick = { showGradeModal = false },
-                                            contentPadding = PaddingValues(horizontal = 16.dp)
-                                        ) {
-                                            Text("OK")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CommonRowGrade(
-    iconRes: Int,
-    iconTint: Color,
-    content: @Composable BoxScope.() -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(24.dp)
+                },
+                confirmButton = { TextButton(onClick = { showTypeModal = false }) { Text("Anuluj") } }
             )
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Box(modifier = Modifier.weight(1f)) {
-            content()
-        }
     }
 }
 
-private fun formatDateLong(millis: Long): String {
-    val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
-    val formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale("pl"))
-    return date.format(formatter).replaceFirstChar { it.titlecase(Locale("pl")) }
+private fun gradeTypeLabel(type: GradeType): String = when (type) {
+    GradeType.STANDARD -> "Ocena"
+    GradeType.CUSTOM -> "Ocena niestandardowa"
+    GradeType.POINTS -> "Punkty"
+    GradeType.ACTIVITY -> "Aktywność +"
+}
+
+private fun formatGradeValue(value: Double?): String {
+    if (value == null) return ""
+    return if (value % 1.0 == 0.0) value.roundToInt().toString() else value.toString()
 }

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -14,25 +13,27 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.DatePicker
+import com.example.my_uz_android.ui.screens.calendar.tasks.FormRow
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditAbsenceScreen(
     absenceId: Int?,
@@ -50,7 +51,6 @@ fun AddEditAbsenceScreen(
     LaunchedEffect(isSaved) {
         if (isSaved) {
             Toast.makeText(context, "Operacja zakończona pomyślnie", Toast.LENGTH_SHORT).show()
-            // Nawigacja powrotna (obsłużona w AppNavigation, by trafić do tab=1)
             onNavigateBack()
         }
     }
@@ -61,341 +61,170 @@ fun AddEditAbsenceScreen(
         } else {
             if (uiState.id == 0 && uiState.subjectName == null) {
                 viewModel.initNewAbsence(prefilledSubject, prefilledClassType)
-                if (prefilledDate != null) {
-                    viewModel.updateDate(prefilledDate)
-                }
+                if (prefilledDate != null) viewModel.updateDate(prefilledDate)
             }
         }
     }
 
-    AddEditAbsenceContent(
-        uiState = uiState,
-        onNavigateBack = onNavigateBack,
-        onSaveAbsence = viewModel::saveAbsence,
-        onSubjectChange = viewModel::updateSubjectName,
-        onClassTypeChange = viewModel::updateClassType,
-        onDescriptionChange = viewModel::updateDescription,
-        onDateChange = viewModel::updateDate,
-        modifier = modifier
-    )
+    Dialog(
+        onDismissRequest = onNavigateBack,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.surface,
+            topBar = {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .height(64.dp)
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(painterResource(R.drawable.ic_x_close), "Zamknij")
+                    }
+                    Button(
+                        onClick = { viewModel.saveAbsence() },
+                        enabled = !uiState.subjectName.isNullOrBlank(),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text(stringResource(R.string.btn_save))
+                    }
+                }
+            }
+        ) { paddingValues ->
+            AddEditAbsenceContent(
+                uiState = uiState,
+                onSubjectChange = viewModel::updateSubjectName,
+                onClassTypeChange = viewModel::updateClassType,
+                onDescriptionChange = viewModel::updateDescription,
+                onDateChange = viewModel::updateDate,
+                modifier = Modifier.padding(paddingValues)
+            )
+        }
+    }
 }
 
 @Composable
 fun AddEditAbsenceContent(
     uiState: AddEditAbsenceUiState,
-    onNavigateBack: () -> Unit,
-    onSaveAbsence: () -> Unit,
     onSubjectChange: (String?) -> Unit,
     onClassTypeChange: (String?) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onDateChange: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val dividerColor = MaterialTheme.colorScheme.outlineVariant
-    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-    val primaryColor = MaterialTheme.colorScheme.primary
-
     var showSubjectModal by remember { mutableStateOf(false) }
     var showTypeModal by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    val isFormValid = !uiState.subjectName.isNullOrBlank()
     val isTypeSelectionEnabled = !uiState.subjectName.isNullOrBlank()
 
-    Surface(
-        color = surfaceColor,
-        modifier = modifier.fillMaxSize().statusBarsPadding()
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .clickable { onNavigateBack() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = "Zamknij",
-                        tint = textColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Button(
-                    onClick = onSaveAbsence,
-                    enabled = isFormValid,
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = primaryColor,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    contentPadding = PaddingValues(horizontal = 24.dp),
-                    modifier = Modifier.height(40.dp)
-                ) {
-                    Text(
-                        stringResource(R.string.btn_save),
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 8.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Box(modifier = Modifier.size(48.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = if(uiState.id != 0) "Edytuj nieobecność" else "Nowa nieobecność",
-                        style = MaterialTheme.typography.headlineMedium.copy(color = textColor),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = dividerColor)
-
-                AbsenceCommonRow(iconRes = R.drawable.ic_calendar, iconTint = iconTint) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showDatePicker = true }
-                            .padding(vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = formatDateLong(uiState.date),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = textColor
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = dividerColor)
-
-                AbsenceCommonRow(iconRes = R.drawable.ic_book_open, iconTint = iconTint) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showSubjectModal = true }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = uiState.subjectName ?: "Wybierz przedmiot",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (uiState.subjectName == null) subTextColor else textColor
-                        )
-                        Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = subTextColor, modifier = Modifier.size(24.dp))
-                    }
-                }
-
-                HorizontalDivider(color = dividerColor)
-
-                AbsenceCommonRow(
-                    iconRes = R.drawable.ic_graduation_hat,
-                    iconTint = if (isTypeSelectionEnabled) iconTint else iconTint.copy(alpha = 0.4f)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = isTypeSelectionEnabled) { showTypeModal = true }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć (opcjonalne)"
-                        Text(
-                            text = typeText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (!isTypeSelectionEnabled) subTextColor.copy(alpha = 0.4f) else if (uiState.classType == null) subTextColor else textColor
-                        )
-                        Icon(painter = painterResource(R.drawable.ic_chevron_down), contentDescription = null, tint = if (isTypeSelectionEnabled) subTextColor else subTextColor.copy(alpha = 0.4f), modifier = Modifier.size(24.dp))
-                    }
-                }
-
-                HorizontalDivider(color = dividerColor)
-
-                AbsenceCommonRow(iconRes = R.drawable.ic_menu_2, iconTint = iconTint) {
-                    Box(modifier = Modifier.padding(vertical = 12.dp)) {
-                        BasicTextField(
-                            value = uiState.description,
-                            onValueChange = onDescriptionChange,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
-                            cursorBrush = SolidColor(primaryColor),
-                            decorationBox = { innerTextField ->
-                                if (uiState.description.isEmpty()) {
-                                    Text(
-                                        text = "Dodaj opis (opcjonalnie)",
-                                        style = MaterialTheme.typography.bodyLarge.copy(color = subTextColor)
-                                    )
-                                }
-                                innerTextField()
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
-                HorizontalDivider(color = dividerColor)
-                Spacer(modifier = Modifier.height(100.dp))
-            }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 72.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.width(40.dp))
+            Text(
+                text = if(uiState.id != 0) "Edytuj nieobecność" else "Nowa nieobecność",
+                style = TextStyle(fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
+            )
         }
 
-        if (showDatePicker) {
-            DatePicker(
-                date = uiState.date,
-                onDateSelected = { millis ->
-                    onDateChange(millis)
-                    showDatePicker = false
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        FormRow(iconRes = R.drawable.ic_calendar, onClick = { showDatePicker = true }) {
+            val date = Instant.ofEpochMilli(uiState.date).atZone(ZoneId.systemDefault()).toLocalDate()
+            val formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale("pl"))
+            Text(text = date.format(formatter), style = MaterialTheme.typography.bodyLarge)
+        }
+
+        FormRow(iconRes = R.drawable.ic_book_open, onClick = { showSubjectModal = true }) {
+            Text(
+                text = uiState.subjectName ?: "Wybierz przedmiot",
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (uiState.subjectName == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        FormRow(
+            iconRes = R.drawable.ic_graduation_hat,
+            onClick = if (isTypeSelectionEnabled) { { showTypeModal = true } } else null
+        ) {
+            val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć (opcjonalne)"
+            Text(
+                text = typeText,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (!isTypeSelectionEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        FormRow(iconRes = R.drawable.ic_menu_2) {
+            BasicTextField(
+                value = uiState.description,
+                onValueChange = onDescriptionChange,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                decorationBox = { inner ->
+                    if (uiState.description.isEmpty()) Text("Dodaj opis (opcjonalnie)", style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurfaceVariant))
+                    inner()
                 },
-                onDismiss = { showDatePicker = false }
+                modifier = Modifier.fillMaxWidth()
             )
         }
+    }
 
-        if (showSubjectModal) {
-            Dialog(onDismissRequest = { showSubjectModal = false }) {
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) {
-                    LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item {
-                            Text(
-                                text = "Wybierz przedmiot",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = textColor,
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-                            )
-                        }
-                        items(items = uiState.availableSubjects) { item ->
-                            val subject = item.first
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onSubjectChange(subject)
-                                        onClassTypeChange(null)
-                                        showSubjectModal = false
-                                    }
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = uiState.subjectName == subject, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = subject,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = textColor
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    if (showDatePicker) {
+        DatePicker(
+            date = uiState.date,
+            onDateSelected = { onDateChange(it); showDatePicker = false },
+            onDismiss = { showDatePicker = false }
+        )
+    }
 
-        if (showTypeModal) {
-            val selectedSubject = uiState.availableSubjects.find { it.first == uiState.subjectName }
-            val availableTypes = selectedSubject?.second ?: emptyList()
-            Dialog(onDismissRequest = { showTypeModal = false }) {
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) {
-                    LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                        item {
-                            Text(
-                                text = "Wybierz rodzaj zajęć",
-                                style = MaterialTheme.typography.titleLarge,
-                                color = textColor,
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
-                            )
-                        }
-                        if (availableTypes.isEmpty()) {
-                            item {
-                                Text(
-                                    text = "Brak typów zajęć",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = subTextColor,
-                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-                                )
-                            }
-                        }
-                        items(items = availableTypes) { type ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onClassTypeChange(type)
-                                        showTypeModal = false
-                                    }
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = uiState.classType == type, onClick = null)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = ClassTypeUtils.getFullName(type),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = textColor
-                                )
-                            }
+    if (showSubjectModal) {
+        Dialog(onDismissRequest = { showSubjectModal = false }) {
+            Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
+                    item { Text("Wybierz przedmiot", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(24.dp)) }
+                    items(uiState.availableSubjects) { (subject, _) ->
+                        Row(modifier = Modifier.fillMaxWidth().clickable { onSubjectChange(subject); onClassTypeChange(null); showSubjectModal = false }.padding(horizontal = 24.dp, vertical = 12.dp)) {
+                            RadioButton(selected = uiState.subjectName == subject, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text(subject)
                         }
                     }
                 }
             }
         }
     }
-}
 
-@Composable
-private fun AbsenceCommonRow(iconRes: Int, iconTint: Color, content: @Composable BoxScope.() -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Box(modifier = Modifier.weight(1f)) {
-            content()
+    if (showTypeModal) {
+        val availableTypes = uiState.availableSubjects.find { it.first == uiState.subjectName }?.second ?: emptyList()
+        Dialog(onDismissRequest = { showTypeModal = false }) {
+            Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
+                    item { Text("Wybierz rodzaj", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(24.dp)) }
+                    items(availableTypes) { type ->
+                        Row(modifier = Modifier.fillMaxWidth().clickable { onClassTypeChange(type); showTypeModal = false }.padding(horizontal = 24.dp, vertical = 12.dp)) {
+                            RadioButton(selected = uiState.classType == type, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text(ClassTypeUtils.getFullName(type))
+                        }
+                    }
+                }
+            }
         }
     }
-}
-
-private fun formatDateLong(millis: Long): String {
-    val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
-    val formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale("pl"))
-    return date.format(formatter).replaceFirstChar { it.titlecase(Locale("pl")) }
 }

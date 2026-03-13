@@ -3,7 +3,7 @@ package com.example.my_uz_android.ui.screens.onboarding
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background // Dodano brakujący import
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -37,7 +37,6 @@ private fun getIllustrationResId(currentPage: Int): Int = when (currentPage) {
     2 -> R.drawable.settings_rafiki
     3 -> R.drawable.calendar_rafiki
     4 -> R.drawable.grades_rafiki
-    5 -> R.drawable.paper_map_rafiki
     else -> R.drawable.ic_user
 }
 
@@ -53,7 +52,8 @@ fun LandingScreen(
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val selectedGender by viewModel.selectedGender.collectAsState()
     val userName by viewModel.userName.collectAsState()
-    val totalPages = viewModel.totalPages
+    // Teraz mamy tylko 5 stron (0 do 4)
+    val totalPages = 5
     val isLoading by viewModel.isLoading.collectAsState()
 
     val imeInsets = WindowInsets.ime
@@ -74,8 +74,8 @@ fun LandingScreen(
                         .statusBarsPadding(),
                     contentAlignment = Alignment.TopEnd
                 ) {
-                    // Przycisk Pomiń (tylko na stronach < 5)
-                    if (currentPage < 5) {
+                    // Przycisk Pomiń (tylko na stronach < 4)
+                    if (currentPage < 4) {
                         TextButton(
                             onClick = {
                                 viewModel.skipOnboarding { onFinishOnboarding() }
@@ -126,7 +126,7 @@ fun LandingScreen(
                                         )
                                     }
                                 }
-                                5 -> {
+                                4 -> { // Ostatnia strona to teraz 4 (Oceny)
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -222,7 +222,6 @@ fun LandingScreen(
                         2 -> GroupSelectionStepContent(viewModel)
                         3 -> CalendarFeatureStepContent()
                         4 -> GradesFeatureStepContent()
-                        5 -> MapFeatureStepContent()
                     }
                 }
             }
@@ -238,7 +237,7 @@ fun WelcomeStepContent() {
         OnboardingTexts(
             title = "Witaj w MyUZ! 👋",
             subtitle = "Twój cyfrowy asystent",
-            description = "Plan zajęć, oceny i mapa kampusu w jednym miejscu."
+            description = "Plan zajęć i oceny w jednym miejscu."
         )
     }
 }
@@ -306,7 +305,6 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
             }
         }
 
-        // Dane osobowe
         AnimatedVisibility(
             visible = selectedGender != null,
             enter = expandVertically() + fadeIn(),
@@ -476,16 +474,10 @@ fun GradesFeatureStepContent() {
 }
 
 @Composable
-fun MapFeatureStepContent() {
-    InfoStepContent(5, "Mapa Kampusu", "Nawigacja", "Znajdź każdą salę i budynek na terenie kampusu.")
-}
-
-@Composable
 fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description: String) {
     val resId = when(pageIndex) {
         3 -> R.drawable.calendar_rafiki
         4 -> R.drawable.grades_rafiki
-        5 -> R.drawable.paper_map_rafiki
         else -> R.drawable.ic_user
     }
     ResponsiveOnboardingStep(illustrationResId = resId) {
@@ -585,7 +577,7 @@ fun PageIndicators(totalPages: Int, currentPage: Int) {
 @Composable
 fun FooterText() {
     Text(
-        text = "MyUZ 2025 v1.0.0",
+        text = "MyUZ 2026 v1.0.0",
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.outline
     )

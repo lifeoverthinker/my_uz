@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,10 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
@@ -42,31 +41,26 @@ fun UniversalFab(
     options: List<FabOption> = emptyList(),
     iconRes: Int = R.drawable.ic_plus
 ) {
-    // --- KOLORY (Dynamicznie z Theme.kt) ---
-    // Główny FAB: PrimaryContainer (Fiolet)
+    // --- KOLORY ---
     val fabContainerColor = MaterialTheme.colorScheme.primaryContainer
     val fabContentColor = MaterialTheme.colorScheme.onPrimaryContainer
 
-    // Menu opcji: SecondaryContainer
     val menuContainerColor = MaterialTheme.colorScheme.secondaryContainer
     val menuContentColor = MaterialTheme.colorScheme.onSecondaryContainer
-    val menuShape = RoundedCornerShape(16.dp)
 
-    // --- ANIMACJA STANU GŁÓWNEGO FABA ---
+    // --- ANIMACJA ---
     val targetCornerRadius = if (isExpandable && isExpanded) 28.dp else 16.dp
     val currentCornerRadius by animateDpAsState(
         targetValue = targetCornerRadius,
         label = "FabCornerAnimation"
     )
 
-    // Jeśli rozwinięty, zmieniamy lekko kolor na Primary (akcent), jeśli zwinięty - PrimaryContainer
     val targetContainerColor = if (isExpandable && isExpanded) MaterialTheme.colorScheme.primary else fabContainerColor
     val currentContainerColor by animateColorAsState(
         targetValue = targetContainerColor,
         label = "FabContainerColorAnimation"
     )
 
-    // Ikona: Biała na Primary (gdy rozwinięty), onPrimaryContainer (gdy zwinięty)
     val targetContentColor = if (isExpandable && isExpanded) MaterialTheme.colorScheme.onPrimary else fabContentColor
     val currentContentColor by animateColorAsState(
         targetValue = targetContentColor,
@@ -83,45 +77,45 @@ fun UniversalFab(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
     ) {
-        // --- MENU (Rozwijane opcje) ---
+        // --- MENU (Rozwijane opcje z nowoczesnym UI) ---
         AnimatedVisibility(
             visible = isExpandable && isExpanded,
             enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
             exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp), // Zwiększony odstęp dla czytelności
-                horizontalAlignment = Alignment.End
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.padding(bottom = 16.dp)
             ) {
                 options.forEach { option ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(end = 4.dp) // Lekki margines od prawej
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(end = 4.dp)
                     ) {
-                        // Etykieta w Surface (dla widoczności w Dark Mode)
+                        // Etykieta typu Glassmorphism (półprzezroczyste tło, bez cienia)
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh, // Wysoki kontrast tła
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                             contentColor = MaterialTheme.colorScheme.onSurface,
-                            tonalElevation = 2.dp,
-                            shadowElevation = 2.dp
+                            shadowElevation = 0.dp // Płaskie, nowoczesne
                         ) {
                             Text(
                                 text = option.label,
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     fontFamily = InterFontFamily,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.SemiBold
                                 ),
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                             )
                         }
 
-                        // Mały przycisk FAB dla opcji
+                        // Okrągły mini-FAB
                         Box(
                             modifier = Modifier
-                                .size(48.dp) // Standardowy rozmiar Small FAB
-                                .clip(menuShape)
+                                .size(48.dp)
+                                .clip(CircleShape) // Idealne koło zamiast zaokrąglonego kwadratu
                                 .background(menuContainerColor)
                                 .clickable { option.onClick() },
                             contentAlignment = Alignment.Center
@@ -142,12 +136,12 @@ fun UniversalFab(
         Surface(
             shape = RoundedCornerShape(currentCornerRadius),
             color = currentContainerColor,
-            shadowElevation = 4.dp, // Dodajemy cień dla głębi
+            shadowElevation = 4.dp,
             modifier = Modifier
                 .size(56.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = null, // Własna animacja koloru wyżej
+                    indication = null,
                     onClick = onMainFabClick
                 )
         ) {

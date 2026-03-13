@@ -18,6 +18,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.FabOption
+import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.index.components.IndexTabs
 import com.example.my_uz_android.ui.theme.MyUZTheme
@@ -130,7 +131,8 @@ fun IndexScreen(
     }
 }
 
-// Wydzielony TopBar, by móc używać na nim @Preview bez inicjowania ViewModeli
+// Zaktualizowany IndexTopBar - używa systemowego TopAppBar i podaje ładny tytuł
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IndexTopBar(
     userCourses: List<UserCourseEntity>,
@@ -141,73 +143,79 @@ fun IndexTopBar(
 ) {
     var isFilterExpanded by remember { mutableStateOf(false) }
 
+    // Dynamiczny tytuł: Zwraca nazwę kierunku jeśli wybrano 1, lub napis informacyjny dla innych przypadków
+    val titleText = if (selectedGroupCodes.size == 1) {
+        val selectedCourse = userCourses.find { it.groupCode == selectedGroupCodes.first() }
+        selectedCourse?.fieldOfStudy ?: selectedCourse?.groupCode ?: "Indeks"
+    } else if (selectedGroupCodes.isNotEmpty()) {
+        "Wiele kierunków"
+    } else {
+        "Brak wybranych"
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp)
-            .padding(top = 16.dp, bottom = 8.dp)
+            .padding(bottom = 8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Indeks",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface // Poprawiony kontrast
-            )
-
-            if (userCourses.size > 1) {
-                Box {
-                    IconButton(onClick = { isFilterExpanded = true }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_filter_funnel), // <-- TWOJA IKONA
-                            contentDescription = "Filtruj kierunki",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = isFilterExpanded,
-                        onDismissRequest = { isFilterExpanded = false },
-                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                    ) {
-                        userCourses.forEach { course ->
-                            val isSelected = selectedGroupCodes.contains(course.groupCode)
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = course.fieldOfStudy ?: course.groupCode,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                },
-                                trailingIcon = {
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = "Wybrane",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    onToggleGroupVisibility(course.groupCode)
-                                }
+        TopAppBar(
+            title = titleText,
+            subtitle = "Indeks",
+            navigationIcon = null, // Brak ikony powrotu
+            isCenterAligned = false,
+            actions = {
+                if (userCourses.size > 1) {
+                    Box {
+                        IconButton(onClick = { isFilterExpanded = true }) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_filter_funnel),
+                                contentDescription = "Filtruj kierunki",
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
+                        }
+
+                        DropdownMenu(
+                            expanded = isFilterExpanded,
+                            onDismissRequest = { isFilterExpanded = false },
+                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            userCourses.forEach { course ->
+                                val isSelected = selectedGroupCodes.contains(course.groupCode)
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = course.fieldOfStudy ?: course.groupCode,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    },
+                                    trailingIcon = {
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Wybrane",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        onToggleGroupVisibility(course.groupCode)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-
-        IndexTabs(
-            selectedTabIndex = currentTab,
-            onTabSelected = onTabSelected
         )
+
+        // Zakładki
+        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+            IndexTabs(
+                selectedTabIndex = currentTab,
+                onTabSelected = onTabSelected
+            )
+        }
     }
 }
 

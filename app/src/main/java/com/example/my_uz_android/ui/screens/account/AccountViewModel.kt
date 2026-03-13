@@ -274,7 +274,16 @@ class AccountViewModel(
         val finalField = if (detailsRes is NetworkResult.Success) detailsRes.data?.fieldInfo?.name ?: code else code
         val finalFac = if (detailsRes is NetworkResult.Success) detailsRes.data?.fieldInfo?.faculty ?: "" else ""
         val finalMod = if (detailsRes is NetworkResult.Success) detailsRes.data?.studyMode ?: "" else ""
-        val finalSem = if (detailsRes is NetworkResult.Success) detailsRes.data?.semester ?: 1 else 1
+
+        // POPRAWKA: Mapujemy tekst "semestr letni..." na cyfrę 2, "zimowy" na 1
+        val finalSem = if (detailsRes is NetworkResult.Success) {
+            val semStr = detailsRes.data?.semester?.lowercase() ?: ""
+            when {
+                semStr.contains("letni") -> 2
+                semStr.contains("zimowy") -> 1
+                else -> 1
+            }
+        } else 1
 
         val currentCourses = userCourseRepository.getAllUserCoursesStream().first()
         val courseToUpdate = currentCourses.find { it.groupCode == code }

@@ -19,40 +19,51 @@ class ClassDetailsViewModel(
     private val classRepository: ClassRepository
 ) : ViewModel() {
 
-    // ✅ Pobieranie ID z argumentów nawigacji
     private val classId: Int = checkNotNull(savedStateHandle["classId"])
 
-    val uiState: StateFlow<ClassDetailsUiState> =
-        classRepository.getClassByIdStream(classId)
-            .map { classEntity ->
-                if (classEntity != null) {
-                    ClassDetailsUiState(
-                        classEntity = classEntity,
-                        isLoading = false
-                    )
-                } else {
-                    ClassDetailsUiState(
-                        classEntity = null,
-                        isLoading = false,
-                        error = "Nie znaleziono zajęć"
-                    )
-                }
+    // Używamy MutableStateFlow, żeby móc nadpisać stan, jeśli otrzymamy zajęcia z pamięci tymczasowej
+    private val _uiState = MutableStateFlow(ClassDetailsUiState(isLoading = true))
+    val uiState: StateFlow<ClassDetailsUiState> = _uiState.asStateFlow()
+
+    init {
+        loadClassDetails()
+    }
+
+    private fun loadClassDetails() {
+        if (classId == -1) {
+            // To znaczy, że jesteśmy w trybie podglądu (wyszukiwania).
+            // Dane zostaną wstrzyknięte z zewnątrz przez funkcję setTemporaryClass.
+            _uiState.value = ClassDetailsUiState(isLoading = true)
+        } else {
+            // Normalny tryb z kalendarza - idziemy do bazy SQLite
+            viewModelScope.launch {
+                classRepository.getClassByIdStream(classId)
+                    .catch { e ->
+                        _uiState.value = ClassDetailsUiState(isLoading = false, error = "Błąd bazy: ${e.message}")
+                    }
+                    .collect { classEntity ->
+                        if (classEntity != null) {
+                            _uiState.value = ClassDetailsUiState(classEntity = classEntity, isLoading = false)
+                        } else {
+                            _uiState.value = ClassDetailsUiState(isLoading = false, error = "Nie znaleziono zajęć")
+                        }
+                    }
             }
-            .catch { e ->
-                emit(ClassDetailsUiState(
-                    isLoading = false,
-                    error = "Błąd: ${e.message}"
-                ))
-            }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = ClassDetailsUiState(isLoading = true)
-            )
+        }
+    }
+
+    // Nowa funkcja - pozwala "wstrzyknąć" zajęcia bez szukania ich w bazie
+    fun setTemporaryClass(classEntity: ClassEntity?) {
+        if (classEntity != null) {
+            _uiState.value = ClassDetailsUiState(classEntity = classEntity, isLoading = false)
+        } else {
+            _uiState.value = ClassDetailsUiState(isLoading = false, error = "Błąd pobierania podglądu")
+        }
+    }
 
     fun deleteClass() {
         viewModelScope.launch {
-            uiState.value.classEntity?.let {
+            _uiState.value.classEntity?.let {
                 classRepository.deleteClass(it)
             }
         }

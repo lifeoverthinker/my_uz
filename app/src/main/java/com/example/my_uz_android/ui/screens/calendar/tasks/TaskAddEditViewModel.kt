@@ -105,10 +105,45 @@ class TaskAddEditViewModel(
     fun updateClassSubject(v: String?) = _uiState.update { it.copy(classSubject = v) }
     fun updateClassType(v: String?) = _uiState.update { it.copy(classType = v) }
     fun updateIsAllDay(v: Boolean) = _uiState.update { it.copy(isAllDay = v) }
-    fun updateStartDate(v: LocalDate) = _uiState.update { it.copy(startDate = v) }
-    fun updateEndDate(v: LocalDate) = _uiState.update { it.copy(endDate = v) }
-    fun updateStartTime(v: LocalTime) = _uiState.update { it.copy(startTime = v) }
-    fun updateEndTime(v: LocalTime) = _uiState.update { it.copy(endTime = v) }
+    fun updateStartDate(v: LocalDate) {
+        _uiState.update { state ->
+            // Jeśli nowa data startowa jest po dacie końcowej, zrównaj datę końcową
+            val newEndDate = if (v.isAfter(state.endDate)) v else state.endDate
+            // Jeśli po zmianie daty są takie same, sprawdź czy godzina startowa nie wyprzedza końcowej
+            val newEndTime = if (v == newEndDate && state.startTime.isAfter(state.endTime)) state.startTime else state.endTime
+
+            state.copy(startDate = v, endDate = newEndDate, endTime = newEndTime)
+        }
+    }
+
+    fun updateEndDate(v: LocalDate) {
+        _uiState.update { state ->
+            // Jeśli nowa data końcowa jest przed datą startową, zrównaj datę startową
+            val newStartDate = if (v.isBefore(state.startDate)) v else state.startDate
+            // Jeśli po zmianie daty są takie same, sprawdź czy godzina końcowa nie jest przed startową
+            val newStartTime = if (newStartDate == v && state.startTime.isAfter(state.endTime)) state.endTime else state.startTime
+
+            state.copy(startDate = newStartDate, endDate = v, startTime = newStartTime)
+        }
+    }
+
+    fun updateStartTime(v: LocalTime) {
+        _uiState.update { state ->
+            // Jeśli to ten sam dzień i nowa godzina startowa wyprzedza końcową, wyrównaj końcową
+            val newEndTime = if (state.startDate == state.endDate && v.isAfter(state.endTime)) v else state.endTime
+
+            state.copy(startTime = v, endTime = newEndTime)
+        }
+    }
+
+    fun updateEndTime(v: LocalTime) {
+        _uiState.update { state ->
+            // Jeśli to ten sam dzień i nowa godzina końcowa jest przed startową, wyrównaj startową
+            val newStartTime = if (state.startDate == state.endDate && v.isBefore(state.startTime)) v else state.startTime
+
+            state.copy(startTime = newStartTime, endTime = v)
+        }
+    }
     fun updateDescription(v: String) = _uiState.update { it.copy(description = v) }
     fun updatePriority(v: Int) = _uiState.update { it.copy(priority = v) }
 

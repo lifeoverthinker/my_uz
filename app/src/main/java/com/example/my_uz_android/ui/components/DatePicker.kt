@@ -1,6 +1,5 @@
 package com.example.my_uz_android.ui.components
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -34,42 +33,40 @@ fun DatePicker(
                     dateState.selectedDateMillis?.let { onDateSelected(it) }
                 }
             ) {
-                Text("OK", style = MaterialTheme.typography.labelLarge)
+                // Używamy pogrubionego labelLarge dla czytelności akcji
+                Text("OK", style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj", style = MaterialTheme.typography.labelLarge)
+                Text("Anuluj", style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.outline))
             }
         },
-        shape = RoundedCornerShape(28.dp),
+        // Korzystamy z systemowych kształtów MD3
+        shape = MaterialTheme.shapes.extraLarge,
         colors = DatePickerDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface // Czyste tło (białe/szare)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        tonalElevation = 0.dp // Kluczowe: usuwa fioletową poświatę (tint)
+        tonalElevation = 0.dp
     ) {
         androidx.compose.material3.DatePicker(
             state = dateState,
+            showModeToggle = false, // Ukrywamy ikonę edycji ręcznej dla czystszego wyglądu "Calendar"
             colors = DatePickerDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surface, // Czyste tło dla kalendarza
-                titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                headlineContentColor = MaterialTheme.colorScheme.onSurface,
-                weekdayContentColor = MaterialTheme.colorScheme.onSurface,
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.secondary, // Mniejszy nacisk na tytuł
+                headlineContentColor = MaterialTheme.colorScheme.onSurface, // Mocny nagłówek z datą
+                weekdayContentColor = MaterialTheme.colorScheme.outline, // Dni tygodnia bardziej subtelne
                 subheadContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 currentYearContentColor = MaterialTheme.colorScheme.primary,
                 selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
                 selectedYearContainerColor = MaterialTheme.colorScheme.primary,
                 dayContentColor = MaterialTheme.colorScheme.onSurface,
-                disabledDayContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                 selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
-                disabledSelectedDayContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.38f),
                 selectedDayContainerColor = MaterialTheme.colorScheme.primary,
-                disabledSelectedDayContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
                 todayContentColor = MaterialTheme.colorScheme.primary,
-                todayDateBorderColor = MaterialTheme.colorScheme.primary,
-                dayInSelectionRangeContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                dayInSelectionRangeContainerColor = MaterialTheme.colorScheme.secondaryContainer
+                todayDateBorderColor = MaterialTheme.colorScheme.primary
             )
         )
     }

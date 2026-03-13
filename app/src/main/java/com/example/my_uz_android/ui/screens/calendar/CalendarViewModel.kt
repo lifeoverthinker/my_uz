@@ -32,7 +32,8 @@ data class CalendarUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val selectedDate: LocalDate = LocalDate.now(ZoneId.of("Europe/Warsaw")),
-    val isMonthView: Boolean = false
+    val isMonthView: Boolean = false,
+    val temporaryClassForDetails: ClassEntity? = null
 )
 
 class CalendarViewModel(
@@ -51,11 +52,9 @@ class CalendarViewModel(
     private val _currentSource = MutableStateFlow<ScheduleSource>(ScheduleSource.MyPlan)
     private val _selectedDate = MutableStateFlow(LocalDate.now(ZoneId.of("Europe/Warsaw")))
     private val _isMonthView = MutableStateFlow(false)
-
-    // NOWE: Stan ładowania danych z sieci (Supabase)
     private val _isLoadingNetwork = MutableStateFlow(false)
+    private val _temporaryClassForDetails = MutableStateFlow<ClassEntity?>(null)
 
-    @Suppress("UNCHECKED_CAST")
     val uiState: StateFlow<CalendarUiState> = combine(
         userCourseRepository.getAllUserCoursesStream(),
         classRepository.getAllClassesStream(),
@@ -66,8 +65,9 @@ class CalendarViewModel(
         _previewState,
         _selectedDate,
         _isMonthView,
-        _isLoadingNetwork, // Dodano 10. argument
-        tasksRepository.getAllTasks()
+        _isLoadingNetwork,
+        tasksRepository.getAllTasks(),
+        _temporaryClassForDetails
     ) { args: Array<Any?> ->
         val courses = args[0] as List<UserCourseEntity>
         val myClasses = args[1] as List<ClassEntity>
@@ -78,15 +78,15 @@ class CalendarViewModel(
         val previewClasses = args[6] as List<ClassEntity>
         val selectedDate = args[7] as LocalDate
         val isMonthView = args[8] as Boolean
-        val isLoadingNet = args[9] as Boolean // Odczyt stanu ładowania
+        val isLoadingNet = args[9] as Boolean
         val tasks = args[10] as List<TaskEntity>
+        val tempClass = args[11] as ClassEntity?
 
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
         val colorMap: Map<String, Int> = try {
             gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
         } catch (_: Exception) { emptyMap() }
 
-        // DZIAŁAJĄCA FUNKCJONALNOŚĆ: Łączenie grup
         val allCoursesForUi = mutableListOf<UserCourseEntity>()
         settings?.selectedGroupCode?.let { mainCode ->
             allCoursesForUi.add(
@@ -106,7 +106,6 @@ class CalendarViewModel(
             selectedCodes
         }
 
-        // DZIAŁAJĄCA FUNKCJONALNOŚĆ: Wybór zajęć do wyświetlenia
         val classesToShow = when (source) {
             is ScheduleSource.MyPlan -> myClasses.filter { activeCodes.contains(it.groupCode) }
             else -> previewClasses
@@ -132,11 +131,16 @@ class CalendarViewModel(
                 is ScheduleSource.Favorite -> source.name
                 is ScheduleSource.Preview -> source.name
             },
-            isLoading = isLoadingNet, // Przekazanie stanu ładowania do UI
+            isLoading = isLoadingNet,
             selectedDate = selectedDate,
-            isMonthView = isMonthView
+            isMonthView = isMonthView,
+            temporaryClassForDetails = tempClass
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CalendarUiState(isLoading = true))
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        CalendarUiState(isLoading = false) // Start without loading to avoid initial splash
+    )
 
     fun toggleGroupVisibility(groupCode: String) {
         val current = _selectedGroups.value.toMutableSet()
@@ -144,11 +148,9 @@ class CalendarViewModel(
         _selectedGroups.value = current
     }
 
-    fun setTemporaryClassForDetails(classEntity: ClassEntity) {
-        classRepository.setTemporaryClass(classEntity)
+    fun selectMyPlan() {
+        _currentSource.value = ScheduleSource.MyPlan
     }
-
-    fun selectMyPlan() { _currentSource.value = ScheduleSource.MyPlan }
 
     fun toggleFavorite(name: String, type: String) {
         viewModelScope.launch {
@@ -159,16 +161,19 @@ class CalendarViewModel(
     }
 
     fun selectFavoritePlan(favorite: FavoriteEntity) {
+        // Fix: Clear preview data immediately to prevent "stale data" glitch
+        _previewState.value = emptyList()
         _currentSource.value = ScheduleSource.Favorite(favorite.resourceId, favorite.name, favorite.type)
         loadNetworkSchedule(favorite.name, favorite.type)
     }
 
     fun selectPreviewPlan(name: String, type: String) {
+        // Fix: Clear preview data immediately
+        _previewState.value = emptyList()
         _currentSource.value = ScheduleSource.Preview(name, name, type)
         loadNetworkSchedule(name, type)
     }
 
-    // NAPRAWIONE: Teraz funkcja zarządza stanem isLoading, aby UI wiedziało, że pobiera dane
     private fun loadNetworkSchedule(name: String, type: String) {
         viewModelScope.launch {
             _isLoadingNetwork.value = true
@@ -182,6 +187,8 @@ class CalendarViewModel(
                 if (result is NetworkResult.Success) {
                     _previewState.value = result.data ?: emptyList()
                 }
+            } catch (e: Exception) {
+                // Potential error handling here
             } finally {
                 _isLoadingNetwork.value = false
             }
@@ -190,4 +197,8 @@ class CalendarViewModel(
 
     fun setSelectedDate(date: LocalDate) { _selectedDate.value = date }
     fun setMonthView(isMonth: Boolean) { _isMonthView.value = isMonth }
+
+    fun setTemporaryClassForDetails(classEntity: ClassEntity?) {
+        _temporaryClassForDetails.value = classEntity
+    }
 }

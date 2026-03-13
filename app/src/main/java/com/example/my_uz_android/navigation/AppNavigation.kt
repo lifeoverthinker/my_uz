@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,8 +54,9 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val iconR
 
     data object GradeDetails : Screen("grade_details", "Szczegóły oceny", 0)
     data object AddEditGrade : Screen("add_grade", "Dodaj/Edytuj ocenę", 0)
-    data object ClassDetails : Screen("class_details", "Szczegóły zajęć", 0) // <--- DODAJ TĘ LINIJKĘ
+    data object ClassDetails : Screen("class_details", "Szczegóły zajęć", 0)
 }
+
 @Composable
 fun AppNavigation(
     startDestination: String = "landing",
@@ -69,7 +69,6 @@ fun AppNavigation(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // NAPRAWA: Wspólny ViewModel dla całego drzewa Kalendarza i Szuflady Ulubionych (Drawer)
     val sharedCalendarViewModel: CalendarViewModel =
         viewModel(factory = AppViewModelProvider.Factory)
     val calendarUiState by sharedCalendarViewModel.uiState.collectAsState()
@@ -90,7 +89,7 @@ fun AppNavigation(
         drawerContent = {
             ModalDrawerSheet {
                 CalendarDrawerContent(
-                    favorites = calendarUiState.favorites, // Pobieramy rzeczywiste ulubione!
+                    favorites = calendarUiState.favorites,
                     selectedResourceId = calendarUiState.selectedResourceId,
                     currentScreen = currentRoute ?: "",
                     onMyPlanClick = {
@@ -222,7 +221,7 @@ fun AppNavigation(
                         onTaskClick = { taskId -> navController.navigate("task_details/$taskId") },
                         onAccountClick = { navController.navigate(Screen.Account.route) },
                         onCalendarClick = { navController.navigate(Screen.Calendar.route) },
-                        onNotificationsClick = { navController.navigate("notifications") }, // PODPIĘCIE EKRANU
+                        onNotificationsClick = { navController.navigate("notifications") },
                         onAddGradeClick = { navController.navigate("add_grade") },
                         onAddAbsenceClick = { navController.navigate("add_absence") },
                         onAddTaskClick = { navController.navigate("add_task") }
@@ -237,14 +236,14 @@ fun AppNavigation(
                         onAccountClick = { navController.navigate(Screen.Account.route) },
                         onClassClick = { classEntity -> navController.navigate("class_details/${classEntity.id}") },
                         onShowPreview = { navController.navigate("schedule_preview") },
-                        viewModel = sharedCalendarViewModel // Podmiana na instancję ze wspólnego Scopa
+                        viewModel = sharedCalendarViewModel
                     )
                 }
 
                 composable("schedule_preview") {
                     SchedulePreviewScreen(
                         navController = navController,
-                        viewModel = sharedCalendarViewModel, // Podmiana
+                        viewModel = sharedCalendarViewModel,
                         onClassClick = { classEntity ->
                             sharedCalendarViewModel.setTemporaryClassForDetails(classEntity)
                             navController.navigate("class_details/-1")
@@ -258,7 +257,7 @@ fun AppNavigation(
                     ScheduleSearchScreen(
                         navController = navController,
                         searchViewModel = searchViewModel,
-                        calendarViewModel = sharedCalendarViewModel // Podmiana
+                        calendarViewModel = sharedCalendarViewModel
                     )
                 }
 
@@ -328,16 +327,19 @@ fun AppNavigation(
                     )
                 ) { backStackEntry ->
                     val isTeacherPlan = backStackEntry.arguments?.getBoolean("isTeacherPlan") ?: false
+                    val classId = backStackEntry.arguments?.getInt("classId") ?: 0
 
                     ClassDetailsScreen(
+                        classId = classId,
                         onBackClick = { navController.popBackStack() },
-                        isTeacherPlan = isTeacherPlan
+                        isTeacherPlan = isTeacherPlan,
+                        sharedCalendarViewModel = sharedCalendarViewModel
                     )
                 }
 
-                composable (
-                        "event_details/{eventId}",
-                arguments = listOf(navArgument("eventId") { type = NavType.IntType })
+                composable(
+                    "event_details/{eventId}",
+                    arguments = listOf(navArgument("eventId") { type = NavType.IntType })
                 ) { EventDetailsScreen(onBackClick = { navController.popBackStack() }) }
 
                 composable(
@@ -398,24 +400,23 @@ fun AppNavigation(
                         navArgument("description") { type = NavType.StringType; nullable = true },
                         navArgument("comment") { type = NavType.StringType; nullable = true }
                     )
-                ) { backStackEntry ->
+                ) { _ ->
                     AddEditGradeScreen(
-                        gradeId = backStackEntry.arguments?.getInt("gradeId"),
-                        prefilledSubject = backStackEntry.arguments?.getString("subject"),
-                        prefilledClassType = backStackEntry.arguments?.getString("classType"),
-                        onNavigateBack = { navController.popBackStack() }
+                        onDismiss = { navController.popBackStack() }
                     )
                 }
 
                 composable(
                     route = "absence_details/{absenceId}",
                     arguments = listOf(navArgument("absenceId") { type = NavType.IntType })
-                ) {
+                ) { backStackEntry ->
+                    val absenceId = backStackEntry.arguments?.getInt("absenceId") ?: 0
                     AbsenceDetailsScreen(
+                        absenceId = absenceId,
                         onNavigateBack = { navController.popBackStack() },
-                        onEdit = { id -> navController.navigate("edit_absence/$id") },
-                        onDuplicateAbsence = { subject, type, date ->
-                            navController.navigate("add_absence?subject=$subject&classType=$type&date=$date")
+                        onEditAbsence = { id -> navController.navigate("edit_absence/$id") },
+                        onDuplicateClick = { subject, type ->
+                            navController.navigate("add_absence?subject=$subject&classType=$type")
                         }
                     )
                 }
@@ -423,12 +424,14 @@ fun AppNavigation(
                 composable(
                     route = Screen.GradeDetails.route + "/{gradeId}",
                     arguments = listOf(navArgument("gradeId") { type = NavType.IntType })
-                ) {
+                ) { backStackEntry ->
+                    val gradeId = backStackEntry.arguments?.getInt("gradeId") ?: 0
                     GradeDetailsScreen(
+                        gradeId = gradeId,
                         onNavigateBack = { navController.popBackStack() },
-                        onEdit = { id -> navController.navigate("edit_grade/$id") },
-                        onDuplicateGrade = { subject, classType, grade, weight, desc, comment ->
-                            navController.navigate("add_grade?gradeId=0&subject=$subject&classType=$classType&gradeValue=$grade&weight=$weight&description=$desc&comment=$comment")
+                        onEditGrade = { id -> navController.navigate("edit_grade/$id") },
+                        onDuplicateClick = {
+                            navController.navigate("add_grade")
                         }
                     )
                 }
@@ -445,12 +448,9 @@ fun AppNavigation(
                 composable(
                     route = "edit_grade/{gradeId}",
                     arguments = listOf(navArgument("gradeId") { type = NavType.IntType })
-                ) { backStackEntry ->
+                ) { _ ->
                     AddEditGradeScreen(
-                        gradeId = backStackEntry.arguments?.getInt("gradeId"),
-                        prefilledSubject = null,
-                        prefilledClassType = null,
-                        onNavigateBack = { navController.popBackStack() }
+                        onDismiss = { navController.popBackStack() }
                     )
                 }
 
@@ -468,9 +468,7 @@ fun AppNavigation(
                         onAddGradeClick = {
                             navController.navigate(
                                 "add_grade?subject=${
-                                    backStackEntry.arguments?.getString(
-                                        "subjectName"
-                                    )
+                                    backStackEntry.arguments?.getString("subjectName")
                                 }&classType=${backStackEntry.arguments?.getString("classType")}"
                             )
                         }
@@ -478,19 +476,16 @@ fun AppNavigation(
                 }
 
                 composable(
-                    route = "add_absence?subject={subject}&classType={classType}&date={date}",
+                    route = "add_absence?subject={subject}&classType={classType}",
                     arguments = listOf(
                         navArgument("subject") { type = NavType.StringType; nullable = true },
-                        navArgument("classType") { type = NavType.StringType; nullable = true },
-                        navArgument("date") { type = NavType.LongType; defaultValue = 0L }
+                        navArgument("classType") { type = NavType.StringType; nullable = true }
                     )
                 ) { backStackEntry ->
                     AddEditAbsenceScreen(
                         absenceId = null,
                         prefilledSubject = backStackEntry.arguments?.getString("subject"),
                         prefilledClassType = backStackEntry.arguments?.getString("classType"),
-                        prefilledDate = backStackEntry.arguments?.getLong("date")
-                            .takeIf { it != 0L },
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }

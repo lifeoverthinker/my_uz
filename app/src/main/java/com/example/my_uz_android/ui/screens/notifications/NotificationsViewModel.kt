@@ -11,9 +11,19 @@ class NotificationsViewModel(private val notificationDao: NotificationDao) : Vie
 
     val notifications: Flow<List<NotificationEntity>> = notificationDao.getAllNotifications()
 
+    // Nowy strumień dla licznika Badge
+    val unreadCount: Flow<Int> = notificationDao.getUnreadCount()
+
     fun markAllAsRead() {
         viewModelScope.launch {
             notificationDao.markAllAsRead()
+        }
+    }
+
+    // Funkcja do usuwania pojedynczego powiadomienia
+    fun deleteNotification(notification: NotificationEntity) {
+        viewModelScope.launch {
+            notificationDao.deleteNotification(notification)
         }
     }
 

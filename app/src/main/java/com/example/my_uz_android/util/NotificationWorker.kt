@@ -6,7 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.my_uz_android.data.db.AppDatabase
 import com.example.my_uz_android.data.models.NotificationEntity
-import com.example.my_uz_android.data.models.ClassEntity // Upewnij się, że ten import się zgadza
+import com.example.my_uz_android.data.models.ClassEntity
 import kotlinx.coroutines.flow.first
 import java.time.Duration
 import java.time.LocalDate
@@ -23,20 +23,10 @@ class NotificationWorker(
         val database = AppDatabase.getDatabase(applicationContext)
         val settings = database.settingsDao().getSettings().first() ?: return Result.success()
 
-        // Jeśli powiadomienia są całkowicie wyłączone w ustawieniach, kończymy pracę
         if (!settings.notificationsEnabled) return Result.success()
 
-        // 1. Sprawdzanie zadań
-        if (settings.notificationsTasks) {
-            checkTasks(database)
-        }
-
-        // 2. Sprawdzanie zajęć (15 min przed)
-        if (settings.notificationsClasses) {
-            checkClasses(database)
-        }
-
-        // 3. NOWE: Sprawdzanie zmian w planie względem bazy danych (np. Supabase)
+        if (settings.notificationsTasks) checkTasks(database)
+        if (settings.notificationsClasses) checkClasses(database)
         checkScheduleChanges(database)
 
         return Result.success()
@@ -44,26 +34,22 @@ class NotificationWorker(
 
     private suspend fun checkTasks(database: AppDatabase) {
         val now = LocalTime.now()
-
-        // Wysyłamy powiadomienie tylko raz dziennie w oknie godziny 8:00 - 9:00
         if (now.hour != 8) return
 
         val tasks = database.tasksDao().getAllTasks().first()
         val tomorrow = LocalDate.now().plusDays(1)
 
-        tasks.forEach { task ->
-            if (!task.isCompleted) {
-                val taskDate = Instant.ofEpochMilli(task.dueDate)
-                    .atZone(ZoneId.systemDefault()).toLocalDate()
+        tasks.filter { !it.isCompleted }.forEach { task ->
+            val taskDate = Instant.ofEpochMilli(task.dueDate)
+                .atZone(ZoneId.systemDefault()).toLocalDate()
 
-                if (taskDate == tomorrow) {
-                    NotificationHelper.showNotification(
-                        applicationContext,
-                        "Zadanie na jutro!",
-                        "Zbliża się termin: ${task.title}",
-                        isTask = true
-                    )
-                }
+            if (taskDate == tomorrow) {
+                NotificationHelper.showNotification(
+                    applicationContext,
+                    "Zadanie na jutro!",
+                    "Zbliża się termin: ${task.title}",
+                    isTask = true
+                )
             }
         }
     }
@@ -73,85 +59,149 @@ class NotificationWorker(
         val now = LocalTime.now()
         val todayStr = LocalDate.now().toString()
 
-        classes.forEach { classItem ->
-            if (classItem.date == todayStr) {
-                try {
-                    val startTime = LocalTime.parse(classItem.startTime)
-                    val diff = Duration.between(now, startTime).toMinutes()
+        classes.filter { it.date == todayStr }.forEach { classItem ->
+            try {
+                val startTime = LocalTime.parse(classItem.startTime)
+                val diff = Duration.between(now, startTime).toMinutes()
 
-                    // Jeśli do zajęć zostało od 14 do 16 minut
-                    if (diff in 14..16) {
-                        NotificationHelper.showNotification(
-                            applicationContext,
-                            "Zajęcia za 15 minut",
-                            "${classItem.subjectName} (sala ${classItem.room})",
-                            isTask = false
-                        )
-                    }
-                } catch (e: Exception) {
-                    // Ignorujemy błędy parsowania czasu dla niepoprawnych danych
+                if (diff in 14..16) {
+                    NotificationHelper.showNotification(
+                        applicationContext,
+                        "Zajęcia za 15 minut",
+                        "${classItem.subjectName} (sala ${classItem.room})",
+                        isTask = false
+                    )
                 }
+            } catch (e: Exception) {
+                Log.e("NotificationWorker", "Błąd parsowania czasu: ${e.message}")
             }
         }
     }
 
+    // --- NOWA LOGIKA SPRAWDZANIA ZMIAN ---
+
     private suspend fun checkScheduleChanges(database: AppDatabase) {
         try {
-            val localClasses = database.classDao().getAllClasses().first()
+            val settings = database.settingsDao().getSettings().first() ?: return
+            val groupCode = settings.selectedGroupCode ?: return
+            val subgroups = settings.selectedSubgroup?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
 
-            // TODO: W tym miejscu musisz odpytać Firebase / Supabase o aktualny plan dla grupy usera.
-            // Poniższa zmienna symuluje pobraną z internetu listę zajęć.
-            // Zastąp to właściwym kodem pobierającym dane (np. z Repozytorium lub SupabaseClient)
-            val remoteClasses = emptyList<ClassEntity>()
+            val application = applicationContext as com.example.my_uz_android.MyUZApplication
+            val repository = application.container.universityRepository
+
+            val result = repository.getSchedule(groupCode, subgroups)
+            val remoteClasses = (result as? NetworkResult.Success)?.data ?: return
 
             if (remoteClasses.isEmpty()) return
 
-            val localClassMap = localClasses.associateBy { it.id }
+            val localClasses = database.classDao().getAllClasses().first()
+            val localMap = localClasses.associateBy { it.supabaseId }
+            val remoteMap = remoteClasses.associateBy { it.supabaseId }
 
+            val notificationsToTrigger = mutableListOf<NotificationEntity>()
+
+            // 1. Sprawdzanie NOWYCH i ZMIENIONYCH zajęć
             for (remoteClass in remoteClasses) {
-                val localClass = localClassMap[remoteClass.id]
-                if (localClass != null) {
-                    var isChanged = false
-                    var message = "Zmiana w zajęciach: ${remoteClass.subjectName}.\n"
+                if (remoteClass.supabaseId == null) continue // Pomijamy błędne dane bez ID
 
-                    // Porównanie Sali
-                    if (localClass.room != remoteClass.room) {
-                        message += "Nowa sala: ${remoteClass.room} (poprzednio: ${localClass.room}). "
-                        isChanged = true
-                    }
+                val localClass = localMap[remoteClass.supabaseId]
 
-                    // Porównanie Godzin
-                    if (localClass.startTime != remoteClass.startTime || localClass.endTime != remoteClass.endTime) {
-                        message += "Nowe godziny: ${remoteClass.startTime}-${remoteClass.endTime}. "
-                        isChanged = true
-                    }
-
-                    if (isChanged) {
-                        // 1. Zapisz powiadomienie do bazy, by pokazać na ekranie powiadomień
-                        database.notificationDao().insertNotification(
-                            NotificationEntity(
-                                title = "Zmiana w planie!",
-                                message = message.trim(),
-                                timestamp = System.currentTimeMillis(),
-                                type = "schedule_change"
-                            )
-                        )
-
-                        // 2. Wyślij Push / Pokaż na pasku
-                        NotificationHelper.showNotification(
-                            applicationContext,
-                            "Zmiana w planie!",
-                            message.trim(),
-                            isTask = false
-                        )
-
-                        // 3. Nadpisz zajęcia w lokalnej bazie, by zaktualizować ekran
-                        database.classDao().insertClass(remoteClass)
-                    }
+                if (localClass == null) {
+                    // Wykryto NOWE zajęcia
+                    handleNewClass(remoteClass, notificationsToTrigger, database)
+                } else {
+                    // Wykryto istniejące zajęcia - sprawdzamy ZMIANY
+                    handleModifiedClass(localClass, remoteClass, notificationsToTrigger, database)
                 }
             }
+
+            // 2. Sprawdzanie ODWOŁANYCH / USUNIĘTYCH zajęć
+            for (localClass in localClasses) {
+                // Sprawdzamy tylko zajęcia pochodzące z Supabase (mają supabaseId)
+                if (localClass.supabaseId != null && !remoteMap.containsKey(localClass.supabaseId)) {
+                    handleCanceledClass(localClass, notificationsToTrigger, database)
+                }
+            }
+
+            // 3. Wysyłanie powiadomień na telefon
+            notificationsToTrigger.forEach { notif ->
+                NotificationHelper.showNotification(
+                    applicationContext,
+                    notif.title,
+                    notif.message,
+                    isTask = false
+                )
+            }
+
         } catch (e: Exception) {
-            Log.e("NotificationWorker", "Błąd podczas sprawdzania zmian w planie: ${e.message}")
+            Log.e("NotificationWorker", "Błąd podczas sprawdzania zmian: ${e.message}")
         }
+    }
+
+    private suspend fun handleNewClass(
+        remoteClass: ClassEntity,
+        notifications: MutableList<NotificationEntity>,
+        database: AppDatabase
+    ) {
+        val msg = "Dodano nowe zajęcia: ${remoteClass.subjectName} (${remoteClass.date} o ${remoteClass.startTime})"
+
+        notifications.add(createNotification("Nowe zajęcia!", msg))
+        database.notificationDao().insertNotification(createNotification("Nowe zajęcia!", msg))
+        database.classDao().insertClass(remoteClass)
+    }
+
+    private suspend fun handleModifiedClass(
+        localClass: ClassEntity,
+        remoteClass: ClassEntity,
+        notifications: MutableList<NotificationEntity>,
+        database: AppDatabase
+    ) {
+        val changes = detectDifferences(localClass, remoteClass)
+
+        if (changes.isNotEmpty()) {
+            val msg = "Zmiana w zajęciach: ${remoteClass.subjectName}.\n$changes"
+
+            notifications.add(createNotification("Zmiana w planie!", msg))
+            database.notificationDao().insertNotification(createNotification("Zmiana w planie!", msg))
+
+            // UWAGA: Musimy zachować lokalne ID, żeby Room zaktualizował ten sam wiersz, zamiast tworzyć duplikat!
+            val updatedClass = remoteClass.copy(id = localClass.id)
+            database.classDao().update(updatedClass)
+        }
+    }
+
+    private suspend fun handleCanceledClass(
+        localClass: ClassEntity,
+        notifications: MutableList<NotificationEntity>,
+        database: AppDatabase
+    ) {
+        val msg = "Odwołano zajęcia: ${localClass.subjectName} w dniu ${localClass.date}"
+
+        notifications.add(createNotification("Zajęcia odwołane!", msg))
+        database.notificationDao().insertNotification(createNotification("Zajęcia odwołane!", msg))
+        database.classDao().delete(localClass)
+    }
+
+    // Funkcja porównująca poszczególne pola
+    private fun detectDifferences(local: ClassEntity, remote: ClassEntity): String {
+        val changes = mutableListOf<String>()
+
+        if (local.room != remote.room) changes.add("Sala: ${remote.room ?: "Brak"} (było: ${local.room ?: "Brak"})")
+        if (local.startTime != remote.startTime || local.endTime != remote.endTime) changes.add("Godziny: ${remote.startTime}-${remote.endTime}")
+        if (local.date != remote.date) changes.add("Data: ${remote.date}")
+        if (local.teacherName != remote.teacherName) changes.add("Prowadzący: ${remote.teacherName ?: "Brak"}")
+        if (local.subjectName != remote.subjectName) changes.add("Przedmiot: ${remote.subjectName}")
+        if (local.classType != remote.classType) changes.add("Typ: ${remote.classType}")
+
+        return changes.joinToString("\n")
+    }
+
+    private fun createNotification(title: String, message: String): NotificationEntity {
+        return NotificationEntity(
+            title = title,
+            message = message.trim(),
+            timestamp = System.currentTimeMillis(),
+            type = "schedule_change"
+        )
     }
 }

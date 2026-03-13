@@ -22,7 +22,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
-// Stała wielkość dla wszystkich okrągłych przycisków w TopBar
+// Stała wielkość dla wszystkich okrągłych przycisków w TopBar wg wytycznych Material Design (48dp Touch Target)
 private val TopBarButtonSize = 48.dp
 private val TopBarIconSize = 24.dp
 
@@ -53,13 +53,12 @@ fun TopAppBar(
         ) {
             if (navigationIcon != null) {
                 if (isNavigationIconFilled) {
-                    Box(
+                    // Używamy natywnego IconButton dla idealnego efektu Ripple
+                    IconButton(
+                        onClick = onNavigationClick,
                         modifier = Modifier
                             .size(TopBarButtonSize)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.extendedColors.buttonBackground)
-                            .clickable(onClick = onNavigationClick),
-                        contentAlignment = Alignment.Center
+                            .background(MaterialTheme.extendedColors.buttonBackground, CircleShape)
                     ) {
                         Icon(
                             painter = painterResource(id = navigationIcon),
@@ -69,10 +68,14 @@ fun TopAppBar(
                         )
                     }
                 } else {
-                    IconButton(onClick = onNavigationClick) {
+                    IconButton(
+                        onClick = onNavigationClick,
+                        modifier = Modifier.size(TopBarButtonSize)
+                    ) {
                         Icon(
                             painter = painterResource(id = navigationIcon),
                             contentDescription = "Nawigacja",
+                            modifier = Modifier.size(TopBarIconSize),
                             tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -146,13 +149,11 @@ fun CalendarTopAppBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
+            IconButton(
+                onClick = onNavigationClick,
                 modifier = Modifier
                     .size(TopBarButtonSize)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.extendedColors.buttonBackground)
-                    .clickable(onClick = onNavigationClick),
-                contentAlignment = Alignment.Center
+                    .background(MaterialTheme.extendedColors.buttonBackground, CircleShape)
             ) {
                 Icon(painterResource(navigationIcon), null, Modifier.size(TopBarIconSize), iconColor)
             }
@@ -237,13 +238,13 @@ fun TopBarActionIcon(
     tint: Color = MaterialTheme.extendedColors.iconText,
     onClick: () -> Unit
 ) {
-    Box(
+    // Naprawa błędu z uciętym ripple'm (cieniem) - teraz korzystamy z systemowego IconButton
+    IconButton(
+        onClick = onClick,
+        enabled = !isLoading,
         modifier = Modifier
             .size(TopBarButtonSize)
-            .clip(CircleShape)
-            .background(MaterialTheme.extendedColors.buttonBackground)
-            .clickable(enabled = !isLoading, onClick = onClick),
-        contentAlignment = Alignment.Center
+            .background(MaterialTheme.extendedColors.buttonBackground, CircleShape)
     ) {
         if (isLoading) {
             CircularProgressIndicator(
@@ -253,8 +254,8 @@ fun TopBarActionIcon(
             )
         } else {
             Icon(
-                painterResource(icon),
-                null,
+                painter = painterResource(icon),
+                contentDescription = null,
                 Modifier.size(TopBarIconSize),
                 tint = tint
             )
@@ -282,7 +283,10 @@ fun PreviewTopAppBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBackClick) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.size(TopBarButtonSize)
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_chevron_left),
                     contentDescription = null,
@@ -340,11 +344,9 @@ fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick:
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(TopBarButtonSize)
-                        .clickable(onClick = onBackClick),
-                    contentAlignment = Alignment.Center
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.size(TopBarButtonSize)
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_chevron_left),

@@ -55,6 +55,7 @@ fun ClassCard(
     accentColor: Color = MaterialTheme.colorScheme.primary,
     showBadge: Boolean = true,
     hasDeadlines: Boolean = false, // <-- DODANO (przekaż true, jeśli w czasie zajęć wypada deadline zadania)
+    isTeacherPlan: Boolean = false,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -76,6 +77,19 @@ fun ClassCard(
     }
 
     val contentAlpha = if (isPast && type == ClassCardType.CALENDAR) 0.6f else 1f
+    val secondaryInfo = if (isTeacherPlan) {
+        buildString {
+            if (classItem.groupCode.isNotBlank()) {
+                append(classItem.groupCode)
+            }
+            if (!classItem.subgroup.isNullOrBlank()) {
+                if (isNotEmpty()) append(" · ")
+                append(classItem.subgroup)
+            }
+        }
+    } else {
+        classItem.teacherName.orEmpty()
+    }
 
     Card(
         shape = RoundedCornerShape(8.dp),
@@ -143,6 +157,34 @@ fun ClassCard(
                     ) {
                         Text(
                             text = classItem.room ?: "",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                color = detailsColor
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                if (type == ClassCardType.CALENDAR && secondaryInfo.isNotBlank()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                id = if (isTeacherPlan) R.drawable.ic_users else R.drawable.ic_user
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = detailsColor
+                        )
+                        Text(
+                            text = secondaryInfo,
                             style = TextStyle(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Normal,

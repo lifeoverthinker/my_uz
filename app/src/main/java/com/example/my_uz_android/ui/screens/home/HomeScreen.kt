@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,11 +37,12 @@ import com.example.my_uz_android.ui.components.UniversalFab
 import com.example.my_uz_android.ui.screens.home.components.UpcomingClasses
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.ui.theme.extendedColors
-
+import com.example.my_uz_android.ui.screens.notifications.NotificationsViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory),
+    notificationsViewModel: NotificationsViewModel = viewModel(factory = AppViewModelProvider.Factory),
     onClassClick: (Int) -> Unit,
     onEventClick: (Int) -> Unit,
     onTaskClick: (Int) -> Unit,
@@ -53,16 +53,13 @@ fun HomeScreen(
     onAddAbsenceClick: () -> Unit = {},
     onAddTaskClick: () -> Unit = {}
 ) {
-    // Użycie collectAsStateWithLifecycle dla lepszej wydajności
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isFabExpanded by remember { mutableStateOf(false) }
 
     MyUZTheme(darkTheme = uiState.isDarkMode) {
         val topSectionBackground = MaterialTheme.extendedColors.homeTopBackground
-        val buttonBgColor = MaterialTheme.extendedColors.homeButtonBackground
         val headerContentColor = MaterialTheme.colorScheme.onSurface
         val subHeaderContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-        val buttonIconColor = MaterialTheme.extendedColors.iconText
 
         val view = LocalView.current
         val isDark = uiState.isDarkMode
@@ -71,7 +68,6 @@ fun HomeScreen(
         val homeStatusBarColor = topSectionBackground
         val homeNavBarColor = MaterialTheme.colorScheme.surface
 
-        // Zarządzanie kolorami systemowymi
         if (!view.isInEditMode) {
             DisposableEffect(isDark) {
                 val window = (view.context as? Activity)?.window
@@ -96,7 +92,6 @@ fun HomeScreen(
         }
 
         if (uiState.isLoading) {
-            // KLUCZOWE: Zapobieganie mryganiu pustego stanu
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -137,12 +132,15 @@ fun HomeScreen(
                         .background(MaterialTheme.colorScheme.surface)
                         .padding(bottom = paddingValues.calculateBottomPadding())
                 ) {
-                    // Tło górnej sekcji (Header)
-                    Box(modifier = Modifier.fillMaxWidth().height(300.dp).background(topSectionBackground))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                            .background(topSectionBackground)
+                    )
 
                     Column(modifier = Modifier.fillMaxSize()) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            // --- HEADER ---
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -158,45 +156,44 @@ fun HomeScreen(
                                     color = headerContentColor
                                 )
 
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    // Przycisk Mapy
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .background(buttonBgColor, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        IconButton(onClick = { /* Mapa */ }) {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_map),
-                                                contentDescription = "Mapa",
-                                                tint = buttonIconColor,
-                                                modifier = Modifier.size(24.dp)
-                                            )
+                                val unreadCount by notificationsViewModel.unreadCount.collectAsState(initial = 0)
+
+                                IconButton(onClick = onNotificationsClick) {
+                                    BadgedBox(
+                                        badge = {
+                                            if (unreadCount > 0) {
+                                                Badge(
+                                                    containerColor = MaterialTheme.colorScheme.error,
+                                                    contentColor = Color.White
+                                                ) {
+                                                    Text(text = unreadCount.toString())
+                                                }
+                                            }
                                         }
-                                    }
-                                    // Przycisk Powiadomień
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .background(buttonBgColor, CircleShape),
-                                        contentAlignment = Alignment.Center
                                     ) {
-                                        IconButton(onClick = onNotificationsClick) {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_mail),
-                                                contentDescription = "Powiadomienia",
-                                                tint = buttonIconColor,
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        }
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_bell),
+                                            contentDescription = "Powiadomienia",
+                                            tint = headerContentColor
+                                        )
                                     }
                                 }
                             }
-
-                            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                                Text(text = uiState.greeting, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold), color = headerContentColor)
-                                Text(text = uiState.departmentInfo, style = MaterialTheme.typography.bodySmall, color = subHeaderContentColor)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = uiState.greeting,
+                                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = headerContentColor
+                                )
+                                Text(
+                                    text = uiState.departmentInfo,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = subHeaderContentColor
+                                )
                             }
                         }
 
@@ -241,7 +238,7 @@ fun HomeScreen(
                                             EmptyStateMessage(
                                                 title = "Wszystko zrobione!",
                                                 message = "Brak nadchodzących zadań. Masz czas dla siebie.",
-                                                imageSize = 0.dp, // Wymusza tryb kompaktowy i ukrywa miejsce na ikonę
+                                                imageSize = 0.dp,
                                                 modifier = Modifier.padding(vertical = 4.dp)
                                             )
                                         } else {
@@ -287,7 +284,6 @@ fun HomeScreen(
                         }
                     }
 
-                    // Nakładka przy rozwiniętym FAB
                     AnimatedVisibility(
                         visible = isFabExpanded,
                         enter = fadeIn(),
