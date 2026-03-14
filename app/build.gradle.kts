@@ -130,4 +130,8 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     debugImplementation("androidx.glance:glance-preview:1.1.0")
     implementation("com.google.firebase:firebase-messaging-ktx:23.4.0")
+    // --- Narzędzia do testów jednostkowych (ViewModel, Flow, Coroutines) ---
+    testImplementation("io.mockk:mockk:1.13.9") // Do tworzenia "atrap" (mocków) bazy danych
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0") // Do testowania kodu asynchronicznego
+    testImplementation("app.cash.turbine:turbine:1.0.0") // Opcjonalnie, super przydatne do testowania Flow
 }
