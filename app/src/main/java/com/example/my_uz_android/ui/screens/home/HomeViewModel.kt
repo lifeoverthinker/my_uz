@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -50,9 +51,9 @@ class HomeViewModel(
 
     val uiState: StateFlow<HomeUiState> = combine(
         settingsRepository.getSettingsStream(),
-        classRepository.getAllClassesStream(),
+        classRepository.getUpcomingClasses(), // Używamy nowej funkcji z repozytorium
         tasksRepository.getAllTasks()
-    ) { settings: SettingsEntity?, classes: List<ClassEntity>, tasks: List<TaskEntity> ->
+    ) { settings: SettingsEntity?, upcomingClasses: List<ClassEntity>, tasks: List<TaskEntity> ->
 
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
@@ -61,6 +62,7 @@ class HomeViewModel(
         val hasGroup = !settings?.selectedGroupCode.isNullOrBlank()
         val gender = settings?.gender // STUDENTKA / STUDENT
 
+        // Przywrócona logika powitania
         val (greeting, initials) = when {
             isAnonymous && !hasGroup -> "Witaj w MyUZ!" to ""
             isAnonymous && hasGroup -> {
@@ -80,36 +82,27 @@ class HomeViewModel(
             }
         }
 
-        // Naprawa departmentInfo - używamy faculty z SettingsEntity
+        // Przywrócona logika wydziału
         val departmentInfo = when {
             !settings?.faculty.isNullOrBlank() -> settings?.faculty!!
             else -> "Uniwersytet Zielonogórski"
         }
 
         val isPlanSelected = hasGroup
-        val todayString = today.toString()
-        val tomorrowString = today.plusDays(1).toString()
 
+        // Uproszczona logika wyboru etykiety dla zajęć
         val (displayedClasses, dayLabel, emptyMessage) = if (isPlanSelected) {
-            val todaysClasses = classes
-                .filter { it.date == todayString }
-                .filter { classItem ->
-                    try {
-                        val endTime = LocalTime.parse(classItem.endTime)
-                        val endDateTime = LocalDateTime.of(today, endTime)
-                        endDateTime.isAfter(now)
-                    } catch (e: Exception) { true }
+            if (upcomingClasses.isNotEmpty()) {
+                val classDateStr = upcomingClasses.first().date
+                val classDate = LocalDate.parse(classDateStr)
+                val label = when (classDate) {
+                    today -> "Dzisiaj"
+                    today.plusDays(1) -> "Jutro"
+                    else -> classDate.format(dateFormatter).replaceFirstChar { it.uppercase() }
                 }
-                .sortedBy { it.startTime }
-
-            val tomorrowsClasses = classes
-                .filter { it.date == tomorrowString }
-                .sortedBy { it.startTime }
-
-            when {
-                todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
-                tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
-                else -> Triple(emptyList(), null, "Brak zajęć w najbliższych dniach")
+                Triple(upcomingClasses, label, null)
+            } else {
+                Triple(emptyList(), null, "Brak zajęć w najbliższych dniach")
             }
         } else {
             Triple(emptyList(), null, "Wybierz plan zajęć w profilu")
@@ -134,7 +127,9 @@ class HomeViewModel(
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
         val classColorMap: Map<String, Int> = try {
             gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-        } catch (e: Exception) { emptyMap() }
+        } catch (e: Exception) {
+            emptyMap()
+        }
 
         HomeUiState(
             greeting = greeting,
@@ -147,7 +142,7 @@ class HomeViewModel(
             classesMessage = emptyMessage,
             classesDayLabel = dayLabel,
             tasksMessage = if (finalTasks.isEmpty()) "Brak zadań" else "Najbliższe zadania",
-            isLoading = false, // Wyłączamy loading dopiero tutaj
+            isLoading = false,
             isPlanSelected = isPlanSelected,
             classColorMap = classColorMap,
             isDarkMode = settings?.isDarkMode ?: false
@@ -155,6 +150,6 @@ class HomeViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = HomeUiState(isLoading = true) // Startujemy z true
+        initialValue = HomeUiState(isLoading = true)
     )
 }

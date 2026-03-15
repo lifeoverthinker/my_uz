@@ -8,6 +8,10 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.map
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 
 class ClassRepository(private val classDao: ClassDao) {
 
@@ -88,5 +92,44 @@ class ClassRepository(private val classDao: ClassDao) {
     suspend fun updateClass(classEntity: ClassEntity) {
         try { classDao.update(classEntity) }
         catch (e: Exception) { Log.e("ClassRepository", "Błąd updateClass", e) }
+    }
+
+    fun getUpcomingClasses(limit: Int = Int.MAX_VALUE): Flow<List<ClassEntity>> {
+        return getAllClassesStream().map { classes ->
+            val now = LocalDateTime.now()
+            val today = now.toLocalDate()
+
+            // 1. Odrzucamy przeszłe zajęcia
+            val upcoming = classes.filter { classItem ->
+                try {
+                    val classDate = LocalDate.parse(classItem.date) // Format: yyyy-MM-dd
+                    if (classDate.isBefore(today)) {
+                        false // Minione dni
+                    } else if (classDate.isEqual(today)) {
+                        val endTime = LocalTime.parse(classItem.endTime)
+                        val endDateTime = LocalDateTime.of(today, endTime)
+                        endDateTime.isAfter(now) // Zwraca true, jeśli zajęcia wciąż trwają lub są przed nami
+                    } else {
+                        true // Przyszłe dni
+                    }
+                } catch (e: Exception) {
+                    false // W razie błędu parsowania ignorujemy wpis
+                }
+            }
+
+            // 2. Szukamy najbliższej daty z dostępnymi zajęciami
+            val nextDate = upcoming.mapNotNull {
+                try { LocalDate.parse(it.date) } catch (e: Exception) { null }
+            }.minOrNull()
+
+            // 3. Zwracamy zajęcia z tego najbliższego dnia (posortowane po czasie)
+            if (nextDate != null) {
+                upcoming.filter { it.date == nextDate.toString() }
+                    .sortedBy { it.startTime }
+                    .take(limit)
+            } else {
+                emptyList()
+            }
+        }
     }
 }

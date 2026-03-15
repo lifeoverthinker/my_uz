@@ -10,8 +10,8 @@ import com.example.my_uz_android.MyUZApplication
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.firstOrNull
+import java.time.LocalDate // <-- Brakujący import dodany
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -25,39 +25,27 @@ class WidgetWorker(
         val classRepository = appContainer.classRepository
         val settingsRepository = appContainer.settingsRepository
 
-        // Pobierz aktualny stan bazy i ustawień
+        // Pobierz ustawienia i NAJBLIŻSZE zajęcia (repozytorium załatwia filtrowanie)
         val settings = settingsRepository.getSettingsStream().firstOrNull()
-        val allClasses = classRepository.getAllClassesStream().firstOrNull() ?: emptyList()
+        val upcomingClasses = classRepository.getUpcomingClasses().firstOrNull() ?: emptyList()
 
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
-        val tomorrow = today.plusDays(1)
-        val todayString = today.toString()
-        val tomorrowString = tomorrow.toString()
 
         val isPlanSelected = !settings?.selectedGroupCode.isNullOrBlank()
 
-        // Logika wyboru dnia (identyczna jak w HomeViewModel)
         val (displayedClasses, dayLabel, emptyMessage) = if (isPlanSelected) {
-            val todaysClasses = allClasses
-                .filter { it.date == todayString }
-                .filter { classItem ->
-                    try {
-                        val endTime = LocalTime.parse(classItem.endTime)
-                        val endDateTime = LocalDateTime.of(today, endTime)
-                        endDateTime.isAfter(now)
-                    } catch (e: Exception) { true }
+            if (upcomingClasses.isNotEmpty()) {
+                val classDateStr = upcomingClasses.first().date
+                val classDate = LocalDate.parse(classDateStr)
+                val label = when (classDate) {
+                    today -> "Dzisiaj"
+                    today.plusDays(1) -> "Jutro"
+                    else -> classDate.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("pl"))).replaceFirstChar { it.uppercase() }
                 }
-                .sortedBy { it.startTime }
-
-            val tomorrowsClasses = allClasses
-                .filter { it.date == tomorrowString }
-                .sortedBy { it.startTime }
-
-            when {
-                todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
-                tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
-                else -> Triple(emptyList(), null, "Brak zajęć w najbliższych dniach")
+                Triple(upcomingClasses, label, null)
+            } else {
+                Triple(emptyList(), null, "Brak zajęć w najbliższych dniach")
             }
         } else {
             Triple(emptyList(), null, "Skonfiguruj grupę w aplikacji")
@@ -72,7 +60,6 @@ class WidgetWorker(
         val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("pl"))
         val dateString = today.format(dateFormatter).replaceFirstChar { it.uppercase() }
 
-        // ✅ USUNIĘTO .take(4) - teraz widget przesyła wszystkie dostępne zajęcia
         val widgetClasses = displayedClasses
 
         val manager = GlanceAppWidgetManager(context)
