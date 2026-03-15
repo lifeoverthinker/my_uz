@@ -4,7 +4,7 @@ import com.example.my_uz_android.data.models.ClassEntity
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class EventOverlapUtilsTest {
+class EventOverlapTest {
 
     // Metoda pomocnicza do szybkiego tworzenia obiektów zajęć na potrzeby testów
     private fun createMockClass(id: Int, startTime: String, endTime: String): ClassEntity {
