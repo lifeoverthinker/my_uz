@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import com.example.my_uz_android.util.BackupManager
 
 enum class BackupDataType(val displayName: String) {
     SETTINGS("Ustawienia aplikacji"),
@@ -43,7 +44,9 @@ data class SettingsUiState(
     val isSaved: Boolean = false
 )
 
+
 class SettingsViewModel(
+    private val backupManager: BackupManager,
     private val settingsRepository: SettingsRepository,
     private val universityRepository: UniversityRepository,
     private val classRepository: ClassRepository,
@@ -143,7 +146,12 @@ class SettingsViewModel(
         val current = _uiState.value.settings ?: return
         val newTheme = if (enabled) ThemeMode.DARK.name else ThemeMode.LIGHT.name
         viewModelScope.launch {
-            settingsRepository.insertOrUpdate(current.copy(isDarkMode = enabled, themeMode = newTheme))
+            settingsRepository.insertOrUpdate(
+                current.copy(
+                    isDarkMode = enabled,
+                    themeMode = newTheme
+                )
+            )
             triggerSaveFeedback()
         }
     }
@@ -172,26 +180,44 @@ class SettingsViewModel(
         }
     }
 
-    suspend fun createBackupJson(selectedTypes: Set<BackupDataType>): String = withContext(Dispatchers.IO) {
-        val backup = BackupData(
-            settings = if (selectedTypes.contains(BackupDataType.SETTINGS)) settingsRepository.getSettingsStream().first() else null,
-            classes = if (selectedTypes.contains(BackupDataType.CLASSES)) classRepository.getAllClassesStream().first() else emptyList(),
-            tasks = if (selectedTypes.contains(BackupDataType.TASKS)) tasksRepository.getAllTasks().first() else emptyList(),
-            grades = if (selectedTypes.contains(BackupDataType.GRADES)) gradesRepository.getAllGradesStream().first() else emptyList(),
-            absences = if (selectedTypes.contains(BackupDataType.ABSENCES)) absenceRepository.getAllAbsencesStream().first() else emptyList(),
-            events = if (selectedTypes.contains(BackupDataType.EVENTS)) eventRepository.getAllEvents().first() else emptyList()
-        )
-        gson.toJson(backup)
-    }
+    suspend fun createBackupJson(selectedTypes: Set<BackupDataType>): String =
+        withContext(Dispatchers.IO) {
+            val backup = BackupData(
+                settings = if (selectedTypes.contains(BackupDataType.SETTINGS)) settingsRepository.getSettingsStream()
+                    .first() else null,
+                classes = if (selectedTypes.contains(BackupDataType.CLASSES)) classRepository.getAllClassesStream()
+                    .first() else emptyList(),
+                tasks = if (selectedTypes.contains(BackupDataType.TASKS)) tasksRepository.getAllTasks()
+                    .first() else emptyList(),
+                grades = if (selectedTypes.contains(BackupDataType.GRADES)) gradesRepository.getAllGradesStream()
+                    .first() else emptyList(),
+                absences = if (selectedTypes.contains(BackupDataType.ABSENCES)) absenceRepository.getAllAbsencesStream()
+                    .first() else emptyList(),
+                events = if (selectedTypes.contains(BackupDataType.EVENTS)) eventRepository.getAllEvents()
+                    .first() else emptyList()
+            )
+            gson.toJson(backup)
+        }
 
     fun previewBackupFile(jsonString: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val data = gson.fromJson(jsonString, BackupData::class.java)
-                _uiState.update { it.copy(backupPreview = data, showImportDialog = true, isLoading = false) }
+                _uiState.update {
+                    it.copy(
+                        backupPreview = data,
+                        showImportDialog = true,
+                        isLoading = false
+                    )
+                }
             } catch (e: Exception) {
-                _uiState.update { it.copy(importMessage = "Błędny format pliku", isLoading = false) }
+                _uiState.update {
+                    it.copy(
+                        importMessage = "Błędny format pliku",
+                        isLoading = false
+                    )
+                }
             }
         }
     }
@@ -221,7 +247,12 @@ class SettingsViewModel(
                     eventRepository.insertEvents(data.events)
                 }
                 withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(isLoading = false, importMessage = "Import zakończony") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            importMessage = "Import zakończony"
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -231,5 +262,36 @@ class SettingsViewModel(
         }
     }
 
-    fun cancelImport() { _uiState.update { it.copy(showImportDialog = false) } }
+    fun cancelImport() {
+        _uiState.update { it.copy(showImportDialog = false) }
+    }
+
+    /**
+     * Eksportuje bazę i zwraca JSON przez callback
+     */
+    fun exportDatabase(onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val json = backupManager.exportData()
+                onResult(json)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    /**
+     * Importuje bazę z podanego JSONa. Informuje o sukcesie lub błędzie.
+     */
+    fun importDatabase(json: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                backupManager.importData(json)
+                onSuccess()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onError(e.localizedMessage ?: "Nieznany błąd podczas importu")
+            }
+        }
+    }
 }

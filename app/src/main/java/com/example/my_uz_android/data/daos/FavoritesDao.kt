@@ -26,4 +26,7 @@ interface FavoritesDao {
     // ✅ FIX: Używamy nazwy kolumny "resource_id"
     @Query("DELETE FROM favorites WHERE resource_id = :resourceId")
     suspend fun deleteByResourceId(resourceId: String)
+
+    @Query("DELETE FROM favorites")
+    suspend fun deleteAll()
 }

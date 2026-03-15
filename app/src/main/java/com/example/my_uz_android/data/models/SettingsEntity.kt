@@ -1,21 +1,20 @@
-// java/com/example/my_uz_android/data/models/SettingsEntity.kt
-
 package com.example.my_uz_android.data.models
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
+@Serializable
 enum class ThemeMode(val displayName: String) {
     LIGHT("Jasny"),
     DARK("Ciemny"),
     SYSTEM("Systemowy")
 }
 
+@Serializable
 @Entity(tableName = "settings")
 data class SettingsEntity(
     @PrimaryKey val id: Int = 1,
-
-    // ... (zachowaj poprzednie pola: userName, firstName, itd.)
     val isAnonymous: Boolean = false,
     val userName: String? = null,
     val firstName: String? = null,
@@ -38,10 +37,9 @@ data class SettingsEntity(
     val offlineModeEnabled: Boolean = false,
     val classColorsJson: String = "{}",
 
-    // Powiadomienia - ROZSZERZONE
     val notificationsEnabled: Boolean = true,
     val notificationsTasks: Boolean = true,
     val notificationsClasses: Boolean = true,
-    val notificationsScheduleChanges: Boolean = true, // NOWE
-    val notificationsExams: Boolean = true           // NOWE
+    val notificationsScheduleChanges: Boolean = true,
+    val notificationsExams: Boolean = true
 )
