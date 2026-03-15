@@ -11,6 +11,7 @@ import com.example.my_uz_android.data.repositories.UserCourseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.example.my_uz_android.util.GradeCalculator
 
 data class ClassTypeState(
     val name: String,
@@ -51,7 +52,6 @@ class GradesViewModel(
         _selectedGroups
     ) { grades, allClasses, courses, settings, selectedGroups ->
 
-        // NAPRAWA: Złączenie głównego kierunku i dodatkowych, aby filtry działały!
         val allCoursesForUi = mutableListOf<UserCourseEntity>()
         settings?.selectedGroupCode?.let { mainCode ->
             allCoursesForUi.add(
@@ -87,48 +87,46 @@ class GradesViewModel(
 
             val types = classTypes.map { typeName ->
                 val typeGrades = subjectGrades.filter { it.classType == typeName }
-                val gradesForTypeAverage = typeGrades.filter { !it.isPoints && it.grade != -1.0 && it.weight > 0 }
-                val typeAverage = if (gradesForTypeAverage.isNotEmpty()) {
-                    val sum = gradesForTypeAverage.sumOf { it.grade * it.weight }
-                    val weightSum = gradesForTypeAverage.sumOf { it.weight }
-                    if (weightSum > 0) sum / weightSum else null
-                } else null
+
+                val rawTypeAverage = GradeCalculator.calculateGPA(typeGrades)
+                val typeAverage = if (rawTypeAverage > 0.0) rawTypeAverage else null
 
                 ClassTypeState(name = typeName, average = typeAverage, grades = typeGrades)
             }
 
-            val gradesForSubjectAverage = subjectGrades.filter { !it.isPoints && it.grade != -1.0 && it.weight > 0 }
-            val subjectAverage = if (gradesForSubjectAverage.isNotEmpty()) {
-                val sum = gradesForSubjectAverage.sumOf { it.grade * it.weight }
-                val weightSum = gradesForSubjectAverage.sumOf { it.weight }
-                if (weightSum > 0) sum / weightSum else null
-            } else null
+            val rawSubjectAverage = GradeCalculator.calculateGPA(subjectGrades)
+            val subjectAverage = if (rawSubjectAverage > 0.0) rawSubjectAverage else null
 
-            SubjectState(code = subjectName.take(3).uppercase(), name = subjectName, average = subjectAverage, types = types)
+            SubjectState(
+                code = subjectName.take(3).uppercase(),
+                name = subjectName,
+                average = subjectAverage,
+                types = types
+            )
         }
 
         val allGradesForAverage = grades.filter {
             subjectsFromSchedule.any { s -> s.first == it.subjectName }
-                    && !it.isPoints && it.grade != -1.0 && it.weight > 0
         }
 
-        val overallAverage = if (allGradesForAverage.isNotEmpty()) {
-            val sum = allGradesForAverage.sumOf { it.grade * it.weight }
-            val weightSum = allGradesForAverage.sumOf { it.weight }
-            if (weightSum > 0) sum / weightSum else null
-        } else null
+        val rawOverallAverage = GradeCalculator.calculateGPA(allGradesForAverage)
+        val overallAverage = if (rawOverallAverage > 0.0) rawOverallAverage else null
 
         GradesUiState(
             subjects = subjects,
             average = overallAverage,
             isLoading = false,
             allGrades = grades,
-            userCourses = allCoursesForUi, // Przekazujemy pełną listę do filtrów
+            userCourses = allCoursesForUi,
             selectedGroupCodes = activeCodes
         )
     }
         .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GradesUiState(isLoading = true))
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            GradesUiState(isLoading = true)
+        )
 
     fun toggleGroupVisibility(groupCode: String) {
         val current = _selectedGroups.value.toMutableSet()
