@@ -9,9 +9,6 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-
-// --- DTO (Kuloodporne, wszystkie pola opcjonalne z domyślnym null) ---
-
 @Serializable
 data class TeacherDetailsDto(
     @SerialName("nazwisko_imie") val name: String? = null,
@@ -21,7 +18,7 @@ data class TeacherDetailsDto(
 
 @Serializable
 data class ClassScheduleDto(
-    @SerialName("uid") val id: String? = null, // UID to tekst (String)
+    @SerialName("uid") val id: String? = null,
     @SerialName("przedmiot") val subjectName: String? = null,
     @SerialName("rodzaj_zajec") val classType: String? = null,
     @SerialName("poczatek") val startDateTime: String? = null,
@@ -35,7 +32,7 @@ data class ClassScheduleDto(
 data class GroupCodeDto(@SerialName("nazwa") val code: String? = null)
 
 @Serializable
-data class GroupIdDto(@SerialName("grupa_id") val id: Int? = null) // ID to liczba (Int)
+data class GroupIdDto(@SerialName("grupa_id") val id: Int? = null)
 
 @Serializable
 data class SubgroupDto(@SerialName("podgrupa") val subgroup: String? = null)
@@ -46,7 +43,7 @@ data class TeacherDto(@SerialName("nazwisko_imie") val name: String? = null)
 @Serializable
 data class GroupDetailsDto(
     @SerialName("tryb") val studyMode: String? = null,
-    @SerialName("semestr") val semester: String? = null, // ZMIANA NA String?
+    @SerialName("semestr") val semester: String? = null,
     @SerialName("kierunki") val fieldInfo: FieldOfStudyDto? = null
 )
 
@@ -91,7 +88,6 @@ class UniversityRepository(private val supabase: Postgrest) {
         }
     }
 
-    // Zwracamy Int?, ponieważ "grupa_id" w bazie jest typem Integer
     private suspend fun getGrupaId(groupName: String): Int? {
         return try {
             val result = supabase.from("grupy").select(columns = Columns.list("grupa_id")) {
@@ -106,13 +102,26 @@ class UniversityRepository(private val supabase: Postgrest) {
 
     suspend fun searchGroups(query: String): NetworkResult<List<String>> {
         return try {
-            val result = supabase.from("grupy").select(columns = Columns.list("nazwa")) {
-                filter { ilike("nazwa", "%$query%") }
-            }.decodeList<GroupCodeDto>().mapNotNull { it.code }.distinct().sorted()
-            NetworkResult.Success(result)
-        } catch (e: Exception) { NetworkResult.Error("Błąd wyszukiwania grup.") }
-    }
+            val result = supabase.from("grupy")
+                .select(columns = Columns.raw("nazwa, kierunki!inner(nazwa)")) {
+                    filter {
+                        or {
+                            ilike("nazwa", "%$query%")
+                            ilike("kierunki.nazwa", "%$query%")
+                        }
+                    }
+                }
+                .decodeList<GroupCodeDto>()
+                .mapNotNull { it.code }
+                .distinct()
+                .sorted()
 
+            NetworkResult.Success(result)
+        } catch (e: Exception) {
+            Log.e("UniversityRepository", "Błąd wyszukiwania grup: ${e.message}", e)
+            NetworkResult.Error("Błąd wyszukiwania grup.")
+        }
+    }
     suspend fun searchTeachers(query: String): NetworkResult<List<String>> {
         return try {
             val result = supabase.from("nauczyciele").select(columns = Columns.list("nazwisko_imie")) {
@@ -147,7 +156,7 @@ class UniversityRepository(private val supabase: Postgrest) {
         return try {
             val grupaId = getGrupaId(groupCode) ?: return NetworkResult.Error("Nie znaleziono grupy.")
             val result = supabase.from("zajecia_grupy").select(columns = Columns.list("podgrupa")) {
-                filter { eq("grupa_id", grupaId) } // Prawidłowe porównanie Int z Int
+                filter { eq("grupa_id", grupaId) }
             }.decodeList<SubgroupDto>()
 
             val safeSubgroups = result.mapNotNull { it.subgroup }
@@ -165,7 +174,7 @@ class UniversityRepository(private val supabase: Postgrest) {
             val grupaId = getGrupaId(groupCode) ?: return NetworkResult.Error("Nie znaleziono grupy.")
 
             val dtoList = supabase.from("zajecia_grupy").select(columns = scheduleColumns) {
-                filter { eq("grupa_id", grupaId) } // Prawidłowe porównanie Int z Int
+                filter { eq("grupa_id", grupaId) }
             }.decodeList<ClassScheduleDto>()
 
             val safeSubgroups = subgroups.map { it.trim() }.filter { it.isNotBlank() }
@@ -290,7 +299,7 @@ class UniversityRepository(private val supabase: Postgrest) {
                 dayOfWeek = startDT.dayOfWeek.value,
                 date = startDT.toLocalDate().toString(),
                 groupCode = groupCode,
-                subgroup = if (isCommon) null else rawSub, // Maskowanie "ALL"
+                subgroup = if (isCommon) null else rawSub,
                 teacherName = dto.teacher ?: "Brak danych",
                 teacherEmail = teacherMap[dto.teacher]?.email,
                 teacherInstitute = teacherMap[dto.teacher]?.institute,

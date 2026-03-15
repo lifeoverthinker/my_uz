@@ -32,7 +32,6 @@ class TasksViewModel(
 
     fun toggleTaskCompletion(task: TaskEntity) {
         viewModelScope.launch {
-            // Zmieniamy na stan przeciwny (!task.isCompleted)
             tasksRepository.updateTask(task.copy(isCompleted = !task.isCompleted))
         }
     }
@@ -47,22 +46,24 @@ class TasksViewModel(
         viewModelScope.launch {
             _isSharing.value = true
             _shareError.value = null
-            Log.d("TasksDebug", "Rozpoczynam udostępnianie...")
             try {
                 val tasks = tasksStream.first()
                 if (tasks.isNotEmpty()) {
-                    val code = tasksRepository.shareTasks(tasks)
-                    _sharedCode.value = code
-                    Log.d("TasksDebug", "Udostępniono kod: $code")
+                    // Obsługa NetworkResult<String>
+                    when (val result = tasksRepository.shareTasks(tasks)) {
+                        is NetworkResult.Success -> {
+                            _sharedCode.value = result.data
+                        }
+                        is NetworkResult.Error -> {
+                            _shareError.value = result.message
+                        }
+                        else -> {}
+                    }
                 } else {
-                    val msg = "Brak zadań do udostępnienia"
-                    _shareError.value = msg
-                    Log.w("TasksDebug", msg)
+                    _shareError.value = "Brak zadań do udostępnienia"
                 }
             } catch (e: Exception) {
-                val msg = "Błąd udostępniania: ${e.message}"
-                _shareError.value = msg
-                Log.e("TasksDebug", msg, e)
+                _shareError.value = "Błąd: ${e.message}"
             } finally {
                 _isSharing.value = false
             }
@@ -74,36 +75,27 @@ class TasksViewModel(
         viewModelScope.launch {
             _isImporting.value = true
             _importStatus.value = null
-            Log.d("TasksDebug", "Rozpoczynam import kodu: $code")
-
             try {
-                val result = tasksRepository.importTasks(code.trim().uppercase())
-                when (result) {
+                // Obsługa NetworkResult<List<TaskEntity>>
+                when (val result = tasksRepository.importTasks(code.trim().uppercase())) {
                     is NetworkResult.Success -> {
                         val count = result.data?.size ?: 0
-                        val msg = "Pomyślnie zaimportowano $count zadań!"
-                        _importStatus.value = msg
-                        Log.d("TasksDebug", msg)
+                        _importStatus.value = "Pomyślnie zaimportowano $count zadań!"
                     }
                     is NetworkResult.Error -> {
                         _importStatus.value = result.message
-                        Log.e("TasksDebug", "Błąd importu (wynik): ${result.message}")
                     }
+                    else -> {}
                 }
             } catch (e: Exception) {
-                val msg = "Błąd importu (wyjątek): ${e.message}"
-                _importStatus.value = msg
-                Log.e("TasksDebug", msg, e)
+                _importStatus.value = "Błąd krytyczny: ${e.message}"
             } finally {
                 _isImporting.value = false
             }
         }
     }
 
-    fun clearSharedCode() {
-        _sharedCode.value = null
-    }
-
+    fun clearSharedCode() = _sharedCode.update { null }
     fun clearError() {
         _shareError.value = null
         _importStatus.value = null

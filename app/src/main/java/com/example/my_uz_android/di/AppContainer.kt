@@ -16,8 +16,8 @@ interface AppContainer {
     val absenceRepository: AbsenceRepository
     val eventRepository: EventRepository
     val favoritesRepository: FavoritesRepository
-    val userCourseRepository: UserCourseRepository // Nasz nowy kierunek
-    val notificationDao: com.example.my_uz_android.data.daos.NotificationDao
+    val userCourseRepository: UserCourseRepository
+    val notificationsRepository: NotificationsRepository
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
@@ -25,8 +25,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     private val database: AppDatabase by lazy {
         AppDatabase.getDatabase(context)
     }
-
-    // Inicjalizacja Supabase
     private val supabase: SupabaseClient by lazy {
         provideSupabaseClient()
     }
@@ -36,7 +34,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val universityRepository: UniversityRepository by lazy {
-        // UniversityRepository potrzebuje wtyczki postgrest
         UniversityRepository(supabase.postgrest)
     }
 
@@ -45,7 +42,6 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val tasksRepository: TasksRepository by lazy {
-        // TasksRepository potrzebuje DAO i całego klienta Supabase do eksportu
         TasksRepository(database.tasksDao(), supabase)
     }
 
@@ -69,7 +65,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         UserCourseRepository(database.userCourseDao())
     }
 
-    override val notificationDao: com.example.my_uz_android.data.daos.NotificationDao by lazy {
-        database.notificationDao()
+    override val notificationsRepository: NotificationsRepository by lazy {
+        NotificationsRepository(database.notificationDao())
     }
 }

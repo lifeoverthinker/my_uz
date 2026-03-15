@@ -6,10 +6,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -169,7 +167,7 @@ fun IndexTopBar(
                     Box {
                         IconButton(onClick = { isFilterExpanded = true }) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_filter_funnel),
+                                painter = painterResource(id = R.drawable.ic_filter),
                                 contentDescription = "Filtruj kierunki",
                                 tint = MaterialTheme.colorScheme.onSurface
                             )

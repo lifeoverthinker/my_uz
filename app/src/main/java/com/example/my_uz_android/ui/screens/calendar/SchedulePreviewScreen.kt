@@ -10,10 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.my_uz_android.R
@@ -164,7 +162,7 @@ fun SchedulePreviewScreenContent(
                 isFavorite = isFavorite,
                 onBackClick = onBackClick,
                 onFavoriteClick = onFavoriteClick,
-                actionIcon = if (isTeacher) R.drawable.ic_info_circle else R.drawable.ic_filter_funnel,
+                actionIcon = if (isTeacher) R.drawable.ic_info_circle else R.drawable.ic_filter,
                 onActionClick = {
                     if (isTeacher) showTeacherInfo = true else showSubgroupFilter = true
                 }

@@ -202,7 +202,7 @@ fun CalendarScreenContent(
                         Box {
                             IconButton(onClick = { isFilterExpanded = true }) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_filter_funnel),
+                                    painter = painterResource(id = R.drawable.ic_filter),
                                     contentDescription = "Filtruj kierunki",
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )

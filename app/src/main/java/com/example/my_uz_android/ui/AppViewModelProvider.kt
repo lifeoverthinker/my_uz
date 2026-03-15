@@ -19,7 +19,6 @@ import com.example.my_uz_android.ui.screens.home.details.TaskDetailsViewModel
 import com.example.my_uz_android.ui.screens.index.*
 import com.example.my_uz_android.ui.screens.onboarding.OnboardingViewModel
 import com.example.my_uz_android.ui.screens.notifications.NotificationsViewModel
-import com.example.my_uz_android.ui.screens.notifications.NotificationsScreen
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
@@ -168,7 +167,7 @@ object AppViewModelProvider {
         }
 
         initializer {
-            NotificationsViewModel(myUZApplication().container.notificationDao)
+            NotificationsViewModel(myUZApplication().container.notificationsRepository)
         }
     }
 }
