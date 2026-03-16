@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -27,24 +28,24 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.theme.extendedColors
+
+// --- IMPORTY COROUTINES ---
+import kotlinx.coroutines.launch
+
+// --- IMPORTY EKRANÓW I VIEWMODELI ---
 import com.example.my_uz_android.ui.screens.account.*
 import com.example.my_uz_android.ui.screens.calendar.*
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
 import com.example.my_uz_android.ui.screens.calendar.search.ScheduleSearchScreen
 import com.example.my_uz_android.ui.screens.calendar.search.ScheduleSearchViewModel
-import com.example.my_uz_android.ui.screens.calendar.tasks.TaskAddEditScreen
-import com.example.my_uz_android.ui.screens.calendar.tasks.TasksScreen
+import com.example.my_uz_android.ui.screens.calendar.tasks.*
 import com.example.my_uz_android.ui.screens.home.HomeScreen
-import com.example.my_uz_android.ui.screens.home.details.ClassDetailsScreen
-import com.example.my_uz_android.ui.screens.home.details.EventDetailsScreen
-import com.example.my_uz_android.ui.screens.home.details.TaskDetailsScreen
+import com.example.my_uz_android.ui.screens.home.details.*
 import com.example.my_uz_android.ui.screens.index.*
-import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
-import com.example.my_uz_android.ui.theme.extendedColors
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.collectAsState
 import com.example.my_uz_android.ui.screens.notifications.NotificationsScreen
 import com.example.my_uz_android.ui.screens.notifications.NotificationsViewModel
+import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
@@ -69,8 +70,7 @@ fun AppNavigation(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    val sharedCalendarViewModel: CalendarViewModel =
-        viewModel(factory = AppViewModelProvider.Factory)
+    val sharedCalendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val calendarUiState by sharedCalendarViewModel.uiState.collectAsState()
 
     val showBottomBar = items.any { currentRoute?.startsWith(it.route) == true } ||
@@ -96,18 +96,14 @@ fun AppNavigation(
                         scope.launch { drawerState.close() }
                         sharedCalendarViewModel.selectMyPlan()
                         navController.navigate(Screen.Calendar.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
                     },
                     onTasksClick = {
                         scope.launch { drawerState.close() }
-                        navController.navigate("tasks") {
-                            launchSingleTop = true
-                        }
+                        navController.navigate("tasks") { launchSingleTop = true }
                     },
                     onFavoriteClick = { fav ->
                         scope.launch { drawerState.close() }
@@ -174,9 +170,7 @@ fun AppNavigation(
                                     selected = selected,
                                     onClick = {
                                         navController.navigate(screen.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
+                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                             launchSingleTop = true
                                             restoreState = screen.route != Screen.Calendar.route
                                         }
@@ -204,12 +198,15 @@ fun AppNavigation(
                 popEnterTransition = { fadeIn(animationSpec = tween(220)) },
                 popExitTransition = { fadeOut(animationSpec = tween(220)) }
             ) {
+
+                // ==========================================
+                // 1. ONBOARDING & HOME
+                // ==========================================
+
                 composable("landing") {
                     LandingScreen(onNavigateToHome = {
                         navController.navigate(Screen.Main.route) {
-                            popUpTo("landing") {
-                                inclusive = true
-                            }
+                            popUpTo("landing") { inclusive = true }
                         }
                     })
                 }
@@ -227,6 +224,18 @@ fun AppNavigation(
                         onAddTaskClick = { navController.navigate("add_task") }
                     )
                 }
+
+                composable("notifications") {
+                    val notificationsViewModel: NotificationsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    NotificationsScreen(
+                        viewModel = notificationsViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+                // ==========================================
+                // 2. KALENDARZ & SZCZEGÓŁY WYDARZEŃ
+                // ==========================================
 
                 composable(Screen.Calendar.route) {
                     CalendarScreen(
@@ -252,8 +261,7 @@ fun AppNavigation(
                 }
 
                 composable("schedule_search") {
-                    val searchViewModel: ScheduleSearchViewModel =
-                        viewModel(factory = AppViewModelProvider.Factory)
+                    val searchViewModel: ScheduleSearchViewModel = viewModel(factory = AppViewModelProvider.Factory)
                     ScheduleSearchScreen(
                         navController = navController,
                         searchViewModel = searchViewModel,
@@ -261,69 +269,11 @@ fun AppNavigation(
                     )
                 }
 
-                composable("tasks") {
-                    TasksScreen(
-                        onNavigateBack = { navController.popBackStack() },
-                        onAddTaskClick = { navController.navigate("add_task") },
-                        onTaskClick = { taskId -> navController.navigate("task_details/$taskId") },
-                        onCalendarClick = { navController.popBackStack() },
-                        onAccountClick = { navController.navigate(Screen.Account.route) }
-                    )
-                }
-
-                composable(
-                    route = "index?tab={tab}",
-                    arguments = listOf(navArgument("tab") {
-                        defaultValue = 0; type = NavType.IntType
-                    })
-                ) { backStackEntry ->
-                    val initialTab = backStackEntry.arguments?.getInt("tab") ?: 0
-                    IndexScreen(
-                        initialTab = initialTab,
-                        onGradeDetailsClick = { gradeId -> navController.navigate("grade_details/$gradeId") },
-                        onNavigateToClassTypeGrades = { subjectName, classType ->
-                            navController.navigate("class_type_grades/$subjectName/$classType")
-                        },
-                        onAddGradeClick = { subject, classType ->
-                            val route = if (subject != null && classType != null)
-                                "add_grade?subject=$subject&classType=$classType" else "add_grade"
-                            navController.navigate(route)
-                        },
-                        onAddAbsenceClick = { subject, classType ->
-                            val route = if (subject != null && classType != null)
-                                "add_absence?subject=$subject&classType=$classType" else "add_absence"
-                            navController.navigate(route)
-                        },
-                        onEditAbsenceClick = { absenceId -> navController.navigate("absence_details/$absenceId") }
-                    )
-                }
-
-                composable(Screen.Account.route) {
-                    AccountScreen(
-                        onBackClick = { },
-                        onPersonalDataClick = { navController.navigate("personal_data") },
-                        onSettingsClick = { navController.navigate("settings") },
-                        onAboutClick = { navController.navigate("about_app") }
-                    )
-                }
-
-                composable("personal_data") {
-                    PersonalDataScreen(
-                        onNavigateBack = { navController.popBackStack() },
-                        onNavigateToEdit = { navController.navigate("edit_personal_data") })
-                }
-                composable("edit_personal_data") { EditPersonalDataScreen(onNavigateBack = { navController.popBackStack() }) }
-                composable("settings") { SettingsScreen(onBackClick = { navController.popBackStack() }) }
-                composable("about_app") { AboutAppScreen(onBackClick = { navController.popBackStack() }) }
-
                 composable(
                     route = "${Screen.ClassDetails.route}/{classId}?isTeacherPlan={isTeacherPlan}",
                     arguments = listOf(
                         navArgument("classId") { type = NavType.IntType },
-                        navArgument("isTeacherPlan") {
-                            type = NavType.BoolType
-                            defaultValue = false
-                        }
+                        navArgument("isTeacherPlan") { type = NavType.BoolType; defaultValue = false }
                     )
                 ) { backStackEntry ->
                     val isTeacherPlan = backStackEntry.arguments?.getBoolean("isTeacherPlan") ?: false
@@ -342,15 +292,38 @@ fun AppNavigation(
                     arguments = listOf(navArgument("eventId") { type = NavType.IntType })
                 ) { EventDetailsScreen(onBackClick = { navController.popBackStack() }) }
 
+
+                // ==========================================
+                // 3. ZADANIA (TASKS)
+                // ==========================================
+
+                composable("tasks") {
+                    TasksScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onAddTaskClick = { navController.navigate("add_task") },
+                        onTaskClick = { taskId -> navController.navigate("task_details/$taskId") },
+                        onCalendarClick = { navController.popBackStack() },
+                        onAccountClick = { navController.navigate(Screen.Account.route) }
+                    )
+                }
+
                 composable(
                     "task_details/{taskId}",
                     arguments = listOf(navArgument("taskId") { type = NavType.IntType })
-                ) {
-                    TaskDetailsScreen(
+                ) { backStackEntry ->
+                    val detailsViewModel: TaskDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+
+                    TaskDetailsScreenRoute(
+                        viewModel = detailsViewModel,
                         onNavigateBack = { navController.popBackStack() },
-                        onEditTask = { taskId -> navController.navigate("edit_task/$taskId") },
-                        onDuplicateTask = { title, desc, subject, type, dueDate, isAllDay ->
-                            navController.navigate("add_task?title=$title&desc=$desc&subject=$subject&type=$type&dueDate=$dueDate&isAllDay=$isAllDay")
+                        onEditClick = { taskId -> navController.navigate("edit_task/$taskId") },
+                        onDuplicateClick = {
+                            val task = detailsViewModel.uiState.value.task
+                            task?.let {
+                                navController.navigate(
+                                    "add_task?title=${it.title}&desc=${it.description ?: ""}&subject=${it.subjectName ?: ""}&type=${it.classType ?: ""}&dueDate=${it.dueDate}&isAllDay=${it.isAllDay}"
+                                )
+                            }
                         }
                     )
                 }
@@ -365,17 +338,10 @@ fun AppNavigation(
                         navArgument("dueDate") { type = NavType.LongType; defaultValue = 0L },
                         navArgument("isAllDay") { type = NavType.BoolType; defaultValue = false }
                     )
-                ) { backStackEntry ->
-                    TaskAddEditScreen(
-                        taskId = null,
-                        prefilledTitle = backStackEntry.arguments?.getString("title"),
-                        prefilledDesc = backStackEntry.arguments?.getString("desc"),
-                        prefilledSubject = backStackEntry.arguments?.getString("subject"),
-                        prefilledType = backStackEntry.arguments?.getString("type"),
-                        prefilledDate = backStackEntry.arguments?.getLong("dueDate")
-                            .takeIf { it != 0L },
-                        prefilledIsAllDay = backStackEntry.arguments?.getBoolean("isAllDay")
-                            ?: false,
+                ) { _ ->
+                    val addEditViewModel: TaskAddEditViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    TaskAddEditScreenRoute(
+                        viewModel = addEditViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -383,10 +349,81 @@ fun AppNavigation(
                 composable(
                     route = "edit_task/{taskId}",
                     arguments = listOf(navArgument("taskId") { type = NavType.IntType })
+                ) { _ ->
+                    val editViewModel: TaskAddEditViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    TaskAddEditScreenRoute(
+                        viewModel = editViewModel,
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
+
+
+                // ==========================================
+                // 4. INDEKS (OCENY)
+                // ==========================================
+
+                composable(
+                    route = "index?tab={tab}",
+                    arguments = listOf(navArgument("tab") { defaultValue = 0; type = NavType.IntType })
                 ) { backStackEntry ->
-                    TaskAddEditScreen(
-                        taskId = backStackEntry.arguments?.getInt("taskId"),
-                        onNavigateBack = { navController.popBackStack() })
+                    val initialTab = backStackEntry.arguments?.getInt("tab") ?: 0
+                    IndexScreen(
+                        initialTab = initialTab,
+                        onGradeDetailsClick = { gradeId -> navController.navigate("grade_details/$gradeId") },
+                        onNavigateToClassTypeGrades = { subjectName, classType ->
+                            navController.navigate("class_type_grades/$subjectName/$classType")
+                        },
+                        onAddGradeClick = { subject, classType ->
+                            val route = if (subject != null && classType != null)
+                                "add_grade?subject=$subject&classType=$classType" else "add_grade"
+                            navController.navigate(route)
+                        },
+                        onAddAbsenceClick = { subject, classType ->
+                            val route = if (subject != null && classType != null)
+                                "add_absence?subject=$subject&classType=$classType" else "add_absence"
+                            navController.navigate(route)
+                        },
+                        // 👇 ZMIANA TUTAJ: Kierujemy do "absence_details", a nie "edit_absence"
+                        onEditAbsenceClick = { absenceId -> navController.navigate("absence_details/$absenceId") }
+                    )
+                }
+
+                composable(
+                    route = "class_type_grades/{subjectName}/{classType}",
+                    arguments = listOf(
+                        navArgument("subjectName") { type = NavType.StringType },
+                        navArgument("classType") { type = NavType.StringType }
+                    )
+                ) { backStackEntry ->
+                    SubjectGradesScreen(
+                        subjectName = backStackEntry.arguments?.getString("subjectName") ?: "",
+                        classType = backStackEntry.arguments?.getString("classType") ?: "",
+                        onNavigateBack = { navController.popBackStack() },
+                        onGradeClick = { gradeId -> navController.navigate("grade_details/$gradeId") },
+                        onAddGradeClick = {
+                            navController.navigate(
+                                "add_grade?subject=${backStackEntry.arguments?.getString("subjectName")}&classType=${backStackEntry.arguments?.getString("classType")}"
+                            )
+                        }
+                    )
+                }
+
+                composable(
+                    route = Screen.GradeDetails.route + "/{gradeId}",
+                    arguments = listOf(navArgument("gradeId") { type = NavType.IntType })
+                ) { backStackEntry ->
+                    val detailsViewModel: GradeDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    GradeDetailsScreenRoute(
+                        viewModel = detailsViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onEditGrade = { id -> navController.navigate("edit_grade/$id") },
+                        onDuplicateGrade = {
+                            val grade = detailsViewModel.uiState.value.grade
+                            grade?.let {
+                                navController.navigate("add_grade?subject=${it.subjectName}&classType=${it.classType}&description=${it.description}&weight=${it.weight}")
+                            }
+                        }
+                    )
                 }
 
                 composable(
@@ -401,46 +438,9 @@ fun AppNavigation(
                         navArgument("comment") { type = NavType.StringType; nullable = true }
                     )
                 ) { _ ->
-                    AddEditGradeScreen(
-                        onDismiss = { navController.popBackStack() }
-                    )
-                }
-
-                composable(
-                    route = "absence_details/{absenceId}",
-                    arguments = listOf(navArgument("absenceId") { type = NavType.IntType })
-                ) { backStackEntry ->
-                    val absenceId = backStackEntry.arguments?.getInt("absenceId") ?: 0
-                    AbsenceDetailsScreen(
-                        absenceId = absenceId,
-                        onNavigateBack = { navController.popBackStack() },
-                        onEditAbsence = { id -> navController.navigate("edit_absence/$id") },
-                        onDuplicateClick = { subject, type ->
-                            navController.navigate("add_absence?subject=$subject&classType=$type")
-                        }
-                    )
-                }
-
-                composable(
-                    route = Screen.GradeDetails.route + "/{gradeId}",
-                    arguments = listOf(navArgument("gradeId") { type = NavType.IntType })
-                ) { backStackEntry ->
-                    val gradeId = backStackEntry.arguments?.getInt("gradeId") ?: 0
-                    GradeDetailsScreen(
-                        gradeId = gradeId,
-                        onNavigateBack = { navController.popBackStack() },
-                        onEditGrade = { id -> navController.navigate("edit_grade/$id") },
-                        onDuplicateClick = {
-                            navController.navigate("add_grade")
-                        }
-                    )
-                }
-
-                composable("add_absence") {
-                    AddEditAbsenceScreen(
-                        absenceId = null,
-                        prefilledSubject = null,
-                        prefilledClassType = null,
+                    val addEditViewModel: AddEditGradeViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    AddEditGradeScreenRoute(
+                        viewModel = addEditViewModel,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -449,41 +449,46 @@ fun AppNavigation(
                     route = "edit_grade/{gradeId}",
                     arguments = listOf(navArgument("gradeId") { type = NavType.IntType })
                 ) { _ ->
-                    AddEditGradeScreen(
-                        onDismiss = { navController.popBackStack() }
+                    val editViewModel: AddEditGradeViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    AddEditGradeScreenRoute(
+                        viewModel = editViewModel,
+                        onNavigateBack = { navController.popBackStack() }
                     )
                 }
 
+
+                // ==========================================
+                // 5. NIEOBECNOŚCI (ABSENCES)
+                // ==========================================
+
                 composable(
-                    route = "class_type_grades/{subjectName}/{classType}",
-                    arguments = listOf(
-                        navArgument("subjectName") { type = NavType.StringType },
-                        navArgument("classType") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    SubjectGradesScreen(
-                        subjectName = backStackEntry.arguments?.getString("subjectName") ?: "",
-                        classType = backStackEntry.arguments?.getString("classType") ?: "",
+                    route = "absence_details/{absenceId}",
+                    arguments = listOf(navArgument("absenceId") { type = NavType.IntType })
+                ) { _ ->
+                    val detailsViewModel: AbsenceDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    AbsenceDetailsScreenRoute(
+                        viewModel = detailsViewModel,
                         onNavigateBack = { navController.popBackStack() },
-                        onGradeClick = { gradeId -> navController.navigate("grade_details/$gradeId") },
-                        onAddGradeClick = {
-                            navController.navigate(
-                                "add_grade?subject=${
-                                    backStackEntry.arguments?.getString("subjectName")
-                                }&classType=${backStackEntry.arguments?.getString("classType")}"
-                            )
+                        onEditClick = { id -> navController.navigate("edit_absence/$id") },
+                        onDuplicateClick = {
+                            val absence = detailsViewModel.uiState.value.absence
+                            absence?.let {
+                                navController.navigate("add_absence?subject=${it.subjectName}&classType=${it.classType}")
+                            }
                         }
                     )
                 }
-
+                
                 composable(
                     route = "add_absence?subject={subject}&classType={classType}",
                     arguments = listOf(
-                        navArgument("subject") { type = NavType.StringType; nullable = true },
-                        navArgument("classType") { type = NavType.StringType; nullable = true }
+                        navArgument("subject") { type = NavType.StringType; nullable = true; defaultValue = null },
+                        navArgument("classType") { type = NavType.StringType; nullable = true; defaultValue = null }
                     )
                 ) { backStackEntry ->
-                    AddEditAbsenceScreen(
-                        absenceId = null,
+                    val addEditViewModel: AddEditAbsenceViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    AbsenceAddEditScreenRoute(
+                        viewModel = addEditViewModel,
                         prefilledSubject = backStackEntry.arguments?.getString("subject"),
                         prefilledClassType = backStackEntry.arguments?.getString("classType"),
                         onNavigateBack = { navController.popBackStack() }
@@ -493,21 +498,49 @@ fun AppNavigation(
                 composable(
                     route = "edit_absence/{absenceId}",
                     arguments = listOf(navArgument("absenceId") { type = NavType.IntType })
-                ) { backStackEntry ->
-                    AddEditAbsenceScreen(
-                        absenceId = backStackEntry.arguments?.getInt("absenceId"),
+                ) { _ ->
+                    val addEditViewModel: AddEditAbsenceViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    AbsenceAddEditScreenRoute(
+                        viewModel = addEditViewModel,
+                        prefilledSubject = null,
+                        prefilledClassType = null,
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
 
-                composable("notifications") {
-                    val notificationsViewModel: NotificationsViewModel =
-                        viewModel(factory = AppViewModelProvider.Factory)
-                    NotificationsScreen(
-                        viewModel = notificationsViewModel,
-                        onNavigateBack = { navController.popBackStack() }
+
+                // ==========================================
+                // 6. KONTO I USTAWIENIA
+                // ==========================================
+
+                composable(Screen.Account.route) {
+                    AccountScreen(
+                        onBackClick = { },
+                        onPersonalDataClick = { navController.navigate("personal_data") },
+                        onSettingsClick = { navController.navigate("settings") },
+                        onAboutClick = { navController.navigate("about_app") }
                     )
                 }
+
+                composable("personal_data") {
+                    PersonalDataScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToEdit = { navController.navigate("edit_personal_data") }
+                    )
+                }
+
+                composable("edit_personal_data") {
+                    EditPersonalDataScreen(onNavigateBack = { navController.popBackStack() })
+                }
+
+                composable("settings") {
+                    SettingsScreen(onBackClick = { navController.popBackStack() })
+                }
+
+                composable("about_app") {
+                    AboutAppScreen(onBackClick = { navController.popBackStack() })
+                }
+
             }
         }
     }

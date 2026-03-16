@@ -22,6 +22,7 @@ data class ClassTypeState(
 data class SubjectState(
     val code: String,
     val name: String,
+    val courseName: String, // NOWOŚĆ: Przechowuje nazwę kierunku
     val average: Double?,
     val types: List<ClassTypeState>
 )
@@ -72,7 +73,17 @@ class GradesViewModel(
             selectedGroups
         }
 
+        // Filtrujemy zajęcia dla aktywnych kierunków
         val classesForSelectedGroups = allClasses.filter { activeCodes.contains(it.groupCode) }
+
+        // Tworzymy mapę szybkiego wyszukiwania, by wiedzieć do jakiego kierunku należy dany kod grupy
+        val courseMap = allCoursesForUi.associateBy { it.groupCode }
+
+        // Mapujemy każdy unikalny przedmiot do jego nazwy kierunku (lub kodu grupy, jeśli brak)
+        val subjectToCourseMap = classesForSelectedGroups.associate {
+            val course = courseMap[it.groupCode]
+            it.subjectName to (course?.fieldOfStudy ?: course?.groupCode ?: it.groupCode)
+        }
 
         val subjectsFromSchedule = classesForSelectedGroups
             .groupBy { it.subjectName }
@@ -87,7 +98,6 @@ class GradesViewModel(
 
             val types = classTypes.map { typeName ->
                 val typeGrades = subjectGrades.filter { it.classType == typeName }
-
                 val rawTypeAverage = GradeCalculator.calculateGPA(typeGrades)
                 val typeAverage = if (rawTypeAverage > 0.0) rawTypeAverage else null
 
@@ -97,9 +107,13 @@ class GradesViewModel(
             val rawSubjectAverage = GradeCalculator.calculateGPA(subjectGrades)
             val subjectAverage = if (rawSubjectAverage > 0.0) rawSubjectAverage else null
 
+            // Pobieramy nazwę kierunku z naszej mapy
+            val courseName = subjectToCourseMap[subjectName] ?: "Inne"
+
             SubjectState(
                 code = subjectName.take(3).uppercase(),
                 name = subjectName,
+                courseName = courseName,
                 average = subjectAverage,
                 types = types
             )

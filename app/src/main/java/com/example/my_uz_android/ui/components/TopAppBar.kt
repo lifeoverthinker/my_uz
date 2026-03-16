@@ -22,7 +22,6 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
-// Stała wielkość dla wszystkich okrągłych przycisków w TopBar wg wytycznych Material Design (48dp Touch Target)
 private val TopBarButtonSize = 48.dp
 private val TopBarIconSize = 24.dp
 
@@ -36,7 +35,8 @@ fun TopAppBar(
     actions: @Composable RowScope.() -> Unit = {},
     isCenterAligned: Boolean = false,
     isNavigationIconFilled: Boolean = false,
-    scrollBehavior: TopAppBarScrollBehavior? = null
+    scrollBehavior: TopAppBarScrollBehavior? = null,
+    bottomContent: @Composable (() -> Unit)? = null // <--- NOWOŚĆ: Miejsce na zakładki (Tabs)
 ) {
     val iconTint = MaterialTheme.extendedColors.iconText
 
@@ -44,78 +44,84 @@ fun TopAppBar(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .statusBarsPadding()
-                .height(72.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (navigationIcon != null) {
-                if (isNavigationIconFilled) {
-                    // Używamy natywnego IconButton dla idealnego efektu Ripple
-                    IconButton(
-                        onClick = onNavigationClick,
-                        modifier = Modifier
-                            .size(TopBarButtonSize)
-                            .background(MaterialTheme.extendedColors.buttonBackground, CircleShape)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = navigationIcon),
-                            contentDescription = "Nawigacja",
-                            modifier = Modifier.size(TopBarIconSize),
-                            tint = iconTint
-                        )
-                    }
-                } else {
-                    IconButton(
-                        onClick = onNavigationClick,
-                        modifier = Modifier.size(TopBarButtonSize)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = navigationIcon),
-                            contentDescription = "Nawigacja",
-                            modifier = Modifier.size(TopBarIconSize),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontFamily = InterFontFamily,
-                        fontWeight = if (isCenterAligned) FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 20.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (!subtitle.isNullOrEmpty()) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .height(72.dp)
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                actions()
+                if (navigationIcon != null) {
+                    if (isNavigationIconFilled) {
+                        IconButton(
+                            onClick = onNavigationClick,
+                            modifier = Modifier
+                                .size(TopBarButtonSize)
+                                .background(MaterialTheme.extendedColors.buttonBackground, CircleShape)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = navigationIcon),
+                                contentDescription = "Nawigacja",
+                                modifier = Modifier.size(TopBarIconSize),
+                                tint = iconTint
+                            )
+                        }
+                    } else {
+                        IconButton(
+                            onClick = onNavigationClick,
+                            modifier = Modifier.size(TopBarButtonSize)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = navigationIcon),
+                                contentDescription = "Nawigacja",
+                                modifier = Modifier.size(TopBarIconSize),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = if (isCenterAligned) FontWeight.SemiBold else FontWeight.Normal,
+                            fontSize = 20.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (!subtitle.isNullOrEmpty()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    actions()
+                }
+            }
+
+            // <--- NOWOŚĆ: Jeśli przekażemy zakładki, wyrenderują się pod spodem
+            if (bottomContent != null) {
+                bottomContent()
             }
         }
     }
@@ -238,7 +244,6 @@ fun TopBarActionIcon(
     tint: Color = MaterialTheme.extendedColors.iconText,
     onClick: () -> Unit
 ) {
-    // Naprawa błędu z uciętym ripple'm (cieniem) - teraz korzystamy z systemowego IconButton
     IconButton(
         onClick = onClick,
         enabled = !isLoading,

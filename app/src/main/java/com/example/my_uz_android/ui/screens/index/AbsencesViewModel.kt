@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 
 data class SubjectAbsences(
     val subjectName: String,
+    val courseName: String, // NOWOŚĆ: Przypisany kierunek
     val types: List<AbsenceTypeGroup>
 )
 
@@ -68,7 +69,15 @@ class AbsencesViewModel(
         }
 
         // Filtrowanie planu po kierunku
-        val validSubjectNames = allClasses.filter { activeCodes.contains(it.groupCode) }.map { it.subjectName }.toSet()
+        val validClasses = allClasses.filter { activeCodes.contains(it.groupCode) }
+        val validSubjectNames = validClasses.map { it.subjectName }.toSet()
+
+        // Mapowanie: Przedmiot -> Nazwa Kierunku (fieldOfStudy lub groupCode)
+        val courseMap = courses.associateBy { it.groupCode }
+        val subjectToCourseMap = validClasses.associate {
+            val course = courseMap[it.groupCode]
+            it.subjectName to (course?.fieldOfStudy ?: course?.groupCode ?: it.groupCode)
+        }
 
         val filteredAbsences = absences.filter { validSubjectNames.contains(it.subjectName) }
 
@@ -81,7 +90,8 @@ class AbsencesViewModel(
                         AbsenceTypeGroup(classType = type, absences = typeList.sortedBy { it.date }, limit = currentLimit)
                     }.sortedBy { it.classType }
 
-                SubjectAbsences(subjectName, typeGroups)
+                val courseName = subjectToCourseMap[subjectName] ?: "Inne"
+                SubjectAbsences(subjectName, courseName, typeGroups)
             }.sortedBy { it.subjectName }
     }
 

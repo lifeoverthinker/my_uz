@@ -32,8 +32,9 @@ import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import com.example.my_uz_android.R // Upewnij się, że ten import jest poprawny dla Twojego pakietu
+import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.EmptyStateMessage
+
 @Composable
 fun AbsencesScreen(
     viewModel: AbsencesViewModel,
@@ -58,37 +59,65 @@ fun AbsencesScreen(
                 )
             }
         } else {
+            // Grupowanie po nazwie kierunku
+            val groupedAbsences = absencesState.groupBy { it.courseName }
+
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(absencesState) { subjectGroup ->
-                    AbsenceCard(
-                        subjectData = subjectGroup,
-                        onDeleteAbsence = { viewModel.deleteAbsence(it) },
-                        onAddAbsenceClick = { type ->
-                            onAddAbsenceClick(subjectGroup.subjectName, type)
-                        },
-                        onEditLimitClick = { type, currentLimit ->
-                            limitEditSubject = subjectGroup.subjectName
-                            limitEditType = type
-                            limitEditValue = currentLimit.toString()
-                            showLimitDialog = true
-                        },
-                        onEditAbsenceClick = { absence ->
-                            onEditAbsenceClick(absence.id)
+                groupedAbsences.forEach { (courseName, subjects) ->
+
+                    // Pokazujemy nagłówek TYLKO jeśli jest więcej niż 1 kierunek na liście
+                    if (groupedAbsences.size > 1) {
+                        item {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = if (courseName == groupedAbsences.keys.first()) 0.dp else 8.dp, bottom = 4.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_graduation_hat),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = courseName,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
-                    )
+                    }
+
+                    items(subjects) { subjectGroup ->
+                        AbsenceCard(
+                            subjectData = subjectGroup,
+                            onDeleteAbsence = { viewModel.deleteAbsence(it) },
+                            onAddAbsenceClick = { type ->
+                                onAddAbsenceClick(subjectGroup.subjectName, type)
+                            },
+                            onEditLimitClick = { type, currentLimit ->
+                                limitEditSubject = subjectGroup.subjectName
+                                limitEditType = type
+                                limitEditValue = currentLimit.toString()
+                                showLimitDialog = true
+                            },
+                            onEditAbsenceClick = { absence ->
+                                onEditAbsenceClick(absence.id)
+                            }
+                        )
+                    }
                 }
             }
         }
 
         if (showLimitDialog) {
-            // ZMIANA: Użycie Dialog + Surface zamiast AlertDialog dla spójnego wyglądu (białe tło)
             Dialog(onDismissRequest = { showLimitDialog = false }) {
                 Surface(
                     shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surface, // Czyste tło (białe/szare)
+                    color = MaterialTheme.colorScheme.surface,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
@@ -174,7 +203,6 @@ fun AbsenceCard(
             .clickable { expanded = !expanded }
             .animateContentSize()
     ) {
-        // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -240,7 +268,6 @@ fun AbsenceTypeSection(
     val limit = typeGroup.limit
     val isLimitReached = count >= limit
 
-    // KOLORY LICZNIKA (Fioletowy gdy OK, Czerwony gdy limit)
     val counterContainerColor = if (isLimitReached)
         MaterialTheme.colorScheme.errorContainer
     else
@@ -265,7 +292,6 @@ fun AbsenceTypeSection(
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
             )
 
-            // Licznik w kolorowej "pastylce" bez ikonki
             Surface(
                 color = counterContainerColor,
                 shape = RoundedCornerShape(8.dp),

@@ -4,24 +4,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.FabOption
 import com.example.my_uz_android.ui.components.TopAppBar
-import com.example.my_uz_android.ui.components.UniversalFab
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.screens.index.components.IndexTabs
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import kotlinx.coroutines.launch
-import androidx.compose.ui.res.painterResource
 
 @Composable
 fun IndexScreen(
@@ -42,7 +39,6 @@ fun IndexScreen(
         pageCount = { 2 }
     )
     val scope = rememberCoroutineScope()
-    var isFabExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -58,47 +54,14 @@ fun IndexScreen(
                 onToggleGroupVisibility = { groupCode ->
                     gradesViewModel.toggleGroupVisibility(groupCode)
                     absencesViewModel.toggleGroupVisibility(groupCode)
-                }
-            )
-        },
-        floatingActionButton = {
-            val fabOptions = when (pagerState.currentPage) {
-                0 -> listOf(
-                    FabOption(
-                        label = "Dodaj ocenę",
-                        iconRes = R.drawable.ic_trophy,
-                        onClick = {
-                            isFabExpanded = false
-                            onAddGradeClick(null, null)
-                        }
-                    )
-                )
-
-                1 -> listOf(
-                    FabOption(
-                        label = "Dodaj nieobecność",
-                        iconRes = R.drawable.ic_calendar_minus,
-                        onClick = {
-                            isFabExpanded = false
-                            onAddAbsenceClick(null, null)
-                        }
-                    )
-                )
-
-                else -> emptyList()
-            }
-
-            UniversalFab(
-                isExpandable = fabOptions.size > 1,
-                isExpanded = isFabExpanded,
-                onMainFabClick = {
-                    if (fabOptions.size > 1) {
-                        isFabExpanded = !isFabExpanded
-                    } else {
-                        fabOptions.firstOrNull()?.onClick?.invoke()
-                    }
                 },
-                options = fabOptions
+                onAddClick = {
+                    if (pagerState.currentPage == 0) {
+                        onAddGradeClick(null, null)
+                    } else {
+                        onAddAbsenceClick(null, null)
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -129,7 +92,6 @@ fun IndexScreen(
     }
 }
 
-// Zaktualizowany IndexTopBar - używa systemowego TopAppBar i podaje ładny tytuł
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IndexTopBar(
@@ -137,84 +99,91 @@ fun IndexTopBar(
     selectedGroupCodes: Set<String>,
     currentTab: Int,
     onTabSelected: (Int) -> Unit,
-    onToggleGroupVisibility: (String) -> Unit
+    onToggleGroupVisibility: (String) -> Unit,
+    onAddClick: () -> Unit
 ) {
     var isFilterExpanded by remember { mutableStateOf(false) }
 
-    // Dynamiczny tytuł: Zwraca nazwę kierunku jeśli wybrano 1, lub napis informacyjny dla innych przypadków
-    val titleText = if (selectedGroupCodes.size == 1) {
-        val selectedCourse = userCourses.find { it.groupCode == selectedGroupCodes.first() }
-        selectedCourse?.fieldOfStudy ?: selectedCourse?.groupCode ?: "Indeks"
-    } else if (selectedGroupCodes.isNotEmpty()) {
-        "Wiele kierunków"
-    } else {
-        "Brak wybranych"
-    }
+    // UX: Tytuł zawsze brzmi "Indeks".
+    // Jeśli student ma więcej niż 1 kierunek, pokazujemy mu wybrany jako podtytuł (Subtitle)
+    val subtitleText = if (userCourses.size > 1) {
+        if (selectedGroupCodes.size == 1) {
+            val selectedCourse = userCourses.find { it.groupCode == selectedGroupCodes.first() }
+            selectedCourse?.fieldOfStudy ?: selectedCourse?.groupCode ?: "Wszystkie"
+        } else if (selectedGroupCodes.isNotEmpty()) {
+            "Wiele kierunków"
+        } else {
+            "Brak wybranych"
+        }
+    } else null // Dla 1 kierunku nie zaśmiecamy paska podtytułem
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(bottom = 8.dp)
-    ) {
-        TopAppBar(
-            title = titleText,
-            subtitle = "Indeks",
-            navigationIcon = null, // Brak ikony powrotu
-            isCenterAligned = false,
-            actions = {
-                if (userCourses.size > 1) {
-                    Box {
-                        IconButton(onClick = { isFilterExpanded = true }) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_filter),
-                                contentDescription = "Filtruj kierunki",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+    TopAppBar(
+        title = "Indeks",
+        subtitle = subtitleText,
+        navigationIcon = null, // Brak ikony powrotu na ekranie głównym
+        isCenterAligned = false,
+        actions = {
+            // --- 1. PRZYCISK FILTROWANIA KIERUNKÓW (Po lewej stronie plusa) ---
+            if (userCourses.size > 1) {
+                Box {
+                    TopBarActionIcon(
+                        icon = R.drawable.ic_filter,
+                        onClick = { isFilterExpanded = true }
+                    )
 
-                        DropdownMenu(
-                            expanded = isFilterExpanded,
-                            onDismissRequest = { isFilterExpanded = false },
-                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                        ) {
-                            userCourses.forEach { course ->
-                                val isSelected = selectedGroupCodes.contains(course.groupCode)
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = course.fieldOfStudy ?: course.groupCode,
-                                            color = MaterialTheme.colorScheme.onSurface
+                    DropdownMenu(
+                        expanded = isFilterExpanded,
+                        onDismissRequest = { isFilterExpanded = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        userCourses.forEach { course ->
+                            val isSelected = selectedGroupCodes.contains(course.groupCode)
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = course.fieldOfStudy ?: course.groupCode,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (isSelected) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_check_square_broken),
+                                            contentDescription = "Wybrane",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
                                         )
-                                    },
-                                    trailingIcon = {
-                                        if (isSelected) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = "Wybrane",
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        onToggleGroupVisibility(course.groupCode)
                                     }
-                                )
-                            }
+                                },
+                                onClick = {
+                                    onToggleGroupVisibility(course.groupCode)
+                                }
+                            )
                         }
                     }
                 }
             }
-        )
 
-        // Zakładki
-        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-            IndexTabs(
-                selectedTabIndex = currentTab,
-                onTabSelected = onTabSelected
+            // --- 2. PRZYCISK DODAWANIA (Po prawej) ---
+            TopBarActionIcon(
+                icon = R.drawable.ic_plus,
+                onClick = onAddClick
             )
+        },
+        // --- ZAKŁADKI INDEKSU WPIĘTE W TOP BAR ---
+        bottomContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                IndexTabs(
+                    selectedTabIndex = currentTab,
+                    onTabSelected = onTabSelected
+                )
+            }
         }
-    }
+    )
 }
 
 @Preview(showBackground = true)
@@ -239,7 +208,8 @@ fun IndexTopBarPreview() {
             selectedGroupCodes = setOf("12IN"),
             currentTab = 0,
             onTabSelected = {},
-            onToggleGroupVisibility = {}
+            onToggleGroupVisibility = {},
+            onAddClick = {}
         )
     }
 }

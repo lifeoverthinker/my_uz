@@ -1,11 +1,8 @@
 package com.example.my_uz_android.ui.screens.home.details
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -14,202 +11,185 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.theme.extendedColors
-import androidx.compose.ui.graphics.Color
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.theme.MyUZTheme
 
-// Podmień całą główną funkcję EventDetailsScreen
+// --- WRAPPER DLA NAWIGACJI ---
 @Composable
 fun EventDetailsScreen(
     onBackClick: () -> Unit,
     viewModel: EventDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val event = uiState.eventEntity
 
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-    val accentColor = MaterialTheme.extendedColors.eventCardBackground
-
-    Surface(
-        color = surfaceColor,
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-        ) {
-            // --- HEADER ---
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DetailIconBox(onClick = onBackClick) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = "Zamknij",
-                        tint = textColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            // --- ZAWARTOŚĆ ---
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (event != null) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    // Tytuł
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        DetailIconBox {
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-                                    .background(accentColor)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Column {
-                            Text(
-                                text = event.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = textColor,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-
-                            val dateTimeText = if (event.timeRange.isNotEmpty()) {
-                                "${event.date}, ${event.timeRange}"
-                            } else {
-                                event.date
-                            }
-
-                            Text(
-                                text = dateTimeText,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                                color = subTextColor
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    if (event.location.isNotEmpty()) {
-                        DetailSection(
-                            label = "LOKALIZACJA",
-                            text = event.location,
-                            iconRes = R.drawable.ic_marker_pin,
-                            iconColor = iconTint,
-                            textColor = textColor,
-                            labelColor = subTextColor
-                        )
-                    }
-
-                    if (event.description.isNotEmpty()) {
-                        DetailSection(
-                            label = "OPIS",
-                            text = event.description,
-                            iconRes = R.drawable.ic_menu_2,
-                            iconColor = iconTint,
-                            textColor = textColor,
-                            labelColor = subTextColor
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(100.dp))
-                }
-            } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "Nie znaleziono wydarzenia",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = subTextColor
-                    )
-                }
-            }
+    if (uiState.isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else if (uiState.eventEntity != null) {
+        EventDetailsContent(
+            event = uiState.eventEntity!!,
+            onBackClick = onBackClick
+        )
+    } else {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Nie znaleziono szczegółów wydarzenia.", color = MaterialTheme.colorScheme.error)
         }
     }
 }
+
+// --- BEZSTANOWY WIDOK ---
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .clickable(enabled = onClick != null) { onClick?.invoke() },
-        contentAlignment = Alignment.Center,
-        content = content
-    )
+fun EventDetailsContent(
+    event: EventEntity,
+    onBackClick: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = "",
+                navigationIcon = R.drawable.ic_x_close,
+                isNavigationIconFilled = true,
+                onNavigationClick = onBackClick,
+                actions = {
+                    // Brak akcji Edytuj / Usuń - to globalne wydarzenia!
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // --- Nagłówek ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .size(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp)) // Fioletowy akcent dla wydarzeń
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(24.dp))
+
+                Column {
+                    Text(
+                        text = event.title,
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${event.date} • ${event.timeRange}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- Lokalizacja ---
+            if (event.location.isNotBlank()) {
+                DetailRow(
+                    iconRes = R.drawable.ic_marker_pin,
+                    label = "Miejsce",
+                    value = event.location
+                )
+            }
+
+            // --- Opis ---
+            if (event.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                DetailRow(
+                    iconRes = R.drawable.ic_menu_2,
+                    label = null,
+                    value = event.description,
+                    isMultiline = true
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
 }
 
+// --- Komponent Pomocniczy dla Wierszy ---
 @Composable
-private fun DetailSection(
-    label: String,
-    text: String,
+private fun DetailRow(
     iconRes: Int,
-    iconColor: androidx.compose.ui.graphics.Color,
-    textColor: androidx.compose.ui.graphics.Color,
-    labelColor: androidx.compose.ui.graphics.Color
+    label: String?,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    isMultiline: Boolean = false
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 24.dp),
-        verticalAlignment = Alignment.Top
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
     ) {
-        DetailIconBox {
-            Icon(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp)
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = if (isMultiline) 4.dp else 0.dp).size(24.dp)
+        )
+        Spacer(modifier = Modifier.width(24.dp))
+        Column {
+            if (label != null) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = value.ifEmpty { "-" },
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = valueColor
             )
         }
+    }
+}
 
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.padding(top = 4.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = labelColor,
-                modifier = Modifier.padding(bottom = 2.dp)
-            )
-
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = textColor
-            )
-        }
+@Preview(showBackground = true)
+@Composable
+fun EventDetailsScreenPreview() {
+    MyUZTheme {
+        EventDetailsContent(
+            event = EventEntity(
+                id = 1,
+                title = "Juwenalia 2025",
+                description = "Największa impreza roku! Muzyka na żywo, food trucki i mnóstwo atrakcji studenckich na kampusie B.",
+                date = "Piątek, 20 maja 2025",
+                location = "Kampus B, Uniwersytet Zielonogórski",
+                timeRange = "18:00 - 02:00"
+            ),
+            onBackClick = {}
+        )
     }
 }

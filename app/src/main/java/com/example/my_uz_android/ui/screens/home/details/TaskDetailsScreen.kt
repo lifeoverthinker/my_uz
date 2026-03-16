@@ -4,168 +4,271 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
-import com.example.my_uz_android.data.models.TaskEntity
-import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.*
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+
+// --- WRAPPER DLA NAWIGACJI ---
 @Composable
-fun TaskDetailsScreen(
+fun TaskDetailsScreenRoute(
+    viewModel: TaskDetailsViewModel,
     onNavigateBack: () -> Unit,
-    onEditTask: (Int) -> Unit,
-    onDuplicateTask: (String, String, String, String, Long, Boolean) -> Unit,
-    viewModel: TaskDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    onEditClick: (Int) -> Unit,
+    onDuplicateClick: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
     val task = uiState.task
 
-    TaskDetailsContent(
-        task = task,
-        isLoading = uiState.isLoading,
+    if (uiState.isLoading || task == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    val localTime = Instant.ofEpochMilli(task.dueDate).atZone(ZoneId.systemDefault()).toLocalTime()
+
+    val mockedHasReminder = false
+    val mockedReminderDate = System.currentTimeMillis()
+    val mockedReminderTime = "08:00"
+
+    TaskDetailsScreen(
+        title = task.title,
+        subjectName = task.subjectName ?: "",
+        classType = ClassTypeUtils.getFullName(task.classType),
+        isAllDay = task.isAllDay,
+        dateMillis = task.dueDate,
+        timeHour = localTime.hour,
+        timeMinute = localTime.minute,
+        hasReminder = mockedHasReminder,
+        reminderDateMillis = mockedReminderDate,
+        reminderTimeText = mockedReminderTime,
+        description = task.description ?: "",
+        priority = task.priority,
+        isCompleted = task.isCompleted,
+        onCompletionChange = { viewModel.toggleTaskCompletion() },
         onNavigateBack = onNavigateBack,
-        onEditTask = onEditTask,
-        onDeleteTask = { viewModel.deleteTask(onSuccess = onNavigateBack) },
-        onDuplicateTask = {
-            task?.let {
-                onDuplicateTask(it.title, it.description ?: "", it.subjectName ?: "", it.classType ?: "", it.dueDate, it.isAllDay)
-            }
-        },
-        onToggleCompletion = { viewModel.toggleTaskCompletion() }
+        onEditClick = { onEditClick(task.id) },
+        onDeleteClick = { viewModel.deleteTask(onSuccess = onNavigateBack) },
+        onDuplicateClick = onDuplicateClick
     )
 }
 
-// Podmień całą funkcję TaskDetailsContent
+// --- BEZSTANOWY WIDOK ---
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskDetailsContent(
-    task: TaskEntity?,
-    isLoading: Boolean,
+fun TaskDetailsScreen(
+    title: String,
+    subjectName: String,
+    classType: String,
+    isAllDay: Boolean,
+    dateMillis: Long,
+    timeHour: Int,
+    timeMinute: Int,
+    hasReminder: Boolean,
+    reminderDateMillis: Long,
+    reminderTimeText: String,
+    description: String,
+    priority: Int,
+    isCompleted: Boolean,
+    onCompletionChange: (Boolean) -> Unit,
     onNavigateBack: () -> Unit,
-    onEditTask: (Int) -> Unit,
-    onDeleteTask: () -> Unit,
-    onDuplicateTask: () -> Unit,
-    onToggleCompletion: () -> Unit
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onDuplicateClick: () -> Unit
 ) {
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Surface(
-        color = surfaceColor,
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // --- HEADER ---
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = "",
+                navigationIcon = R.drawable.ic_x_close,
+                isNavigationIconFilled = true,
+                onNavigationClick = onNavigateBack,
+                actions = {
+                    TopBarActionIcon(icon = R.drawable.ic_edit, onClick = onEditClick)
+                    Box {
+                        TopBarActionIcon(icon = R.drawable.ic_dots_vertical, onClick = { showMenu = true })
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Duplikuj zadanie") },
+                                leadingIcon = { Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(20.dp)) },
+                                onClick = { showMenu = false; onDuplicateClick() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Usuń zadanie", color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(painterResource(R.drawable.ic_trash), contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp)) },
+                                onClick = { showMenu = false; showDeleteDialog = true }
+                            )
+                        }
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // --- Nagłówek z zachowaniem linii wizualnej ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .size(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(modifier = Modifier.size(16.dp).background(Color(0xFF4285F4), RoundedCornerShape(4.dp)))
+                }
+
+                Spacer(modifier = Modifier.width(24.dp))
+
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
+                        color = if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                        textDecoration = if (isCompleted) TextDecoration.LineThrough else null
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    val timeString = if (isAllDay) "Cały dzień" else String.format(Locale.getDefault(), "%02d:%02d", timeHour, timeMinute)
+                    Text(text = "${formatDate(dateMillis)} • $timeString", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // --- Status zadania (Nowy, klikalny wiersz) ---
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onCompletionChange(!isCompleted) }
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                DetailIconBox(onClick = onNavigateBack) {
-                    Icon(painterResource(R.drawable.ic_x_close), "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
+                Box(
+                    modifier = Modifier.size(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Checkbox(
+                        checked = isCompleted,
+                        onCheckedChange = null // Zdarzenie idzie do modyfikatora Clickable na Row
+                    )
                 }
-
-                if (task != null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DetailIconBox(onClick = { onEditTask(task.id) }) {
-                            Icon(painterResource(R.drawable.ic_edit), "Edytuj", tint = textColor, modifier = Modifier.size(24.dp))
-                        }
-                        Box {
-                            DetailIconBox(onClick = { showMenu = true }) {
-                                Icon(painterResource(R.drawable.ic_dots_vertical), "Opcje", tint = textColor, modifier = Modifier.size(24.dp))
-                            }
-                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, modifier = Modifier.background(surfaceColor).width(180.dp)) {
-                                DropdownMenuItem(text = { Text("Duplikuj", style = MaterialTheme.typography.bodyMedium) }, leadingIcon = { Icon(painterResource(R.drawable.ic_copy), null, Modifier.size(20.dp)) }, onClick = { showMenu = false; onDuplicateTask() })
-                                DropdownMenuItem(text = { Text("Usuń", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }, leadingIcon = { Icon(painterResource(R.drawable.ic_trash), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; showDeleteDialog = true })
-                            }
-                        }
-                    }
+                Spacer(modifier = Modifier.width(24.dp))
+                Column {
+                    Text(
+                        text = "Status",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (isCompleted) "Zaliczone" else "Do zrobienia",
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                        color = if (isCompleted) Color(0xFF388E3C) else MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
 
-            // --- STREFA SCROLLOWANIA ---
-            if (task != null) {
-                Column(modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp), verticalAlignment = Alignment.Top) {
-                        DetailIconBox { Box(Modifier.size(18.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).background(MaterialTheme.extendedColors.taskCardBackground)) }
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(text = task.title, style = MaterialTheme.typography.titleLarge, color = textColor, textDecoration = if (task.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null)
-                            Text(text = formatTaskDate(task.dueDate), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = subTextColor)
-                        }
-                    }
-                    Spacer(Modifier.height(24.dp))
-                    DetailSectionTask("STATUS", if (task.isCompleted) "Ukończone" else "Do zrobienia", if (task.isCompleted) R.drawable.ic_check_square_broken else R.drawable.ic_square, if (task.isCompleted) MaterialTheme.colorScheme.primary else iconTint, if (task.isCompleted) MaterialTheme.colorScheme.primary else textColor, subTextColor, modifier = Modifier.clickable { onToggleCompletion() })
-                    if (!task.subjectName.isNullOrEmpty()) DetailSectionTask("PRZEDMIOT", task.subjectName, R.drawable.ic_book_open, iconTint, textColor, subTextColor)
-                    if (!task.classType.isNullOrEmpty()) DetailSectionTask("RODZAJ ZAJĘĆ", ClassTypeUtils.getFullName(task.classType), R.drawable.ic_graduation_hat, iconTint, textColor, subTextColor)
-                    val timeString = if (task.isAllDay) "Cały dzień" else java.time.format.DateTimeFormatter.ofPattern("HH:mm").withZone(java.time.ZoneId.systemDefault()).format(java.time.Instant.ofEpochMilli(task.dueDate))
-                    DetailSectionTask("GODZINA", timeString, R.drawable.ic_clock, iconTint, textColor, subTextColor)
-                    if (!task.description.isNullOrEmpty()) DetailSectionTask("OPIS", task.description, R.drawable.ic_menu_2, iconTint, textColor, subTextColor)
-                    Spacer(Modifier.height(100.dp))
-                }
-            } else if (isLoading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            // --- 1. Przypomnienie ---
+            if (hasReminder) {
+                DetailRow(iconRes = R.drawable.ic_bell, label = "Przypomnienie", value = "${formatDate(reminderDateMillis)} • $reminderTimeText")
             }
+            // --- 2. Przedmiot ---
+            if (subjectName.isNotBlank()) {
+                DetailRow(iconRes = R.drawable.ic_graduation_hat, label = "Przedmiot", value = subjectName)
+            }
+            // --- 3. Rodzaj zajęć ---
+            if (classType.isNotBlank() && classType != "Rodzaj zajęć (opcjonalne)") {
+                DetailRow(iconRes = R.drawable.ic_stand, label = "Rodzaj zajęć", value = classType)
+            }
+
+            // --- 4. Priorytet ---
+            val (priorityText, priorityColor) = when (priority) {
+                2 -> "Wysoki priorytet" to MaterialTheme.colorScheme.error
+                1 -> "Średni priorytet" to Color(0xFFF57C00)
+                else -> "Niski priorytet" to Color(0xFF388E3C)
+            }
+            DetailRow(iconRes = R.drawable.ic_info_circle, label = "Priorytet", value = priorityText, valueColor = priorityColor)
+
+            // --- 5. Opis ---
+            if (description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                DetailRow(iconRes = R.drawable.ic_menu_2, label = null, value = description, isMultiline = true)
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
+
         if (showDeleteDialog) {
-            AlertDialog(onDismissRequest = { showDeleteDialog = false }, title = { Text("Usuń zadanie", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)) }, text = { Text("Czy na pewno chcesz usunąć to zadanie?", style = MaterialTheme.typography.bodyMedium) }, confirmButton = { TextButton(onClick = { onDeleteTask(); showDeleteDialog = false }) { Text("Usuń", color = MaterialTheme.colorScheme.error) } }, dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj") } }, containerColor = surfaceColor)
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Usuń zadanie") },
+                text = { Text("Czy na pewno chcesz usunąć to zadanie? Tej operacji nie można cofnąć.") },
+                confirmButton = { TextButton(onClick = { onDeleteClick(); showDeleteDialog = false }) { Text("Usuń", color = MaterialTheme.colorScheme.error) } },
+                dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj") } }
+            )
         }
     }
 }
 
 @Composable
-private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
-    Box(
-        modifier = Modifier.size(48.dp).clip(CircleShape).clickable(enabled = onClick != null) { onClick?.invoke() },
-        contentAlignment = Alignment.Center, content = content
-    )
-}
-
-@Composable
-private fun DetailSectionTask(
-    label: String, text: String, iconRes: Int, iconColor: Color, textColor: Color, labelColor: Color,
-    modifier: Modifier = Modifier
+private fun DetailRow(
+    iconRes: Int, label: String?, value: String, valueColor: Color = MaterialTheme.colorScheme.onSurface, isMultiline: Boolean = false
 ) {
-    Row(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 24.dp), verticalAlignment = Alignment.Top) {
-        DetailIconBox { Icon(painterResource(iconRes), null, tint = iconColor, modifier = Modifier.size(24.dp)) }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.padding(top = 4.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = labelColor, modifier = Modifier.padding(bottom = 2.dp))
-            Text(text, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = textColor)
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+    ) {
+        Icon(painter = painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = if (isMultiline) 4.dp else 0.dp).size(24.dp))
+        Spacer(modifier = Modifier.width(24.dp))
+        Column {
+            if (label != null) Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = value.ifEmpty { "-" }, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = valueColor)
         }
     }
 }
 
-private fun formatTaskDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("EEEE, d MMM yyyy", Locale("pl"))
-    return sdf.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
+private fun formatDate(timestamp: Long): String = SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp)).replaceFirstChar { it.uppercase() }
+
+@Preview(showBackground = true)
+@Composable
+fun TaskDetailsScreenPreview() {
+    MaterialTheme {
+        TaskDetailsScreen(
+            title = "Napisać esej na zaliczenie", subjectName = "Psychologia Ogólna", classType = "Wykład",
+            isAllDay = false, dateMillis = System.currentTimeMillis(), timeHour = 23, timeMinute = 59,
+            hasReminder = true, reminderDateMillis = System.currentTimeMillis(), reminderTimeText = "20:00",
+            description = "Temat: Wpływ stresu na procesy poznawcze. Minimum 5 stron, formatowanie APA.",
+            priority = 2, isCompleted = false, onCompletionChange = {}, onNavigateBack = {},
+            onEditClick = {}, onDeleteClick = {}, onDuplicateClick = {}
+        )
+    }
 }

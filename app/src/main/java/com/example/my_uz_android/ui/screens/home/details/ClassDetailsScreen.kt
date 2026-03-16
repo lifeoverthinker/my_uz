@@ -12,7 +12,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -22,215 +21,213 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.theme.MyUZTheme
-import com.example.my_uz_android.ui.theme.extendedColors
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-private fun getDayName(dayOfWeek: Int): String {
-    return try {
-        DayOfWeek.of(dayOfWeek)
-            .getDisplayName(TextStyle.FULL, Locale("pl"))
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-    } catch (e: Exception) {
-        ""
-    }
-}
-
+// --- WRAPPER DLA NAWIGACJI ---
 @Composable
 fun ClassDetailsScreen(
     classId: Int,
     onBackClick: () -> Unit,
     isTeacherPlan: Boolean = false,
-    viewModel: ClassDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    sharedCalendarViewModel: CalendarViewModel? = null
+    sharedCalendarViewModel: CalendarViewModel,
+    viewModel: ClassDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val calendarUiState by sharedCalendarViewModel.uiState.collectAsState()
 
     LaunchedEffect(classId) {
-        if (classId == -1 && sharedCalendarViewModel != null) {
-            val tempClass = sharedCalendarViewModel.uiState.value.temporaryClassForDetails
-            if (tempClass != null) {
-                viewModel.setTemporaryClass(tempClass)
-            }
+        if (classId == -1) {
+            viewModel.setTemporaryClass(calendarUiState.temporaryClassForDetails)
         }
     }
 
-    ClassDetailsContent(
-        classEntity = uiState.classEntity,
-        isLoading = uiState.isLoading,
-        isTeacherPlan = isTeacherPlan,
-        onBackClick = onBackClick
-    )
+    if (uiState.isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else if (uiState.classEntity != null) {
+        ClassDetailsContent(
+            classEntity = uiState.classEntity!!,
+            onBackClick = onBackClick,
+            isTeacherPlan = isTeacherPlan
+        )
+    } else {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Nie znaleziono szczegółów zajęć.", color = MaterialTheme.colorScheme.error)
+        }
+    }
 }
 
+// --- BEZSTANOWY WIDOK ---
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClassDetailsContent(
-    classEntity: ClassEntity?,
-    isLoading: Boolean,
-    isTeacherPlan: Boolean,
-    onBackClick: () -> Unit
+    classEntity: ClassEntity,
+    onBackClick: () -> Unit,
+    isTeacherPlan: Boolean = false
 ) {
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-    val accentColor = MaterialTheme.extendedColors.classCardBackground
+    // Określamy datę lub dzień tygodnia do nagłówka
+    val dateOrDayText = if (!classEntity.date.isNullOrBlank()) {
+        try {
+            val date = LocalDate.parse(classEntity.date)
+            val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+            date.format(formatter).replaceFirstChar { it.uppercase() }
+        } catch (e: Exception) {
+            classEntity.date
+        }
+    } else {
+        val day = DayOfWeek.of(if (classEntity.dayOfWeek == 0) 7 else classEntity.dayOfWeek)
+        day.getDisplayName(TextStyle.FULL, Locale("pl", "PL")).replaceFirstChar { it.uppercase() }
+    }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
+            TopAppBar(
+                title = "",
+                navigationIcon = R.drawable.ic_x_close,
+                isNavigationIconFilled = true,
+                onNavigationClick = onBackClick,
+                actions = {
+                    // Brak akcji Edytuj / Usuń - to tylko podgląd!
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // --- Nagłówek ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
-                    .height(64.dp)
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = "Zamknij",
-                        tint = textColor
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
-        if (classEntity != null) {
-            val dayName = getDayName(classEntity.dayOfWeek)
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.Top
+                        .padding(top = 8.dp)
+                        .size(24.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .padding(top = 6.dp)
-                            .size(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(accentColor)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = classEntity.subjectName,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = textColor
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "$dayName, ${classEntity.startTime} – ${classEntity.endTime}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = subTextColor
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                DetailSectionRow(
-                    iconRes = R.drawable.ic_info_circle,
-                    text = ClassTypeUtils.getFullName(classEntity.classType),
-                    label = "Typ",
-                    iconColor = iconTint,
-                    textColor = textColor,
-                    labelColor = subTextColor
-                )
-
-                if (!classEntity.room.isNullOrEmpty()) {
-                    DetailSectionRow(
-                        iconRes = R.drawable.ic_map,
-                        text = classEntity.room,
-                        label = "Sala",
-                        iconColor = iconTint,
-                        textColor = textColor,
-                        labelColor = subTextColor
+                            .size(16.dp)
+                            .background(Color(0xFF4285F4), RoundedCornerShape(4.dp)) // Klasyczny niebieski dla zajęć
                     )
                 }
 
-                if (isTeacherPlan && classEntity.groupCode.isNotEmpty()) {
-                    DetailSectionRow(
-                        iconRes = R.drawable.ic_users,
-                        text = buildString {
-                            append(classEntity.groupCode)
-                            if (!classEntity.subgroup.isNullOrEmpty()) append("\nPodgrupa: ${classEntity.subgroup}")
-                        },
-                        label = "Grupy / Kierunek",
-                        iconColor = iconTint,
-                        textColor = textColor,
-                        labelColor = subTextColor
+                Spacer(modifier = Modifier.width(24.dp))
+
+                Column {
+                    Text(
+                        text = classEntity.subjectName,
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                } else if (!isTeacherPlan && !classEntity.teacherName.isNullOrEmpty()) {
-                    DetailSectionRow(
-                        iconRes = R.drawable.ic_user,
-                        text = buildString {
-                            append(classEntity.teacherName)
-                            if (!classEntity.teacherEmail.isNullOrEmpty()) append("\n${classEntity.teacherEmail}")
-                            if (!classEntity.teacherInstitute.isNullOrEmpty()) append("\n${classEntity.teacherInstitute}")
-                        },
-                        label = "Prowadzący",
-                        iconColor = iconTint,
-                        textColor = textColor,
-                        labelColor = subTextColor
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$dateOrDayText • ${classEntity.startTime} - ${classEntity.endTime}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                Spacer(modifier = Modifier.height(100.dp))
             }
-        } else if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- Miejsce (Sala) ---
+            if (!classEntity.room.isNullOrBlank()) {
+                DetailRow(
+                    iconRes = R.drawable.ic_marker_pin,
+                    label = "Miejsce",
+                    value = "Sala ${classEntity.room}"
+                )
+            }
+
+            // --- Prowadzący / Grupa ---
+            if (!isTeacherPlan && !classEntity.teacherName.isNullOrBlank()) {
+                val teacherDetails = buildString {
+                    append(classEntity.teacherName)
+                    if (!classEntity.teacherEmail.isNullOrBlank()) append("\n${classEntity.teacherEmail}")
+                    if (!classEntity.teacherInstitute.isNullOrBlank()) append("\n${classEntity.teacherInstitute}")
+                }
+                DetailRow(
+                    iconRes = R.drawable.ic_user,
+                    label = "Prowadzący",
+                    value = teacherDetails,
+                    isMultiline = true
+                )
+            }
+
+            val groupInfo = buildString {
+                append(classEntity.groupCode)
+                if (!classEntity.subgroup.isNullOrBlank()) append(" (Podgrupa: ${classEntity.subgroup})")
+            }
+            if (groupInfo.isNotBlank()) {
+                DetailRow(
+                    iconRes = R.drawable.ic_users,
+                    label = "Grupa",
+                    value = groupInfo
+                )
+            }
+
+            // --- Rodzaj zajęć ---
+            DetailRow(
+                iconRes = R.drawable.ic_stand,
+                label = "Rodzaj zajęć",
+                value = ClassTypeUtils.getFullName(classEntity.classType)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
+// --- Komponent Pomocniczy dla Wierszy ---
 @Composable
-private fun DetailSectionRow(
+private fun DetailRow(
     iconRes: Int,
-    text: String,
-    label: String,
-    iconColor: Color,
-    textColor: Color,
-    labelColor: Color
+    label: String?,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    isMultiline: Boolean = false
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.Top
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
     ) {
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
-            tint = iconColor,
-            modifier = Modifier.size(24.dp)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = if (isMultiline) 4.dp else 0.dp).size(24.dp)
         )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = labelColor)
+        Spacer(modifier = Modifier.width(24.dp))
+        Column {
+            if (label != null) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Text(
-                text = text,
+                text = value.ifEmpty { "-" },
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = textColor,
-                modifier = Modifier.padding(top = 2.dp)
+                color = valueColor
             )
         }
     }
@@ -254,10 +251,8 @@ fun StudentClassDetailsPreview() {
                 teacherName = "Prof. dr hab. inż. Jan Kowalski",
                 teacherEmail = "j.kowalski@iie.uz.zgora.pl",
                 teacherInstitute = "Instytut Informatyki",
-                room = "A-2 105"
+                room = "A-2, s. 101"
             ),
-            isLoading = false,
-            isTeacherPlan = false,
             onBackClick = {}
         )
     }

@@ -11,11 +11,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,7 +33,7 @@ import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TaskCard
-import com.example.my_uz_android.ui.components.UniversalFab
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
 import com.example.my_uz_android.ui.theme.extendedColors
@@ -78,6 +76,9 @@ fun TasksScreen(
     var showImportDialog by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
 
+    // --- NOWOŚĆ: Stan zakładek (0 = Aktywne, 1 = Zaliczone) ---
+    var selectedTab by remember { mutableStateOf(0) }
+
     LaunchedEffect(shareError, importStatus) {
         val msg = shareError ?: importStatus
         if (msg != null) {
@@ -86,8 +87,15 @@ fun TasksScreen(
         }
     }
 
-    val groupedByMonth = remember(tasks) {
-        tasks.sortedBy { it.dueDate }.groupBy {
+    // Filtrowanie zadań wg wybranej zakładki
+    val filteredTasks = remember(tasks, selectedTab) {
+        tasks.filter { task ->
+            if (selectedTab == 0) !task.isCompleted else task.isCompleted
+        }
+    }
+
+    val groupedByMonth = remember(filteredTasks) {
+        filteredTasks.sortedBy { it.dueDate }.groupBy {
             Instant.ofEpochMilli(it.dueDate)
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate()
@@ -136,22 +144,19 @@ fun TasksScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         }
+
+                        // --- PRZYCISK DODAWANIA W PASKU ---
+                        TopBarActionIcon(
+                            icon = R.drawable.ic_plus,
+                            onClick = onAddTaskClick
+                        )
+
+                        // --- MENU 3 KROPKI ---
                         Box {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.extendedColors.buttonBackground)
-                                    .clickable { showMenu = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "Opcje",
-                                    tint = MaterialTheme.extendedColors.iconText,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                            TopBarActionIcon(
+                                icon = R.drawable.ic_dots_vertical,
+                                onClick = { showMenu = true }
+                            )
                             DropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false },
@@ -164,11 +169,7 @@ fun TasksScreen(
                                         viewModel.shareMyTasks()
                                     },
                                     leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_share),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
+                                        Icon(painterResource(R.drawable.ic_share), null, Modifier.size(20.dp))
                                     }
                                 )
                                 DropdownMenuItem(
@@ -178,30 +179,58 @@ fun TasksScreen(
                                         showImportDialog = true
                                     },
                                     leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_import),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
+                                        Icon(painterResource(R.drawable.ic_import), null, Modifier.size(20.dp))
                                     }
                                 )
                             }
                         }
+                    },
+                    // --- ZAKŁADKI W PASKU GÓRNYM ---
+                    bottomContent = {
+                        TabRow(
+                            selectedTabIndex = selectedTab,
+                            containerColor = MaterialTheme.colorScheme.background,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            divider = { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)) },
+                            indicator = { tabPositions ->
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                    height = 3.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        ) {
+                            Tab(
+                                selected = selectedTab == 0,
+                                onClick = { selectedTab = 0 },
+                                text = {
+                                    Text(
+                                        text = "Aktywne",
+                                        fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                selectedContentColor = MaterialTheme.colorScheme.primary,
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Tab(
+                                selected = selectedTab == 1,
+                                onClick = { selectedTab = 1 },
+                                text = {
+                                    Text(
+                                        text = "Zaliczone",
+                                        fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                selectedContentColor = MaterialTheme.colorScheme.primary,
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                )
-            },
-            floatingActionButton = {
-                UniversalFab(
-                    isExpandable = false,
-                    isExpanded = false,
-                    onMainFabClick = onAddTaskClick,
-                    iconRes = R.drawable.ic_plus,
-                    options = emptyList()
                 )
             }
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                if (tasks.isEmpty()) {
+                if (filteredTasks.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -214,7 +243,7 @@ fun TasksScreen(
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
-                                text = stringResource(R.string.tasks_empty_title),
+                                text = if (selectedTab == 0) "Super! Brak aktywnych zadań." else "Jeszcze nic tu nie ma. Do dzieła!",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyLarge
                             )
@@ -264,7 +293,7 @@ fun TasksScreen(
         var codeInput by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface, // BIAŁE TŁO
+            containerColor = MaterialTheme.colorScheme.surface,
             title = { Text("Importuj zadania") },
             text = {
                 Column {
@@ -361,7 +390,7 @@ fun DayScheduleRow(
                             val direction = dismissState.dismissDirection
                             val color by animateColorAsState(
                                 when (dismissState.targetValue) {
-                                    SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50) // Zawsze zielony
+                                    SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50)
                                     SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
                                     else -> Color.Transparent
                                 }, label = "SwipeColor"
@@ -381,7 +410,7 @@ fun DayScheduleRow(
                                 )
                                 if (direction == SwipeToDismissBoxValue.StartToEnd) {
                                     Icon(
-                                        painter = painterResource(R.drawable.ic_check_square_broken),
+                                        painter = painterResource(if (task.isCompleted) R.drawable.ic_x_close else R.drawable.ic_check_square_broken),
                                         contentDescription = null,
                                         modifier = Modifier.scale(scale).size(24.dp),
                                         tint = Color.White
@@ -414,7 +443,7 @@ fun DayScheduleRow(
 fun ShareCodeDialog(code: String, onDismiss: () -> Unit, onShareSystem: (String) -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface, // BIAŁE TŁO
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text("Zadania udostępnione!") },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {

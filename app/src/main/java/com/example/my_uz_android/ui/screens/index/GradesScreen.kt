@@ -4,10 +4,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.ui.AppViewModelProvider
@@ -43,6 +47,9 @@ fun GradesScreen(
             )
         }
     } else {
+        // Grupowanie ocen po nazwie kierunku
+        val groupedSubjects = uiState.subjects.groupBy { it.courseName }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -51,7 +58,6 @@ fun GradesScreen(
         ) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-                // Tutaj wyświetla się główna średnia (już bez punktów, bo przeliczona w VM)
                 AverageCard(
                     label = "Średnia z bieżącego semestru",
                     average = uiState.average
@@ -59,34 +65,58 @@ fun GradesScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            items(uiState.subjects) { subject ->
-                val isExpanded = expandedStates[subject.name] ?: false
+            groupedSubjects.forEach { (courseName, subjectsList) ->
 
-                // Mapowanie modelu z ViewModel na model komponentu UI
-                // Uwaga: subject.types.grades to teraz List<GradeEntity>
-                val mappedClassTypes = subject.types.map { type ->
-                    SubjectTypeState(
-                        typeName = type.name,
-                        average = type.average,
-                        grades = type.grades
-                    )
+                // Pokazujemy nagłówek TYLKO jeśli jest więcej niż 1 kierunek na liście
+                if (groupedSubjects.size > 1) {
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(top = if (courseName == groupedSubjects.keys.first()) 0.dp else 16.dp, bottom = 8.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_graduation_hat),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = courseName,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
 
-                ExpandableSubjectCard(
-                    subjectName = subject.name,
-                    subjectCode = subject.code,
-                    overallAverage = subject.average,
-                    classTypes = mappedClassTypes,
-                    isExpanded = isExpanded,
-                    onExpandClick = { expandedStates[subject.name] = !isExpanded },
-                    onAddGradeClick = { typeName ->
-                        onAddGradeClick(subject.name, typeName)
-                    },
-                    onTypeClick = { typeName ->
-                        onNavigateToClassTypeGrades(subject.name, typeName)
+                items(subjectsList) { subject ->
+                    val isExpanded = expandedStates[subject.name] ?: false
+
+                    val mappedClassTypes = subject.types.map { type ->
+                        SubjectTypeState(
+                            typeName = type.name,
+                            average = type.average,
+                            grades = type.grades
+                        )
                     }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+
+                    ExpandableSubjectCard(
+                        subjectName = subject.name,
+                        subjectCode = subject.code,
+                        overallAverage = subject.average,
+                        classTypes = mappedClassTypes,
+                        isExpanded = isExpanded,
+                        onExpandClick = { expandedStates[subject.name] = !isExpanded },
+                        onAddGradeClick = { typeName ->
+                            onAddGradeClick(subject.name, typeName)
+                        },
+                        onTypeClick = { typeName ->
+                            onNavigateToClassTypeGrades(subject.name, typeName)
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
             }
         }
     }
@@ -96,7 +126,6 @@ fun GradesScreen(
 @Composable
 fun GradesScreenEmptyPreview() {
     com.example.my_uz_android.ui.theme.MyUZTheme {
-        // Symulacja pustego ekranu
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             EmptyStateMessage(
                 title = "Brak ocen",
