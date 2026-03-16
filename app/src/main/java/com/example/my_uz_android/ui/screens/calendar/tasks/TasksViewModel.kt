@@ -1,6 +1,5 @@
 package com.example.my_uz_android.ui.screens.calendar.tasks
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.TaskEntity
@@ -42,15 +41,23 @@ class TasksViewModel(
         }
     }
 
-    fun shareMyTasks() {
+    // ZMODYFIKOWANE: Przyjmuje opcjonalny set z wybranymi zadaniami
+    fun shareMyTasks(selectedTaskIds: Set<Int>? = null) {
         viewModelScope.launch {
             _isSharing.value = true
             _shareError.value = null
             try {
-                val tasks = tasksStream.first()
-                if (tasks.isNotEmpty()) {
-                    // Obsługa NetworkResult<String>
-                    when (val result = tasksRepository.shareTasks(tasks)) {
+                val allTasks = tasksStream.first()
+
+                // Filtrujemy zadania, jeśli przekazano konkretne ID
+                val tasksToShare = if (selectedTaskIds != null && selectedTaskIds.isNotEmpty()) {
+                    allTasks.filter { selectedTaskIds.contains(it.id) }
+                } else {
+                    allTasks
+                }
+
+                if (tasksToShare.isNotEmpty()) {
+                    when (val result = tasksRepository.shareTasks(tasksToShare)) {
                         is NetworkResult.Success -> {
                             _sharedCode.value = result.data
                         }
@@ -60,7 +67,7 @@ class TasksViewModel(
                         else -> {}
                     }
                 } else {
-                    _shareError.value = "Brak zadań do udostępnienia"
+                    _shareError.value = "Brak zadań do udostępnienia."
                 }
             } catch (e: Exception) {
                 _shareError.value = "Błąd: ${e.message}"
@@ -76,7 +83,6 @@ class TasksViewModel(
             _isImporting.value = true
             _importStatus.value = null
             try {
-                // Obsługa NetworkResult<List<TaskEntity>>
                 when (val result = tasksRepository.importTasks(code.trim().uppercase())) {
                     is NetworkResult.Success -> {
                         val count = result.data?.size ?: 0
