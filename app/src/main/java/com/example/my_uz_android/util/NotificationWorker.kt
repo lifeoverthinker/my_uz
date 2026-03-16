@@ -7,6 +7,8 @@ import androidx.work.WorkerParameters
 import com.example.my_uz_android.data.db.AppDatabase
 import com.example.my_uz_android.data.models.NotificationEntity
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.sync.ScheduleChange
+import com.example.my_uz_android.sync.ScheduleSyncManager
 import kotlinx.coroutines.flow.first
 import java.time.Duration
 import java.time.LocalDate
@@ -78,7 +80,7 @@ class NotificationWorker(
         }
     }
 
-    // --- NOWA LOGIKA SPRAWDZANIA ZMIAN ---
+    // --- NOWA LOGIKA SPRAWDZANIA ZMIAN Z UŻYCIEM SCHEDULE_SYNC_MANAGER ---
 
     private suspend fun checkScheduleChanges(database: AppDatabase) {
         try {
@@ -94,32 +96,24 @@ class NotificationWorker(
 
             if (remoteClasses.isEmpty()) return
 
-            val localClasses = database.classDao().getAllClasses().first()
-            val localMap = localClasses.associateBy { it.supabaseId }
-            val remoteMap = remoteClasses.associateBy { it.supabaseId }
+            // 1. Delegujemy analizę zmian do naszego nowego Menedżera!
+            val syncManager = ScheduleSyncManager(database.classDao())
+            val changes = syncManager.compareSchedules(remoteClasses)
 
             val notificationsToTrigger = mutableListOf<NotificationEntity>()
 
-            // 1. Sprawdzanie NOWYCH i ZMIENIONYCH zajęć
-            for (remoteClass in remoteClasses) {
-                if (remoteClass.supabaseId == null) continue // Pomijamy błędne dane bez ID
-
-                val localClass = localMap[remoteClass.supabaseId]
-
-                if (localClass == null) {
-                    // Wykryto NOWE zajęcia
-                    handleNewClass(remoteClass, notificationsToTrigger, database)
-                } else {
-                    // Wykryto istniejące zajęcia - sprawdzamy ZMIANY
-                    handleModifiedClass(localClass, remoteClass, notificationsToTrigger, database)
-                }
-            }
-
-            // 2. Sprawdzanie ODWOŁANYCH / USUNIĘTYCH zajęć
-            for (localClass in localClasses) {
-                // Sprawdzamy tylko zajęcia pochodzące z Supabase (mają supabaseId)
-                if (localClass.supabaseId != null && !remoteMap.containsKey(localClass.supabaseId)) {
-                    handleCanceledClass(localClass, notificationsToTrigger, database)
+            // 2. Reagujemy na wyliczone zmiany
+            for (change in changes) {
+                when (change) {
+                    is ScheduleChange.Added -> {
+                        handleNewClass(change.classEntity, notificationsToTrigger, database)
+                    }
+                    is ScheduleChange.Modified -> {
+                        handleModifiedClass(change.oldClass, change.newClass, notificationsToTrigger, database)
+                    }
+                    is ScheduleChange.Canceled -> {
+                        handleCanceledClass(change.classEntity, notificationsToTrigger, database)
+                    }
                 }
             }
 
@@ -182,7 +176,7 @@ class NotificationWorker(
         database.classDao().delete(localClass)
     }
 
-    // Funkcja porównująca poszczególne pola
+    // Funkcja służy teraz WYŁĄCZNIE do formatowania ładnej wiadomości dla użytkownika
     private fun detectDifferences(local: ClassEntity, remote: ClassEntity): String {
         val changes = mutableListOf<String>()
 
