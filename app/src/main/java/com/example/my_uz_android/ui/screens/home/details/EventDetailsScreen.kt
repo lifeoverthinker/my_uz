@@ -89,7 +89,7 @@ fun EventDetailsContent(
                     Box(
                         modifier = Modifier
                             .size(16.dp)
-                            .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp)) // Fioletowy akcent dla wydarzeń
+                            .background(Color(0xFF4CAF50), RoundedCornerShape(4.dp)) // Zielony dla wydarzeń
                     )
                 }
 

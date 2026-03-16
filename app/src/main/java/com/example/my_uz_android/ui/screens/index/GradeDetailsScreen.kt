@@ -110,14 +110,23 @@ fun GradeDetailsScreen(
                             DropdownMenuItem(
                                 text = { Text("Duplikuj") },
                                 leadingIcon = {
-                                    Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(20.dp))
+                                    Icon(
+                                        painterResource(R.drawable.ic_copy),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 },
                                 onClick = { showMenu = false; onDuplicateClick() }
                             )
                             DropdownMenuItem(
                                 text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = {
-                                    Icon(painterResource(R.drawable.ic_trash), contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+                                    Icon(
+                                        painterResource(R.drawable.ic_trash),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 },
                                 onClick = { showMenu = false; showDeleteDialog = true }
                             )
@@ -150,7 +159,10 @@ fun GradeDetailsScreen(
                     Box(
                         modifier = Modifier
                             .size(16.dp)
-                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
+                            .background(
+                                color = androidx.compose.ui.graphics.Color(0xFFF57C00), // Pełna ścieżka do Color
+                                shape = RoundedCornerShape(4.dp)
+                            )
                     )
                 }
 
@@ -293,7 +305,8 @@ private fun DetailRow(
 }
 
 private fun formatDate(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp)).replaceFirstChar { it.uppercase() }
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp))
+        .replaceFirstChar { it.uppercase() }
 }
 
 @Preview(showBackground = true)

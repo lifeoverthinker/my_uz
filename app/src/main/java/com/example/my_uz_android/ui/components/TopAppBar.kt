@@ -36,7 +36,7 @@ fun TopAppBar(
     isCenterAligned: Boolean = false,
     isNavigationIconFilled: Boolean = false,
     scrollBehavior: TopAppBarScrollBehavior? = null,
-    bottomContent: @Composable (() -> Unit)? = null // <--- NOWOŚĆ: Miejsce na zakładki (Tabs)
+    bottomContent: @Composable (() -> Unit)? = null
 ) {
     val iconTint = MaterialTheme.extendedColors.iconText
 
@@ -119,7 +119,6 @@ fun TopAppBar(
                 }
             }
 
-            // <--- NOWOŚĆ: Jeśli przekażemy zakładki, wyrenderują się pod spodem
             if (bottomContent != null) {
                 bottomContent()
             }
@@ -371,7 +370,7 @@ fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick:
                 ) {
                     if (query.isEmpty()) {
                         Text(
-                            "Szukaj grupy lub nauczyciela...",
+                            "Szukaj grupy lub wykładowcy...", // ZMIENIONE NA "WYKŁADOWCY"
                             style = MaterialTheme.typography.bodyLarge,
                             color = elementsColor
                         )

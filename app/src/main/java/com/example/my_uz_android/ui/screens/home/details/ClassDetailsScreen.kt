@@ -123,7 +123,7 @@ fun ClassDetailsContent(
                     Box(
                         modifier = Modifier
                             .size(16.dp)
-                            .background(Color(0xFF4285F4), RoundedCornerShape(4.dp)) // Klasyczny niebieski dla zajęć
+                            .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp)) // Fioletowy dla zajęć
                     )
                 }
 
@@ -155,7 +155,7 @@ fun ClassDetailsContent(
                 )
             }
 
-            // --- Prowadzący / Grupa ---
+            // --- Wykładowca ---
             if (!isTeacherPlan && !classEntity.teacherName.isNullOrBlank()) {
                 val teacherDetails = buildString {
                     append(classEntity.teacherName)
@@ -164,22 +164,25 @@ fun ClassDetailsContent(
                 }
                 DetailRow(
                     iconRes = R.drawable.ic_user,
-                    label = "Prowadzący",
+                    label = "Wykładowca",
                     value = teacherDetails,
                     isMultiline = true
                 )
             }
 
-            val groupInfo = buildString {
-                append(classEntity.groupCode)
-                if (!classEntity.subgroup.isNullOrBlank()) append(" (Podgrupa: ${classEntity.subgroup})")
-            }
-            if (groupInfo.isNotBlank()) {
-                DetailRow(
-                    iconRes = R.drawable.ic_users,
-                    label = "Grupa",
-                    value = groupInfo
-                )
+            // --- Grupa ---
+            if (isTeacherPlan) {
+                val groupInfo = buildString {
+                    append(classEntity.groupCode)
+                    if (!classEntity.subgroup.isNullOrBlank()) append(" (Podgrupa: ${classEntity.subgroup})")
+                }
+                if (groupInfo.isNotBlank()) {
+                    DetailRow(
+                        iconRes = R.drawable.ic_users,
+                        label = "Grupa",
+                        value = groupInfo
+                    )
+                }
             }
 
             // --- Rodzaj zajęć ---
