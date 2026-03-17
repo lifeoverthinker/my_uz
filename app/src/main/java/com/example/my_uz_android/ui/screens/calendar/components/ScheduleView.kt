@@ -52,6 +52,7 @@ import java.time.*
 import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 import kotlin.math.abs
+import androidx.compose.animation.SizeTransform
 
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
@@ -230,7 +231,7 @@ fun ScheduleView(
                         animationSpec = tween(300),
                         targetOffsetX = exitOffset
                     ) + fadeOut(animationSpec = tween(300))
-                )
+                ).using(SizeTransform(clip = false))
             },
             label = "DayOnlyTransition",
             modifier = Modifier.fillMaxSize()
