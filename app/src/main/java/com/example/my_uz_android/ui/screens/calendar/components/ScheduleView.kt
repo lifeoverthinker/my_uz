@@ -104,7 +104,7 @@ fun ScheduleView(
             8 * 60
         }
 
-        scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
+        scrollState.animateScrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
     }
 
     Column(

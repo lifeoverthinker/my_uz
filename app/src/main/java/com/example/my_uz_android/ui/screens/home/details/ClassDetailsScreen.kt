@@ -31,7 +31,6 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-// --- WRAPPER DLA NAWIGACJI ---
 @Composable
 fun ClassDetailsScreen(
     classId: Int,
@@ -66,7 +65,6 @@ fun ClassDetailsScreen(
     }
 }
 
-// --- BEZSTANOWY WIDOK ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClassDetailsContent(
@@ -74,7 +72,6 @@ fun ClassDetailsContent(
     onBackClick: () -> Unit,
     isTeacherPlan: Boolean = false
 ) {
-    // Określamy datę lub dzień tygodnia do nagłówka
     val dateOrDayText = if (!classEntity.date.isNullOrBlank()) {
         try {
             val date = LocalDate.parse(classEntity.date)
@@ -95,9 +92,7 @@ fun ClassDetailsContent(
                 navigationIcon = R.drawable.ic_x_close,
                 isNavigationIconFilled = true,
                 onNavigationClick = onBackClick,
-                actions = {
-                    // Brak akcji Edytuj / Usuń - to tylko podgląd!
-                }
+                actions = { }
             )
         }
     ) { paddingValues ->
@@ -123,7 +118,7 @@ fun ClassDetailsContent(
                     Box(
                         modifier = Modifier
                             .size(16.dp)
-                            .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp)) // Fioletowy dla zajęć
+                            .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp))
                     )
                 }
 
@@ -155,23 +150,24 @@ fun ClassDetailsContent(
                 )
             }
 
-            // --- Wykładowca ---
-            if (!isTeacherPlan && !classEntity.teacherName.isNullOrBlank()) {
-                val teacherDetails = buildString {
-                    append(classEntity.teacherName)
-                    if (!classEntity.teacherEmail.isNullOrBlank()) append("\n${classEntity.teacherEmail}")
-                    if (!classEntity.teacherInstitute.isNullOrBlank()) append("\n${classEntity.teacherInstitute}")
+            // --- Warunkowe Renderowanie Zależne od Typu Planu ---
+            if (!isTeacherPlan) {
+                // Dla Studenta/Grupy - pokazujemy Prowadzącego, ukrywamy Grupy
+                if (!classEntity.teacherName.isNullOrBlank()) {
+                    val teacherDetails = buildString {
+                        append(classEntity.teacherName)
+                        if (!classEntity.teacherEmail.isNullOrBlank()) append("\n${classEntity.teacherEmail}")
+                        if (!classEntity.teacherInstitute.isNullOrBlank()) append("\n${classEntity.teacherInstitute}")
+                    }
+                    DetailRow(
+                        iconRes = R.drawable.ic_user,
+                        label = "Prowadzący",
+                        value = teacherDetails,
+                        isMultiline = true
+                    )
                 }
-                DetailRow(
-                    iconRes = R.drawable.ic_user,
-                    label = "Wykładowca",
-                    value = teacherDetails,
-                    isMultiline = true
-                )
-            }
-
-            // --- Grupa ---
-            if (isTeacherPlan) {
+            } else {
+                // Dla Nauczyciela - pokazujemy Grupę, ukrywamy Prowadzącego
                 val groupInfo = buildString {
                     append(classEntity.groupCode)
                     if (!classEntity.subgroup.isNullOrBlank()) append(" (Podgrupa: ${classEntity.subgroup})")
@@ -197,7 +193,6 @@ fun ClassDetailsContent(
     }
 }
 
-// --- Komponent Pomocniczy dla Wierszy ---
 @Composable
 private fun DetailRow(
     iconRes: Int,
@@ -256,7 +251,34 @@ fun StudentClassDetailsPreview() {
                 teacherInstitute = "Instytut Informatyki",
                 room = "A-2, s. 101"
             ),
-            onBackClick = {}
+            onBackClick = {},
+            isTeacherPlan = false
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Szczegóły - Plan Wykładowcy")
+@Composable
+fun TeacherClassDetailsPreview() {
+    MyUZTheme {
+        ClassDetailsContent(
+            classEntity = ClassEntity(
+                id = 1,
+                subjectName = "Algorytmy i Struktury Danych",
+                classType = "W",
+                startTime = "08:15",
+                endTime = "09:45",
+                dayOfWeek = 1,
+                date = "2024-10-14",
+                groupCode = "31-INF-S",
+                subgroup = "L1",
+                teacherName = "Prof. dr hab. inż. Jan Kowalski",
+                teacherEmail = "j.kowalski@iie.uz.zgora.pl",
+                teacherInstitute = "Instytut Informatyki",
+                room = "A-2, s. 101"
+            ),
+            onBackClick = {},
+            isTeacherPlan = true
         )
     }
 }

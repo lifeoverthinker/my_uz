@@ -1,5 +1,6 @@
 package com.example.my_uz_android.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,8 +41,6 @@ import com.example.my_uz_android.ui.theme.InterFontFamily
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import android.content.res.Configuration
-import androidx.compose.foundation.layout.height
 
 enum class ClassCardType {
     HOME,
@@ -54,15 +54,14 @@ fun ClassCard(
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     accentColor: Color = MaterialTheme.colorScheme.primary,
     showBadge: Boolean = true,
-    hasDeadlines: Boolean = false, // <-- DODANO (przekaż true, jeśli w czasie zajęć wypada deadline zadania)
-    isTeacherPlan: Boolean = false,
+    hasDeadlines: Boolean = false,
+    isTeacherPlan: Boolean = false, // Parametr zachowany dla kompatybilności wstecznej z innymi ekranami
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // POPRAWKA: Automatyczne kolory dostosowujące się do motywu z MaterialTheme zamiast sztywnych HEXów
     val titleColor = MaterialTheme.colorScheme.onSurface
     val detailsColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val avatarTextColor = Color.White // Wymuszenie bieli dla najlepszego kontrastu z kolorem kółka
+    val avatarTextColor = Color.White
 
     val isPast = remember(classItem) {
         try {
@@ -77,19 +76,6 @@ fun ClassCard(
     }
 
     val contentAlpha = if (isPast && type == ClassCardType.CALENDAR) 0.6f else 1f
-    val secondaryInfo = if (isTeacherPlan) {
-        buildString {
-            if (classItem.groupCode.isNotBlank()) {
-                append(classItem.groupCode)
-            }
-            if (!classItem.subgroup.isNullOrBlank()) {
-                if (isNotEmpty()) append(" · ")
-                append(classItem.subgroup)
-            }
-        }
-    } else {
-        classItem.teacherName.orEmpty()
-    }
 
     Card(
         shape = RoundedCornerShape(8.dp),
@@ -151,50 +137,24 @@ fun ClassCard(
                         )
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = classItem.room ?: "",
-                            style = TextStyle(
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp,
-                                color = detailsColor
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                if (type == ClassCardType.CALENDAR && secondaryInfo.isNotBlank()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(
-                                id = if (isTeacherPlan) R.drawable.ic_users else R.drawable.ic_user
-                            ),
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = detailsColor
-                        )
-                        Text(
-                            text = secondaryInfo,
-                            style = TextStyle(
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp,
-                                color = detailsColor
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    if (!classItem.room.isNullOrBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = classItem.room ?: "",
+                                style = TextStyle(
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.Normal,
+                                    fontSize = 12.sp,
+                                    lineHeight = 16.sp,
+                                    color = detailsColor
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -235,14 +195,13 @@ fun ClassCard(
                         }
                     }
 
-                    // UX: Wyświetlanie kropki zadania/deadline'u pod znaczkiem
                     if (hasDeadlines) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.error) // Czerwona kropka dla deadline'u
+                                .background(MaterialTheme.colorScheme.error)
                         )
                     }
                 }
@@ -251,7 +210,6 @@ fun ClassCard(
     }
 }
 
-// ... Previews zostawione tak jak było (zmienione kolory odzwierciedlą się same w środowisku) ...
 @Preview(showBackground = true, name = "ClassCard • HOME")
 @Composable
 private fun ClassCardHomePreview() {
