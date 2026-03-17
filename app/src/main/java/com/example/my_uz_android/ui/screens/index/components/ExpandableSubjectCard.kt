@@ -6,7 +6,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,14 +25,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.GradeEntity
-import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
 
-// ZMIANA: Używamy GradeEntity zamiast GradeItem
 data class SubjectTypeState(
     val typeName: String,
     val average: Double? = null,
@@ -67,11 +63,10 @@ fun ExpandableSubjectCard(
             .fillMaxWidth()
             .clickable { onExpandClick() },
         color = cardBackgroundColor,
-        shadowElevation = 2.dp,
-        shape = RoundedCornerShape(8.dp)
+        shadowElevation = 0.dp, // BRAK CIENIA - Google M3 Style
+        shape = RoundedCornerShape(16.dp) // Większe zaokrąglenia
     ) {
         Column {
-            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -83,9 +78,7 @@ fun ExpandableSubjectCard(
                     text = subjectName,
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                     color = contentColor,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 16.dp),
+                    modifier = Modifier.weight(1f).padding(end = 16.dp),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -105,7 +98,6 @@ fun ExpandableSubjectCard(
                             color = contentColor,
                             textAlign = TextAlign.Center
                         )
-
                         Text(
                             text = "średnia",
                             style = MaterialTheme.typography.bodySmall,
@@ -119,41 +111,28 @@ fun ExpandableSubjectCard(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = if (isExpanded) "Zwiń" else "Rozwiń",
                         tint = contentColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .rotate(arrowRotation)
+                        modifier = Modifier.size(24.dp).rotate(arrowRotation)
                     )
                 }
             }
 
-            // Lista typów zajęć
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
                 Column {
-                    HorizontalDivider(
-                        color = dividerColor,
-                        thickness = 1.dp,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    HorizontalDivider(color = dividerColor, thickness = 1.dp, modifier = Modifier.fillMaxWidth())
 
                     classTypes.forEachIndexed { index, typeState ->
                         ClassTypeRow(
-                            typeState = typeState.copy(
-                                typeName = ClassTypeUtils.getFullName(typeState.typeName)
-                            ),
+                            typeState = typeState.copy(typeName = ClassTypeUtils.getFullName(typeState.typeName)),
                             onTypeClick = { onTypeClick(typeState.typeName) },
                             onAddGradeClick = { onAddGradeClick(typeState.typeName) }
                         )
 
                         if (index < classTypes.lastIndex) {
-                            HorizontalDivider(
-                                color = dividerColor,
-                                thickness = 1.dp,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            HorizontalDivider(color = dividerColor, thickness = 1.dp, modifier = Modifier.fillMaxWidth())
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -194,7 +173,7 @@ fun ClassTypeRow(
 
                 if (typeState.grades.isEmpty()) {
                     Text(
-                        text = "Brak ocen",
+                        text = "Brak wpisów",
                         style = MaterialTheme.typography.bodySmall,
                         color = subTextColor
                     )
@@ -204,10 +183,7 @@ fun ClassTypeRow(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         items(typeState.grades) { grade ->
-                            // ZMIANA: Usunięto onGradeClick, bo GradeBubble go nie obsługuje w tej wersji
-                            GradeBubble(
-                                grade = grade
-                            )
+                            GradeBubble(grade = grade)
                         }
                     }
                 }
@@ -222,7 +198,6 @@ fun ClassTypeRow(
                     style = MaterialTheme.typography.titleLarge,
                     color = textColor
                 )
-
                 Icon(
                     painter = painterResource(id = R.drawable.ic_chevron_right),
                     contentDescription = "Przejdź do szczegółów",
@@ -232,61 +207,16 @@ fun ClassTypeRow(
             }
         }
 
-        Surface(
+        // Czysty, bezramkowy przycisk "Dodaj wpis" zamiast zarysowanego
+        TextButton(
             onClick = onAddGradeClick,
-            shape = RoundedCornerShape(8.dp),
-            border = BorderStroke(1.dp, primaryColor),
-            color = Color.Transparent,
             modifier = Modifier
                 .align(Alignment.End)
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp)
+                .padding(end = 8.dp, bottom = 8.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    tint = primaryColor,
-                    modifier = Modifier.size(16.dp)
-                )
-
-                Text(
-                    text = "Dodaj ocenę",
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                    color = primaryColor
-                )
-            }
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Dodaj wpis", style = MaterialTheme.typography.labelLarge)
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ExpandableSubjectCardPreview() {
-    MyUZTheme {
-        val classTypes = listOf(
-            SubjectTypeState(
-                typeName = "WYK",
-                average = 4.5,
-                grades = listOf(
-                    GradeEntity(id = 1, subjectName = "IO", grade = 4.0, weight = 2, description = "Kolokwium", date = 0L, semester = 1),
-                    GradeEntity(id = 2, subjectName = "IO", grade = 5.0, weight = 1, description = "Projekt", date = 0L, semester = 1)
-                )
-            )
-        )
-        ExpandableSubjectCard(
-            subjectName = "Inżynieria Oprogramowania",
-            subjectCode = "IO-101",
-            overallAverage = 4.0,
-            classTypes = classTypes,
-            isExpanded = true,
-            onExpandClick = {},
-            onAddGradeClick = {},
-            onTypeClick = {}
-        )
     }
 }

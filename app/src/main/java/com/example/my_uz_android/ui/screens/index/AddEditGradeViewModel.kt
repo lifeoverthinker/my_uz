@@ -22,7 +22,7 @@ data class AddEditGradeUiState(
     val subjectName: String? = null,
     val classType: String? = null,
     val gradeType: GradeType = GradeType.STANDARD,
-    val gradeValue: Double? = null,
+    val gradeValue: Double? = 5.0, // NAPRAWIONY BŁĄD: startujemy z domyślnym 5.0 a nie null
     val customGradeValue: String = "",
     val weight: String = "1",
     val description: String = "",
@@ -83,7 +83,7 @@ class AddEditGradeViewModel(
                 classType = type,
                 description = desc ?: "",
                 weight = weight ?: "1",
-                gradeValue = if (gradeDouble != -1.0) gradeDouble else null,
+                gradeValue = if (gradeDouble != -1.0) (gradeDouble ?: 5.0) else null, // Zabezpieczenie na domyślne 5.0
                 gradeType = if (gradeDouble == -1.0) GradeType.ACTIVITY else GradeType.STANDARD,
                 comment = comment ?: "",
                 date = System.currentTimeMillis()
@@ -148,7 +148,6 @@ class AddEditGradeViewModel(
     fun updateSubjectName(name: String?) { _uiState.update { it.copy(subjectName = name) } }
     fun updateClassType(type: String?) { _uiState.update { it.copy(classType = type) } }
 
-    // ZMIANA: Automatyczne ustawianie wagi
     fun updateGradeType(type: GradeType) {
         _uiState.update {
             it.copy(
@@ -176,7 +175,7 @@ class AddEditGradeViewModel(
 
             when (state.gradeType) {
                 GradeType.STANDARD -> {
-                    finalGrade = state.gradeValue ?: return@launch
+                    finalGrade = state.gradeValue ?: 5.0 // Dodatkowe zabezpieczenie
                     isPoints = false
                 }
                 GradeType.ACTIVITY -> {

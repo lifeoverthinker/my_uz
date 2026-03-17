@@ -28,7 +28,6 @@ import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
-// --- WRAPPER DLA NAWIGACJI ---
 @Composable
 fun AddEditGradeScreenRoute(
     viewModel: AddEditGradeViewModel,
@@ -61,6 +60,10 @@ fun AddEditGradeScreenRoute(
         onQuickTypeSelect = { type ->
             selectedQuickType = type
             viewModel.updateDescription(type)
+            // Automatyczne przełączanie na Plusy jeśli wybrano Aktywność
+            if (type.lowercase() == "aktywność") {
+                viewModel.updateGradeType(GradeType.ACTIVITY)
+            }
         },
         gradeType = appGradeType,
         onGradeTypeChange = { newType ->
@@ -109,7 +112,6 @@ enum class AppGradeType {
     SCALE, POINTS, ACTIVITY
 }
 
-// --- WSPÓLNE STYLE ---
 @Composable
 private fun getAppTextFieldColors() = TextFieldDefaults.colors(
     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
@@ -163,7 +165,6 @@ private fun ClickableFieldRow(
     }
 }
 
-// --- BEZSTANOWY WIDOK ---
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddEditGradeScreen(
@@ -201,7 +202,7 @@ fun AddEditGradeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = if (isEditMode) "Edytuj ocenę" else "Dodaj ocenę",
+                title = if (isEditMode) "Edytuj wpis" else "Dodaj wpis",
                 navigationIcon = R.drawable.ic_x_close,
                 isNavigationIconFilled = true,
                 onNavigationClick = onBackClick,
@@ -225,14 +226,14 @@ fun AddEditGradeScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 1. Szybki wybór
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "SZYBKI WYBÓR",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                val quickTypes = listOf("Kolokwium", "Egzamin", "Wejściówka", "Projekt", "Prezentacja", "Zadanie domowe", "Odpowiedź ustna")
+                // Dodano pozycję "Aktywność" do szybkiego wyboru!
+                val quickTypes = listOf("Kolokwium", "Egzamin", "Aktywność", "Wejściówka", "Projekt", "Prezentacja", "Zadanie domowe", "Odpowiedź ustna")
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(quickTypes) { type ->
                         FilterChip(
@@ -244,7 +245,6 @@ fun AddEditGradeScreen(
                 }
             }
 
-            // 2. Tytuł i Data spójne graficznie (Filled TextFields / Rows)
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 TextField(
                     value = title,
@@ -265,7 +265,6 @@ fun AddEditGradeScreen(
                 )
             }
 
-            // 3. Wybór Przedmiotu
             AppDropdownMenu(
                 label = "Przedmiot",
                 selectedOption = selectedSubject,
@@ -273,7 +272,6 @@ fun AddEditGradeScreen(
                 onOptionSelected = onSubjectChange
             )
 
-            // 4. Wybór Rodzaju Zajęć
             AnimatedVisibility(
                 visible = selectedSubject.isNotEmpty() && classTypesList.isNotEmpty(),
                 enter = expandVertically(),
@@ -306,7 +304,6 @@ fun AddEditGradeScreen(
                 }
             }
 
-            // 5. Sekcja Oceny i Wagi
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
                 shape = RoundedCornerShape(16.dp)
@@ -400,7 +397,6 @@ fun AddEditGradeScreen(
                 }
             }
 
-            // 6. Opcjonalny Opis
             TextField(
                 value = comment,
                 onValueChange = onCommentChange,
