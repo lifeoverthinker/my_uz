@@ -13,11 +13,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.data.models.UserCourseEntity
-import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.CalendarTopAppBar
 import com.example.my_uz_android.ui.screens.calendar.components.ScheduleView
 import com.example.my_uz_android.ui.theme.MyUZTheme
@@ -35,31 +34,22 @@ import kotlin.math.abs
 
 @Composable
 fun CalendarScreen(
-    onNavigateBack: () -> Unit = {},
     onOpenDrawer: () -> Unit,
     onSearchClick: () -> Unit,
     onTasksClick: () -> Unit,
     onAccountClick: () -> Unit,
-    onClassClick: (ClassEntity) -> Unit = {},
+    onClassClick: (ClassEntity) -> Unit,
     onShowPreview: () -> Unit,
-    viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: CalendarViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
-
-    // NAPRAWA: Automatycznie resetuje kalendarz z wyszukiwanego podglądu do "Mój Plan" po powrocie do tego widoku
-    LaunchedEffect(Unit) {
-        viewModel.selectMyPlan()
-    }
 
     CalendarScreenContent(
         uiState = uiState,
         onOpenDrawer = onOpenDrawer,
         onSearchClick = onSearchClick,
         onAccountClick = onAccountClick,
-        onClassClick = {
-            viewModel.setTemporaryClassForDetails(it)
-            onClassClick(it)
-        },
+        onClassClick = onClassClick,
         onDateSelected = { viewModel.setSelectedDate(it) },
         onToggleMonthView = { viewModel.setMonthView(it) },
         onToggleGroupVisibility = { viewModel.toggleGroupVisibility(it) }
@@ -139,7 +129,7 @@ fun CalendarScreenContent(
             CalendarTopAppBar(
                 title = calendarTitle,
                 isExpanded = isMonthView,
-                onNavigationClick = onOpenDrawer, // Poprawne podpięcie pod hamburger menu
+                onNavigationClick = onOpenDrawer,
                 onSearchClick = onSearchClick,
                 onTitleClick = { onToggleMonthView(!isMonthView) },
                 onAddClick = {
@@ -245,7 +235,7 @@ fun CalendarScreenContent(
                     },
                     onToggleView = { onToggleMonthView(!isMonthView) },
                     classes = uiState.visibleClasses,
-                    tasks = uiState.tasks,
+                    tasks = uiState.tasks, // Przekazujemy listę zadań do kalendarza
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
                     modifier = Modifier.weight(1f),
@@ -270,7 +260,7 @@ fun CalendarScreenPreview() {
                 ),
                 selectedGroupCodes = setOf("12IN"),
                 visibleClasses = emptyList(),
-                tasks = emptyList()
+                tasks = emptyList() // Dostarczamy pustą listę zadań dla Preview
             ),
             onOpenDrawer = {},
             onSearchClick = {},

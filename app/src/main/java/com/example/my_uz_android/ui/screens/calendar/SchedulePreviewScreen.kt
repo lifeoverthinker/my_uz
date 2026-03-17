@@ -16,6 +16,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.TaskEntity // <-- Dodany brakujący import
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.PreviewTopAppBar
 import com.example.my_uz_android.ui.components.SubgroupFilterDialog
@@ -60,6 +61,7 @@ fun SchedulePreviewScreen(
 
     SchedulePreviewScreenContent(
         classes = classes,
+        tasks = uiState.tasks,
         classColorMap = classColorMap,
         planName = planName,
         isFavorite = isFavorite,
@@ -83,6 +85,7 @@ fun SchedulePreviewScreen(
 @Composable
 fun SchedulePreviewScreenContent(
     classes: List<ClassEntity>,
+    tasks: List<TaskEntity>,
     classColorMap: Map<String, Int>,
     planName: String,
     isFavorite: Boolean,
@@ -100,7 +103,6 @@ fun SchedulePreviewScreenContent(
         classes.map { it.subgroup ?: "" }.distinct().sorted()
     }
 
-    // Fix filtrów: Inicjalizacja podgrup dopiero gdy dane faktycznie dotrą
     var selectedSubgroups by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     LaunchedEffect(availableSubgroups) {
@@ -213,7 +215,6 @@ fun SchedulePreviewScreenContent(
                     )
                 }
             } else if (classes.isEmpty()) {
-                // Tymczasowy, bezpieczny "Empty State" bez użycia zewnętrznego komponentu
                 Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
@@ -259,10 +260,13 @@ fun SchedulePreviewScreenContent(
                         }
                     },
                     classes = filteredClasses,
+
+                    // TUTAJ ZMIANA: Pusta lista zadań dla wyszukiwanych i ulubionych planów
                     tasks = emptyList(),
+
                     classColorMap = classColorMap,
                     onClassClick = onClassClick,
-                    isTeacherPlan = isTeacher, // Przekazujemy flagę do widoku planu
+                    isTeacherPlan = isTeacher,
                     showHeader = true,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -309,6 +313,7 @@ fun SchedulePreviewScreenPreview() {
                     subgroup = "L1"
                 )
             ),
+            tasks = emptyList(), // <-- Wypełniony brakujący parametr
             classColorMap = emptyMap(),
             planName = "Dr inż. Jan Kowalski",
             isFavorite = false,
