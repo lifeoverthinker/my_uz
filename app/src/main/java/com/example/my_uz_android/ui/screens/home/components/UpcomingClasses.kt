@@ -16,6 +16,8 @@ import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import kotlin.math.abs
+import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.ui.components.DashboardEmptyCard
 
 @Composable
 fun UpcomingClasses(
@@ -73,10 +75,12 @@ fun UpcomingClasses(
         }
 
         if (classes.isEmpty()) {
-            com.example.my_uz_android.ui.components.EmptyStateMessage(
-                title = "Czas na odpoczynek",
-                message = emptyMessage ?: "Dzisiaj nie masz żadnych zajęć.",
-                imageSize = 0.dp,
+            DashboardEmptyCard(
+                title = "Wszystko gotowe!",
+                message = "Brak zajęć na dziś i jutro",
+                iconRes = R.drawable.ic_calendar_check,
+                containerColor = MaterialTheme.extendedColors.classCardBackground,
+                contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         } else {

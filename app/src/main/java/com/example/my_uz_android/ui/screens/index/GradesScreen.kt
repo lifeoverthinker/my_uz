@@ -40,8 +40,9 @@ fun GradesScreen(
     } else if (uiState.subjects.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             EmptyStateMessage(
-                title = "Brak ocen",
-                message = "Nie znaleźliśmy żadnych przedmiotów w indeksie.\nUpewnij się, że poprawnie wybrałeś plan zajęć w ustawieniach.",
+                title = "Czysta karta! \uD83D\uDCD6",
+                subtitle = "Startujesz od zera",
+                message = "W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!",
                 iconRes = R.drawable.grades_rafiki,
                 modifier = Modifier.padding(16.dp)
             )

@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -22,21 +23,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
 fun EmptyStateMessage(
+    title: String,
     message: String,
     modifier: Modifier = Modifier,
-    title: String? = null,
+    subtitle: String? = null,
     iconRes: Int? = null,
     imageVector: ImageVector? = null,
-    imageSize: Dp = 240.dp, // <--- Steruje tym, czy układ jest duży czy mały (np. na Home)
+    imageSize: Dp = 240.dp,
     hint: String? = null,
     actionText: String? = null,
     onActionClick: (() -> Unit)? = null
 ) {
     val isCompact = imageSize <= 120.dp
     val padding = if (isCompact) 16.dp else 32.dp
-    val hasIcon = iconRes != null || imageVector != null // Sprawdzamy, czy w ogóle jest ikona
+    val hasIcon = iconRes != null || imageVector != null
 
-    // Dodajemy zaokrąglenie i delikatne tło dla kompaktowych widoków
     val bgColor = if (isCompact) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.background
     val shape = if (isCompact) RoundedCornerShape(16.dp) else RoundedCornerShape(0.dp)
 
@@ -46,7 +47,7 @@ fun EmptyStateMessage(
         shape = shape
     ) {
         if (isCompact) {
-            // UKŁAD KOMPAKTOWY (BEZ OBRAZKA LUB Z MAŁYM)
+            // --- UKŁAD KOMPAKTOWY ---
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -70,34 +71,37 @@ fun EmptyStateMessage(
                     }
                 }
 
-                // Teksty po prawej (wyrównane do lewej)
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    if (title != null) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Start
+                    )
+                    if (subtitle != null) {
                         Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary, // Tytuł w kolorze fioletowym
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.primary,
                             textAlign = TextAlign.Start
                         )
                     }
                     Text(
                         text = message,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Start
                     )
                 }
             }
         } else {
-            // ==========================================
-            // UKŁAD PIONOWY (PEŁNY EKRAN) - np. Oceny, Nieobecności
-            // ==========================================
+            // --- UKŁAD PIONOWY ---
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.padding(padding)
             ) {
                 when {
@@ -122,11 +126,18 @@ fun EmptyStateMessage(
                     )
                 }
 
-                if (title != null) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                if (subtitle != null) {
                     Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
+                        text = subtitle,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -148,7 +159,7 @@ fun EmptyStateMessage(
                 }
 
                 if (actionText != null && onActionClick != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = onActionClick,
                         modifier = Modifier.height(48.dp),
@@ -168,28 +179,51 @@ fun EmptyStateMessage(
     }
 }
 
-@Preview(showBackground = true)
+// --- NOWY KOMPONENT NA KARTY PUSTYCH STANÓW (DASHBOARD) ---
 @Composable
-fun EmptyStateMessagePreview() {
-    MyUZTheme {
-        Column {
-            // Podgląd dla dużego ekranu
-            EmptyStateMessage(
-                title = "Duży ekran",
-                message = "Wygląda na to, że nie ma tu jeszcze żadnych wpisów. Odpocznij chwilę!",
-                iconRes = R.drawable.ic_launcher_foreground,
-                actionText = "Odśwież",
-                onActionClick = {}
+fun DashboardEmptyCard(
+    title: String,
+    message: String,
+    iconRes: Int,
+    containerColor: Color,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = containerColor,
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        tint = contentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = contentColor
             )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-            // Podgląd dla HomeScreen (Kompaktowy)
-            EmptyStateMessage(
-                title = "Karta na pulpicie",
-                message = "Brak zadań na dzisiaj. Możesz iść na kawę i się zrelaksować.",
-                iconRes = R.drawable.ic_launcher_foreground,
-                imageSize = 80.dp // Teraz używa układu poziomego!
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

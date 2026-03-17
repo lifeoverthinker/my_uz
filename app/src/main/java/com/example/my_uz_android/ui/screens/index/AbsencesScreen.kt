@@ -34,6 +34,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.EmptyStateMessage
+import com.example.my_uz_android.ui.components.EmptyStateMessage
+import com.example.my_uz_android.ui.components.DashboardEmptyCard
 
 @Composable
 fun AbsencesScreen(
@@ -52,9 +54,10 @@ fun AbsencesScreen(
         if (absencesState.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 EmptyStateMessage(
-                    title = "Czyste konto!",
-                    message = "Brak nieobecności do wyświetlenia.\nOby tak dalej! Jeśli jednak musisz, dodaj ją przyciskiem +",
-                    iconRes = R.drawable.college_students_rafiki,
+                    title = "100% frekwencji! ✅",
+                    subtitle = "Bez ani jednej nieobecności!",
+                    message = "Brawo! Nie opuściłeś żadnych zajęć w tym semestrze. Tak trzymaj!",
+                    iconRes = R.drawable.students_rafiki, // Twoja nowa ilustracja
                     modifier = Modifier.padding(16.dp)
                 )
             }
@@ -73,7 +76,10 @@ fun AbsencesScreen(
                         item {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = if (courseName == groupedAbsences.keys.first()) 0.dp else 8.dp, bottom = 4.dp)
+                                modifier = Modifier.padding(
+                                    top = if (courseName == groupedAbsences.keys.first()) 0.dp else 8.dp,
+                                    bottom = 4.dp
+                                )
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_graduation_hat),

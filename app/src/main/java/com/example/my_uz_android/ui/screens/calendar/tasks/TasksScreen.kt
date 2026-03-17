@@ -240,19 +240,12 @@ fun TasksScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Image(
-                                painter = painterResource(id = R.drawable.time_flies_rafiki),
-                                contentDescription = null,
-                                modifier = Modifier.size(220.dp)
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Text(
-                                text = if (selectedTab == 0) "Super! Brak aktywnych zadań." else "Jeszcze nic tu nie ma. Do dzieła!",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
+                        com.example.my_uz_android.ui.components.EmptyStateMessage(
+                            title = "Brak zadań ✅",
+                            subtitle = "Wszystko gotowe",
+                            message = "Lista Twoich zadań do zrobienia jest obecnie pusta",
+                            iconRes = R.drawable.to_do_list_rafiki // Podmień na nową grafikę z zadań
+                        )
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {

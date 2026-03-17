@@ -3,6 +3,7 @@ package com.example.my_uz_android.ui.screens.index
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,7 +49,7 @@ fun AbsenceAddEditScreenRoute(
 
     var localSubject by remember(uiState.subjectName) { mutableStateOf(uiState.subjectName ?: "") }
     var localClassType by remember(uiState.classType) { mutableStateOf(uiState.classType ?: "") }
-    var isExcused by remember { mutableStateOf(true) } // Lokalny stan, jeśli brakuje we ViewModelu
+    var isExcused by remember { mutableStateOf(true) }
 
     val subjectsList = uiState.availableSubjects.map { it.first }
     val classTypesList = uiState.availableSubjects.find { it.first == localSubject }?.second ?: emptyList()
@@ -58,7 +60,7 @@ fun AbsenceAddEditScreenRoute(
         onSubjectChange = {
             localSubject = it
             viewModel.updateSubjectName(it)
-            viewModel.updateClassType("") // Czyścimy typ po zmianie przedmiotu
+            viewModel.updateClassType("")
         },
         subjectsList = subjectsList,
         selectedClassType = localClassType,
@@ -76,6 +78,60 @@ fun AbsenceAddEditScreenRoute(
         onSaveClick = { viewModel.saveAbsence() },
         onNavigateBack = onNavigateBack
     )
+}
+
+// --- WSPÓLNE STYLE ---
+@Composable
+private fun getAppTextFieldColors() = TextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+)
+
+private val AppTextFieldShape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+
+@Composable
+private fun ClickableFieldRow(
+    label: String,
+    value: String,
+    iconRes: Int?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(AppTextFieldShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Column {
+                Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            thickness = 1.dp
+        )
+    }
 }
 
 // --- BEZSTANOWY WIDOK ---
@@ -134,32 +190,13 @@ fun AbsenceAddEditScreen(
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // --- 1. Data ---
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = formatDate(dateMillis),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Data nieobecności") },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_calendar),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-                Spacer(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .clickable { showDatePicker = true }
-                )
-            }
+            // --- 1. Data (Klikalny wiersz z Dividerem) ---
+            ClickableFieldRow(
+                label = "Data nieobecności",
+                value = formatDate(dateMillis),
+                iconRes = R.drawable.ic_calendar,
+                onClick = { showDatePicker = true }
+            )
 
             // --- 2. Przedmiot (Dropdown) ---
             AppDropdownMenu(
@@ -238,8 +275,8 @@ fun AbsenceAddEditScreen(
                 }
             }
 
-            // --- 5. Powód / Opis (Spójne z zadaniami/ocenami) ---
-            OutlinedTextField(
+            // --- 5. Powód / Opis (Filled TextField) ---
+            TextField(
                 value = reason,
                 onValueChange = onReasonChange,
                 label = { Text("Powód / Opis (opcjonalnie)") },
@@ -247,7 +284,9 @@ fun AbsenceAddEditScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp),
-                maxLines = 5
+                maxLines = 5,
+                colors = getAppTextFieldColors(),
+                shape = AppTextFieldShape
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -281,7 +320,7 @@ private fun AppDropdownMenu(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
     ) {
-        OutlinedTextField(
+        TextField(
             value = selectedOption,
             onValueChange = {},
             readOnly = true,
@@ -297,7 +336,13 @@ private fun AppDropdownMenu(
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+            colors = ExposedDropdownMenuDefaults.textFieldColors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            shape = AppTextFieldShape
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -318,30 +363,4 @@ private fun AppDropdownMenu(
 
 private fun formatDate(timestamp: Long): String {
     return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp)).replaceFirstChar { it.uppercase() }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun AbsenceAddEditScreenPreview() {
-    MyUZTheme {
-        var isExcused by remember { mutableStateOf(true) }
-
-        AbsenceAddEditScreen(
-            isEditMode = false,
-            selectedSubject = "Programowanie",
-            onSubjectChange = {},
-            subjectsList = listOf("Programowanie", "Bazy Danych"),
-            selectedClassType = "Laboratorium",
-            onClassTypeChange = {},
-            classTypesList = listOf("Wykład", "Laboratorium"),
-            dateMillis = System.currentTimeMillis(),
-            onDateChange = {},
-            isExcused = isExcused,
-            onExcusedChange = { isExcused = it },
-            reason = "Zwolnienie lekarskie do końca tygodnia.",
-            onReasonChange = {},
-            onSaveClick = {},
-            onNavigateBack = {}
-        )
-    }
 }

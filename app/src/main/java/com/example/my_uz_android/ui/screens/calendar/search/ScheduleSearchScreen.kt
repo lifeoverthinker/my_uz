@@ -22,6 +22,8 @@ import com.example.my_uz_android.ui.components.EmptyStateMessage
 import com.example.my_uz_android.ui.components.SearchTopAppBar
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.components.EmptyStateMessage
+import com.example.my_uz_android.ui.components.DashboardEmptyCard
 
 @Composable
 fun ScheduleSearchScreen(
@@ -79,8 +81,10 @@ fun ScheduleSearchContent(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyStateMessage(
                         title = "Brak wyników",
-                        message = "Nie znaleziono planów dla podanego hasła. Spróbuj zmienić zapytanie.",
-                        iconRes = R.drawable.paper_map_rafiki
+                        subtitle = "Nie znaleźliśmy tego, czego szukasz",
+                        message = "Spróbuj wpisać inną nazwę grupy lub nazwisko prowadzącego. Upewnij się, że nie ma literówek.",
+                        iconRes = R.drawable.paper_map_rafiki, // Pasuje do szukania drogi/planu
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
             } else {

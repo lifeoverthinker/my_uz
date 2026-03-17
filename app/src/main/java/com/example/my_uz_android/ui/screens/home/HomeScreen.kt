@@ -38,6 +38,8 @@ import com.example.my_uz_android.ui.screens.home.components.UpcomingClasses
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.ui.theme.extendedColors
 import com.example.my_uz_android.ui.screens.notifications.NotificationsViewModel
+import com.example.my_uz_android.ui.components.DashboardEmptyCard
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -235,10 +237,13 @@ fun HomeScreen(
                                             Text(text = "Zadania", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
                                         }
                                         if (uiState.upcomingTasks.isEmpty()) {
-                                            EmptyStateMessage(
-                                                title = "Wszystko zrobione!",
-                                                message = "Brak nadchodzących zadań. Masz czas dla siebie.",
-                                                imageSize = 0.dp,
+                                            // NOWY EMPTY STATE ZADAŃ
+                                            DashboardEmptyCard(
+                                                title = "Czysta lista!",
+                                                message = "Nie masz żadnych zadań",
+                                                iconRes = R.drawable.ic_check_circle_broken,
+                                                containerColor = MaterialTheme.extendedColors.taskCardBackground,
+                                                contentColor = Color(0xFF38608F), // Twój custom_blue_light z Color.kt
                                                 modifier = Modifier.padding(vertical = 4.dp)
                                             )
                                         } else {
@@ -259,10 +264,13 @@ fun HomeScreen(
                                             Text(text = "Wydarzenia", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
                                         }
                                         if (uiState.upcomingEvents.isEmpty()) {
-                                            EmptyStateMessage(
-                                                title = "Cisza w eterze",
-                                                message = "W najbliższym czasie nie ma żadnych wydarzeń na uczelni.",
-                                                imageSize = 0.dp,
+                                            // NOWY EMPTY STATE WYDARZEŃ
+                                            DashboardEmptyCard(
+                                                title = "Spokojny czas",
+                                                message = "Brak nadchodzących wydarzeń",
+                                                iconRes = R.drawable.ic_marker_pin,
+                                                containerColor = MaterialTheme.extendedColors.eventCardBackground,
+                                                contentColor = Color(0xFF3C6839), // Twój custom_green_light z Color.kt
                                                 modifier = Modifier.padding(vertical = 4.dp)
                                             )
                                         } else {

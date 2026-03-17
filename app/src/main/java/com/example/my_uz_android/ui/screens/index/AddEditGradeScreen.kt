@@ -3,6 +3,7 @@ package com.example.my_uz_android.ui.screens.index
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -15,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -103,11 +105,65 @@ fun AddEditGradeScreenRoute(
     )
 }
 
-// --- BEZSTANOWY WIDOK (STATELESS UI) ---
 enum class AppGradeType {
     SCALE, POINTS, ACTIVITY
 }
 
+// --- WSPÓLNE STYLE ---
+@Composable
+private fun getAppTextFieldColors() = TextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+)
+
+private val AppTextFieldShape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+
+@Composable
+private fun ClickableFieldRow(
+    label: String,
+    value: String,
+    iconRes: Int?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(AppTextFieldShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Column {
+                Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            thickness = 1.dp
+        )
+    }
+}
+
+// --- BEZSTANOWY WIDOK ---
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddEditGradeScreen(
@@ -188,44 +244,25 @@ fun AddEditGradeScreen(
                 }
             }
 
-            // 2. Tytuł i Data spójne graficznie (OutlinedTextFields)
+            // 2. Tytuł i Data spójne graficznie (Filled TextFields / Rows)
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
+                TextField(
                     value = title,
                     onValueChange = onTitleChange,
                     label = { Text("Tytuł") },
                     placeholder = { Text("np. Kolokwium 1") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    colors = getAppTextFieldColors(),
+                    shape = AppTextFieldShape
                 )
 
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = formatMillisToDate(selectedDateMillis) ?: "Wybierz datę",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Data") },
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_calendar),
-                                contentDescription = "Data",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        // Stylizujemy by wyglądał jak zwykły input, pomimo że jest readOnly
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                    // Niewidzialna warstwa przechwytująca kliknięcie (chroni przed fokusem klawiatury)
-                    Spacer(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable { showDatePicker = true }
-                    )
-                }
+                ClickableFieldRow(
+                    label = "Data",
+                    value = formatMillisToDate(selectedDateMillis) ?: "Wybierz datę",
+                    iconRes = R.drawable.ic_calendar,
+                    onClick = { showDatePicker = true }
+                )
             }
 
             // 3. Wybór Przedmiotu
@@ -269,7 +306,7 @@ fun AddEditGradeScreen(
                 }
             }
 
-            // 5. Sekcja Oceny i Wagi Złączona
+            // 5. Sekcja Oceny i Wagi
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
                 shape = RoundedCornerShape(16.dp)
@@ -309,12 +346,14 @@ fun AddEditGradeScreen(
                             )
                         }
                         AppGradeType.POINTS -> {
-                            OutlinedTextField(
+                            TextField(
                                 value = pointsScored,
                                 onValueChange = onPointsScoredChange,
                                 label = { Text("Liczba punktów") },
                                 modifier = Modifier.fillMaxWidth(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                colors = getAppTextFieldColors(),
+                                shape = AppTextFieldShape
                             )
                         }
                         AppGradeType.ACTIVITY -> {
@@ -340,13 +379,12 @@ fun AddEditGradeScreen(
                         }
                     }
 
-                    // Waga wyświetla się WEWNĄTRZ karty, pod spodem
                     AnimatedVisibility(
                         visible = gradeType == AppGradeType.SCALE,
                         enter = expandVertically(),
                         exit = shrinkVertically()
                     ) {
-                        OutlinedTextField(
+                        TextField(
                             value = weight,
                             onValueChange = onWeightChange,
                             label = { Text("Waga (opcjonalnie)") },
@@ -354,14 +392,16 @@ fun AddEditGradeScreen(
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
                                 Icon(painterResource(R.drawable.ic_scales), contentDescription = null, modifier = Modifier.size(20.dp))
-                            }
+                            },
+                            colors = getAppTextFieldColors(),
+                            shape = AppTextFieldShape
                         )
                     }
                 }
             }
 
-            // 6. Opcjonalny Opis na samym dole
-            OutlinedTextField(
+            // 6. Opcjonalny Opis
+            TextField(
                 value = comment,
                 onValueChange = onCommentChange,
                 label = { Text("Opis (opcjonalnie)") },
@@ -369,7 +409,9 @@ fun AddEditGradeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 100.dp),
-                maxLines = 5
+                maxLines = 5,
+                colors = getAppTextFieldColors(),
+                shape = AppTextFieldShape
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -401,14 +443,20 @@ fun AppDropdownMenu(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
     ) {
-        OutlinedTextField(
+        TextField(
             value = selectedOption,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+            colors = ExposedDropdownMenuDefaults.textFieldColors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            shape = AppTextFieldShape
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -427,40 +475,4 @@ fun AppDropdownMenu(
 private fun formatMillisToDate(millis: Long?): String? {
     if (millis == null) return null
     return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(millis)).replaceFirstChar { it.uppercase() }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun AddEditGradeScreenPreview() {
-    MaterialTheme {
-        AddEditGradeScreen(
-            isEditMode = false,
-            selectedQuickType = "Kolokwium",
-            onQuickTypeSelect = {},
-            gradeType = AppGradeType.SCALE,
-            onGradeTypeChange = {},
-            gradeValue = "4.5",
-            onGradeValueChange = {},
-            pointsScored = "15",
-            onPointsScoredChange = {},
-            activityCount = 2,
-            onActivityCountChange = {},
-            weight = "2",
-            onWeightChange = {},
-            selectedSubject = "Programowanie",
-            onSubjectChange = {},
-            subjectsList = listOf("Programowanie", "Matematyka"),
-            selectedClassType = "L",
-            onClassTypeChange = {},
-            classTypesList = listOf("W", "L"),
-            selectedDateMillis = System.currentTimeMillis(),
-            onDateChange = {},
-            title = "Kolokwium 1",
-            onTitleChange = {},
-            comment = "",
-            onCommentChange = {},
-            onSaveClick = {},
-            onBackClick = {}
-        )
-    }
 }

@@ -3,6 +3,7 @@ package com.example.my_uz_android.ui.screens.calendar.tasks
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -14,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -43,7 +45,6 @@ fun TaskAddEditScreenRoute(
 
     val dateMillis = uiState.startDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
-    // Lokalne stany (np. dla przypomnienia, które nie istnieje jeszcze w encji)
     var selectedQuickType by remember { mutableStateOf("") }
     var hasReminder by remember { mutableStateOf(false) }
     var reminderDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -58,19 +59,19 @@ fun TaskAddEditScreenRoute(
         selectedQuickType = selectedQuickType,
         onQuickTypeSelect = { type ->
             selectedQuickType = type
-            viewModel.updateTitle(type) // Odblokowany szybki wybór!
+            viewModel.updateTitle(type)
         },
         title = uiState.title,
-        onTitleChange = { viewModel.updateTitle(it) }, // Odblokowana edycja tytułu!
+        onTitleChange = { viewModel.updateTitle(it) },
 
         isAllDay = uiState.isAllDay,
-        onAllDayChange = { viewModel.updateIsAllDay(it) }, // Odblokowany switch całego dnia!
+        onAllDayChange = { viewModel.updateIsAllDay(it) },
 
         selectedDateMillis = dateMillis,
         onDateChange = { millis ->
             val date = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
             viewModel.updateStartDate(date)
-            viewModel.updateEndDate(date) // Bezpieczeństwo - zadanie 1-dniowe
+            viewModel.updateEndDate(date)
         },
 
         selectedHour = uiState.startTime.hour,
@@ -108,7 +109,61 @@ fun TaskAddEditScreenRoute(
     )
 }
 
-// --- BEZSTANOWY WIDOK (STATELESS UI) ---
+// --- WSPÓLNE STYLE ---
+@Composable
+private fun getAppTextFieldColors() = TextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+)
+
+private val AppTextFieldShape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+
+@Composable
+private fun ClickableFieldRow(
+    label: String,
+    value: String,
+    iconRes: Int?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(AppTextFieldShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Column {
+                Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
+        }
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            thickness = 1.dp
+        )
+    }
+}
+
+// --- BEZSTANOWY WIDOK ---
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TaskAddEditScreen(
@@ -198,17 +253,18 @@ fun TaskAddEditScreen(
             }
 
             // 2. TYTUŁ ZADANIA
-            OutlinedTextField(
+            TextField(
                 value = title,
                 onValueChange = onTitleChange,
                 label = { Text("Tytuł zadania") },
                 placeholder = { Text("np. Przeczytać rozdział 4") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                colors = getAppTextFieldColors(),
+                shape = AppTextFieldShape
             )
 
-
-            // 5. CAŁY DZIEŃ PRZEŁĄCZNIK (przeniesiony nad datę)
+            // 5. CAŁY DZIEŃ PRZEŁĄCZNIK
             Row(
                 modifier = Modifier.fillMaxWidth().clickable { onAllDayChange(!isAllDay) }.padding(vertical = 4.dp, horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -219,41 +275,23 @@ fun TaskAddEditScreen(
             }
 
             // 3. DATA WYKONANIA
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = formatDate(selectedDateMillis),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Data wykonania") },
-                    leadingIcon = { Icon(painterResource(R.drawable.ic_calendar), contentDescription = null, modifier = Modifier.size(20.dp)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-                Spacer(modifier = Modifier.matchParentSize().clickable { showDatePicker = true })
-            }
+            ClickableFieldRow(
+                label = "Data wykonania",
+                value = formatDate(selectedDateMillis),
+                iconRes = R.drawable.ic_calendar,
+                onClick = { showDatePicker = true }
+            )
 
             // 4. CZAS WYKONANIA
             AnimatedVisibility(visible = !isAllDay, enter = expandVertically(), exit = shrinkVertically()) {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Godzina wykonania") },
-                        leadingIcon = { Icon(painterResource(R.drawable.ic_clock), contentDescription = null, modifier = Modifier.size(20.dp)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                    Spacer(modifier = Modifier.matchParentSize().clickable { showTimePicker = true })
-                }
+                ClickableFieldRow(
+                    label = "Godzina wykonania",
+                    value = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
+                    iconRes = R.drawable.ic_clock,
+                    onClick = { showTimePicker = true },
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
-
 
             // 6. PRZYPOMNIENIE
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -272,22 +310,20 @@ fun TaskAddEditScreen(
 
                 AnimatedVisibility(visible = hasReminder, enter = expandVertically(), exit = shrinkVertically()) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedTextField(
-                                value = formatDateShort(reminderDateMillis),
-                                onValueChange = {}, readOnly = true, label = { Text("Data") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.matchParentSize().clickable { showReminderDatePicker = true })
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedTextField(
-                                value = String.format(Locale.getDefault(), "%02d:%02d", reminderHour, reminderMinute),
-                                onValueChange = {}, readOnly = true, label = { Text("Godzina") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.matchParentSize().clickable { showReminderTimePicker = true })
-                        }
+                        ClickableFieldRow(
+                            label = "Data",
+                            value = formatDateShort(reminderDateMillis),
+                            iconRes = null,
+                            onClick = { showReminderDatePicker = true },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ClickableFieldRow(
+                            label = "Godzina",
+                            value = String.format(Locale.getDefault(), "%02d:%02d", reminderHour, reminderMinute),
+                            iconRes = null,
+                            onClick = { showReminderTimePicker = true },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }
@@ -328,13 +364,15 @@ fun TaskAddEditScreen(
             }
 
             // 10. OPIS
-            OutlinedTextField(
+            TextField(
                 value = description,
                 onValueChange = onDescriptionChange,
                 label = { Text("Opis (opcjonalnie)") },
                 placeholder = { Text("Dodatkowe szczegóły, materiały...") },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
-                maxLines = 5
+                maxLines = 5,
+                colors = getAppTextFieldColors(),
+                shape = AppTextFieldShape
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -366,11 +404,17 @@ fun TaskAddEditScreen(
 fun AppDropdownMenu(label: String, selectedOption: String, options: List<String>, onOptionSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-        OutlinedTextField(
+        TextField(
             value = selectedOption, onValueChange = {}, readOnly = true, label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+            colors = ExposedDropdownMenuDefaults.textFieldColors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            shape = AppTextFieldShape
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
@@ -382,25 +426,3 @@ fun AppDropdownMenu(label: String, selectedOption: String, options: List<String>
 
 private fun formatDate(timestamp: Long): String = SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp)).replaceFirstChar { it.uppercase() }
 private fun formatDateShort(timestamp: Long): String = SimpleDateFormat("dd.MM.yyyy", Locale("pl", "PL")).format(Date(timestamp))
-
-@Preview(showBackground = true)
-@Composable
-fun TaskAddEditScreenPreview() {
-    MaterialTheme {
-        TaskAddEditScreen(
-            isEditMode = false, selectedQuickType = "Projekt", onQuickTypeSelect = {},
-            title = "Projekt Zaliczeniowy", onTitleChange = {},
-            isAllDay = false, onAllDayChange = {},
-            selectedDateMillis = System.currentTimeMillis(), onDateChange = {},
-            selectedHour = 14, selectedMinute = 30, onTimeChange = { _, _ -> },
-            hasReminder = true, onHasReminderChange = {},
-            reminderDateMillis = System.currentTimeMillis(), onReminderDateChange = {},
-            reminderHour = 12, reminderMinute = 0, onReminderTimeChange = { _, _ -> },
-            selectedSubject = "Programowanie", onSubjectChange = {}, subjectsList = listOf("Programowanie"),
-            selectedClassType = "Laboratorium", onClassTypeChange = {}, classTypesList = listOf("Laboratorium"),
-            priority = 2, onPriorityChange = {},
-            description = "Przygotować bazę danych.", onDescriptionChange = {},
-            onSaveClick = {}, onNavigateBack = {}
-        )
-    }
-}

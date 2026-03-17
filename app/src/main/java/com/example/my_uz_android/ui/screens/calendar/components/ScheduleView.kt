@@ -53,6 +53,10 @@ import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 import kotlin.math.abs
 import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
@@ -82,30 +86,34 @@ fun ScheduleView(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    LaunchedEffect(classes, selectedDate) {
-        delay(50)
+    LaunchedEffect(selectedDate) {
+        // Małe opóźnienie, aby Compose zdążyło obliczyć layout (można poeksperymentować z 10-50ms)
+        delay(10)
 
         val isToday = selectedDate == LocalDate.now(PolandZone)
         val classesForToday = classes.filter { it.date == selectedDate.toString() }
 
-        val targetMinute = if (isToday) {
-            val now = LocalTime.now(PolandZone)
-            (now.hour * 60 + now.minute - 60).coerceAtLeast(0)
-        } else if (classesForToday.isNotEmpty()) {
-            val firstClassMinute = classesForToday.minOfOrNull {
-                try {
-                    val parts = it.startTime.split(":")
-                    parts[0].toInt() * 60 + parts[1].toInt()
-                } catch (e: Exception) {
-                    8 * 60
-                }
-            } ?: (8 * 60)
-            (firstClassMinute - 60).coerceAtLeast(0)
-        } else {
-            8 * 60
+        val targetMinute = when {
+            isToday -> {
+                val now = LocalTime.now(PolandZone)
+                // Godzina przed aktualną godziną
+                (now.hour * 60 + now.minute - 60).coerceAtLeast(0)
+            }
+            classesForToday.isNotEmpty() -> {
+                val firstClassMinute = classesForToday.minOfOrNull {
+                    try {
+                        val parts = it.startTime.split(":")
+                        parts[0].toInt() * 60 + parts[1].toInt()
+                    } catch (e: Exception) { 8 * 60 }
+                } ?: (8 * 60)
+                // Godzina przed pierwszymi zajęciami
+                (firstClassMinute - 60).coerceAtLeast(0)
+            }
+            else -> 8 * 60 // Domyślnie 8:00 dla pustych dni
         }
 
-        scrollState.animateScrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
+        // Używamy scrollTo zamiast animateScrollTo dla natychmiastowego efektu
+        scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
     }
 
     Column(
@@ -122,8 +130,9 @@ fun ScheduleView(
                 else YearMonth.now(PolandZone)
             }
 
-            val monthName = visibleMonth.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
-                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
+            val monthName =
+                visibleMonth.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
+                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
             val monthTitle = "$monthName ${visibleMonth.year}"
 
             Box(
@@ -166,14 +175,18 @@ fun ScheduleView(
             )
         }
 
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
                 DaysOfWeekTitle(daysOfWeek = daysOfWeek(firstDayOfWeek = DayOfWeek.MONDAY))
             }
         }
 
-        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Row(modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
                 if (isMonthView) {
@@ -181,7 +194,8 @@ fun ScheduleView(
                         state = calendarState,
                         dayContent = { day ->
                             val dayTasks = tasks.filter {
-                                val taskDate = Instant.ofEpochMilli(it.dueDate).atZone(PolandZone).toLocalDate()
+                                val taskDate = Instant.ofEpochMilli(it.dueDate).atZone(PolandZone)
+                                    .toLocalDate()
                                 taskDate == day.date
                             }
                             CalendarDay(
@@ -199,7 +213,8 @@ fun ScheduleView(
                         state = weekState,
                         dayContent = { day ->
                             val dayTasks = tasks.filter {
-                                val taskDate = Instant.ofEpochMilli(it.dueDate).atZone(PolandZone).toLocalDate()
+                                val taskDate = Instant.ofEpochMilli(it.dueDate).atZone(PolandZone)
+                                    .toLocalDate()
                                 taskDate == day.date
                             }
                             CalendarDay(
@@ -220,8 +235,10 @@ fun ScheduleView(
             targetState = selectedDate,
             transitionSpec = {
                 val isNext = swipeDirection != DaySwipeDirection.PREVIOUS
-                val enterOffset: (Int) -> Int = { fullWidth -> if (isNext) fullWidth else -fullWidth }
-                val exitOffset: (Int) -> Int = { fullWidth -> if (isNext) -fullWidth else fullWidth }
+                val enterOffset: (Int) -> Int =
+                    { fullWidth -> if (isNext) fullWidth else -fullWidth }
+                val exitOffset: (Int) -> Int =
+                    { fullWidth -> if (isNext) -fullWidth else fullWidth }
 
                 (slideInHorizontally(
                     animationSpec = tween(300),
@@ -307,21 +324,33 @@ private fun DayTimelineContent(
     scrollState: androidx.compose.foundation.ScrollState
 ) {
     if (classesForDay.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
             com.example.my_uz_android.ui.components.EmptyStateMessage(
                 title = "Brak zajęć",
-                message = "W tym dniu nie masz zaplanowanych żadnych zajęć.",
-                iconRes = R.drawable.calendar_rafiki
+                subtitle = "Zasłużony odpoczynek",
+                message = "W tym dniu nie masz żadnych zaplanowanych zajęć. Ciesz się wolnym czasem!",
+                iconRes = R.drawable.calendar_rafiki // Oczywiście podmień na zasób ze swojej Figmy
             )
         }
     } else {
-        Box(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     repeat(24) { index -> HourRow(hour = index) }
                 }
 
-                BoxWithConstraints(modifier = Modifier.matchParentSize().padding(start = 56.dp)) {
+                BoxWithConstraints(modifier = Modifier
+                    .matchParentSize()
+                    .padding(start = 56.dp)) {
                     val eventLayouts = remember(classesForDay) {
                         com.example.my_uz_android.util.calculateEventLayouts(classesForDay)
                     }
@@ -353,7 +382,9 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
     Row(modifier = Modifier.fillMaxWidth()) {
         for (dayOfWeek in daysOfWeek) {
             Text(
-                modifier = Modifier.weight(1f).height(24.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .height(24.dp),
                 text = dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale("pl"))
                     .replaceFirstChar { it.titlecase() }.take(1),
                 textAlign = TextAlign.Center,
@@ -383,10 +414,16 @@ fun CalendarDay(
 
     val circleSize = if (isSelected || isToday) 28.dp else 24.dp
     val circleColor = if (isSelected && isDateInMonth) primaryColor else Color.Transparent
-    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(1.dp, primaryColor, CircleShape) else Modifier
+    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(
+        1.dp,
+        primaryColor,
+        CircleShape
+    ) else Modifier
 
     Box(
-        modifier = Modifier.aspectRatio(1f).padding(2.dp),
+        modifier = Modifier
+            .aspectRatio(1f)
+            .padding(2.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -449,7 +486,9 @@ fun HourRow(hour: Int) {
     val horizontalLineStart = HourColWidth - 8.dp
     val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
-    Box(modifier = Modifier.fillMaxWidth().height(rowHeight)) {
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .height(rowHeight)) {
         if (hour != 0) {
             HorizontalDivider(
                 modifier = Modifier
@@ -514,10 +553,12 @@ fun ScheduledClassItem(
     val startXOffset = columnWidth * colIndex
 
     val now = LocalDateTime.now(PolandZone)
-    val classStartDateTime = LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
+    val classStartDateTime =
+        LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
     val isFuture = now.isBefore(classStartDateTime)
 
-    val assignedColorIndex = classColorMap[classEntity.classType] ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
+    val assignedColorIndex = classColorMap[classEntity.classType]
+        ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
     val colorSet = ClassColorPalette.getOrElse(assignedColorIndex) { ClassColorPalette[0] }
 
     Box(
@@ -564,7 +605,9 @@ fun CurrentTimeIndicator() {
         HorizontalDivider(
             color = indicatorColor,
             thickness = 2.dp,
-            modifier = Modifier.fillMaxWidth().padding(start = HourColWidth)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = HourColWidth)
         )
         Box(
             modifier = Modifier
