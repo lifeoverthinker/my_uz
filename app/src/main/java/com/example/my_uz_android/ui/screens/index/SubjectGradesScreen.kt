@@ -210,7 +210,30 @@ fun FinalGradeMinimalButton(finalGrade: Double?, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Średnia końcowa",
+                text = "Średnia końcowaPROMPT K: Nowoczesny Ekran Konta (Styl Google)\n" +
+                        "Ten prompt odświeży profil użytkownika, robiąc z niego czytelne centrum dowodzenia.\n" +
+                        "\n" +
+                        "Pliki do załączenia: AccountScreen.kt, SettingsEntity.kt, PersonalDataScreen.kt.\n" +
+                        "\n" +
+                        "Zadanie: Działaj jako UI Designer i Senior Android Developer. Chcę całkowicie odświeżyć wygląd AccountScreen.kt, aby pasował do estetyki Google Account / Material Design 3.\n" +
+                        "\n" +
+                        "Wymagania wizualne:\n" +
+                        "\n" +
+                        "Nagłówek: Na górze duże, okrągłe zdjęcie profilowe (lub inicjały na kolorowym tle), pod nim Imię i Nazwisko (Bold) oraz adres e-mail/numer indeksu (Medium, Grey).\n" +
+                        "\n" +
+                        "Sekcje (Karty): Zamiast luźnej listy, pogrupuj opcje w eleganckie karty (ElevatedCard) z zaokrąglonymi rogami:\n" +
+                        "\n" +
+                        "Dane osobiste: Wydział, kierunek, grupa.\n" +
+                        "\n" +
+                        "Ustawienia aplikacji: Powiadomienia, motyw, backup.\n" +
+                        "\n" +
+                        "Informacje: O aplikacji, wyloguj.\n" +
+                        "\n" +
+                        "Interakcja: Każdy wiersz w karcie ma mieć ikonę po lewej, tytuł i strzałkę chevron_right po prawej.\n" +
+                        "\n" +
+                        "Spójność: Użyj kolorów z mojego motywu MaterialTheme.colorScheme.primary dla ikon.\n" +
+                        "\n" +
+                        "Zwróć tylko zaktualizowany kod Compose dla AccountScreen.kt.",
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
