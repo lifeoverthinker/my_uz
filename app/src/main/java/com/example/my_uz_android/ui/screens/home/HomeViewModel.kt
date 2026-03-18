@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -36,7 +35,8 @@ data class HomeUiState(
     val classesDayLabel: String? = null,
     val isPlanSelected: Boolean = false,
     val classColorMap: Map<String, Int> = emptyMap(),
-    val isDarkMode: Boolean = false
+    // ZMIANA: używamy stringa, tak jak w MainActivity
+    val themeMode: String = "SYSTEM"
 )
 
 class HomeViewModel(
@@ -51,7 +51,7 @@ class HomeViewModel(
 
     val uiState: StateFlow<HomeUiState> = combine(
         settingsRepository.getSettingsStream(),
-        classRepository.getUpcomingClasses(), // Używamy nowej funkcji z repozytorium
+        classRepository.getUpcomingClasses(),
         tasksRepository.getAllTasks()
     ) { settings: SettingsEntity?, upcomingClasses: List<ClassEntity>, tasks: List<TaskEntity> ->
 
@@ -60,9 +60,8 @@ class HomeViewModel(
 
         val isAnonymous = settings?.isAnonymous == true
         val hasGroup = !settings?.selectedGroupCode.isNullOrBlank()
-        val gender = settings?.gender // STUDENTKA / STUDENT
+        val gender = settings?.gender
 
-        // Przywrócona logika powitania
         val (greeting, initials) = when {
             isAnonymous && !hasGroup -> "Witaj w MyUZ!" to ""
             isAnonymous && hasGroup -> {
@@ -82,7 +81,6 @@ class HomeViewModel(
             }
         }
 
-        // Przywrócona logika wydziału
         val departmentInfo = when {
             !settings?.faculty.isNullOrBlank() -> settings?.faculty!!
             else -> "Uniwersytet Zielonogórski"
@@ -90,7 +88,6 @@ class HomeViewModel(
 
         val isPlanSelected = hasGroup
 
-        // Uproszczona logika wyboru etykiety dla zajęć
         val (displayedClasses, dayLabel, emptyMessage) = if (isPlanSelected) {
             if (upcomingClasses.isNotEmpty()) {
                 val classDateStr = upcomingClasses.first().date
@@ -116,9 +113,9 @@ class HomeViewModel(
         val mockEvents = listOf(
             EventEntity(
                 id = 1,
-                title = "Juwenalia 2025",
+                title = "Juwenalia 2026",
                 description = "Największa impreza roku!",
-                date = "Piątek, 20 maja 2025",
+                date = "Piątek, 20 maja 2026",
                 location = "Kampus A",
                 timeRange = "18:00 - 02:00"
             )
@@ -145,7 +142,8 @@ class HomeViewModel(
             isLoading = false,
             isPlanSelected = isPlanSelected,
             classColorMap = classColorMap,
-            isDarkMode = settings?.isDarkMode ?: false
+            // ZMIANA: Pobieramy poprawny themeMode z ustawień
+            themeMode = settings?.themeMode ?: "SYSTEM"
         )
     }.stateIn(
         scope = viewModelScope,

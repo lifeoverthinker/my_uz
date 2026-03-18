@@ -44,9 +44,9 @@ class EventDetailsViewModel(
                     _uiState.value = EventDetailsUiState(
                         eventEntity = EventEntity(
                             id = eventId,
-                            title = "Juwenalia 2025",
+                            title = "Juwenalia 2026",
                             description = "Największa impreza roku! Muzyka na żywo, food trucki i mnóstwo atrakcji.",
-                            date = "Piątek, 20 maja 2025",
+                            date = "Piątek, 20 maja 2026",
                             location = "Kampus A, Uniwersytet Zielonogórski",
                             timeRange = "18:00 - 02:00"
                         ),

@@ -114,7 +114,7 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
                 modifier = Modifier.padding(bottom = 32.dp)
             ) {
                 Text(
-                    text = "Student Project 2025",
+                    text = "Student Project 2026",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.outline
                 )

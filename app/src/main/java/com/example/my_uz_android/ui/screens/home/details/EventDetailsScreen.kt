@@ -183,9 +183,9 @@ fun EventDetailsScreenPreview() {
         EventDetailsContent(
             event = EventEntity(
                 id = 1,
-                title = "Juwenalia 2025",
+                title = "Juwenalia 2026",
                 description = "Największa impreza roku! Muzyka na żywo, food trucki i mnóstwo atrakcji studenckich na kampusie B.",
-                date = "Piątek, 20 maja 2025",
+                date = "Piątek, 20 maja 2026",
                 location = "Kampus B, Uniwersytet Zielonogórski",
                 timeRange = "18:00 - 02:00"
             ),

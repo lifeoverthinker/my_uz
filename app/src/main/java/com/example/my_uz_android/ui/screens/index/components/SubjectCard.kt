@@ -120,7 +120,7 @@ fun PreviewSubjectCardWithAverage() {
     Box(modifier = Modifier.padding(16.dp)) {
         SubjectCard(
             subjectName = "Bazy danych",
-            subjectCode = "BD-2025",
+            subjectCode = "BD-2026",
             average = 5.0
         )
     }
