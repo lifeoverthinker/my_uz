@@ -11,7 +11,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -21,6 +20,14 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
+/**
+ * Komponent wyświetlający zadanie (Task) ze statusem ukończenia i terminem.
+ *
+ * @param task Obiekt [TaskEntity] reprezentujący zadanie.
+ * @param onTaskClick Akcja wywoływana po kliknięciu w zadanie.
+ * @param modifier Modyfikator układu karty.
+ * @param showDayMarker Flaga określająca, czy wyświetlać znacznik dnia (obecnie nieużywana w UI komponentu, gotowa do rozbudowy).
+ */
 @Composable
 fun TaskCard(
     task: TaskEntity,
@@ -29,16 +36,15 @@ fun TaskCard(
     showDayMarker: Boolean = true
 ) {
     val isCompleted = task.isCompleted
+    val baseBackgroundColor = extendedColors.taskCardBackground
 
-    val baseBackgroundColor = MaterialTheme.extendedColors.taskCardBackground // pastelowe tło Task
-
-    // ZMIANA: Zamiast alpha (przezroczystości), używamy solidnego koloru surfaceVariant
-    val cardBackgroundColor = if (isCompleted)
+    val cardBackgroundColor = if (isCompleted) {
         MaterialTheme.colorScheme.surfaceVariant
-    else
+    } else {
         baseBackgroundColor
+    }
 
-    val titleColor = Color(0xFF1D192B)
+    val contentColor = MaterialTheme.colorScheme.onSurface
     val textDecoration = if (isCompleted) TextDecoration.LineThrough else null
 
     Column(
@@ -52,14 +58,13 @@ fun TaskCard(
         Text(
             text = task.title,
             style = MaterialTheme.typography.titleSmall.copy(
-                color = titleColor,
+                color = contentColor,
                 textDecoration = textDecoration
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
 
-        // Wyświetlanie daty i przedmiotu
         val dateText = formatTaskDateShort(task.dueDate)
         val subjectText = task.subjectName?.takeIf { it.isNotBlank() }
         val fullText = subjectText?.let { "$dateText • $it" } ?: dateText
@@ -68,7 +73,7 @@ fun TaskCard(
             Text(
                 text = fullText,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = titleColor
+                    color = contentColor
                 ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -77,6 +82,12 @@ fun TaskCard(
     }
 }
 
+/**
+ * Formatuje timestamp na przyjazny dla użytkownika krótki tekst daty (np. "Dziś", "Jutro", "Pn, 15 paź").
+ *
+ * @param dueDate Czas w milisekundach (epoch time).
+ * @return Sformatowany ciąg znaków reprezentujący datę.
+ */
 private fun formatTaskDateShort(dueDate: Long): String {
     return try {
         val date = Instant.ofEpochMilli(dueDate)

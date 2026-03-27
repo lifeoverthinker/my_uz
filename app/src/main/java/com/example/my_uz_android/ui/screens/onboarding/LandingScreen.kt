@@ -37,6 +37,7 @@ private fun getIllustrationResId(currentPage: Int): Int = when (currentPage) {
     2 -> R.drawable.settings_rafiki
     3 -> R.drawable.calendar_rafiki
     4 -> R.drawable.grades_rafiki
+    5 -> R.drawable.happy_student_rafiki
     else -> R.drawable.ic_user
 }
 
@@ -52,8 +53,7 @@ fun LandingScreen(
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val selectedGender by viewModel.selectedGender.collectAsState()
     val userName by viewModel.userName.collectAsState()
-    // Teraz mamy tylko 5 stron (0 do 4)
-    val totalPages = 5
+    val totalPages = viewModel.totalPages
     val isLoading by viewModel.isLoading.collectAsState()
 
     val imeInsets = WindowInsets.ime
@@ -74,8 +74,7 @@ fun LandingScreen(
                         .statusBarsPadding(),
                     contentAlignment = Alignment.TopEnd
                 ) {
-                    // Przycisk Pomiń (tylko na stronach < 4)
-                    if (currentPage < 4) {
+                    if (currentPage < totalPages - 1) {
                         TextButton(
                             onClick = {
                                 viewModel.skipOnboarding { onFinishOnboarding() }
@@ -126,7 +125,7 @@ fun LandingScreen(
                                         )
                                     }
                                 }
-                                4 -> { // Ostatnia strona to teraz 4 (Oceny)
+                                totalPages - 1 -> {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -136,6 +135,8 @@ fun LandingScreen(
                                             modifier = Modifier.weight(1f).height(48.dp),
                                             enabled = !isLoading
                                         ) {
+                                            Icon(painterResource(R.drawable.ic_chevron_left), null, Modifier.size(20.dp))
+                                            Spacer(Modifier.width(8.dp))
                                             Text("Wstecz")
                                         }
                                         Button(
@@ -151,7 +152,7 @@ fun LandingScreen(
                                                     color = MaterialTheme.colorScheme.onPrimary
                                                 )
                                             } else {
-                                                Text("Gotowe!")
+                                                Text("Zaczynamy!")
                                             }
                                         }
                                     }
@@ -222,6 +223,7 @@ fun LandingScreen(
                         2 -> GroupSelectionStepContent(viewModel)
                         3 -> CalendarFeatureStepContent()
                         4 -> GradesFeatureStepContent()
+                        5 -> FinalStepContent()
                     }
                 }
             }
@@ -236,8 +238,8 @@ fun WelcomeStepContent() {
     ResponsiveOnboardingStep(illustrationResId = R.drawable.college_students_rafiki) {
         OnboardingTexts(
             title = "Witaj w MyUZ! 👋",
-            subtitle = "Twój cyfrowy asystent",
-            description = "Plan zajęć i oceny w jednym miejscu."
+            subtitle = "Twój cyfrowy asystent na\nUniwersytecie Zielonogórskim",
+            description = "Zarządzaj zajęciami, zadaniami i ocenami w jednym miejscu. Wszystko co potrzebujesz do organizacji życia studenckiego."
         )
     }
 }
@@ -254,7 +256,7 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
         OnboardingTexts(
             title = "Personalizacja",
             subtitle = "Kim jesteś?",
-            description = "Dzięki temu aplikacja będzie zwracać się do Ciebie tak, jak lubisz."
+            description = "Dzięki temu aplikacja będzie zwracać się do Ciebie tak, jak lubisz"
         )
 
         Column(
@@ -365,9 +367,9 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
 
     ResponsiveOnboardingStep(illustrationResId = R.drawable.settings_rafiki) {
         OnboardingTexts(
-            title = "Twoja Grupa",
-            subtitle = "Pobierz plan zajęć",
-            description = "Wpisz kod grupy dziekańskiej (np. 32INF-SP)."
+            title = "Wybierz swoją grupę",
+            subtitle = "Znajdź swój plan zajęć",
+            description = "Wybierz swoją grupę i podgrupy, aby dostosować aplikację do Twojego rozkładu zajęć"
         )
 
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -381,13 +383,13 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
                         viewModel.setGroupSearchQuery(it)
                         expanded = true
                     },
-                    placeholder = { Text("Szukaj grupy...") },
+                    placeholder = { Text("np. 23INF-SP") },
                     label = { Text("Kod grupy") },
                     leadingIcon = { Icon(painterResource(R.drawable.ic_search), null, Modifier.size(24.dp)) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.setGroupSearchQuery("") }) {
-                                Icon(painterResource(R.drawable.ic_x_close), "Wyczyść", Modifier.size(24.dp))
+                                Icon(painterResource(R.drawable.ic_close), "Wyczyść", Modifier.size(24.dp))
                             }
                         }
                     },
@@ -465,12 +467,32 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
 
 @Composable
 fun CalendarFeatureStepContent() {
-    InfoStepContent(3, "Terminarz", "Zarządzaj czasem", "Twój plan zajęć i osobiste notatki w przejrzystym kalendarzu.")
+    InfoStepContent(
+        pageIndex = 3,
+        title = "Terminarz i kalendarz",
+        subtitle = "Wszystkie zajęcia w jednym miejscu",
+        description = "Sprawdzaj plan zajęć, dodawaj zadania i nie przegap żadnego wydarzenia uniwersyteckiego"
+    )
 }
 
 @Composable
 fun GradesFeatureStepContent() {
-    InfoStepContent(4, "Indeks", "Twoje postępy", "Monitoruj swoje oceny i średnią na bieżąco.")
+    InfoStepContent(
+        pageIndex = 4,
+        title = "Osobisty indeks",
+        subtitle = "Śledź swoje postępy lokalnie",
+        description = "Twoje oceny w jednym miejscu. Zapisuj wyniki, sprawdzaj średnią i pilnuj limitów nieobecności"
+    )
+}
+
+@Composable
+fun FinalStepContent() {
+    InfoStepContent(
+        pageIndex = 5,
+        title = "Wszystko gotowe! 🎉",
+        subtitle = "Witaj na pokładzie!",
+        description = "Twój profil został skonfigurowany. Plan zajęć, indeks i terminarz czekają na Ciebie"
+    )
 }
 
 @Composable
@@ -478,6 +500,7 @@ fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description
     val resId = when(pageIndex) {
         3 -> R.drawable.calendar_rafiki
         4 -> R.drawable.grades_rafiki
+        5 -> R.drawable.happy_student_rafiki
         else -> R.drawable.ic_user
     }
     ResponsiveOnboardingStep(illustrationResId = resId) {
@@ -577,7 +600,7 @@ fun PageIndicators(totalPages: Int, currentPage: Int) {
 @Composable
 fun FooterText() {
     Text(
-        text = "MyUZ 2026 v1.0.0",
+        text = "MyUZ 2026 Wersja 1.00",
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.outline
     )

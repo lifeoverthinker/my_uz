@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.DatePicker
@@ -203,7 +202,7 @@ fun AddEditGradeScreen(
         topBar = {
             TopAppBar(
                 title = if (isEditMode) "Edytuj wpis" else "Dodaj wpis",
-                navigationIcon = R.drawable.ic_x_close,
+                navigationIcon = R.drawable.ic_close,
                 isNavigationIconFilled = true,
                 onNavigationClick = onBackClick,
                 actions = {

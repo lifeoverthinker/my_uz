@@ -17,7 +17,6 @@ class OnboardingViewModel(
     private val classRepository: ClassRepository
 ) : ViewModel() {
 
-    // --- Stany UI ---
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
@@ -26,7 +25,6 @@ class OnboardingViewModel(
 
     val totalPages = 6
 
-    // --- Dane Użytkownika ---
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
@@ -36,7 +34,6 @@ class OnboardingViewModel(
     private val _selectedGender = MutableStateFlow<UserGender?>(null)
     val selectedGender: StateFlow<UserGender?> = _selectedGender.asStateFlow()
 
-    // --- Wybór Grupy ---
     private val _groupSearchQuery = MutableStateFlow("")
     val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
 
@@ -49,10 +46,8 @@ class OnboardingViewModel(
     private val _selectedSubgroups = MutableStateFlow<Set<String>>(emptySet())
     val selectedSubgroups: StateFlow<Set<String>> = _selectedSubgroups.asStateFlow()
 
-    // Lista grup z serwera
     private val _allGroups = MutableStateFlow<List<String>>(emptyList())
 
-    // Filtrowanie grup
     val filteredGroups: StateFlow<List<String>> = combine(
         _groupSearchQuery,
         _allGroups
@@ -61,7 +56,7 @@ class OnboardingViewModel(
             emptyList()
         } else {
             allGroups.filter { it.contains(query, ignoreCase = true) }
-                .sorted() // Sortowanie alfabetyczne
+                .sorted()
                 .take(5)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -74,21 +69,17 @@ class OnboardingViewModel(
         viewModelScope.launch {
             when (val result = universityRepository.getGroupCodes()) {
                 is NetworkResult.Success -> {
-                    // POPRAWKA: Filtrowanie pustych wartości i "null" oraz sortowanie
                     val groups = (result.data ?: emptyList())
                         .filter { !it.isNullOrBlank() && it != "null" }
                         .sorted()
                     _allGroups.value = groups
                 }
-
                 else -> {
                     _allGroups.value = emptyList()
                 }
             }
         }
     }
-
-    // --- Metody obsługi UI ---
 
     fun onNextClick() {
         if (_currentPage.value < totalPages - 1) {
@@ -135,13 +126,11 @@ class OnboardingViewModel(
             _isLoading.value = true
             when (val result = universityRepository.getSubgroups(group)) {
                 is NetworkResult.Success -> {
-                    // POPRAWKA: Filtrowanie podgrup (żeby nie pokazywało pustej opcji)
                     val subgroups = (result.data ?: emptyList())
                         .filter { !it.isNullOrBlank() && it != "null" }
                         .sorted()
                     _availableSubgroups.value = subgroups
                 }
-
                 else -> {
                     _availableSubgroups.value = emptyList()
                 }
@@ -160,7 +149,6 @@ class OnboardingViewModel(
         _selectedSubgroups.value = current
     }
 
-    // Funkcja Skip (Pomiń) - zachowana oryginalna logika
     fun skipOnboarding(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -170,7 +158,7 @@ class OnboardingViewModel(
             val guestSettings = SettingsEntity(
                 id = currentSettings?.id ?: 0,
                 userName = "Gość",
-                isAnonymous = true, // Ustawiamy flagę anonimowości
+                isAnonymous = true,
                 selectedGroupCode = null,
                 activeDirectionCode = null,
                 selectedSubgroup = null,
@@ -186,13 +174,10 @@ class OnboardingViewModel(
         }
     }
 
-    // Funkcja Zapisu - zachowana oryginalna logika (pobieranie szczegółów grupy)
-// Funkcja Zapisu
     fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
 
-            // Pobieranie szczegółów grupy (Wydział, Kierunek, Tryb)
             var fetchedFaculty: String? = null
             var fetchedFieldOfStudy: String? = null
             var fetchedStudyMode: String? = null
@@ -214,7 +199,6 @@ class OnboardingViewModel(
             val genderString =
                 if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
 
-            // NAPRAWA: Zapis bez spacji między przecinkami, tak aby multiselect w AccountViewModel widział je poprawnie
             val subgroupsString = _selectedSubgroups.value.joinToString(",")
 
             val newSettings = SettingsEntity(
@@ -239,4 +223,3 @@ class OnboardingViewModel(
         }
     }
 }
-

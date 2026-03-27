@@ -25,14 +25,13 @@ fun ThemeSelector(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ThemeMode.values().forEach { mode ->
+        ThemeMode.entries.forEach { mode ->
             val isSelected = selectedTheme == mode
 
             val bgColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
             val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
             val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
 
-            // Zamiana enum na czytelny tekst
             val themeName = when (mode.name) {
                 "LIGHT" -> "Jasny"
                 "DARK" -> "Ciemny"
@@ -45,7 +44,6 @@ fun ThemeSelector(
                     .height(48.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(bgColor)
-                    // POPRAWIONE OBRAMOWANIE (stała grubość 1.dp, kolor zależny od zaznaczenia)
                     .border(
                         width = 1.dp,
                         color = borderColor,
@@ -56,7 +54,7 @@ fun ThemeSelector(
             ) {
                 Text(
                     text = themeName,
-                    fontWeight = FontWeight.Medium, // Lżejszy tekst, tak jak chciałaś
+                    fontWeight = FontWeight.Medium,
                     style = MaterialTheme.typography.bodyMedium,
                     color = contentColor
                 )

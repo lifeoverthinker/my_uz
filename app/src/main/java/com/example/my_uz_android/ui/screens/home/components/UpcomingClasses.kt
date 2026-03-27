@@ -79,7 +79,7 @@ fun UpcomingClasses(
                 title = "Wszystko gotowe!",
                 message = "Brak zajęć na dziś i jutro",
                 iconRes = R.drawable.ic_calendar_check,
-                containerColor = MaterialTheme.extendedColors.classCardBackground,
+                containerColor = extendedColors.classCardBackground,
                 contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(vertical = 4.dp)
             )

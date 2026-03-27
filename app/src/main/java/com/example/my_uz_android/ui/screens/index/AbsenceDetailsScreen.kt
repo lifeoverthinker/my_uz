@@ -75,7 +75,7 @@ fun AbsenceDetailsScreen(
         topBar = {
             TopAppBar(
                 title = "",
-                navigationIcon = R.drawable.ic_x_close,
+                navigationIcon = R.drawable.ic_close,
                 isNavigationIconFilled = true,
                 onNavigationClick = onNavigateBack,
                 actions = {
@@ -178,7 +178,7 @@ fun AbsenceDetailsScreen(
             // --- Status ---
             val statusText = if (isExcused) "Usprawiedliwiona" else "Nieusprawiedliwiona"
             val statusColor = if (isExcused) Color(0xFF388E3C) else MaterialTheme.colorScheme.error
-            val statusIcon = if (isExcused) R.drawable.ic_check_circle_broken else R.drawable.ic_x_close
+            val statusIcon = if (isExcused) R.drawable.ic_check_circle_broken else R.drawable.ic_close
 
             DetailRow(
                 iconRes = statusIcon,

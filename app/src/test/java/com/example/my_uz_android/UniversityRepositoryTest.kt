@@ -46,7 +46,7 @@ class UniversityRepositoryTest {
     @Test
     fun `getScheduleForTeacher powinien obsluzyc brak odpowiedzi z serwera`() = runBlocking {
         // Symulacja błędu zapytania
-        every { postgrest.from(any()) } throws RuntimeException("Brak danych nauczyciela")
+        every { postgrest.from(any()) } throws RuntimeException("Brak danych wykładowcy")
 
         val result = repository.getScheduleForTeacher("Jan Kowalski")
 

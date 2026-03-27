@@ -89,7 +89,7 @@ fun ClassDetailsContent(
         topBar = {
             TopAppBar(
                 title = "",
-                navigationIcon = R.drawable.ic_x_close,
+                navigationIcon = R.drawable.ic_close,
                 isNavigationIconFilled = true,
                 onNavigationClick = onBackClick,
                 actions = { }

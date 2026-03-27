@@ -93,16 +93,19 @@ val md_theme_dark_surfaceContainer = Color(0xFF212121)
 val md_theme_dark_surfaceContainerHigh = Color(0xFF2B2B2B)
 val md_theme_dark_surfaceContainerHighest = Color(0xFF363636)
 
-// --- KOLORY KART ---
-// Używamy Twojego fioletu (Lavender) jako domyślnego
+// --- KOLORY KART (POPRAWIONE DLA DARK MODE) ---
 val card_class_light = Color(0xFFE8DEF8)
-val card_class_dark = Color(0xFFE8DEF8)
+val card_class_dark = Color(0xFF2B2930) // Ciemniejszy fiolet
 
 val card_event_light = Color(0xFFDAF5D7)
-val card_event_dark = Color(0xFFDAF5D7)
+val card_event_dark = Color(0xFF243622) // Ciemna zieleń
 
 val card_task_light = Color(0xFFD7E3FF)
-val card_task_dark = Color(0xFFD7E3FF)
+val card_task_dark = Color(0xFF232E44) // Ciemny niebieski
+
+// --- PRZYCISKI I IKONY ---
+val circle_button_bg_light = Color(0xFFE8DEF8)
+val circle_button_bg_dark = Color(0xFF49454F)
 
 // Custom colors
 val custom_red_light = Color(0xFF904a43)

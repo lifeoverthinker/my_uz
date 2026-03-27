@@ -1,7 +1,7 @@
 package com.example.my_uz_android.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.clickable // DODANE
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
@@ -22,24 +21,37 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.ui.theme.extendedColors
 
-private val TopBarButtonSize = 48.dp
-private val TopBarIconSize = 24.dp
+@Composable
+private fun BaseTopBarContainer(
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .statusBarsPadding()
+                .height(72.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = content
+        )
+    }
+}
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBar(
     title: String,
     subtitle: String? = null,
     navigationIcon: Int? = R.drawable.ic_chevron_left,
     onNavigationClick: () -> Unit = {},
-    actions: @Composable RowScope.() -> Unit = {},
-    isCenterAligned: Boolean = false,
     isNavigationIconFilled: Boolean = false,
-    scrollBehavior: TopAppBarScrollBehavior? = null,
-    bottomContent: @Composable (() -> Unit)? = null
+    isCenterAligned: Boolean = false, // PRZYWRÓCONE
+    actions: @Composable RowScope.() -> Unit = {},
+    bottomContent: @Composable (() -> Unit)? = null // PRZYWRÓCONE
 ) {
-    val iconTint = MaterialTheme.extendedColors.iconText
-
     Surface(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxWidth()
@@ -53,34 +65,12 @@ fun TopAppBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (navigationIcon != null) {
-                    if (isNavigationIconFilled) {
-                        IconButton(
-                            onClick = onNavigationClick,
-                            modifier = Modifier
-                                .size(TopBarButtonSize)
-                                .background(MaterialTheme.extendedColors.buttonBackground, CircleShape)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = navigationIcon),
-                                contentDescription = "Nawigacja",
-                                modifier = Modifier.size(TopBarIconSize),
-                                tint = iconTint
-                            )
-                        }
-                    } else {
-                        IconButton(
-                            onClick = onNavigationClick,
-                            modifier = Modifier.size(TopBarButtonSize)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = navigationIcon),
-                                contentDescription = "Nawigacja",
-                                modifier = Modifier.size(TopBarIconSize),
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    TopBarActionIcon(
+                        icon = navigationIcon,
+                        onClick = onNavigationClick,
+                        isFilled = isNavigationIconFilled
+                    )
+                    Spacer(Modifier.width(12.dp))
                 }
 
                 Column(
@@ -91,37 +81,23 @@ fun TopAppBar(
                         text = title,
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontFamily = InterFontFamily,
-                            fontWeight = if (isCenterAligned) FontWeight.SemiBold else FontWeight.Normal,
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = 20.sp
                         ),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface
+                        overflow = TextOverflow.Ellipsis
                     )
                     if (!subtitle.isNullOrEmpty()) {
                         Text(
                             text = subtitle,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    actions()
-                }
+                actions()
             }
-
-            if (bottomContent != null) {
-                bottomContent()
-            }
+            bottomContent?.invoke() // WYWOŁANIE DOLNEJ ZAWARTOŚCI
         }
     }
 }
@@ -129,22 +105,57 @@ fun TopAppBar(
 @Composable
 fun CalendarTopAppBar(
     title: String,
-    subtitle: String? = null,
-    navigationIcon: Int = R.drawable.ic_menu,
-    isExpanded: Boolean = false,
+    isExpanded: Boolean,
     onNavigationClick: () -> Unit,
-    onSearchClick: (() -> Unit)? = null,
-    onAddClick: (() -> Unit)? = null,
-    onInfoClick: (() -> Unit)? = null,
-    onTitleClick: (() -> Unit)? = null,
-    onShareClick: (() -> Unit)? = null,
-    isShareLoading: Boolean = false,
-    actions: (@Composable RowScope.() -> Unit)? = null
+    onTitleClick: () -> Unit,
+    actions: @Composable RowScope.() -> Unit
 ) {
-    val iconColor = MaterialTheme.extendedColors.iconText
+    BaseTopBarContainer {
+        TopBarActionIcon(
+            icon = R.drawable.ic_menu,
+            onClick = onNavigationClick,
+            isFilled = true
+        )
 
+        Spacer(Modifier.width(12.dp))
+
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onTitleClick() }, // TERAZ DZIAŁA
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 22.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Icon(
+                painter = painterResource(if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        actions()
+    }
+}
+
+
+/**
+ * PASEK WYSZUKIWANIA
+ */
+@Composable
+fun SearchTopAppBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onBackClick: () -> Unit
+) {
     Surface(
-        color = MaterialTheme.colorScheme.background,
+        color = extendedColors.buttonBackground,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -154,248 +165,96 @@ fun CalendarTopAppBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
-                onClick = onNavigationClick,
-                modifier = Modifier
-                    .size(TopBarButtonSize)
-                    .background(MaterialTheme.extendedColors.buttonBackground, CircleShape)
-            ) {
-                Icon(painterResource(navigationIcon), null, Modifier.size(TopBarIconSize), iconColor)
+            IconButton(onClick = onBackClick) {
+                Icon(painterResource(R.drawable.ic_chevron_left), "Wstecz")
             }
 
-            Spacer(Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(enabled = onTitleClick != null) { onTitleClick?.invoke() }
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = title,
-                        style = TextStyle(
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 24.sp,
-                            lineHeight = 24.sp,
-                            letterSpacing = 0.sp,
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-
-                    if (onTitleClick != null) {
-                        Box(
-                            modifier = Modifier.size(20.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
+            Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                if (query.isEmpty()) {
+                    Text("Szukaj...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f))
                 }
-
-                if (!subtitle.isNullOrBlank()) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                BasicTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    singleLine = true
+                )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (actions != null) {
-                    actions()
-                } else {
-                    if (onShareClick != null) {
-                        TopBarActionIcon(
-                            icon = R.drawable.ic_share,
-                            isLoading = isShareLoading,
-                            onClick = onShareClick
-                        )
-                    }
-                    if (onSearchClick != null) {
-                        TopBarActionIcon(icon = R.drawable.ic_search, onClick = onSearchClick)
-                    }
-                    if (onAddClick != null) {
-                        TopBarActionIcon(icon = R.drawable.ic_calendar, onClick = onAddClick)
-                    }
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(painterResource(R.drawable.ic_close), "Wyczyść")
                 }
             }
         }
     }
 }
 
+/**
+ * REUŻYWALNA IKONA NA OKRĄGŁYM TLE
+ */
+
 @Composable
 fun TopBarActionIcon(
     icon: Int,
+    onClick: () -> Unit,
+    isFilled: Boolean = false,
     isLoading: Boolean = false,
-    tint: Color = MaterialTheme.extendedColors.iconText,
-    onClick: () -> Unit
+    tint: Color = extendedColors.iconText
 ) {
     IconButton(
         onClick = onClick,
         enabled = !isLoading,
         modifier = Modifier
-            .size(TopBarButtonSize)
-            .background(MaterialTheme.extendedColors.buttonBackground, CircleShape)
+            .size(48.dp)
+            .then(
+                if (isFilled) Modifier.background(extendedColors.homeButtonBackground, CircleShape)
+                else Modifier
+            )
     ) {
         if (isLoading) {
             CircularProgressIndicator(
-                Modifier.size(20.dp),
+                modifier = Modifier.size(20.dp),
                 strokeWidth = 2.dp,
-                color = MaterialTheme.extendedColors.iconText
+                color = tint
             )
         } else {
             Icon(
-                painter = painterResource(icon),
+                painter = painterResource(id = icon),
                 contentDescription = null,
-                Modifier.size(TopBarIconSize),
+                modifier = Modifier.size(24.dp),
                 tint = tint
             )
         }
     }
 }
 
+/**
+ * SPECJALISTYCZNY PASEK DLA PODGLĄDU (Preview)
+ */
 @Composable
 fun PreviewTopAppBar(
     title: String,
     subtitle: String,
     onBackClick: () -> Unit,
-    onActionClick: () -> Unit,
-    actionIcon: Int,
+    onFavoriteClick: () -> Unit,
     isFavorite: Boolean,
-    onFavoriteClick: () -> Unit
+    actionIcon: Int,
+    onActionClick: () -> Unit
 ) {
-    val iconColor = MaterialTheme.extendedColors.iconText
-
-    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .statusBarsPadding()
-                .height(72.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.size(TopBarButtonSize)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_left),
-                    contentDescription = null,
-                    modifier = Modifier.size(TopBarIconSize),
-                    tint = iconColor
-                )
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = subtitle.ifBlank { "Szczegóły" },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TopBarActionIcon(icon = actionIcon, onClick = onActionClick)
-                TopBarActionIcon(
-                    icon = if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart,
-                    tint = MaterialTheme.colorScheme.primary,
-                    onClick = onFavoriteClick
-                )
-            }
+    TopAppBar(
+        title = title,
+        subtitle = subtitle,
+        onNavigationClick = onBackClick,
+        actions = {
+            TopBarActionIcon(icon = actionIcon, onClick = onActionClick)
+            TopBarActionIcon(
+                icon = if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart,
+                tint = if (isFavorite) Color.Red else extendedColors.iconText,
+                onClick = onFavoriteClick
+            )
         }
-    }
-}
-
-@Composable
-fun SearchTopAppBar(query: String, onQueryChange: (String) -> Unit, onBackClick: () -> Unit) {
-    val elementsColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.extendedColors.buttonBackground,
-        shadowElevation = 0.dp,
-        tonalElevation = 0.dp
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .height(72.dp)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier.size(TopBarButtonSize)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_chevron_left),
-                        contentDescription = "Wstecz",
-                        modifier = Modifier.size(TopBarIconSize),
-                        tint = elementsColor
-                    )
-                }
-
-                Spacer(Modifier.width(12.dp))
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    if (query.isEmpty()) {
-                        Text(
-                            "Szukaj grupy lub wykładowcy...", // ZMIENIONE NA "WYKŁADOWCY"
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = elementsColor
-                        )
-                    }
-                    BasicTextField(
-                        value = query,
-                        onValueChange = onQueryChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        singleLine = true
-                    )
-                }
-
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = { onQueryChange("") }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_x_close),
-                            contentDescription = "Wyczyść",
-                            modifier = Modifier.size(20.dp),
-                            tint = elementsColor
-                        )
-                    }
-                }
-            }
-        }
-    }
+    )
 }

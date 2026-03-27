@@ -268,6 +268,33 @@ class CalendarViewModel(
         }
     }
 
+    /**
+     * Odświeża plan z Supabase na żądanie.
+     * Wywołuj to z CalendarScreen przy wejściu użytkownika na ekran.
+     */
+    fun refreshMyPlan() {
+        viewModelScope.launch {
+            val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch
+            val groupCode = settings.selectedGroupCode ?: return@launch
+
+            _isLoadingNetwork.value = true
+            try {
+                val result = universityRepository.refreshSchedule(
+                    groupCode = groupCode,
+                    subgroup = settings.selectedSubgroup,  // pojedynczy String?
+                    classRepository = classRepository
+                )
+                if (result is NetworkResult.Error) {
+                    Log.e("CalendarVM", "Błąd odświeżania planu: ${result.message}")
+                }
+            } catch (e: Exception) {
+                Log.e("CalendarVM", "Wyjątek podczas odświeżania planu", e)
+            } finally {
+                _isLoadingNetwork.value = false
+            }
+        }
+    }
+
     fun setSelectedDate(date: LocalDate) {
         _selectedDate.value = date
     }

@@ -104,10 +104,10 @@ fun TeacherInfoDialog(
     BaseScheduleDialog(
         onDismiss = onDismiss,
         icon = R.drawable.ic_user,
-        title = "Szczegóły nauczyciela",
+        title = "Szczegóły wykładowcy",
         content = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                DialogInfoSection(label = "Dane nauczyciela", value = fullName)
+                DialogInfoSection(label = "Dane wykładowcy", value = fullName)
 
                 val deptDisplay = if (department.isNotBlank()) department else "Brak informacji o jednostce"
                 DialogInfoSection(label = "Instytut / Katedra", value = deptDisplay)

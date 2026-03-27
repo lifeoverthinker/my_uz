@@ -12,22 +12,26 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.ui.theme.extendedColors
 
+/**
+ * Komponent wyświetlający pojedyncze wydarzenie w formie karty.
+ *
+ * @param event Obiekt [EventEntity] zawierający dane wydarzenia do wyświetlenia.
+ * @param onClick Akcja wywoływana po kliknięciu w kartę.
+ * @param modifier Modyfikator układu dla karty.
+ */
 @Composable
 fun EventCard(
     event: EventEntity,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val cardBackgroundColor = MaterialTheme.extendedColors.eventCardBackground
-
-    // Jeden kolor dla tytułu i opisu (jak w ClassCard)
-    val titleColor = Color(0xFF1D192B)
+    val cardBackgroundColor = extendedColors.eventCardBackground
+    val contentColor = MaterialTheme.colorScheme.onSurface
 
     Column(
         modifier = modifier
@@ -41,7 +45,7 @@ fun EventCard(
         Text(
             text = event.title,
             style = MaterialTheme.typography.titleSmall.copy(
-                color = titleColor
+                color = contentColor
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -50,7 +54,7 @@ fun EventCard(
         Text(
             text = event.description,
             style = MaterialTheme.typography.bodySmall.copy(
-                color = titleColor
+                color = contentColor
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis

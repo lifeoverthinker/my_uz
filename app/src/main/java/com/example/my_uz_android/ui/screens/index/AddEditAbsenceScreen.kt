@@ -15,11 +15,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.DatePicker
-import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.*
@@ -164,7 +162,7 @@ fun AbsenceAddEditScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_x_close),
+                            painter = painterResource(R.drawable.ic_close),
                             contentDescription = "Anuluj",
                             modifier = Modifier.size(24.dp)
                         )

@@ -1,32 +1,40 @@
 package com.example.my_uz_android.ui.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.theme.InterFontFamily
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-data class FabOption(
+// 1. Model danych dla akcji
+data class FabAction(
     val label: String,
     val iconRes: Int,
     val onClick: () -> Unit
@@ -34,139 +42,182 @@ data class FabOption(
 
 @Composable
 fun UniversalFab(
-    onMainFabClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    isExpandable: Boolean = false,
-    isExpanded: Boolean = false,
-    options: List<FabOption> = emptyList(),
-    iconRes: Int = R.drawable.ic_plus
+    onAddGrade: () -> Unit,
+    onAddAbsence: () -> Unit,
+    onAddTask: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    // --- KOLORY ---
-    val fabContainerColor = MaterialTheme.colorScheme.primaryContainer
-    val fabContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    // Lista akcji - łatwa do rozbudowy
+    val actions = remember(onAddGrade, onAddAbsence, onAddTask) {
+        listOf(
+            FabAction("Dodaj ocenę", R.drawable.ic_trophy, onAddGrade),
+            FabAction("Dodaj nieobecność", R.drawable.ic_calendar_minus, onAddAbsence),
+            FabAction("Dodaj zadanie", R.drawable.ic_book_open, onAddTask)
+        )
+    }
 
-    val menuContainerColor = MaterialTheme.colorScheme.secondaryContainer
-    val menuContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    var isDialogOpen by remember { mutableStateOf(false) }
+    var fabPaddingBottom by remember { mutableStateOf(0.dp) }
+    var fabPaddingEnd by remember { mutableStateOf(0.dp) }
 
-    // --- ANIMACJA ---
-    val targetCornerRadius = if (isExpandable && isExpanded) 28.dp else 16.dp
-    val currentCornerRadius by animateDpAsState(
-        targetValue = targetCornerRadius,
-        label = "FabCornerAnimation"
-    )
+    val density = LocalDensity.current
+    val view = LocalView.current
+    val haptic = LocalHapticFeedback.current
 
-    val targetContainerColor = if (isExpandable && isExpanded) MaterialTheme.colorScheme.primary else fabContainerColor
-    val currentContainerColor by animateColorAsState(
-        targetValue = targetContainerColor,
-        label = "FabContainerColorAnimation"
-    )
-
-    val targetContentColor = if (isExpandable && isExpanded) MaterialTheme.colorScheme.onPrimary else fabContentColor
-    val currentContentColor by animateColorAsState(
-        targetValue = targetContentColor,
-        label = "FabContentColorAnimation"
-    )
-
-    val rotation by animateFloatAsState(
-        targetValue = if (isExpanded) 45f else 0f,
-        label = "FabRotation"
-    )
-
-    Column(
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier
-    ) {
-        // --- MENU (Rozwijane opcje z nowoczesnym UI) ---
-        AnimatedVisibility(
-            visible = isExpandable && isExpanded,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
-            exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
+    // Główny wyzwalacz (Static FAB)
+    if (!isDialogOpen) {
+        FloatingActionButton(
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                isDialogOpen = true
+            },
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            shape = RoundedCornerShape(16.dp),
+            modifier = modifier
+                .size(56.dp)
+                .onGloballyPositioned { coordinates ->
+                    val bounds = coordinates.boundsInWindow()
+                    fabPaddingBottom = with(density) { (view.height - bounds.bottom).toDp() }
+                    fabPaddingEnd = with(density) { (view.width - bounds.right).toDp() }
+                }
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.End,
-                modifier = Modifier.padding(bottom = 16.dp)
-            ) {
-                options.forEach { option ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(end = 4.dp)
-                    ) {
-                        // Etykieta typu Glassmorphism (półprzezroczyste tło, bez cienia)
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                            contentColor = MaterialTheme.colorScheme.onSurface,
-                            shadowElevation = 0.dp // Płaskie, nowoczesne
-                        ) {
-                            Text(
-                                text = option.label,
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontFamily = InterFontFamily,
-                                    fontWeight = FontWeight.SemiBold
-                                ),
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                            )
-                        }
+            Icon(Icons.Default.Add, contentDescription = "Otwórz menu dodawania")
+        }
+    }
 
-                        // Okrągły mini-FAB
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape) // Idealne koło zamiast zaokrąglonego kwadratu
-                                .background(menuContainerColor)
-                                .clickable { option.onClick() },
-                            contentAlignment = Alignment.Center
+    if (isDialogOpen) {
+        ExpandedFabDialog(
+            actions = actions,
+            fabPaddingBottom = fabPaddingBottom,
+            fabPaddingEnd = fabPaddingEnd,
+            onDismiss = { isDialogOpen = false }
+        )
+    }
+}
+
+@Composable
+private fun ExpandedFabDialog(
+    actions: List<FabAction>,
+    fabPaddingBottom: androidx.compose.ui.unit.Dp,
+    fabPaddingEnd: androidx.compose.ui.unit.Dp,
+    onDismiss: () -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var isVisible by remember { mutableStateOf(false) }
+
+    // Animacja wejścia
+    LaunchedEffect(Unit) { isVisible = true }
+
+    val closeWithAnimation = {
+        coroutineScope.launch {
+            isVisible = false
+            delay(200) // Czas wyjścia
+            onDismiss()
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { closeWithAnimation() },
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        // Używamy transition do synchronizacji wszystkich parametrów
+        val transition = updateTransition(targetState = isVisible, label = "FabMenuTransition")
+
+        val scrimAlpha by transition.animateFloat(label = "ScrimAlpha") { if (it) 0.6f else 0f }
+        val fabRadius by transition.animateDp(label = "FabRadius") { if (it) 28.dp else 16.dp }
+        val rotation by transition.animateFloat(label = "IconRotation") { if (it) 45f else 0f }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = scrimAlpha))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { closeWithAnimation() }
+                )
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = fabPaddingBottom, end = fabPaddingEnd)
+            ) {
+                // Menu Items
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 72.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    actions.forEachIndexed { index, action ->
+                        AnimatedVisibility(
+                            visible = isVisible,
+                            enter = fadeIn(tween(150, delayMillis = index * 30)) +
+                                    slideInHorizontally { it / 2 },
+                            exit = fadeOut(tween(100)) + slideOutHorizontally { it / 2 }
                         ) {
-                            Icon(
-                                painter = painterResource(id = option.iconRes),
-                                contentDescription = null,
-                                tint = menuContentColor,
-                                modifier = Modifier.size(24.dp)
+                            FabMenuItem(
+                                label = action.label,
+                                iconRes = action.iconRes,
+                                onClick = {
+                                    action.onClick()
+                                    closeWithAnimation()
+                                }
                             )
                         }
                     }
                 }
-            }
-        }
 
-        // --- GŁÓWNY PRZYCISK FAB ---
-        Surface(
-            shape = RoundedCornerShape(currentCornerRadius),
-            color = currentContainerColor,
-            shadowElevation = 4.dp,
-            modifier = Modifier
-                .size(56.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onMainFabClick
-                )
-        ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                if (isExpandable) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_plus),
-                        contentDescription = if (isExpanded) "Zamknij" else "Otwórz",
-                        tint = currentContentColor,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .rotate(rotation)
-                    )
-                } else {
-                    Icon(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = "Akcja",
-                        tint = currentContentColor,
-                        modifier = Modifier.size(24.dp)
-                    )
+                // Morphing FAB (z rotacją ikony zamiast Crossfade dla płynniejszego efektu)
+                Surface(
+                    onClick = { closeWithAnimation() },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(56.dp),
+                    shape = RoundedCornerShape(fabRadius),
+                    color = if (isVisible) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = if (isVisible) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer,
+                    shadowElevation = 6.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.rotate(rotation)
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FabMenuItem(label: String, iconRes: Int, onClick: () -> Unit) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shadowElevation = 4.dp,
+        onClick = onClick
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+            )
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

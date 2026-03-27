@@ -128,7 +128,7 @@ class UniversityRepository(private val supabase: Postgrest) {
                 filter { ilike("nazwisko_imie", "%$query%") }
             }.decodeList<TeacherDto>().mapNotNull { it.name }.distinct().sorted()
             NetworkResult.Success(result)
-        } catch (e: Exception) { NetworkResult.Error("Błąd wyszukiwania nauczycieli.") }
+        } catch (e: Exception) { NetworkResult.Error("Błąd wyszukiwania wykładowców.") }
     }
 
     suspend fun getAllTeachers(): NetworkResult<List<String>> {
@@ -137,7 +137,7 @@ class UniversityRepository(private val supabase: Postgrest) {
                 .decodeList<TeacherDto>().mapNotNull { it.name }.distinct().sorted()
             NetworkResult.Success(result)
         } catch (e: Exception) {
-            NetworkResult.Error("Błąd pobierania nauczycieli.")
+            NetworkResult.Error("Błąd pobierania wykładowców.")
         }
     }
 
@@ -209,7 +209,7 @@ class UniversityRepository(private val supabase: Postgrest) {
                 filter { eq("nazwisko_imie", teacherName.trim()) }
             }.decodeList<TeacherIdDto>()
 
-            if (teachers.isEmpty()) return NetworkResult.Error("Nie znaleziono nauczyciela o tym nazwisku.")
+            if (teachers.isEmpty()) return NetworkResult.Error("Nie znaleziono wykładowcy o tym nazwisku.")
 
             val aggregatedEmail = teachers.mapNotNull { it.email }.filter { it.isNotBlank() }.distinct().joinToString(" • ")
             val aggregatedInstitute = teachers.mapNotNull { it.institute }.filter { it.isNotBlank() }.distinct().joinToString(" • ")
@@ -243,7 +243,7 @@ class UniversityRepository(private val supabase: Postgrest) {
 
             NetworkResult.Success(entities)
         } catch (e: Exception) {
-            Log.e("UniversityRepository", "Błąd pobierania planu nauczyciela: ${e.message}", e)
+            Log.e("UniversityRepository", "Błąd pobierania planu wykładowcy: ${e.message}", e)
             NetworkResult.Error("Błąd serwera przy pobieraniu planu.")
         }
     }
@@ -324,7 +324,28 @@ class UniversityRepository(private val supabase: Postgrest) {
 
             NetworkResult.Success(aggregated)
         } catch (e: Exception) {
-            NetworkResult.Error("Błąd pobierania danych nauczycieli.")
+            NetworkResult.Error("Błąd pobierania danych wykładowców.")
+        }
+    }
+
+    /**
+     * Pobiera plan z Supabase na żądanie i zapisuje do lokalnej bazy Room.
+     * Wywołuj to z CalendarViewModel przy wejściu użytkownika na ekran.
+     */
+    suspend fun refreshSchedule(
+        groupCode: String,
+        subgroup: String?,           // pojedynczy String, nie List
+        classRepository: ClassRepository
+    ): NetworkResult<Unit> {
+        // Zamieniamy pojedynczą podgrupę na listę której oczekuje getSchedule()
+        val subgroups = if (subgroup.isNullOrBlank()) emptyList() else listOf(subgroup)
+
+        return when (val result = getSchedule(groupCode, subgroups)) {
+            is NetworkResult.Success -> {
+                classRepository.syncGroupClasses(groupCode, result.data ?: emptyList())
+                NetworkResult.Success(Unit)
+            }
+            is NetworkResult.Error -> NetworkResult.Error(result.message ?: "Nieznany błąd")
         }
     }
 }

@@ -18,52 +18,58 @@ object NotificationHelper {
     private const val CHANNEL_ID = "my_uz_notifications"
     private const val CHANNEL_NAME = "Powiadomienia i Zmiany MyUZ"
 
-    // Tworzy kanał (wymagane od Androida 8.0 Oreo)
     fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                CHANNEL_NAME,
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
                 description = "Ważne powiadomienia dotyczące zajęć i zadań"
             }
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
         }
     }
 
-    // Główna funkcja do pokazywania powiadomień na górnym pasku telefonu
-    fun showNotification(context: Context, title: String, message: String, isTask: Boolean) {
-        // Blokada dla Android 13+ jeśli użytkownik nie dał zgody na powiadomienia
+    /**
+     * @param notificationId Unikalny identyfikator — zapobiega duplikatom.
+     *                       Dla zajęć użyj classItem.id, dla zadań task.id.
+     */
+    fun showNotification(
+        context: Context,
+        title: String,
+        message: String,
+        isTask: Boolean,
+        notificationId: Int  // <-- ZMIANA: explicit ID zamiast currentTimeMillis().toInt()
+    ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                return
-            }
+            if (ActivityCompat.checkSelfPermission(
+                    context, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) return
         }
 
-        createNotificationChannels(context)
-
-        // Intencja uruchamiająca aplikację po kliknięciu powiadomienia
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         val pendingIntent = PendingIntent.getActivity(
-            context, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            context, notificationId, intent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        // Wybór ikonki na podstawie tego czy powiadomienie dotyczy zadań czy planu
         val iconRes = if (isTask) R.drawable.ic_book_open else R.drawable.ic_marker_pin
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(iconRes) // Ważne: to musi być ikona jednokolorowa (wektor) z przezroczystym tłem!
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(iconRes)
             .setContentTitle(title)
             .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message)) // Rozwija długi tekst
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true) // Usuwa z paska po kliknięciu
-            .setContentIntent(pendingIntent) // Przekierowanie do MainActivity
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
 
-        // Wyświetlenie
-        with(NotificationManagerCompat.from(context)) {
-            notify(System.currentTimeMillis().toInt(), builder.build())
-        }
+        NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
 }

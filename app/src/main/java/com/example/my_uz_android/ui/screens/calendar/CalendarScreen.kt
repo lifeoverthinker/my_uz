@@ -4,6 +4,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,6 +44,11 @@ fun CalendarScreen(
     viewModel: CalendarViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // odśwież plan przy każdym wejściu na ekran
+    LaunchedEffect(Unit) {
+        viewModel.refreshMyPlan()
+    }
 
     CalendarScreenContent(
         uiState = uiState,
@@ -115,14 +121,17 @@ fun CalendarScreenContent(
         monthState.firstVisibleMonth.yearMonth
     } else {
         val weekDays = weekState.firstVisibleWeek.days
-        if (weekDays.isNotEmpty()) YearMonth.from(weekDays.first().date) else YearMonth.from(selectedDate)
+        if (weekDays.isNotEmpty()) YearMonth.from(weekDays.first().date) else YearMonth.from(
+            selectedDate
+        )
     }
 
     val monthName = visibleMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
         .replaceFirstChar { it.titlecase(Locale("pl")) }
 
     val currentRealWorldYear = YearMonth.now(ZoneId.of("Europe/Warsaw")).year
-    val calendarTitle = if (visibleMonth.year == currentRealWorldYear) monthName else "$monthName ${visibleMonth.year}"
+    val calendarTitle =
+        if (visibleMonth.year == currentRealWorldYear) monthName else "$monthName ${visibleMonth.year}"
 
     Scaffold(
         topBar = {
@@ -130,18 +139,52 @@ fun CalendarScreenContent(
                 title = calendarTitle,
                 isExpanded = isMonthView,
                 onNavigationClick = onOpenDrawer,
-                onSearchClick = onSearchClick,
                 onTitleClick = { onToggleMonthView(!isMonthView) },
-                onAddClick = {
-                    val today = LocalDate.now(ZoneId.of("Europe/Warsaw"))
-                    swipeDirection = null
-                    onDateSelected(today)
-                    scope.launch {
-                        if (isMonthView) {
-                            monthState.animateScrollToMonth(YearMonth.from(today))
-                        } else {
-                            weekState.animateScrollToWeek(today)
+                // Używamy bloku 'actions', by zbudować własne ikonki i menu bezpośrednio w pasku
+                actions = {
+                    if (uiState.userCourses.size > 1) {
+                        // Box trzyma razem ikonkę ORAZ menu, dzięki czemu otworzy się idealnie pod nią!
+                        Box {
+                            IconButton(onClick = { isFilterExpanded = true }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_filter),
+                                    contentDescription = "Filtruj",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = isFilterExpanded,
+                                onDismissRequest = { isFilterExpanded = false }
+                            ) {
+                                uiState.userCourses.forEach { course ->
+                                    val isSelected =
+                                        uiState.selectedGroupCodes.contains(course.groupCode)
+                                    DropdownMenuItem(
+                                        text = { Text(course.fieldOfStudy ?: course.groupCode) },
+                                        trailingIcon = {
+                                            if (isSelected) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = "Wybrane",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        },
+                                        onClick = { onToggleGroupVisibility(course.groupCode) }
+                                    )
+                                }
+                            }
                         }
+                    }
+
+                    // Ikonka lupy (zawsze na prawo od filtra)
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Szukaj",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             )
@@ -163,17 +206,20 @@ fun CalendarScreenContent(
                         },
                         onHorizontalDrag = { change, dragAmount ->
                             accumulatedDx += dragAmount
-                            accumulatedDy += abs(change.position.y - change.previousPosition.y)
+                            accumulatedDy += kotlin.math.abs(change.position.y - change.previousPosition.y)
                         },
                         onDragEnd = {
-                            val isHorizontalIntent = abs(accumulatedDx) > accumulatedDy
-                            val passedThreshold = abs(accumulatedDx) >= swipeThresholdPx
+                            val isHorizontalIntent = kotlin.math.abs(accumulatedDx) > accumulatedDy
+                            val passedThreshold = kotlin.math.abs(accumulatedDx) >= swipeThresholdPx
 
                             if (isHorizontalIntent && passedThreshold) {
                                 if (accumulatedDx < 0) {
                                     navigateDay(offsetDays = 1, direction = DaySwipeDirection.NEXT)
                                 } else {
-                                    navigateDay(offsetDays = -1, direction = DaySwipeDirection.PREVIOUS)
+                                    navigateDay(
+                                        offsetDays = -1,
+                                        direction = DaySwipeDirection.PREVIOUS
+                                    )
                                 }
                             }
                         }
@@ -181,47 +227,8 @@ fun CalendarScreenContent(
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (uiState.userCourses.size > 1) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box {
-                            IconButton(onClick = { isFilterExpanded = true }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_filter),
-                                    contentDescription = "Filtruj kierunki",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = isFilterExpanded,
-                                onDismissRequest = { isFilterExpanded = false }
-                            ) {
-                                uiState.userCourses.forEach { course ->
-                                    val isSelected = uiState.selectedGroupCodes.contains(course.groupCode)
-                                    DropdownMenuItem(
-                                        text = { Text(course.fieldOfStudy ?: course.groupCode) },
-                                        trailingIcon = {
-                                            if (isSelected) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = "Wybrane",
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        },
-                                        onClick = { onToggleGroupVisibility(course.groupCode) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                // TUTAJ USUNĄŁEM TEN BOX Z MENU, KTÓRY POWODOWAŁ BŁĄD.
+                // Został nam czysty ScheduleView!
 
                 ScheduleView(
                     calendarState = monthState,
@@ -235,7 +242,7 @@ fun CalendarScreenContent(
                     },
                     onToggleView = { onToggleMonthView(!isMonthView) },
                     classes = uiState.visibleClasses,
-                    tasks = uiState.tasks, // Przekazujemy listę zadań do kalendarza
+                    tasks = uiState.tasks,
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
                     modifier = Modifier.weight(1f),
@@ -255,8 +262,18 @@ fun CalendarScreenPreview() {
                 selectedDate = LocalDate.now(),
                 isMonthView = false,
                 userCourses = listOf(
-                    UserCourseEntity(id = 1, groupCode = "12IN", fieldOfStudy = "Informatyka", semester = 1),
-                    UserCourseEntity(id = 2, groupCode = "34MA", fieldOfStudy = "Matematyka", semester = 3)
+                    UserCourseEntity(
+                        id = 1,
+                        groupCode = "12IN",
+                        fieldOfStudy = "Informatyka",
+                        semester = 1
+                    ),
+                    UserCourseEntity(
+                        id = 2,
+                        groupCode = "34MA",
+                        fieldOfStudy = "Matematyka",
+                        semester = 3
+                    )
                 ),
                 selectedGroupCodes = setOf("12IN"),
                 visibleClasses = emptyList(),

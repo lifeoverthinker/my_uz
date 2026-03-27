@@ -1,7 +1,6 @@
 package com.example.my_uz_android.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -14,96 +13,83 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+/**
+ * SEKCJA 1: Rozszerzenie Systemu Kolorów (Extended Colors)
+ * * Wyjaśnienie: Material 3 posiada ograniczoną liczbę slotów na kolory.
+ * Ta klasa pozwala nam dodać własne zmienne (np. specyficzne tła kart),
+ * które automatycznie reagują na zmianę trybu Dark/Light.
+ */
 @Immutable
 data class ExtendedColors(
-    val classCardBackground: Color = card_class_light,
-    val eventCardBackground: Color = card_event_light,
-    val taskCardBackground: Color = card_task_light,
-    val navBackground: Color = nav_light_background,
-    val navBorder: Color = nav_light_border,
-    val navActive: Color = nav_light_active,
-    val navInactive: Color = nav_light_inactive,
-    val homeTopBackground: Color = home_top_background_light,
-    val homeHeaderBackground: Color = home_header_light,
-    val homeContentBackground: Color = home_content_light,
-    val buttonBackground: Color = button_background_light,
-    val homeButtonBackground: Color = home_button_background_light,
-    val iconText: Color = icon_text_light,
+    val classCardBackground: Color,
+    val eventCardBackground: Color,
+    val taskCardBackground: Color,
+    val navBackground: Color,
+    val navBorder: Color,
+    val navActive: Color,
+    val navInactive: Color,
+    val homeTopBackground: Color,
+    val homeHeaderBackground: Color,
+    val homeContentBackground: Color,
+    val buttonBackground: Color,
+    val homeButtonBackground: Color,
+    val iconText: Color,
     val grayInactive: Color = Color(0xFFBDBDBD)
 )
 
-val LocalExtendedColors = staticCompositionLocalOf { ExtendedColors() }
+// Zapewnia dostęp do rozszerzonych kolorów wewnątrz Composable
+val LocalExtendedColors = staticCompositionLocalOf<ExtendedColors> {
+    error("No ExtendedColors provided")
+}
 
-private fun lightScheme(): ColorScheme = lightColorScheme(
+/**
+ * SEKCJA 2: Definicje Schematów Material 3
+ * * Mapowanie kolorów z pliku Color.kt na standardowe sloty Material Theme.
+ */
+private fun lightScheme() = lightColorScheme(
     primary = md_theme_light_primary,
     onPrimary = md_theme_light_onPrimary,
     primaryContainer = md_theme_light_primaryContainer,
     onPrimaryContainer = md_theme_light_onPrimaryContainer,
     secondary = md_theme_light_secondary,
-    onSecondary = md_theme_light_onSecondary,
-    secondaryContainer = md_theme_light_secondaryContainer,
-    onSecondaryContainer = md_theme_light_onSecondaryContainer,
-    tertiary = md_theme_light_tertiary,
-    onTertiary = md_theme_light_onTertiary,
-    tertiaryContainer = md_theme_light_tertiaryContainer,
-    onTertiaryContainer = md_theme_light_onTertiaryContainer,
-    error = md_theme_light_error,
-    onError = md_theme_light_onError,
-    errorContainer = md_theme_light_errorContainer,
-    onErrorContainer = md_theme_light_onErrorContainer,
     background = md_theme_light_background,
     onBackground = md_theme_light_onBackground,
     surface = md_theme_light_surface,
     onSurface = md_theme_light_onSurface,
     surfaceVariant = md_theme_light_surfaceVariant,
     onSurfaceVariant = md_theme_light_onSurfaceVariant,
-    outline = md_theme_light_outline,
-    inverseSurface = md_theme_light_inverseSurface,
-    inverseOnSurface = md_theme_light_inverseOnSurface,
-    inversePrimary = md_theme_light_inversePrimary,
-    surfaceTint = md_theme_light_surfaceTint
+    outline = md_theme_light_outline
 )
 
-private fun darkScheme(): ColorScheme = darkColorScheme(
+private fun darkScheme() = darkColorScheme(
     primary = md_theme_dark_primary,
     onPrimary = md_theme_dark_onPrimary,
     primaryContainer = md_theme_dark_primaryContainer,
     onPrimaryContainer = md_theme_dark_onPrimaryContainer,
     secondary = md_theme_dark_secondary,
-    onSecondary = md_theme_dark_onSecondary,
-    secondaryContainer = md_theme_dark_secondaryContainer,
-    onSecondaryContainer = md_theme_dark_onSecondaryContainer,
-    tertiary = md_theme_dark_tertiary,
-    onTertiary = md_theme_dark_onTertiary,
-    tertiaryContainer = md_theme_dark_tertiaryContainer,
-    onTertiaryContainer = md_theme_dark_onTertiaryContainer,
-    error = md_theme_dark_error,
-    onError = md_theme_dark_onError,
-    errorContainer = md_theme_dark_errorContainer,
-    onErrorContainer = md_theme_dark_onErrorContainer,
     background = md_theme_dark_background,
     onBackground = md_theme_dark_onBackground,
     surface = md_theme_dark_surface,
     onSurface = md_theme_dark_onSurface,
     surfaceVariant = md_theme_dark_surfaceVariant,
     onSurfaceVariant = md_theme_dark_onSurfaceVariant,
-    outline = md_theme_dark_outline,
-    inverseSurface = md_theme_dark_inverseSurface,
-    inverseOnSurface = md_theme_dark_inverseOnSurface,
-    inversePrimary = md_theme_dark_inversePrimary,
-    surfaceTint = md_theme_dark_surfaceTint
+    outline = md_theme_dark_outline
 )
 
+/**
+ * SEKCJA 3: Główny Komponent Motywu (Entry Point)
+ * * Zarządza przełączaniem trybów, kolorowaniem pasków systemowych
+ * oraz dostarczaniem kolorów rozszerzonych do UI.
+ */
 @Composable
 fun MyUZTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Usunięto parametr dynamicColor, aby uniknąć pomyłek
     content: @Composable () -> Unit
 ) {
+    // Inicjalizacja kolorów niestandardowych zależnie od trybu
     val extended = if (darkTheme) {
         ExtendedColors(
             classCardBackground = card_class_dark,
@@ -118,8 +104,7 @@ fun MyUZTheme(
             homeContentBackground = home_content_dark,
             buttonBackground = button_background_dark,
             homeButtonBackground = home_button_background_dark,
-            iconText = icon_text_dark,
-            grayInactive = Color(0xFFBDBDBD)
+            iconText = icon_text_dark
         )
     } else {
         ExtendedColors(
@@ -135,32 +120,27 @@ fun MyUZTheme(
             homeContentBackground = home_content_light,
             buttonBackground = button_background_light,
             homeButtonBackground = home_button_background_light,
-            iconText = icon_text_light,
-            grayInactive = Color(0xFFBDBDBD)
+            iconText = icon_text_light
         )
     }
 
-    // WYMUSZENIE: Zawsze używamy naszych schematów, nigdy dynamicznych z tapety
-    val colorScheme = when {
-        darkTheme -> darkScheme()
-        else -> lightScheme()
-    }
-
+    val colorScheme = if (darkTheme) darkScheme() else lightScheme()
     val view = LocalView.current
+
+    // Konfiguracja wyglądu paska stanu i nawigacji systemowej
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as? Activity)?.window
-            if (window != null) {
-                window.statusBarColor = colorScheme.background.toArgb()
-                window.navigationBarColor = colorScheme.surface.toArgb()
+            val window = (view.context as? Activity)?.window ?: return@SideEffect
+            window.statusBarColor = colorScheme.background.toArgb()
+            window.navigationBarColor = colorScheme.surface.toArgb()
 
-                val insets = WindowCompat.getInsetsController(window, view)
-                insets.isAppearanceLightStatusBars = !darkTheme
-                insets.isAppearanceLightNavigationBars = !darkTheme
-            }
+            val controller = WindowCompat.getInsetsController(window, view)
+            controller.isAppearanceLightStatusBars = !darkTheme
+            controller.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
+    // Udostępnienie obu systemów kolorów (M3 + Custom) w głąb aplikacji
     CompositionLocalProvider(LocalExtendedColors provides extended) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -170,6 +150,7 @@ fun MyUZTheme(
     }
 }
 
-val MaterialTheme.extendedColors: ExtendedColors
+// Skrót ułatwiający pobieranie kolorów w ekranach: extendedColors.nazwa
+val extendedColors: ExtendedColors
     @Composable
     get() = LocalExtendedColors.current

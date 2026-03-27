@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.BackupDataType // <--- OTO BRAKUJĄCY IMPORT!
 import com.example.my_uz_android.data.models.ThemeMode
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
@@ -53,7 +54,8 @@ fun SettingsScreen(
     val activeSettings = uiState.settings
 
     var showExportDialog by remember { mutableStateOf(false) }
-    var exportSelection by remember { mutableStateOf(BackupDataType.values().toSet()) }
+    // ZMIANA: Używamy .entries zamiast .values()
+    var exportSelection by remember { mutableStateOf(BackupDataType.entries.toSet()) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -181,7 +183,7 @@ fun SettingsScreen(
                         title = "Eksportuj dane",
                         description = "Zapisz kopię do pliku JSON",
                         onClick = {
-                            exportSelection = BackupDataType.values().toSet()
+                            exportSelection = BackupDataType.entries.toSet() // ZMIANA
                             showExportDialog = true
                         }
                     )
@@ -224,7 +226,7 @@ fun SettingsScreen(
         DataTypeSelectionDialog(
             title = "Importuj dane",
             confirmText = "Przywróć",
-            initialSelection = BackupDataType.values().toSet(),
+            initialSelection = BackupDataType.entries.toSet(), // ZMIANA
             onDismiss = { viewModel.cancelImport() },
             onConfirm = { selection -> viewModel.confirmImport(selection) }
         )
@@ -311,11 +313,10 @@ fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelec
                         Icon(
                             painter = painterResource(R.drawable.ic_check),
                             contentDescription = null,
-                            // --- TUTAJ JEST ZMIANA ---
                             tint = if (colorSet.lightBg.luminance() > 0.5f) {
-                                MaterialTheme.colorScheme.onSurface // Ciemny ptaszek dla jasnego kółka
+                                MaterialTheme.colorScheme.onSurface
                             } else {
-                                MaterialTheme.colorScheme.surface // Jasny ptaszek dla ciemnego kółka
+                                MaterialTheme.colorScheme.surface
                             },
                             modifier = Modifier.size(18.dp)
                         )
@@ -341,7 +342,7 @@ fun DataTypeSelectionDialog(
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                BackupDataType.values().forEach { type ->
+                BackupDataType.entries.forEach { type -> // ZMIANA
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -395,27 +396,6 @@ private suspend fun readBackupFileToPreview(context: Context, uri: Uri, viewMode
             content?.let { viewModel.previewBackupFile(it) }
         } catch (e: Exception) {
             e.printStackTrace()
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun SettingsScreenPreview() {
-    MyUZTheme {
-        Column(modifier = Modifier.fillMaxSize().padding(vertical = 8.dp)) {
-            SettingsHeader("Wygląd")
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text(
-                    text = "Motyw aplikacji",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                ThemeSelector(selectedTheme = ThemeMode.SYSTEM, onThemeSelected = {})
-            }
-            SettingsHeader("Powiadomienia")
-            SettingsToggleItem(iconRes = R.drawable.ic_bell, title = "Włącz powiadomienia", description = "Opis testowy", isChecked = true, onCheckedChange = {})
         }
     }
 }

@@ -29,44 +29,28 @@ fun DatePicker(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(
-                onClick = {
-                    dateState.selectedDateMillis?.let { onDateSelected(it) }
-                }
+                onClick = { dateState.selectedDateMillis?.let { onDateSelected(it) } }
             ) {
-                // Używamy pogrubionego labelLarge dla czytelności akcji
-                Text("OK", style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary))
+                Text("OK", style = MaterialTheme.typography.labelLarge)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj", style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.outline))
+                Text("Anuluj", color = MaterialTheme.colorScheme.outline)
             }
         },
-        // Korzystamy z systemowych kształtów MD3
         shape = MaterialTheme.shapes.extraLarge,
         colors = DatePickerDefaults.colors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        tonalElevation = 0.dp
+        tonalElevation = 0.dp,
+        modifier = modifier
     ) {
         androidx.compose.material3.DatePicker(
             state = dateState,
-            showModeToggle = false, // Ukrywamy ikonę edycji ręcznej dla czystszego wyglądu "Calendar"
+            showModeToggle = false,
             colors = DatePickerDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                titleContentColor = MaterialTheme.colorScheme.secondary, // Mniejszy nacisk na tytuł
-                headlineContentColor = MaterialTheme.colorScheme.onSurface, // Mocny nagłówek z datą
-                weekdayContentColor = MaterialTheme.colorScheme.outline, // Dni tygodnia bardziej subtelne
-                subheadContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                currentYearContentColor = MaterialTheme.colorScheme.primary,
-                selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
-                selectedYearContainerColor = MaterialTheme.colorScheme.primary,
-                dayContentColor = MaterialTheme.colorScheme.onSurface,
-                selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
-                selectedDayContainerColor = MaterialTheme.colorScheme.primary,
-                todayContentColor = MaterialTheme.colorScheme.primary,
-                todayDateBorderColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.surface
             )
         )
     }

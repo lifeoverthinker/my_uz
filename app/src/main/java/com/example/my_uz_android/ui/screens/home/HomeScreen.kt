@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,9 +33,8 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.EmptyStateMessage
 import com.example.my_uz_android.ui.components.EventCard
-import com.example.my_uz_android.ui.components.FabOption
-import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.components.UniversalFab
+import com.example.my_uz_android.ui.components.TaskCard
 import com.example.my_uz_android.ui.screens.home.components.UpcomingClasses
 import com.example.my_uz_android.ui.theme.extendedColors
 import com.example.my_uz_android.ui.screens.notifications.NotificationsViewModel
@@ -55,10 +55,11 @@ fun HomeScreen(
     onAddAbsenceClick: () -> Unit = {},
     onAddTaskClick: () -> Unit = {}
 ) {
+    // --- STATE ---
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var isFabExpanded by remember { mutableStateOf(false) }
 
-    // Obliczamy motyw, aby obsłużyć niestandardowe kolory StatusBar'a
+    // --- THEME & SYSTEM BARS ---
     val isSystemDark = isSystemInDarkTheme()
     val isDark = when (uiState.themeMode) {
         "DARK" -> true
@@ -66,8 +67,7 @@ fun HomeScreen(
         else -> isSystemDark
     }
 
-    // NIE używamy MyUZTheme, ponieważ MainActivity już obsługuje całą nawigację!
-    val topSectionBackground = MaterialTheme.extendedColors.homeTopBackground
+    val topSectionBackground = extendedColors.homeTopBackground
     val headerContentColor = MaterialTheme.colorScheme.onSurface
     val subHeaderContentColor = MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -100,6 +100,7 @@ fun HomeScreen(
         }
     }
 
+    // --- MAIN CONTENT ---
     if (uiState.isLoading) {
         Box(
             modifier = Modifier
@@ -113,24 +114,9 @@ fun HomeScreen(
         Scaffold(
             floatingActionButton = {
                 UniversalFab(
-                    isExpandable = true,
-                    isExpanded = isFabExpanded,
-                    onMainFabClick = { isFabExpanded = !isFabExpanded },
-                    iconRes = R.drawable.ic_plus,
-                    options = listOf(
-                        FabOption("Dodaj ocenę", R.drawable.ic_trophy) {
-                            isFabExpanded = false
-                            onAddGradeClick()
-                        },
-                        FabOption("Dodaj nieobecność", R.drawable.ic_calendar_minus) {
-                            isFabExpanded = false
-                            onAddAbsenceClick()
-                        },
-                        FabOption("Dodaj zadanie", R.drawable.ic_book_open) {
-                            isFabExpanded = false
-                            onAddTaskClick()
-                        }
-                    )
+                    onAddGrade = onAddGradeClick,
+                    onAddAbsence = onAddAbsenceClick,
+                    onAddTask = onAddTaskClick
                 )
             },
             containerColor = Color.Transparent
@@ -141,6 +127,7 @@ fun HomeScreen(
                     .background(MaterialTheme.colorScheme.surface)
                     .padding(bottom = paddingValues.calculateBottomPadding())
             ) {
+                // Tło górnej sekcji
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -149,6 +136,8 @@ fun HomeScreen(
                 )
 
                 Column(modifier = Modifier.fillMaxSize()) {
+
+                    // --- HEADER ---
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier
@@ -206,8 +195,12 @@ fun HomeScreen(
                         }
                     }
 
+                    // --- DASHBOARD CONTENT ---
                     Surface(
-                        modifier = Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                         color = MaterialTheme.colorScheme.surface
                     ) {
                         LazyColumn(contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
@@ -218,7 +211,6 @@ fun HomeScreen(
                                         emptyMessage = uiState.classesMessage,
                                         dayLabel = uiState.classesDayLabel,
                                         classColorMap = uiState.classColorMap,
-                                        // Przekazujemy przeliczony isDark
                                         isDarkMode = isDark,
                                         onClassClick = onClassClick
                                     )
@@ -249,7 +241,7 @@ fun HomeScreen(
                                             title = "Czysta lista!",
                                             message = "Nie masz żadnych zadań",
                                             iconRes = R.drawable.ic_check_circle_broken,
-                                            containerColor = MaterialTheme.extendedColors.taskCardBackground,
+                                            containerColor = extendedColors.taskCardBackground,
                                             contentColor = Color(0xFF38608F),
                                             modifier = Modifier.padding(vertical = 4.dp)
                                         )
@@ -275,7 +267,7 @@ fun HomeScreen(
                                             title = "Spokojny czas",
                                             message = "Brak nadchodzących wydarzeń",
                                             iconRes = R.drawable.ic_marker_pin,
-                                            containerColor = MaterialTheme.extendedColors.eventCardBackground,
+                                            containerColor = extendedColors.eventCardBackground,
                                             contentColor = Color(0xFF3C6839),
                                             modifier = Modifier.padding(vertical = 4.dp)
                                         )
@@ -298,17 +290,22 @@ fun HomeScreen(
                     }
                 }
 
+                // --- FAB SCRIM OVERLAY ---
                 AnimatedVisibility(
                     visible = isFabExpanded,
                     enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.matchParentSize()
+                    exit = fadeOut()
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.4f))
-                            .clickable { isFabExpanded = false }
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                isFabExpanded = false
+                            }
                     )
                 }
             }

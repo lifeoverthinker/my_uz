@@ -46,6 +46,7 @@ import com.example.my_uz_android.ui.screens.index.*
 import com.example.my_uz_android.ui.screens.notifications.NotificationsScreen
 import com.example.my_uz_android.ui.screens.notifications.NotificationsViewModel
 import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
+import androidx.compose.runtime.LaunchedEffect
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
@@ -61,8 +62,19 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val iconR
 @Composable
 fun AppNavigation(
     startDestination: String = "landing",
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    deepLinkIntent: android.content.Intent? = null
+
 ) {
+
+    LaunchedEffect(deepLinkIntent) {
+        if (deepLinkIntent?.data?.toString() == "myuz://add_task") {
+            navController.navigate("tasks") {
+                launchSingleTop = true
+            }
+        }
+    }
+
     val items = listOf(Screen.Main, Screen.Calendar, Screen.Index, Screen.Account)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -70,7 +82,8 @@ fun AppNavigation(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    val sharedCalendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val sharedCalendarViewModel: CalendarViewModel =
+        viewModel(factory = AppViewModelProvider.Factory)
     val calendarUiState by sharedCalendarViewModel.uiState.collectAsState()
 
     val showBottomBar = items.any { currentRoute?.startsWith(it.route) == true } ||
@@ -78,10 +91,10 @@ fun AppNavigation(
             currentRoute == "schedule_search" ||
             currentRoute == "schedule_preview"
 
-    val navBackgroundColor = MaterialTheme.extendedColors.navBackground
-    val navBorderColor = MaterialTheme.extendedColors.navBorder
-    val navActiveColor = MaterialTheme.extendedColors.navActive
-    val navInactiveColor = MaterialTheme.extendedColors.navInactive
+    val navBackgroundColor = extendedColors.navBackground
+    val navBorderColor = extendedColors.navBorder
+    val navActiveColor = extendedColors.navActive
+    val navInactiveColor = extendedColors.navInactive
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -96,7 +109,9 @@ fun AppNavigation(
                         scope.launch { drawerState.close() }
                         sharedCalendarViewModel.selectMyPlan()
                         navController.navigate(Screen.Calendar.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
                             launchSingleTop = true
                             restoreState = true
                         }
@@ -170,7 +185,9 @@ fun AppNavigation(
                                     selected = selected,
                                     onClick = {
                                         navController.navigate(screen.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
                                             launchSingleTop = true
                                             restoreState = screen.route != Screen.Calendar.route
                                         }
@@ -226,7 +243,8 @@ fun AppNavigation(
                 }
 
                 composable("notifications") {
-                    val notificationsViewModel: NotificationsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val notificationsViewModel: NotificationsViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     NotificationsScreen(
                         viewModel = notificationsViewModel,
                         onNavigateBack = { navController.popBackStack() }
@@ -261,7 +279,8 @@ fun AppNavigation(
                 }
 
                 composable("schedule_search") {
-                    val searchViewModel: ScheduleSearchViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val searchViewModel: ScheduleSearchViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     ScheduleSearchScreen(
                         navController = navController,
                         searchViewModel = searchViewModel,
@@ -273,10 +292,13 @@ fun AppNavigation(
                     route = "${Screen.ClassDetails.route}/{classId}?isTeacherPlan={isTeacherPlan}",
                     arguments = listOf(
                         navArgument("classId") { type = NavType.IntType },
-                        navArgument("isTeacherPlan") { type = NavType.BoolType; defaultValue = false }
+                        navArgument("isTeacherPlan") {
+                            type = NavType.BoolType; defaultValue = false
+                        }
                     )
                 ) { backStackEntry ->
-                    val isTeacherPlan = backStackEntry.arguments?.getBoolean("isTeacherPlan") ?: false
+                    val isTeacherPlan =
+                        backStackEntry.arguments?.getBoolean("isTeacherPlan") ?: false
                     val classId = backStackEntry.arguments?.getInt("classId") ?: 0
 
                     ClassDetailsScreen(
@@ -311,7 +333,8 @@ fun AppNavigation(
                     "task_details/{taskId}",
                     arguments = listOf(navArgument("taskId") { type = NavType.IntType })
                 ) { backStackEntry ->
-                    val detailsViewModel: TaskDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val detailsViewModel: TaskDetailsViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
 
                     TaskDetailsScreenRoute(
                         viewModel = detailsViewModel,
@@ -339,7 +362,8 @@ fun AppNavigation(
                         navArgument("isAllDay") { type = NavType.BoolType; defaultValue = false }
                     )
                 ) { _ ->
-                    val addEditViewModel: TaskAddEditViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val addEditViewModel: TaskAddEditViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     TaskAddEditScreenRoute(
                         viewModel = addEditViewModel,
                         onNavigateBack = { navController.popBackStack() }
@@ -350,7 +374,8 @@ fun AppNavigation(
                     route = "edit_task/{taskId}",
                     arguments = listOf(navArgument("taskId") { type = NavType.IntType })
                 ) { _ ->
-                    val editViewModel: TaskAddEditViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val editViewModel: TaskAddEditViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     TaskAddEditScreenRoute(
                         viewModel = editViewModel,
                         onNavigateBack = { navController.popBackStack() }
@@ -364,7 +389,9 @@ fun AppNavigation(
 
                 composable(
                     route = "index?tab={tab}",
-                    arguments = listOf(navArgument("tab") { defaultValue = 0; type = NavType.IntType })
+                    arguments = listOf(navArgument("tab") {
+                        defaultValue = 0; type = NavType.IntType
+                    })
                 ) { backStackEntry ->
                     val initialTab = backStackEntry.arguments?.getInt("tab") ?: 0
                     IndexScreen(
@@ -402,7 +429,11 @@ fun AppNavigation(
                         onGradeClick = { gradeId -> navController.navigate("grade_details/$gradeId") },
                         onAddGradeClick = {
                             navController.navigate(
-                                "add_grade?subject=${backStackEntry.arguments?.getString("subjectName")}&classType=${backStackEntry.arguments?.getString("classType")}"
+                                "add_grade?subject=${backStackEntry.arguments?.getString("subjectName")}&classType=${
+                                    backStackEntry.arguments?.getString(
+                                        "classType"
+                                    )
+                                }"
                             )
                         }
                     )
@@ -412,7 +443,8 @@ fun AppNavigation(
                     route = Screen.GradeDetails.route + "/{gradeId}",
                     arguments = listOf(navArgument("gradeId") { type = NavType.IntType })
                 ) { backStackEntry ->
-                    val detailsViewModel: GradeDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val detailsViewModel: GradeDetailsViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     GradeDetailsScreenRoute(
                         viewModel = detailsViewModel,
                         onNavigateBack = { navController.popBackStack() },
@@ -438,7 +470,8 @@ fun AppNavigation(
                         navArgument("comment") { type = NavType.StringType; nullable = true }
                     )
                 ) { _ ->
-                    val addEditViewModel: AddEditGradeViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val addEditViewModel: AddEditGradeViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     AddEditGradeScreenRoute(
                         viewModel = addEditViewModel,
                         onNavigateBack = { navController.popBackStack() }
@@ -449,7 +482,8 @@ fun AppNavigation(
                     route = "edit_grade/{gradeId}",
                     arguments = listOf(navArgument("gradeId") { type = NavType.IntType })
                 ) { _ ->
-                    val editViewModel: AddEditGradeViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val editViewModel: AddEditGradeViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     AddEditGradeScreenRoute(
                         viewModel = editViewModel,
                         onNavigateBack = { navController.popBackStack() }
@@ -465,7 +499,8 @@ fun AppNavigation(
                     route = "absence_details/{absenceId}",
                     arguments = listOf(navArgument("absenceId") { type = NavType.IntType })
                 ) { _ ->
-                    val detailsViewModel: AbsenceDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val detailsViewModel: AbsenceDetailsViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     AbsenceDetailsScreenRoute(
                         viewModel = detailsViewModel,
                         onNavigateBack = { navController.popBackStack() },
@@ -478,15 +513,20 @@ fun AppNavigation(
                         }
                     )
                 }
-                
+
                 composable(
                     route = "add_absence?subject={subject}&classType={classType}",
                     arguments = listOf(
-                        navArgument("subject") { type = NavType.StringType; nullable = true; defaultValue = null },
-                        navArgument("classType") { type = NavType.StringType; nullable = true; defaultValue = null }
+                        navArgument("subject") {
+                            type = NavType.StringType; nullable = true; defaultValue = null
+                        },
+                        navArgument("classType") {
+                            type = NavType.StringType; nullable = true; defaultValue = null
+                        }
                     )
                 ) { backStackEntry ->
-                    val addEditViewModel: AddEditAbsenceViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val addEditViewModel: AddEditAbsenceViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     AbsenceAddEditScreenRoute(
                         viewModel = addEditViewModel,
                         prefilledSubject = backStackEntry.arguments?.getString("subject"),
@@ -499,7 +539,8 @@ fun AppNavigation(
                     route = "edit_absence/{absenceId}",
                     arguments = listOf(navArgument("absenceId") { type = NavType.IntType })
                 ) { _ ->
-                    val addEditViewModel: AddEditAbsenceViewModel = viewModel(factory = AppViewModelProvider.Factory)
+                    val addEditViewModel: AddEditAbsenceViewModel =
+                        viewModel(factory = AppViewModelProvider.Factory)
                     AbsenceAddEditScreenRoute(
                         viewModel = addEditViewModel,
                         prefilledSubject = null,

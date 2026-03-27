@@ -38,13 +38,12 @@ fun TimePicker(
             shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 0.dp,
-            modifier = Modifier.wrapContentSize()
+            modifier = modifier.wrapContentSize()
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Tytuł modala jak w MD3
                 Text(
                     text = "Wybierz godzinę",
                     style = MaterialTheme.typography.labelMedium,
@@ -57,16 +56,7 @@ fun TimePicker(
                 androidx.compose.material3.TimePicker(
                     state = timeState,
                     colors = TimePickerDefaults.colors(
-                        clockDialColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        clockDialSelectedContentColor = MaterialTheme.colorScheme.onPrimary,
-                        clockDialUnselectedContentColor = MaterialTheme.colorScheme.onSurface,
-                        selectorColor = MaterialTheme.colorScheme.primary,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        // Kolory prostokątów z cyframi (góra)
-                        timeSelectorSelectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        timeSelectorUnselectedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        timeSelectorSelectedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        timeSelectorUnselectedContentColor = MaterialTheme.colorScheme.onSurface
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 )
 
@@ -82,9 +72,7 @@ fun TimePicker(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     TextButton(
-                        onClick = {
-                            onTimeSelected(timeState.hour, timeState.minute)
-                        }
+                        onClick = { onTimeSelected(timeState.hour, timeState.minute) }
                     ) {
                         Text(
                             text = "OK",

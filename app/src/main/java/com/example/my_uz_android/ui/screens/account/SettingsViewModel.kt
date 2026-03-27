@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.*
 import com.example.my_uz_android.data.repositories.*
 import com.example.my_uz_android.ui.theme.ClassColorPalette
+import com.example.my_uz_android.util.BackupManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -13,25 +14,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
-import com.example.my_uz_android.util.BackupManager
-
-enum class BackupDataType(val displayName: String) {
-    SETTINGS("Ustawienia aplikacji"),
-    CLASSES("Plan zajęć"),
-    TASKS("Zadania"),
-    GRADES("Oceny"),
-    ABSENCES("Nieobecności"),
-    EVENTS("Wydarzenia")
-}
-
-data class BackupData(
-    val settings: SettingsEntity?,
-    val classes: List<ClassEntity>,
-    val tasks: List<TaskEntity>,
-    val grades: List<GradeEntity>,
-    val absences: List<AbsenceEntity>,
-    val events: List<EventEntity>
-)
 
 data class SettingsUiState(
     val settings: SettingsEntity? = null,
@@ -39,11 +21,10 @@ data class SettingsUiState(
     val classColorMap: Map<String, Int> = emptyMap(),
     val isLoading: Boolean = false,
     val importMessage: String? = null,
-    val backupPreview: BackupData? = null,
+    val backupPreview: ManualBackupData? = null,
     val showImportDialog: Boolean = false,
     val isSaved: Boolean = false
 )
-
 
 class SettingsViewModel(
     private val backupManager: BackupManager,
@@ -141,21 +122,6 @@ class SettingsViewModel(
         }
     }
 
-    fun toggleDarkMode(enabled: Boolean) {
-        // Zostawione dla kompatybilności wstecznej (opcjonalnie)
-        val current = _uiState.value.settings ?: return
-        val newTheme = if (enabled) ThemeMode.DARK.name else ThemeMode.LIGHT.name
-        viewModelScope.launch {
-            settingsRepository.insertOrUpdate(
-                current.copy(
-                    isDarkMode = enabled,
-                    themeMode = newTheme
-                )
-            )
-            triggerSaveFeedback()
-        }
-    }
-
     fun toggleNotifications(enabled: Boolean) {
         val current = _uiState.value.settings ?: return
         viewModelScope.launch {
@@ -182,19 +148,13 @@ class SettingsViewModel(
 
     suspend fun createBackupJson(selectedTypes: Set<BackupDataType>): String =
         withContext(Dispatchers.IO) {
-            val backup = BackupData(
-                settings = if (selectedTypes.contains(BackupDataType.SETTINGS)) settingsRepository.getSettingsStream()
-                    .first() else null,
-                classes = if (selectedTypes.contains(BackupDataType.CLASSES)) classRepository.getAllClassesStream()
-                    .first() else emptyList(),
-                tasks = if (selectedTypes.contains(BackupDataType.TASKS)) tasksRepository.getAllTasks()
-                    .first() else emptyList(),
-                grades = if (selectedTypes.contains(BackupDataType.GRADES)) gradesRepository.getAllGradesStream()
-                    .first() else emptyList(),
-                absences = if (selectedTypes.contains(BackupDataType.ABSENCES)) absenceRepository.getAllAbsencesStream()
-                    .first() else emptyList(),
-                events = if (selectedTypes.contains(BackupDataType.EVENTS)) eventRepository.getAllEvents()
-                    .first() else emptyList()
+            val backup = ManualBackupData(
+                settings = if (selectedTypes.contains(BackupDataType.SETTINGS)) settingsRepository.getSettingsStream().first() else null,
+                classes = if (selectedTypes.contains(BackupDataType.CLASSES)) classRepository.getAllClassesStream().first() else emptyList(),
+                tasks = if (selectedTypes.contains(BackupDataType.TASKS)) tasksRepository.getAllTasks().first() else emptyList(),
+                grades = if (selectedTypes.contains(BackupDataType.GRADES)) gradesRepository.getAllGradesStream().first() else emptyList(),
+                absences = if (selectedTypes.contains(BackupDataType.ABSENCES)) absenceRepository.getAllAbsencesStream().first() else emptyList(),
+                events = if (selectedTypes.contains(BackupDataType.EVENTS)) eventRepository.getAllEvents().first() else emptyList()
             )
             gson.toJson(backup)
         }
@@ -203,20 +163,13 @@ class SettingsViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val data = gson.fromJson(jsonString, BackupData::class.java)
+                val data = gson.fromJson(jsonString, ManualBackupData::class.java)
                 _uiState.update {
-                    it.copy(
-                        backupPreview = data,
-                        showImportDialog = true,
-                        isLoading = false
-                    )
+                    it.copy(backupPreview = data, showImportDialog = true, isLoading = false)
                 }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(
-                        importMessage = "Błędny format pliku",
-                        isLoading = false
-                    )
+                    it.copy(importMessage = "Błędny format pliku", isLoading = false)
                 }
             }
         }
@@ -247,12 +200,7 @@ class SettingsViewModel(
                     eventRepository.insertEvents(data.events)
                 }
                 withContext(Dispatchers.Main) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            importMessage = "Import zakończony"
-                        )
-                    }
+                    _uiState.update { it.copy(isLoading = false, importMessage = "Import zakończony") }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
@@ -266,9 +214,7 @@ class SettingsViewModel(
         _uiState.update { it.copy(showImportDialog = false) }
     }
 
-    /**
-     * Eksportuje bazę i zwraca JSON przez callback
-     */
+    // --- FUNKCJE DLA BackupSettingsSection.kt ---
     fun exportDatabase(onResult: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -280,9 +226,6 @@ class SettingsViewModel(
         }
     }
 
-    /**
-     * Importuje bazę z podanego JSONa. Informuje o sukcesie lub błędzie.
-     */
     fun importDatabase(json: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
             try {

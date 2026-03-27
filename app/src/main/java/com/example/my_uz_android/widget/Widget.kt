@@ -30,6 +30,9 @@ import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlin.math.abs
+import android.content.Intent
+import android.net.Uri
+import androidx.glance.appwidget.action.actionStartActivity
 
 class Widget : GlanceAppWidget() {
 
@@ -89,23 +92,36 @@ class Widget : GlanceAppWidget() {
             Column(modifier = GlanceModifier.fillMaxWidth().padding(bottom = 8.dp)) {
                 Text(
                     text = date,
-                    style = TextStyle(color = GlanceTheme.colors.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurface,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 )
                 if (dayLabel.isNotEmpty()) {
                     Text(
                         text = "Plan na: $dayLabel",
-                        style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = 12.sp)
+                        style = TextStyle(
+                            color = GlanceTheme.colors.onSurfaceVariant,
+                            fontSize = 12.sp
+                        )
                     )
                 }
             }
 
             // ✅ Użycie LazyColumn pozwala na przewijanie, jeśli zajęć jest dużo
             if (classes.isEmpty()) {
-                Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = message.ifEmpty { "Brak danych" }, style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant))
+                Box(
+                    modifier = GlanceModifier.defaultWeight().fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = message.ifEmpty { "Brak danych" },
+                        style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant)
+                    )
                 }
             } else {
-                LazyColumn(modifier = GlanceModifier.fillMaxWidth()) {
+                LazyColumn(modifier = GlanceModifier.defaultWeight().fillMaxWidth()) {
                     items(classes) { classItem ->
                         ClassItem(classItem, colorMap)
                         Spacer(modifier = GlanceModifier.height(8.dp))
@@ -171,6 +187,33 @@ class Widget : GlanceAppWidget() {
                             )
                         )
                     }
+                }
+                // NOWE: przycisk na dole widgetu
+                val addTaskIntent = Intent(
+                    Intent.ACTION_VIEW,
+                    android.net.Uri.parse("myuz://add_task")
+                ).apply {
+                    setPackage(LocalContext.current.packageName)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+
+                Box(
+                    modifier = GlanceModifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp)
+                        .background(GlanceTheme.colors.primary)
+                        .clickable(actionStartActivity(addTaskIntent))
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+ Dodaj zadanie",
+                        style = TextStyle(
+                            color = GlanceTheme.colors.onPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
                 }
             }
 
