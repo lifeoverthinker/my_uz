@@ -71,7 +71,7 @@ class SettingsViewModel(
                         abs(type.hashCode()) % ClassColorPalette.size
                     }
                     val newJson = gson.toJson(colorMap)
-                    settingsRepository.insertOrUpdate(settings.copy(classColorsJson = newJson))
+                    settingsRepository.insertSettings(settings.copy(classColorsJson = newJson))
                 }
 
                 _uiState.update { currentState ->
@@ -97,7 +97,7 @@ class SettingsViewModel(
     fun setThemeMode(mode: ThemeMode) {
         val current = _uiState.value.settings ?: return
         viewModelScope.launch {
-            settingsRepository.insertOrUpdate(current.copy(themeMode = mode.name))
+            settingsRepository.insertSettings(current.copy(themeMode = mode.name))
             triggerSaveFeedback()
         }
     }
@@ -109,7 +109,7 @@ class SettingsViewModel(
 
         val newJson = gson.toJson(currentMap)
         viewModelScope.launch {
-            settingsRepository.insertOrUpdate(current.copy(classColorsJson = newJson))
+            settingsRepository.insertSettings(current.copy(classColorsJson = newJson))
             triggerSaveFeedback()
         }
     }
@@ -117,7 +117,7 @@ class SettingsViewModel(
     fun toggleOfflineMode(enabled: Boolean) {
         val current = _uiState.value.settings ?: return
         viewModelScope.launch {
-            settingsRepository.insertOrUpdate(current.copy(offlineModeEnabled = enabled))
+            settingsRepository.insertSettings(current.copy(offlineModeEnabled = enabled))
             triggerSaveFeedback()
         }
     }
@@ -125,7 +125,7 @@ class SettingsViewModel(
     fun toggleNotifications(enabled: Boolean) {
         val current = _uiState.value.settings ?: return
         viewModelScope.launch {
-            settingsRepository.insertOrUpdate(current.copy(notificationsEnabled = enabled))
+            settingsRepository.insertSettings(current.copy(notificationsEnabled = enabled))
             triggerSaveFeedback()
         }
     }
@@ -133,7 +133,7 @@ class SettingsViewModel(
     fun toggleTasksNotifications(enabled: Boolean) {
         val current = _uiState.value.settings ?: return
         viewModelScope.launch {
-            settingsRepository.insertOrUpdate(current.copy(notificationsTasks = enabled))
+            settingsRepository.insertSettings(current.copy(notificationsTasks = enabled))
             triggerSaveFeedback()
         }
     }
@@ -141,7 +141,7 @@ class SettingsViewModel(
     fun toggleClassesNotifications(enabled: Boolean) {
         val current = _uiState.value.settings ?: return
         viewModelScope.launch {
-            settingsRepository.insertOrUpdate(current.copy(notificationsClasses = enabled))
+            settingsRepository.insertSettings(current.copy(notificationsClasses = enabled))
             triggerSaveFeedback()
         }
     }
@@ -181,7 +181,7 @@ class SettingsViewModel(
             _uiState.update { it.copy(isLoading = true, showImportDialog = false) }
             try {
                 if (selectedTypes.contains(BackupDataType.SETTINGS) && data.settings != null) {
-                    settingsRepository.insertOrUpdate(data.settings)
+                    settingsRepository.insertSettings(data.settings)
                 }
                 if (selectedTypes.contains(BackupDataType.CLASSES)) {
                     classRepository.deleteAllClasses()

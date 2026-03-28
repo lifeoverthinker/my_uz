@@ -188,7 +188,7 @@ class AccountViewModel(
     fun setGroupSearchQuery(q: String) = _groupSearchQuery.update { q }
 
     fun setActiveDirection(code: String) = viewModelScope.launch {
-        currentSettings?.let { settingsRepository.insertOrUpdate(it.copy(activeDirectionCode = code)) }
+        currentSettings?.let { settingsRepository.insertSettings(it.copy(activeDirectionCode = code)) }
     }
 
     fun selectGroup(g: String) {
@@ -327,7 +327,7 @@ class AccountViewModel(
         if (_activeDirection.value == c.groupCode) {
             _activeDirection.value = _selectedGroup.value
             currentSettings?.let { settings ->
-                settingsRepository.insertOrUpdate(settings.copy(activeDirectionCode = _selectedGroup.value))
+                settingsRepository.insertSettings(settings.copy(activeDirectionCode = _selectedGroup.value))
             }
         }
 
@@ -337,7 +337,7 @@ class AccountViewModel(
         // 4. Wymuszenie zapisu i odświeżenia zajęć
         _triggerSave.tryEmit(Unit)
     }
-    
+
     fun updateAdditionalSubgroup(course: UserCourseEntity, subgroup: String) {
         isEditingProfile = true
         val currentSet = course.selectedSubgroup
@@ -399,7 +399,7 @@ class AccountViewModel(
             isAnonymous = false, activeDirectionCode = newActiveDir
         )
 
-        settingsRepository.insertOrUpdate(settings)
+        settingsRepository.insertSettings(settings)
 
         // BEZPIECZNE POBIERANIE PLANU ZAJĘĆ
         var hasNetworkError = false

@@ -167,7 +167,7 @@ class OnboardingViewModel(
                 isDarkMode = currentSettings?.isDarkMode ?: false
             )
 
-            settingsRepository.insertOrUpdate(guestSettings)
+            settingsRepository.insertSettings(guestSettings)
 
             _isLoading.value = false
             onSuccess()
@@ -216,7 +216,7 @@ class OnboardingViewModel(
                 studyMode = fetchedStudyMode
             )
 
-            settingsRepository.insertOrUpdate(newSettings)
+            settingsRepository.insertSettings(newSettings)
 
             _isLoading.value = false
             onSuccess()

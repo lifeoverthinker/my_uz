@@ -18,7 +18,7 @@ class NotificationWorker(
 
     override suspend fun doWork(): Result {
         val database = AppDatabase.getDatabase(applicationContext)
-        val settings = database.settingsDao().getSettings().first()
+        val settings = database.settingsDao().getSettingsStream().first()
             ?: return Result.success()
 
         if (!settings.notificationsEnabled) return Result.success()

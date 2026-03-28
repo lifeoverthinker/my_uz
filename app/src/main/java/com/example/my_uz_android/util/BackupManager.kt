@@ -40,7 +40,7 @@ class BackupManager(private val db: AppDatabase) {
             grades = db.gradesDao().getAllGrades().first(),
             absences = db.absenceDao().getAllAbsences().first(),
             events = db.eventDao().getAllEvents().first(),
-            settings = db.settingsDao().getSettings().first(),
+            settings = db.settingsDao().getSettingsStream().first(),
             favorites = db.favoritesDao().getAllFavoritesStream().first(),
             userCourses = db.userCourseDao().getAllUserCoursesStream().first(),
             notifications = db.notificationDao().getAllNotifications().first()
