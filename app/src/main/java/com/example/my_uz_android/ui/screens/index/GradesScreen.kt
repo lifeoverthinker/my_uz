@@ -27,13 +27,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.EmptyStateMessage
 import com.example.my_uz_android.util.ClassTypeUtils
+import com.example.my_uz_android.ui.components.EmptyStateFigma
 
 @Composable
 fun GradesScreen(
     viewModel: GradesViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    onSubjectClick: (String) -> Unit,
+    onSubjectClick: (String, String) -> Unit,
     onAddGradeClick: (String, String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -47,19 +47,15 @@ fun GradesScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (uiState.subjects.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                EmptyStateMessage(
-                    title = "Brak ocen",
-                    message = "Nie masz jeszcze żadnych ocen.\nWybierz plan zajęć lub dodaj pierwszą ocenę ręcznie.",
-                    iconRes = R.drawable.college_students_rafiki,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+            EmptyStateFigma(
+                title = "Czysta karta! 📖",
+                subtitle = "Startujesz od zera",
+                message = "W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!",
+                iconRes = R.drawable.grades_rafiki,
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                illustrationSize = 221.7868.dp,
+                containerHeight = 582.dp
+            )
         } else {
             val isMultiCourse = uiState.userCourses.size > 1
             val groupedByCourse = remember(uiState.subjects, isMultiCourse) {
@@ -79,28 +75,67 @@ fun GradesScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 item {
+                    val isMultiCourseBanner = uiState.courseAverages.size > 1
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
                             .padding(16.dp)
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Średnia z bieżącego semestru",
-                                style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                text = uiState.average?.let { String.format("%.1f", it) } ?: "-",
-                                style = TextStyle(fontWeight = FontWeight.Normal, fontSize = 24.sp),
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
+                        if (!isMultiCourseBanner) {
+                            Row(
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "Średnia z bieżącego semestru",
+                                    style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    text = uiState.average?.let { String.format("%.1f", it) } ?: "-",
+                                    style = TextStyle(fontWeight = FontWeight.Normal, fontSize = 24.sp),
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "Średnie z bieżącego semestru",
+                                    style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp),
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+
+                                uiState.courseAverages.forEachIndexed { index, (courseName, avg) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = courseName,
+                                            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 13.sp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            text = avg?.let { String.format("%.1f", it) } ?: "-",
+                                            style = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    }
+
+                                    if (index < uiState.courseAverages.lastIndex) {
+                                        HorizontalDivider(
+                                            thickness = 1.dp,
+                                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.18f)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -120,10 +155,10 @@ fun GradesScreen(
                         }
                     }
 
-                    items(subjects, key = { "${it.courseName}_${it.name}" }) { subject ->
+                    items(subjects, key = { it.uniqueKey }) { subject ->
                         ExpandableSubjectGradeCard(
                             subject = subject,
-                            onGradeListClick = { onSubjectClick(subject.name) },
+                            onGradeListClick = { type -> onSubjectClick(subject.uniqueKey, type) },
                             onAddGradeClick = { type -> onAddGradeClick(subject.name, type) }
                         )
                     }
@@ -137,7 +172,7 @@ fun GradesScreen(
 @Composable
 private fun ExpandableSubjectGradeCard(
     subject: SubjectState,
-    onGradeListClick: () -> Unit,
+    onGradeListClick: (String) -> Unit,
     onAddGradeClick: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -204,7 +239,7 @@ private fun ExpandableSubjectGradeCard(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
 
-                subject.types.forEach { classType ->
+                subject.types.forEachIndexed { typeIndex, classType ->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -215,7 +250,7 @@ private fun ExpandableSubjectGradeCard(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onGradeListClick() },
+                                .clickable { onGradeListClick(classType.name) },
                             horizontalArrangement = Arrangement.spacedBy(36.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -301,6 +336,14 @@ private fun ExpandableSubjectGradeCard(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+                    }
+
+                    if (typeIndex < subject.types.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
                     }
                 }
             }

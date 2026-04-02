@@ -380,8 +380,10 @@ fun AppNavigation(
 
                     composable(Screen.Index.route) {
                         IndexScreen(
-                            onSubjectClick = { subjectName ->
-                                navController.navigate("subject_grades/${Uri.encode(subjectName)}")
+                            onSubjectClick = { subjectKey, classType ->
+                                navController.navigate(
+                                    "subject_grades/${Uri.encode(subjectKey)}?classType=${Uri.encode(classType)}"
+                                )
                             },
                             onAddGradeClick = { navController.navigate("add_grade") },
                             onAddAbsenceClick = { navController.navigate("add_absence") },
@@ -395,10 +397,22 @@ fun AppNavigation(
                         )
                     }
 
-                    composable("subject_grades/{subjectName}") { backStackEntry ->
-                        val subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
+                    composable(
+                        route = "subject_grades/{subjectKey}?classType={classType}",
+                        arguments = listOf(
+                            navArgument("subjectKey") { type = NavType.StringType },
+                            navArgument("classType") {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            }
+                        )
+                    ) { backStackEntry ->
+                        val subjectKey = backStackEntry.arguments?.getString("subjectKey") ?: ""
+                        val classType = backStackEntry.arguments?.getString("classType")
                         SubjectGradesScreen(
-                            subjectName = subjectName,
+                            subjectKey = subjectKey,
+                            preselectedClassType = classType,
                             onBackClick = { navController.popBackStack() },
                             onGradeClick = { gradeId -> navController.navigate("grade_details/$gradeId") },
                             onAddGradeClick = { subj, type ->

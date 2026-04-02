@@ -13,13 +13,17 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.ui.theme.InterFontFamily
 
 /**
- * Komponent dla stanów pustych na pełnych ekranach.
- * Wykorzystuje piękne ilustracje (rafiki) z folderu drawable.
+ * Bazowy full-screen Empty State zgodny z układem z Figmy:
+ * - kontener szerokości 328.dp
+ * - ilustracja ~221.8dp
+ * - stack tekstów 312.dp
+ * - spacing 10.dp między ilustracją i tekstem, 8.dp między liniami tekstu
  */
 @Composable
 fun EmptyStateMessage(
@@ -31,71 +35,174 @@ fun EmptyStateMessage(
     actionText: String? = null,
     onActionClick: (() -> Unit)? = null
 ) {
+    EmptyStateFigma(
+        title = title,
+        subtitle = subtitle,
+        message = message,
+        iconRes = iconRes,
+        modifier = modifier,
+        actionText = actionText,
+        onActionClick = onActionClick
+    )
+}
+
+/**
+ * Wariant "figmowy" do precyzyjnego odwzorowania:
+ * - title: headlineMedium (28/36)
+ * - subtitle: titleMedium (16/24), kolor primary-like (68548E)
+ * - message: bodySmall (12/16), onSurfaceVariant
+ */
+@Composable
+fun EmptyStateFigma(
+    title: String,
+    subtitle: String?,
+    message: String,
+    iconRes: Int,
+    modifier: Modifier = Modifier,
+    actionText: String? = null,
+    onActionClick: (() -> Unit)? = null,
+    illustrationSize: Dp = 221.7868.dp,
+    containerHeight: Dp = 519.dp
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Używamy Image zamiast Icon dla ilustracji, aby zachować kolory
-        Image(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
+        Column(
             modifier = Modifier
-                .size(240.dp) // Zwiększony rozmiar dla ilustracji
-                .padding(bottom = 16.dp),
-            contentScale = ContentScale.Fit
-        )
-        
-        Text(
-            text = title,
-            style = MaterialTheme.typography.headlineSmall.copy(
-                fontWeight = FontWeight.Bold,
-                fontFamily = InterFontFamily
-            ),
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
-        )
-        
-        if (subtitle != null) {
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontFamily = InterFontFamily
-                ),
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontFamily = InterFontFamily
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        
-        if (actionText != null && onActionClick != null) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = onActionClick,
-                shape = RoundedCornerShape(12.dp)
+                .width(328.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier.size(illustrationSize),
+                contentAlignment = Alignment.Center
             ) {
-                Text(text = actionText)
+                Image(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(illustrationSize),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            Box(modifier = Modifier.width(312.dp)) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 28.sp,
+                            lineHeight = 36.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (!subtitle.isNullOrBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp,
+                                lineHeight = 24.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            if (actionText != null && onActionClick != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Button(
+                    onClick = onActionClick,
+                    shape = RoundedCornerShape(100.dp),
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text(text = actionText)
+                }
             }
         }
     }
 }
 
 /**
- * SPECJALISTYCZNA KARTA DLA PUSTYCH STANÓW NA DASHBOARDZIE (Home)
- * Odwzorowana dokładnie z Figmy - używa małych ikon w białym kwadracie.
+ * Gotowe preset-y pod ekrany, które opisałeś.
+ */
+@Composable
+fun CalendarEmptyState(
+    iconRes: Int,
+    modifier: Modifier = Modifier
+) {
+    EmptyStateFigma(
+        title = "Brak zajęć",
+        subtitle = "Zasłużony odpoczynek",
+        message = "W tym dniu nie masz żadnych zaplanowanych zajęć. Ciesz się wolnym czasem!",
+        iconRes = iconRes,
+        modifier = modifier,
+        illustrationSize = 221.7868.dp
+    )
+}
+
+@Composable
+fun TasksEmptyState(
+    iconRes: Int,
+    modifier: Modifier = Modifier
+) {
+    EmptyStateFigma(
+        title = "Brak zadań ✅",
+        subtitle = "Wszystko gotowe",
+        message = "Lista Twoich zadań do zrobienia jest obecnie pusta",
+        iconRes = iconRes,
+        modifier = modifier,
+        illustrationSize = 221.7868.dp,
+        containerHeight = 519.dp
+    )
+}
+
+@Composable
+fun AbsencesEmptyState(
+    iconRes: Int,
+    modifier: Modifier = Modifier
+) {
+    EmptyStateFigma(
+        title = "100% frekwencji! ✅",
+        subtitle = "Bez ani jednej nieobecności!",
+        message = "Brawo! Nie opuściłeś żadnych zajęć w tym semestrze. Tak trzymaj!",
+        iconRes = iconRes,
+        modifier = modifier,
+        illustrationSize = 221.7868.dp,
+        containerHeight = 519.dp
+    )
+}
+
+/**
+ * DASHBOARD EMPTY CARD — zostaje, ale porządkujemy typografię pod M3 + Inter.
  */
 @Composable
 fun DashboardEmptyCard(
@@ -116,10 +223,9 @@ fun DashboardEmptyCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(12.dp)
         ) {
-            // Ikona w kwadraciku - używa theme by pasowało do dark mode
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLowest, // Zamiast sztywnego Color.White
+                color = MaterialTheme.colorScheme.surfaceContainerLowest,
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -131,11 +237,10 @@ fun DashboardEmptyCard(
                     )
                 }
             }
-            
-            // Tytuł
+
             Text(
                 text = title,
-                style = TextStyle(
+                style = MaterialTheme.typography.titleMedium.copy(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = 16.sp,
@@ -145,11 +250,10 @@ fun DashboardEmptyCard(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
-            
-            // Wiadomość
+
             Text(
                 text = message,
-                style = TextStyle(
+                style = MaterialTheme.typography.bodySmall.copy(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = 12.sp,
@@ -162,8 +266,6 @@ fun DashboardEmptyCard(
         }
     }
 }
-
-// java/com/example/my_uz_android/ui/components/EmptyStateMessage.kt
 
 @Composable
 fun DashboardActionEmptyCard(
@@ -203,7 +305,7 @@ fun DashboardActionEmptyCard(
 
             Text(
                 text = title,
-                style = TextStyle(
+                style = MaterialTheme.typography.titleLarge.copy(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp,
@@ -216,7 +318,7 @@ fun DashboardActionEmptyCard(
 
             Text(
                 text = message,
-                style = TextStyle(
+                style = MaterialTheme.typography.bodyMedium.copy(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = 14.sp,
@@ -232,7 +334,8 @@ fun DashboardActionEmptyCard(
             Button(
                 onClick = onActionClick,
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                modifier = Modifier.heightIn(min = 48.dp)
             ) {
                 Text(text = actionText, color = MaterialTheme.colorScheme.surfaceContainerLowest)
             }

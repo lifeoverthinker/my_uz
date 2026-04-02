@@ -20,10 +20,6 @@ import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
 
-/**
- * REUŻYWALNA IKONA NA OKRĄGŁYM TLE (Odwzorowana z Figmy)
- * Dopasowana do Material 3 Light/Dark
- */
 @Composable
 fun TopBarActionIcon(
     icon: Int,
@@ -35,17 +31,17 @@ fun TopBarActionIcon(
     isFilled: Boolean = true
 ) {
     val finalBackgroundColor = if (isFilled) backgroundColor else Color.Transparent
-    
+
     Box(
         modifier = modifier
-            .size(48.dp) // Wielkość klikalnego obszaru wg MD (48dp)
+            .size(48.dp) // touch target
             .clip(CircleShape)
             .clickable(enabled = !isLoading, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp) // Wielkość kółka (background) - MD standard
+                .size(40.dp)
                 .background(color = finalBackgroundColor, shape = CircleShape),
             contentAlignment = Alignment.Center
         ) {
@@ -59,7 +55,7 @@ fun TopBarActionIcon(
                 Icon(
                     painter = painterResource(id = icon),
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp), // Ikona 24x24 (8dp paddingu wewnątrz kółka 40dp)
+                    modifier = Modifier.size(24.dp),
                     tint = iconTint
                 )
             }
@@ -80,8 +76,8 @@ private fun BaseTopBarContainer(
         Row(
             modifier = Modifier
                 .statusBarsPadding()
-                .height(72.dp)
-                .padding(horizontal = 16.dp),
+                .heightIn(min = 72.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
             content = content
@@ -111,7 +107,7 @@ fun TopAppBar(
             Row(
                 modifier = Modifier.weight(1f, fill = false),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (isCenterAligned) Arrangement.Center else Arrangement.spacedBy(16.dp)
+                horizontalArrangement = if (isCenterAligned) Arrangement.Center else Arrangement.spacedBy(12.dp)
             ) {
                 if (navigationIcon != null) {
                     TopBarActionIcon(
@@ -125,10 +121,13 @@ fun TopAppBar(
                 Column(
                     modifier = Modifier
                         .clickable(enabled = titleClickable, onClick = onTitleClick)
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 2.dp),
                     horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         if (titleColor != null) {
                             Box(
                                 modifier = Modifier
@@ -157,6 +156,7 @@ fun TopAppBar(
                             )
                         }
                     }
+
                     if (!subtitle.isNullOrEmpty()) {
                         Text(
                             text = subtitle,
@@ -181,6 +181,7 @@ fun TopAppBar(
                 actions()
             }
         }
+
         bottomContent?.invoke()
     }
 }
@@ -205,7 +206,7 @@ fun AddEditTopAppBar(
                 enabled = saveButtonEnabled,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(100.dp),
-                modifier = Modifier.height(40.dp),
+                modifier = Modifier.heightIn(min = 40.dp),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(
@@ -275,15 +276,15 @@ fun SearchTopAppBar(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 4.dp,
+        shadowElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .statusBarsPadding()
-                .height(72.dp)
-                .padding(horizontal = 16.dp)
+                .heightIn(min = 72.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             TopBarActionIcon(
                 icon = R.drawable.ic_chevron_left,
@@ -291,7 +292,7 @@ fun SearchTopAppBar(
                 isFilled = true,
                 backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
             )
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             TextField(
                 value = query,
                 onValueChange = onQueryChange,
@@ -302,7 +303,7 @@ fun SearchTopAppBar(
                     unfocusedContainerColor = Color.Transparent,
                     disabledContainerColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
                 ),
                 singleLine = true
             )

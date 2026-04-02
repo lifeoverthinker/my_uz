@@ -69,8 +69,7 @@ object AppViewModelProvider {
 
         initializer {
             EventDetailsViewModel(
-                savedStateHandle = createSavedStateHandle(),
-                eventRepository = myUZApplication().container.eventRepository
+                savedStateHandle = createSavedStateHandle()
             )
         }
 

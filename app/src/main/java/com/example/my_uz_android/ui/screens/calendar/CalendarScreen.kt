@@ -91,6 +91,8 @@ fun CalendarScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
+        // Ekran kalendarza zawsze startuje od domyslnego planu użytkownika.
+        viewModel.selectMyPlan()
         viewModel.refreshMyPlan()
     }
 
@@ -199,7 +201,8 @@ fun CalendarScreenContent(
                                 onDismissRequest = { isFilterExpanded = false }
                             ) {
                                 uiState.userCourses.forEach { course ->
-                                    val isSelected = uiState.selectedGroupCodes.contains(course.groupCode)
+                                    val normalizedCode = course.groupCode.trim().lowercase()
+                                    val isSelected = uiState.selectedGroupCodes.contains(normalizedCode)
                                     DropdownMenuItem(
                                         text = {
                                             Text(

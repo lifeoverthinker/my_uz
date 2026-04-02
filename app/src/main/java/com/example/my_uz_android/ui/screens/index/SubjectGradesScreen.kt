@@ -2,11 +2,8 @@ package com.example.my_uz_android.ui.screens.index
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -27,6 +24,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.GradeEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.EmptyStateFigma
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.theme.InterFontFamily
@@ -35,22 +33,23 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SubjectGradesScreen(
-    subjectName: String,
+    subjectKey: String,
+    preselectedClassType: String? = null,
     onBackClick: () -> Unit,
     onGradeClick: (Int) -> Unit,
     onAddGradeClick: (String, String) -> Unit,
     viewModel: GradesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val subject = uiState.subjects.find { it.name == subjectName }
+    val subject = uiState.subjects.find { it.uniqueKey == subjectKey }
+    val normalizedTypeFilter = preselectedClassType?.trim()?.lowercase()
     var showFinalGradeDialog by remember { mutableStateOf(false) }
     var gradeToDelete by remember { mutableStateOf<GradeEntity?>(null) }
-    
-    val isDark = isSystemInDarkTheme()
 
     if (showFinalGradeDialog) {
         FinalGradeDialog(
@@ -70,14 +69,27 @@ fun SubjectGradesScreen(
         )
     }
 
-    val classTypeSubtitle = subject?.types?.joinToString(", ") {
-        ClassTypeUtils.getFullName(it.name)
-    } ?: ""
+    val visibleTypes = subject?.types
+        ?.filter { normalizedTypeFilter.isNullOrBlank() || it.name.trim().lowercase() == normalizedTypeFilter }
+        .orEmpty()
+
+    val classTypeSubtitle = when {
+        visibleTypes.isEmpty() -> ""
+        visibleTypes.size == 1 -> ClassTypeUtils.getFullName(visibleTypes.first().name)
+        else -> visibleTypes.joinToString(", ") { ClassTypeUtils.getFullName(it.name) }
+    }
+
+    val allGrades = visibleTypes
+        ?.flatMap { type -> type.grades.map { it to type.name } }
+        ?.sortedByDescending { it.first.date }
+        .orEmpty()
+
+    val hasAnyGrades = allGrades.isNotEmpty()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = subjectName,
+                title = subject?.name ?: "Przedmiot",
                 subtitle = classTypeSubtitle,
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onBackClick,
@@ -87,8 +99,10 @@ fun SubjectGradesScreen(
                         icon = R.drawable.ic_plus,
                         isFilled = true,
                         onClick = {
-                            val preferredType = subject?.types?.firstOrNull()?.name.orEmpty()
-                            onAddGradeClick(subjectName, preferredType)
+                            val preferredType = visibleTypes.firstOrNull()?.name
+                                ?: subject?.types?.firstOrNull()?.name
+                                .orEmpty()
+                            onAddGradeClick(subject?.name.orEmpty(), preferredType)
                         }
                     )
                 }
@@ -97,139 +111,168 @@ fun SubjectGradesScreen(
         containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
         if (subject == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Brak danych", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        } else {
-            val totalPoints = subject.types.flatMap { it.grades }.filter { it.isPoints }.sumOf { it.grade }
-            val activitiesCount = subject.types.flatMap { it.grades }.size
-            val overallAverage = subject.average?.let { String.format("%.1f", it) } ?: "-"
-            val pointsText = if (totalPoints % 1.0 == 0.0) totalPoints.toInt().toString() else totalPoints.toString()
-
-            LazyColumn(
+            EmptyStateFigma(
+                title = "Czysta karta! 📖",
+                subtitle = "Startujesz od zera",
+                message = "W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!",
+                iconRes = R.drawable.grades_rafiki,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                item {
-                    Row(
+                illustrationSize = 221.7868.dp,
+                containerHeight = 582.dp
+            )
+            return@Scaffold
+        }
+
+        if (!hasAnyGrades) {
+            EmptyStateFigma(
+                title = "Czysta karta! 📖",
+                subtitle = "Startujesz od zera",
+                message = "W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!",
+                iconRes = R.drawable.grades_rafiki,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            )
+            return@Scaffold
+        }
+
+        val totalPoints = allGrades.map { it.first }.filter { it.isPoints }.sumOf { it.grade }
+        val activitiesCount = allGrades.size
+        val overallAverage = subject.average?.let { String.format("%.1f", it) } ?: "-"
+        val pointsText = if (totalPoints % 1.0 == 0.0) totalPoints.toInt().toString() else totalPoints.toString()
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 24.dp)
+        ) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DetailSummaryItem(
+                        value = overallAverage,
+                        label = "Średnia",
+                        modifier = Modifier.weight(1f),
+                        valueColor = MaterialTheme.colorScheme.primary
+                    )
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
-                            .padding(16.dp),
+                            .width(1.dp)
+                            .height(32.dp)
+                            .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f))
+                    )
+                    DetailSummaryItem(
+                        value = if (totalPoints > 0) pointsText else "-",
+                        label = "Punkty",
+                        modifier = Modifier.weight(1f),
+                        valueColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(32.dp)
+                            .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f))
+                    )
+                    DetailSummaryItem(
+                        value = activitiesCount.toString(),
+                        label = "Aktywności",
+                        modifier = Modifier.weight(1f),
+                        valueColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        DetailSummaryItem(
-                            value = overallAverage,
-                            label = "Średnia",
-                            modifier = Modifier.weight(1f),
-                            valueColor = MaterialTheme.colorScheme.primary
+                        Text(
+                            text = "Oceny",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp,
+                                lineHeight = 24.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)))
-                        DetailSummaryItem(
-                            value = if (totalPoints > 0) pointsText else "-",
-                            label = "Punkty",
-                            modifier = Modifier.weight(1f),
-                            valueColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)))
-                        DetailSummaryItem(
-                            value = activitiesCount.toString(),
-                            label = "Aktywności",
-                            modifier = Modifier.weight(1f),
-                            valueColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        Text(
+                            text = "+ Dodaj ocenę końcową",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { showFinalGradeDialog = true }
                         )
                     }
-                }
 
-                item {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.Start
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Oceny",
-                                style = TextStyle(
-                                    fontFamily = InterFontFamily,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 16.sp,
-                                    lineHeight = 24.sp
-                                ),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "+ Dodaj ocenę końcową",
-                                style = TextStyle(
-                                    fontFamily = InterFontFamily,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 12.sp,
-                                    lineHeight = 16.sp
-                                ),
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.clickable { showFinalGradeDialog = true }
-                            )
-                        }
-
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.Start
-                        ) {
-                            val allGrades = subject.types.flatMap { type -> type.grades.map { it to type.name } }
-                                .sortedByDescending { it.first.date }
-
-                            allGrades.forEachIndexed { index, (grade, typeName) ->
-                                val dismissState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = {
-                                        if (it == SwipeToDismissBoxValue.EndToStart) {
-                                            gradeToDelete = grade
-                                            false
-                                        } else false
-                                    }
-                                )
-
-                                SwipeToDismissBox(
-                                    state = dismissState,
-                                    enableDismissFromStartToEnd = false,
-                                    backgroundContent = {
-                                        Box(
-                                            Modifier
-                                                .fillMaxSize()
-                                                .padding(vertical = 4.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(MaterialTheme.colorScheme.error),
-                                            contentAlignment = Alignment.CenterEnd
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = "Usuń",
-                                                tint = Color.White,
-                                                modifier = Modifier.padding(horizontal = 24.dp)
-                                            )
-                                        }
-                                    },
-                                    content = {
-                                        GradeCardRow(grade = grade, onClick = { onGradeClick(grade.id) })
-                                    }
-                                )
-
-                                if (index < allGrades.size - 1) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        thickness = 1.dp,
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                    )
+                        allGrades.forEachIndexed { index, (grade, _) ->
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = {
+                                    if (it == SwipeToDismissBoxValue.EndToStart) {
+                                        gradeToDelete = grade
+                                        false
+                                    } else false
                                 }
+                            )
+
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                backgroundContent = {
+                                    Box(
+                                        Modifier
+                                            .fillMaxSize()
+                                            .padding(vertical = 4.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.error),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Usuń",
+                                            tint = Color.White,
+                                            modifier = Modifier.padding(horizontal = 24.dp)
+                                        )
+                                    }
+                                },
+                                content = {
+                                    GradeCardRow(grade = grade, onClick = { onGradeClick(grade.id) })
+                                }
+                            )
+
+                            if (index < allGrades.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    thickness = 1.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
                             }
                         }
                     }
@@ -309,7 +352,7 @@ private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
         .atZone(ZoneId.systemDefault())
         .toLocalDate()
         .format(DateTimeFormatter.ofPattern("dd MMM yyyy", Locale("pl")))
-    
+
     val displayValue = when {
         grade.grade == -1.0 -> "+"
         grade.grade % 1.0 == 0.0 -> grade.grade.toInt().toString()
@@ -325,7 +368,6 @@ private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Ocena Circle (Box)
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -345,7 +387,6 @@ private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
             )
         }
 
-        // Tytuł i Data
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -375,7 +416,6 @@ private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
             )
         }
 
-        // Waga (opcjonalnie)
         if (!grade.isPoints && grade.weight > 0 && grade.grade != -1.0) {
             Text(
                 text = "Waga: ${if (grade.weight % 1.0 == 0.0) grade.weight.toInt() else grade.weight}",

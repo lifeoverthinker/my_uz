@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,20 +51,31 @@ fun ClassDetailsScreen(
     }
 
     if (uiState.isLoading) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLowest), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest),
+            contentAlignment = Alignment.Center
+        ) {
             CircularProgressIndicator()
         }
-    } else if (uiState.classEntity != null) {
-        ClassDetailsContent(
-            classEntity = uiState.classEntity!!,
-            onBackClick = onBackClick,
-            isTeacherPlan = isTeacherPlan
-        )
-    } else {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLowest), contentAlignment = Alignment.Center) {
-            Text("Nie znaleziono szczegółów zajęć.", color = MaterialTheme.colorScheme.error)
-        }
+        return
     }
+
+    val classEntity = uiState.classEntity
+    if (classEntity == null) {
+        EmptyDetailsState(
+            title = "Brak danych zajęć",
+            description = "Nie udało się pobrać szczegółów tych zajęć."
+        )
+        return
+    }
+
+    ClassDetailsContent(
+        classEntity = classEntity,
+        onBackClick = onBackClick,
+        isTeacherPlan = isTeacherPlan
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,7 +111,7 @@ fun ClassDetailsContent(
                     navigationIcon = R.drawable.ic_close,
                     isNavigationIconFilled = true,
                     onNavigationClick = onBackClick,
-                    actions = { },
+                    actions = {},
                     containerColor = Color.Transparent
                 )
             }
@@ -108,49 +121,55 @@ fun ClassDetailsContent(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // --- Nagłówek ---
-                Row(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.Top
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .padding(top = 8.dp)
-                            .size(24.dp),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.Top
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(16.dp)
-                                .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp))
-                        )
-                    }
+                                .padding(top = 6.dp)
+                                .size(22.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp))
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.width(24.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
 
-                    Column {
-                        Text(
-                            text = classEntity.subjectName,
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "$dateOrDayText • ${classEntity.startTime} - ${classEntity.endTime}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column {
+                            Text(
+                                text = classEntity.subjectName,
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "$dateOrDayText • ${classEntity.startTime} - ${classEntity.endTime}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // --- Miejsce (Sala) ---
                 if (!classEntity.room.isNullOrBlank()) {
-                    DetailRow(
+                    DetailRowCard(
                         iconRes = R.drawable.ic_marker_pin,
                         label = "Miejsce",
                         value = "Sala ${classEntity.room}"
@@ -164,7 +183,7 @@ fun ClassDetailsContent(
                             if (!classEntity.teacherEmail.isNullOrBlank()) append("\n${classEntity.teacherEmail}")
                             if (!classEntity.teacherInstitute.isNullOrBlank()) append("\n${classEntity.teacherInstitute}")
                         }
-                        DetailRow(
+                        DetailRowCard(
                             iconRes = R.drawable.ic_user,
                             label = "Prowadzący",
                             value = teacherDetails,
@@ -177,7 +196,7 @@ fun ClassDetailsContent(
                         if (!classEntity.subgroup.isNullOrBlank()) append(" (Podgrupa: ${classEntity.subgroup})")
                     }
                     if (groupInfo.isNotBlank()) {
-                        DetailRow(
+                        DetailRowCard(
                             iconRes = R.drawable.ic_users,
                             label = "Grupa",
                             value = groupInfo
@@ -185,52 +204,124 @@ fun ClassDetailsContent(
                     }
                 }
 
-                DetailRow(
+                DetailRowCard(
                     iconRes = R.drawable.ic_stand,
                     label = "Rodzaj zajęć",
                     value = ClassTypeUtils.getFullName(classEntity.classType)
                 )
-
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
 
 @Composable
-private fun DetailRow(
+private fun DetailRowCard(
     iconRes: Int,
     label: String?,
     value: String,
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
     isMultiline: Boolean = false
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = if (isMultiline) 4.dp else 0.dp).size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(24.dp))
-        Column {
-            if (label != null) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(top = if (isMultiline) 3.dp else 0.dp)
+                    .size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                if (label != null) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = value.ifEmpty { "-" },
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = valueColor
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDetailsState(
+    title: String,
+    description: String
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(40.dp)
+            )
             Text(
-                text = value.ifEmpty { "-" },
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = valueColor
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ClassDetailsContentPreview() {
+    MyUZTheme {
+        ClassDetailsContent(
+            classEntity = ClassEntity(
+                id = 1,
+                subjectName = "Algorytmy i Struktury Danych",
+                classType = "W",
+                room = "A-101",
+                startTime = "08:15",
+                endTime = "09:45",
+                dayOfWeek = 1,
+                date = "2026-04-02",
+                groupCode = "INF-1A",
+                subgroup = "1",
+                teacherName = "dr Jan Kowalski",
+                teacherEmail = "jan.kowalski@uczelnia.pl",
+                teacherInstitute = "Instytut Informatyki",
+                colorHex = "#3D84FF"
+            ),
+            onBackClick = {},
+            isTeacherPlan = false
+        )
     }
 }

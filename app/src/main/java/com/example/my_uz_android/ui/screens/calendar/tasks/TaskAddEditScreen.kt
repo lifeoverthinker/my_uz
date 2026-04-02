@@ -17,15 +17,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.DatePicker
 import com.example.my_uz_android.ui.components.TimePicker
 import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.*
@@ -111,14 +112,17 @@ fun TaskAddEditScreenRoute(
 }
 
 @Composable
-private fun getAppTextFieldColors() = TextFieldDefaults.colors(
-    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+private fun appOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    cursorColor = MaterialTheme.colorScheme.primary
 )
 
-private val AppTextFieldShape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+private val AppFieldShape = RoundedCornerShape(16.dp)
 
 @Composable
 private fun ClickableFieldRow(
@@ -128,38 +132,49 @@ private fun ClickableFieldRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(AppTextFieldShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .clickable { onClick() }
+            .clip(AppFieldShape)
+            .clickable(onClick = onClick),
+        shape = AppFieldShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (iconRes != null) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (iconRes != null) {
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Column {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
-            Column {
-                Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-            }
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp
+            )
         }
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            thickness = 1.dp
-        )
     }
 }
 
@@ -206,6 +221,7 @@ fun TaskAddEditScreen(
     val scrollState = rememberScrollState()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         topBar = {
             TopAppBar(
                 title = if (isEditMode) "Edytuj zadanie" else "Dodaj zadanie",
@@ -215,7 +231,9 @@ fun TaskAddEditScreen(
                 actions = {
                     Button(
                         onClick = onSaveClick,
-                        modifier = Modifier.padding(end = 8.dp),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .heightIn(min = 48.dp),
                         enabled = title.isNotBlank()
                     ) {
                         Text("Zapisz", style = MaterialTheme.typography.labelLarge)
@@ -229,7 +247,7 @@ fun TaskAddEditScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -239,10 +257,6 @@ fun TaskAddEditScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                /**
-                 * Szybki wybór dla zadań:
-                 * celowo bez "Aktywność" (to opcja wyłącznie dla ocen).
-                 */
                 val quickTypes = listOf(
                     "Kolokwium",
                     "Egzamin",
@@ -264,24 +278,32 @@ fun TaskAddEditScreen(
                 }
             }
 
-            TextField(
+            OutlinedTextField(
                 value = title,
                 onValueChange = onTitleChange,
                 label = { Text("Tytuł zadania") },
                 placeholder = { Text("np. Przeczytać rozdział 4") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                colors = getAppTextFieldColors(),
-                shape = AppTextFieldShape
+                colors = appOutlinedTextFieldColors(),
+                shape = AppFieldShape
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth().clickable { onAllDayChange(!isAllDay) }.padding(vertical = 4.dp, horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Zadanie całodniowe", style = MaterialTheme.typography.bodyLarge)
-                Switch(checked = isAllDay, onCheckedChange = { onAllDayChange(it) })
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onAllDayChange(!isAllDay) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Zadanie całodniowe", style = MaterialTheme.typography.bodyLarge)
+                    Switch(checked = isAllDay, onCheckedChange = { onAllDayChange(it) })
+                }
             }
 
             ClickableFieldRow(
@@ -296,41 +318,59 @@ fun TaskAddEditScreen(
                     label = "Godzina wykonania",
                     value = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
                     iconRes = R.drawable.ic_clock,
-                    onClick = { showTimePicker = true },
-                    modifier = Modifier.padding(top = 8.dp)
+                    onClick = { showTimePicker = true }
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().clickable { onHasReminderChange(!hasReminder) }.padding(vertical = 4.dp, horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(painterResource(R.drawable.ic_bell), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-                        Spacer(Modifier.width(16.dp))
-                        Text("Ustaw przypomnienie", style = MaterialTheme.typography.bodyLarge)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onHasReminderChange(!hasReminder) }
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_bell),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text("Ustaw przypomnienie", style = MaterialTheme.typography.bodyLarge)
+                        }
+                        Switch(checked = hasReminder, onCheckedChange = { onHasReminderChange(it) })
                     }
-                    Switch(checked = hasReminder, onCheckedChange = { onHasReminderChange(it) })
-                }
 
-                AnimatedVisibility(visible = hasReminder, enter = expandVertically(), exit = shrinkVertically()) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        ClickableFieldRow(
-                            label = "Data",
-                            value = formatDateShort(reminderDateMillis),
-                            iconRes = null,
-                            onClick = { showReminderDatePicker = true },
-                            modifier = Modifier.weight(1f)
-                        )
-                        ClickableFieldRow(
-                            label = "Godzina",
-                            value = String.format(Locale.getDefault(), "%02d:%02d", reminderHour, reminderMinute),
-                            iconRes = null,
-                            onClick = { showReminderTimePicker = true },
-                            modifier = Modifier.weight(1f)
-                        )
+                    AnimatedVisibility(visible = hasReminder, enter = expandVertically(), exit = shrinkVertically()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ClickableFieldRow(
+                                label = "Data",
+                                value = formatDateShort(reminderDateMillis),
+                                iconRes = null,
+                                onClick = { showReminderDatePicker = true },
+                                modifier = Modifier.weight(1f)
+                            )
+                            ClickableFieldRow(
+                                label = "Godzina",
+                                value = String.format(Locale.getDefault(), "%02d:%02d", reminderHour, reminderMinute),
+                                iconRes = null,
+                                onClick = { showReminderTimePicker = true },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
@@ -342,9 +382,17 @@ fun TaskAddEditScreen(
                 onOptionSelected = onSubjectChange
             )
 
-            AnimatedVisibility(visible = selectedSubject.isNotEmpty() && classTypesList.isNotEmpty(), enter = expandVertically(), exit = shrinkVertically()) {
+            AnimatedVisibility(
+                visible = selectedSubject.isNotEmpty() && classTypesList.isNotEmpty(),
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("RODZAJ ZAJĘĆ", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "RODZAJ ZAJĘĆ",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -366,31 +414,59 @@ fun TaskAddEditScreen(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("PRIORYTET", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "PRIORYTET",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SegmentedButton(selected = priority == 0, onClick = { onPriorityChange(0) }, shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)) { Text("Niski") }
-                    SegmentedButton(selected = priority == 1, onClick = { onPriorityChange(1) }, shape = RoundedCornerShape(0.dp)) { Text("Średni") }
-                    SegmentedButton(selected = priority == 2, onClick = { onPriorityChange(2) }, shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)) { Text("Wysoki") }
+                    SegmentedButton(
+                        selected = priority == 0,
+                        onClick = { onPriorityChange(0) },
+                        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                    ) { Text("Niski") }
+
+                    SegmentedButton(
+                        selected = priority == 1,
+                        onClick = { onPriorityChange(1) },
+                        shape = RoundedCornerShape(0.dp)
+                    ) { Text("Średni") }
+
+                    SegmentedButton(
+                        selected = priority == 2,
+                        onClick = { onPriorityChange(2) },
+                        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                    ) { Text("Wysoki") }
                 }
             }
 
-            TextField(
+            OutlinedTextField(
                 value = description,
                 onValueChange = onDescriptionChange,
                 label = { Text("Opis (opcjonalnie)") },
                 placeholder = { Text("Dodatkowe szczegóły, materiały...") },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp),
                 maxLines = 5,
-                colors = getAppTextFieldColors(),
-                shape = AppTextFieldShape
+                colors = appOutlinedTextFieldColors(),
+                shape = AppFieldShape
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
-    if (showDatePicker) DatePicker(date = selectedDateMillis, onDateSelected = { onDateChange(it); showDatePicker = false }, onDismiss = { showDatePicker = false })
-    if (showReminderDatePicker) DatePicker(date = reminderDateMillis, onDateSelected = { onReminderDateChange(it); showReminderDatePicker = false }, onDismiss = { showReminderDatePicker = false })
+    if (showDatePicker) DatePicker(
+        date = selectedDateMillis,
+        onDateSelected = { onDateChange(it); showDatePicker = false },
+        onDismiss = { showDatePicker = false }
+    )
+    if (showReminderDatePicker) DatePicker(
+        date = reminderDateMillis,
+        onDateSelected = { onReminderDateChange(it); showReminderDatePicker = false },
+        onDismiss = { showReminderDatePicker = false }
+    )
 
     if (showTimePicker) {
         TimePicker(
@@ -410,31 +486,82 @@ fun TaskAddEditScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppDropdownMenu(label: String, selectedOption: String, options: List<String>, onOptionSelected: (String) -> Unit) {
+fun AppDropdownMenu(
+    label: String,
+    selectedOption: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
+
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-        TextField(
-            value = selectedOption, onValueChange = {}, readOnly = true, label = { Text(label) },
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
-            colors = ExposedDropdownMenuDefaults.textFieldColors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            shape = AppTextFieldShape
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
+            colors = appOutlinedTextFieldColors(),
+            shape = AppFieldShape
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
-                DropdownMenuItem(text = { Text(option) }, onClick = { onOptionSelected(option); expanded = false })
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = { onOptionSelected(option); expanded = false }
+                )
             }
         }
     }
 }
 
 private fun formatDate(timestamp: Long): String =
-    SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp)).replaceFirstChar { it.uppercase() }
+    SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+        .format(Date(timestamp))
+        .replaceFirstChar { it.uppercase() }
 
 private fun formatDateShort(timestamp: Long): String =
     SimpleDateFormat("dd.MM.yyyy", Locale("pl", "PL")).format(Date(timestamp))
+
+@Preview(showBackground = true)
+@Composable
+private fun TaskAddEditScreenPreview() {
+    MyUZTheme {
+        TaskAddEditScreen(
+            isEditMode = false,
+            selectedQuickType = "Projekt",
+            onQuickTypeSelect = {},
+            title = "Przeczytać rozdział 4",
+            onTitleChange = {},
+            isAllDay = false,
+            onAllDayChange = {},
+            selectedDateMillis = System.currentTimeMillis(),
+            onDateChange = {},
+            selectedHour = 14,
+            selectedMinute = 30,
+            onTimeChange = { _, _ -> },
+            hasReminder = true,
+            onHasReminderChange = {},
+            reminderDateMillis = System.currentTimeMillis(),
+            onReminderDateChange = {},
+            reminderHour = 12,
+            reminderMinute = 0,
+            onReminderTimeChange = { _, _ -> },
+            selectedSubject = "Programowanie",
+            onSubjectChange = {},
+            subjectsList = listOf("Programowanie", "Matematyka", "Fizyka"),
+            selectedClassType = "L",
+            onClassTypeChange = {},
+            classTypesList = listOf("W", "L", "C"),
+            priority = 1,
+            onPriorityChange = {},
+            description = "Powtórzyć materiał i przygotować notatki.",
+            onDescriptionChange = {},
+            onSaveClick = {},
+            onBackClick = {}
+        )
+    }
+}

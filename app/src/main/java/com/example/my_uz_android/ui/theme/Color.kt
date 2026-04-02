@@ -120,10 +120,10 @@ val ColorSetPurple = AppColorSet(
 )
 
 val ColorSetBlue = AppColorSet(
-    lightBg = Color(0xFFD8FCFF),
-    darkBg = Color(0xFF222F36), 
-    lightAccent = Color(0xFF52797D),
-    darkAccent = Color(0xFFA2E0E5)
+    lightBg = Color(0xFFDDF4FA),
+    darkBg = Color(0xFF27343D),
+    lightAccent = Color(0xFF567985),
+    darkAccent = Color(0xFFA8CFDC)
 )
 
 val ColorSetGreen = AppColorSet(
@@ -134,10 +134,10 @@ val ColorSetGreen = AppColorSet(
 )
 
 val ColorSetYellow = AppColorSet(
-    lightBg = Color(0xFFFEFFD8),
-    darkBg = Color(0xFF333121), 
-    lightAccent = Color(0xFF7D7C52),
-    darkAccent = Color(0xFFE6E4A4)
+    lightBg = Color(0xFFFAF7D9),
+    darkBg = Color(0xFF353225),
+    lightAccent = Color(0xFF7B7756),
+    darkAccent = Color(0xFFD7D09B)
 )
 
 val ColorSetOrange = AppColorSet(

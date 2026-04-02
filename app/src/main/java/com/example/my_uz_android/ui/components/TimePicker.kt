@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,8 +36,8 @@ fun TimePicker(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 0.dp,
             modifier = modifier.wrapContentSize()
         ) {
@@ -56,7 +57,7 @@ fun TimePicker(
                 androidx.compose.material3.TimePicker(
                     state = timeState,
                     colors = TimePickerDefaults.colors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     )
                 )
 
@@ -68,7 +69,7 @@ fun TimePicker(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Anuluj", color = MaterialTheme.colorScheme.outline)
+                        Text("Anuluj")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     TextButton(
@@ -76,7 +77,7 @@ fun TimePicker(
                     ) {
                         Text(
                             text = "OK",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
                 }

@@ -107,13 +107,14 @@ class CalendarViewModel(
 
             val colorMap = parseColorMapCalendarVM(settings?.classColorsJson)
             val allCoursesForUi = buildAllCoursesForUiCalendarVM(settings, courses)
-            val allUserCodes = allCoursesForUi.map { it.groupCode.trim().uppercase() }.toSet()
+            val allUserCodes = allCoursesForUi.map { it.groupCode.trim().lowercase() }.toSet()
 
             val selectedCodes = initializeGroupsIfNeededCalendarVM(allUserCodes, selectedCodesRaw)
 
-            // Zachowujemy uppercase dla UI, ale do logiki pancernej potrzebujemy lowercase
-            val activeCodesUpper = selectedCodes.map { it.trim().uppercase() }.filter { it in allUserCodes }.toSet()
-            val activeCodesLower = activeCodesUpper.map { it.lowercase() }.toSet()
+            val activeCodesLower = selectedCodes
+                .map { it.trim().lowercase() }
+                .filter { it in allUserCodes }
+                .toSet()
 
             // Budujemy mapę uprawnień w oparciu o AKTYWNE (zaznaczone) kierunki
             val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, courses, activeCodesLower)
@@ -141,7 +142,7 @@ class CalendarViewModel(
 
             CalendarUiState(
                 userCourses = allCoursesForUi,
-                selectedGroupCodes = activeCodesUpper,
+                selectedGroupCodes = activeCodesLower,
                 favorites = favorites,
                 visibleClasses = classesToShow,
                 tasks = tasks,
@@ -172,8 +173,12 @@ class CalendarViewModel(
         )
 
     fun toggleGroupVisibility(groupCode: String) {
-        val normalized = groupCode.trim().uppercase()
+        val normalized = groupCode.trim().lowercase()
         val current = _selectedGroups.value.toMutableSet()
+
+        // Nie pozwalamy odznaczyc ostatniego aktywnego kierunku.
+        if (current.contains(normalized) && current.size <= 1) return
+
         if (current.contains(normalized)) current.remove(normalized) else current.add(normalized)
         _selectedGroups.value = current
     }
@@ -262,20 +267,30 @@ class CalendarViewModel(
             result.add(UserCourseEntity(id = -1, groupCode = mainCode, fieldOfStudy = settings.fieldOfStudy ?: mainCode, semester = settings.currentSemester, selectedSubgroup = settings.selectedSubgroup))
         }
         courses.forEach { course ->
-            if (result.none { it.groupCode.trim().uppercase() == course.groupCode.trim().uppercase() }) result.add(course)
+            if (result.none { it.groupCode.trim().lowercase() == course.groupCode.trim().lowercase() }) result.add(course)
         }
         return result
     }
 
     private fun initializeGroupsIfNeededCalendarVM(allUserCodes: Set<String>, selectedCodesRaw: Set<String>): Set<String> {
-        val normalizedSelected = selectedCodesRaw.map { it.trim().uppercase() }.toSet()
+        val normalizedSelected = selectedCodesRaw
+            .map { it.trim().lowercase() }
+            .filter { it in allUserCodes }
+            .toSet()
+
         if (!isGroupsInitialized && allUserCodes.isNotEmpty()) {
             _selectedGroups.value = allUserCodes
             isGroupsInitialized = true
             return allUserCodes
         }
+
         if (normalizedSelected.isNotEmpty()) return normalizedSelected
-        val current = _selectedGroups.value.map { it.trim().uppercase() }.toSet()
+
+        val current = _selectedGroups.value
+            .map { it.trim().lowercase() }
+            .filter { it in allUserCodes }
+            .toSet()
+
         return if (current.isNotEmpty()) current else allUserCodes
     }
 

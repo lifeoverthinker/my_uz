@@ -21,6 +21,7 @@ data class ClassTypeState(
 )
 
 data class SubjectState(
+    val uniqueKey: String,
     val code: String,
     val name: String,
     val courseName: String,
@@ -31,6 +32,7 @@ data class SubjectState(
 data class GradesUiState(
     val subjects: List<SubjectState> = emptyList(),
     val average: Double? = null,
+    val courseAverages: List<Pair<String, Double?>> = emptyList(),
     val isLoading: Boolean = false,
     val allGrades: List<GradeEntity> = emptyList(),
     val userCourses: List<UserCourseEntity> = emptyList(),
@@ -56,11 +58,15 @@ class GradesViewModel(
         _selectedGroups
     ) { grades, allClasses, courses, settings, selectedGroupsRaw ->
 
-        fun normalizeGroupCode(v: String?): String = v?.trim()?.uppercase().orEmpty()
+        fun normalizeGroupCode(v: String?): String = v?.trim()?.lowercase().orEmpty()
         fun normalizeSubject(v: String?): String = v?.trim()?.lowercase().orEmpty()
         fun normalizeType(v: String?): String {
             val raw = v?.trim().orEmpty()
             return if (raw.isBlank()) "Inne" else raw
+        }
+
+        fun subjectTypeKey(subject: String?, classType: String?): String {
+            return "${normalizeSubject(subject)}|${normalizeType(classType).lowercase()}"
         }
 
         val allCoursesForUi = mutableListOf<UserCourseEntity>()
@@ -84,22 +90,29 @@ class GradesViewModel(
 
         val allUserCodes = allCoursesForUi.map { normalizeGroupCode(it.groupCode) }.toSet()
 
-        val activeCodesUpper: Set<String> = run {
-            val selectedNormalized = selectedGroupsRaw.map { normalizeGroupCode(it) }.toSet()
+        val activeCodes: Set<String> = run {
+            val selectedNormalized = selectedGroupsRaw
+                .map { normalizeGroupCode(it) }
+                .filter { it in allUserCodes }
+                .toSet()
+
             if (!isGroupsInitialized && allUserCodes.isNotEmpty()) {
                 _selectedGroups.value = allUserCodes
                 isGroupsInitialized = true
                 allUserCodes
             } else {
                 val source = if (selectedNormalized.isNotEmpty()) selectedNormalized else _selectedGroups.value
-                source.map { normalizeGroupCode(it) }.filter { it in allUserCodes }.toSet()
+                val normalizedSource = source
+                    .map { normalizeGroupCode(it) }
+                    .filter { it in allUserCodes }
+                    .toSet()
+
+                if (normalizedSource.isNotEmpty()) normalizedSource else allUserCodes
             }
         }
 
-        val activeCodesLower = activeCodesUpper.map { it.lowercase() }.toSet()
-
         // Wspolna mapa uprawnien podgrup oparta o intersection
-        val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, courses, activeCodesLower)
+        val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, courses, activeCodes)
         val activeClasses = allClasses.filter { clazz ->
             SubgroupMatcher.isClassVisible(
                 clazz.groupCode,
@@ -109,31 +122,95 @@ class GradesViewModel(
             )
         }
 
-        val subjectToGroup = activeClasses
+        val subjectTypeToAllGroups = allClasses
+            .groupBy { subjectTypeKey(it.subjectName, it.classType) }
+            .mapValues { (_, list) ->
+                list.map { normalizeGroupCode(it.groupCode) }
+                    .filter { it.isNotBlank() }
+                    .toSet()
+            }
+
+        val subjectTypeToActiveGroups = activeClasses
+            .groupBy { subjectTypeKey(it.subjectName, it.classType) }
+            .mapValues { (_, list) ->
+                list.map { normalizeGroupCode(it.groupCode) }
+                    .filter { it.isNotBlank() }
+                    .toSet()
+            }
+
+        val subjectToAllGroups = allClasses
             .groupBy { normalizeSubject(it.subjectName) }
-            .mapValues { (_, list) -> normalizeGroupCode(list.firstOrNull()?.groupCode) }
-            .filterValues { it.isNotBlank() }
+            .mapValues { (_, list) ->
+                list.map { normalizeGroupCode(it.groupCode) }
+                    .filter { it.isNotBlank() }
+                    .toSet()
+            }
+
+        val subjectToActiveGroups = activeClasses
+            .groupBy { normalizeSubject(it.subjectName) }
+            .mapValues { (_, list) ->
+                list.map { normalizeGroupCode(it.groupCode) }
+                    .filter { it.isNotBlank() }
+                    .toSet()
+            }
 
         val courseMap = allCoursesForUi.associateBy { normalizeGroupCode(it.groupCode) }
 
-        val activeGrades = grades.filter { grade ->
-            val group = subjectToGroup[normalizeSubject(grade.subjectName)]
-            if (group.isNullOrBlank()) true else group in activeCodesUpper
+        val activeGradesWithGroup = grades.mapNotNull { grade ->
+            val typeKey = subjectTypeKey(grade.subjectName, grade.classType)
+            val allGroupsForTypeKey = subjectTypeToAllGroups[typeKey].orEmpty()
+            val activeGroupsForTypeKey = subjectTypeToActiveGroups[typeKey].orEmpty()
+
+            if (allGroupsForTypeKey.isNotEmpty()) {
+                val resolvedGroup = activeGroupsForTypeKey.sorted().firstOrNull() ?: return@mapNotNull null
+                return@mapNotNull grade to resolvedGroup
+            }
+
+            val subjectKey = normalizeSubject(grade.subjectName)
+            val allGroupsForSubject = subjectToAllGroups[subjectKey].orEmpty()
+            val activeGroupsForSubject = subjectToActiveGroups[subjectKey].orEmpty()
+
+            // Brak klas dla przedmiotu -> zostawiamy oceny historyczne.
+            if (allGroupsForSubject.isEmpty()) return@mapNotNull grade to null
+
+            // Przy wielu kierunkach pokazujemy tylko przedmioty obecne w aktywnych grupach.
+            val resolvedGroup = activeGroupsForSubject.sorted().firstOrNull() ?: return@mapNotNull null
+            grade to resolvedGroup
         }
 
-        val subjectsFromClasses = activeClasses.map { normalizeSubject(it.subjectName) }.toSet()
-        val subjectsFromGrades = activeGrades.map { normalizeSubject(it.subjectName) }.toSet()
-        val allSubjects = (subjectsFromClasses + subjectsFromGrades).toList().sorted()
+        val activeGrades = activeGradesWithGroup.map { it.first }
 
-        val subjects = allSubjects.mapNotNull { subjectKey ->
-            val classesForSubject = activeClasses.filter { normalizeSubject(it.subjectName) == subjectKey }
-            val gradesForSubject = activeGrades.filter { normalizeSubject(it.subjectName) == subjectKey }
+        data class SubjectBucketKey(val subjectKey: String, val groupCode: String?)
+
+        val archiveGroupCode = "ARCHIWUM"
+
+        val classesByBucket = activeClasses.groupBy {
+            SubjectBucketKey(
+                subjectKey = normalizeSubject(it.subjectName),
+                groupCode = normalizeGroupCode(it.groupCode).ifBlank { null }
+            )
+        }
+
+        val gradesByBucket = activeGradesWithGroup.groupBy {
+            SubjectBucketKey(
+                subjectKey = normalizeSubject(it.first.subjectName),
+                groupCode = it.second ?: archiveGroupCode
+            )
+        }
+
+        val allBuckets = (classesByBucket.keys + gradesByBucket.keys)
+            .distinct()
+            .sortedWith(compareBy<SubjectBucketKey>({ it.groupCode ?: "" }, { it.subjectKey }))
+
+        val subjects = allBuckets.mapNotNull { bucketKey ->
+            val classesForSubject = classesByBucket[bucketKey].orEmpty()
+            val gradesForSubject = gradesByBucket[bucketKey].orEmpty().map { it.first }
 
             if (classesForSubject.isEmpty() && gradesForSubject.isEmpty()) return@mapNotNull null
 
             val displayName = classesForSubject.firstOrNull()?.subjectName
                 ?: gradesForSubject.firstOrNull()?.subjectName
-                ?: subjectKey
+                ?: bucketKey.subjectKey
 
             val typesFromClasses = classesForSubject.map { normalizeType(it.classType) }
             val typesFromGrades = gradesForSubject.map { normalizeType(it.classType) }
@@ -150,32 +227,67 @@ class GradesViewModel(
             }
 
             val subjAvgRaw = GradeCalculator.calculateGPA(gradesForSubject)
-            val mappedGroup = subjectToGroup[subjectKey]
-            val courseName = if (!mappedGroup.isNullOrBlank()) {
+            val mappedGroup = bucketKey.groupCode
+                ?: subjectToActiveGroups[bucketKey.subjectKey].orEmpty().sorted().firstOrNull()
+                ?: subjectToAllGroups[bucketKey.subjectKey].orEmpty().sorted().firstOrNull()
+
+            val courseName = if (mappedGroup == archiveGroupCode) {
+                "Dodatkowe / Inne"
+            } else if (!mappedGroup.isNullOrBlank()) {
                 val c = courseMap[mappedGroup]
                 c?.fieldOfStudy ?: c?.groupCode ?: mappedGroup
-            } else {
-                "Inne / Dawne"
-            }
+            } else "Inne / Dawne"
+
+            val uniqueKey = "${bucketKey.groupCode ?: archiveGroupCode}|${bucketKey.subjectKey}"
 
             SubjectState(
+                uniqueKey = uniqueKey,
                 code = displayName.take(3).uppercase(),
                 name = displayName,
                 courseName = courseName,
                 average = if (subjAvgRaw > 0.0) subjAvgRaw else null,
                 types = typeStates
             )
-        }
+        }.sortedWith(compareBy<SubjectState>({ it.courseName.lowercase() }, { it.name.lowercase() }))
 
         val overallRaw = GradeCalculator.calculateGPA(activeGrades)
+
+        val activeCourseNames = allCoursesForUi
+            .filter { normalizeGroupCode(it.groupCode) in activeCodes }
+            .map { it.fieldOfStudy?.ifBlank { it.groupCode } ?: it.groupCode }
+            .distinct()
+
+        val gradesByCourseName = activeGradesWithGroup.groupBy { (_, groupCode) ->
+            if (groupCode == null || groupCode == archiveGroupCode) {
+                "Dodatkowe / Inne"
+            } else {
+                val c = courseMap[groupCode]
+                c?.fieldOfStudy?.ifBlank { c.groupCode } ?: c?.groupCode ?: groupCode
+            }
+        }
+
+        val courseAverages = buildList {
+            activeCourseNames.forEach { courseName ->
+                val gradesForCourse = gradesByCourseName[courseName].orEmpty().map { it.first }
+                val avgRaw = GradeCalculator.calculateGPA(gradesForCourse)
+                add(courseName to if (avgRaw > 0.0) avgRaw else null)
+            }
+
+            if (gradesByCourseName.containsKey("Dodatkowe / Inne")) {
+                val gradesForArchive = gradesByCourseName["Dodatkowe / Inne"].orEmpty().map { it.first }
+                val avgRaw = GradeCalculator.calculateGPA(gradesForArchive)
+                add("Dodatkowe / Inne" to if (avgRaw > 0.0) avgRaw else null)
+            }
+        }.sortedBy { it.first.lowercase() }
 
         GradesUiState(
             subjects = subjects,
             average = if (overallRaw > 0.0) overallRaw else null,
+            courseAverages = courseAverages,
             isLoading = false,
             allGrades = grades,
             userCourses = allCoursesForUi,
-            selectedGroupCodes = activeCodesUpper,
+            selectedGroupCodes = activeCodes,
             isPlanSelected = (settings?.selectedGroupCode?.isNotBlank() == true) || courses.isNotEmpty()
         )
     }
@@ -188,8 +300,12 @@ class GradesViewModel(
         )
 
     fun toggleGroupVisibility(groupCode: String) {
-        val normalized = groupCode.trim().uppercase()
+        val normalized = groupCode.trim().lowercase()
         val current = _selectedGroups.value.toMutableSet()
+
+        // Nie pozwalamy odznaczyc ostatniego aktywnego kierunku.
+        if (current.contains(normalized) && current.size <= 1) return
+
         if (current.contains(normalized)) current.remove(normalized) else current.add(normalized)
         _selectedGroups.value = current
     }

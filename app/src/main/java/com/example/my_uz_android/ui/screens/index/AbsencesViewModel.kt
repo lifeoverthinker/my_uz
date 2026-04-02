@@ -92,6 +92,10 @@ class AbsencesViewModel(
     fun toggleGroupVisibility(groupCode: String) {
         val normalized = normalizeGroupCodeAbsencesVm(groupCode)
         val current = _selectedGroups.value.toMutableSet()
+
+        // Nie pozwalamy odznaczyc ostatniego aktywnego kierunku.
+        if (current.contains(normalized) && current.size <= 1) return
+
         if (current.contains(normalized)) current.remove(normalized) else current.add(normalized)
         _selectedGroups.value = current
     }
@@ -105,7 +109,7 @@ class AbsencesViewModel(
     }
 
     fun updateLimit(subjectName: String, classType: String, newLimit: Int) {
-        val key = "$subjectName|$classType"
+        val key = normalizeLimitKeyAbsencesVm(subjectName, classType)
         _limits.update { it + (key to newLimit) }
     }
 
@@ -171,7 +175,7 @@ class AbsencesViewModel(
                     .sorted()
 
                 val typeGroups = allTypes.map { type ->
-                    val limitKey = "$displaySubjectName|$type"
+                    val limitKey = normalizeLimitKeyAbsencesVm(displaySubjectName, type)
                     val currentLimit = limits[limitKey] ?: 2
                     val typeAbsences = absencesForSubject
                         .filter { normalizeTypeAbsencesVm(it.classType) == type }
@@ -198,7 +202,10 @@ class AbsencesViewModel(
         allUserCodes: Set<String>,
         selectedGroupsRaw: Set<String>
     ): Set<String> {
-        val selectedNormalized = selectedGroupsRaw.map { normalizeGroupCodeAbsencesVm(it) }.toSet()
+        val selectedNormalized = selectedGroupsRaw
+            .map { normalizeGroupCodeAbsencesVm(it) }
+            .filter { it in allUserCodes }
+            .toSet()
 
         return if (!isGroupsInitialized && allUserCodes.isNotEmpty()) {
             _selectedGroups.value = allUserCodes
@@ -206,7 +213,12 @@ class AbsencesViewModel(
             allUserCodes
         } else {
             val source = if (selectedNormalized.isNotEmpty()) selectedNormalized else _selectedGroups.value
-            source.map { normalizeGroupCodeAbsencesVm(it) }.filter { it in allUserCodes }.toSet()
+            val normalizedSource = source
+                .map { normalizeGroupCodeAbsencesVm(it) }
+                .filter { it in allUserCodes }
+                .toSet()
+
+            if (normalizedSource.isNotEmpty()) normalizedSource else allUserCodes
         }
     }
 
@@ -249,9 +261,13 @@ class AbsencesViewModel(
     }
 }
 
-private fun normalizeGroupCodeAbsencesVm(value: String?): String = value?.trim()?.uppercase().orEmpty()
+private fun normalizeGroupCodeAbsencesVm(value: String?): String = value?.trim()?.lowercase().orEmpty()
 private fun normalizeSubjectAbsencesVm(value: String?): String = value?.trim()?.lowercase().orEmpty()
 private fun normalizeTypeAbsencesVm(value: String?): String {
     val raw = value?.trim().orEmpty()
     return if (raw.isBlank()) "Inne" else raw
+}
+
+private fun normalizeLimitKeyAbsencesVm(subjectName: String?, classType: String?): String {
+    return "${normalizeSubjectAbsencesVm(subjectName)}|${normalizeTypeAbsencesVm(classType).lowercase()}"
 }

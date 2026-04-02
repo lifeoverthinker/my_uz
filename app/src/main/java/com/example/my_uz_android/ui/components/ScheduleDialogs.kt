@@ -17,8 +17,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
 fun SubgroupFilterDialog(
@@ -43,41 +43,52 @@ fun SubgroupFilterDialog(
                     Text(
                         text = "Brak zdefiniowanych podgrup w pobranym planie.",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 16.dp)
                     )
                 } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxHeight(0.4f)
-                            .fillMaxWidth()
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
-                        items(subgroups) { subgroup ->
-                            val isSelected = selectedSubgroups.contains(subgroup)
-                            val displayName = if (subgroup.isBlank()) "Cała grupa" else subgroup
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxHeight(0.4f)
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp, horizontal = 8.dp)
+                        ) {
+                            items(subgroups) { subgroup ->
+                                val isSelected = selectedSubgroups.contains(subgroup)
+                                val displayName = if (subgroup.isBlank()) "Cała grupa" else subgroup
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        val new = if (isSelected) selectedSubgroups - subgroup else selectedSubgroups + subgroup
-                                        onSelectionChange(new)
-                                    }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(
-                                    checked = isSelected,
-                                    onCheckedChange = null,
-                                    colors = CheckboxDefaults.colors(
-                                        checkedColor = MaterialTheme.colorScheme.primary
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val new = if (isSelected) selectedSubgroups - subgroup else selectedSubgroups + subgroup
+                                            onSelectionChange(new)
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = isSelected,
+                                        onCheckedChange = null,
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = MaterialTheme.colorScheme.primary
+                                        )
                                     )
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    text = displayName,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        text = displayName,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = if (isSelected) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -87,7 +98,7 @@ fun SubgroupFilterDialog(
         confirmButtonText = "Gotowe",
         dismissButton = {
             TextButton(onClick = { onSelectionChange(subgroups.toSet()) }) {
-                Text("Wszystkie", style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary))
+                Text("Wszystkie", style = MaterialTheme.typography.labelLarge)
             }
         }
     )
@@ -123,8 +134,8 @@ fun TeacherInfoDialog(
                                 copyToClipboard(context, email)
                             }
                         },
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
                         modifier = Modifier.fillMaxWidth(),
                         tonalElevation = 0.dp
                     ) {
@@ -193,8 +204,7 @@ private fun BaseScheduleDialog(
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 20.sp
+                    fontWeight = FontWeight.SemiBold
                 ),
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -204,14 +214,13 @@ private fun BaseScheduleDialog(
             TextButton(onClick = onDismiss) {
                 Text(
                     text = confirmButtonText,
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
         },
         dismissButton = dismissButton,
-        shape = MaterialTheme.shapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(28.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 0.dp
     )
 }
@@ -228,13 +237,12 @@ private fun DialogLabel(text: String) {
 
 @Composable
 private fun DialogInfoSection(label: String, value: String) {
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         DialogLabel(text = label)
         Text(
             text = value,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            lineHeight = 22.sp
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

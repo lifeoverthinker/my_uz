@@ -17,11 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.DatePicker
 import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -50,8 +52,7 @@ fun AbsenceAddEditScreenRoute(
     var localSubject by remember(uiState.subjectName) { mutableStateOf(uiState.subjectName ?: "") }
     var localClassType by remember(uiState.classType) { mutableStateOf(uiState.classType ?: "") }
 
-    // Zielony komentarz:
-    // Zostawiamy obecny UX 1:1: przełącznik "Usprawiedliwiona" jest lokalnym stanem UI.
+    // UX 1:1: przełącznik "Usprawiedliwiona" pozostaje lokalnym stanem UI.
     var isExcused by remember { mutableStateOf(true) }
 
     val subjectsList = uiState.availableSubjects.map { it.first }
@@ -88,14 +89,17 @@ fun AbsenceAddEditScreenRoute(
 }
 
 @Composable
-private fun absenceAppTextFieldColors() = TextFieldDefaults.colors(
-    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+private fun absenceOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    cursorColor = MaterialTheme.colorScheme.primary
 )
 
-private val AbsenceAppTextFieldShape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+private val AbsenceAppShape = RoundedCornerShape(16.dp)
 
 @Composable
 private fun AbsenceClickableFieldRow(
@@ -105,46 +109,49 @@ private fun AbsenceClickableFieldRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(AbsenceAppTextFieldShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .clickable(onClick = onClick)
+            .clip(AbsenceAppShape)
+            .clickable(onClick = onClick),
+        shape = AbsenceAppShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (iconRes != null) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (iconRes != null) {
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Column {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
-            Column {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp
+            )
         }
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            thickness = 1.dp
-        )
     }
 }
 
@@ -187,7 +194,9 @@ fun AbsenceAddEditScreen(
                     actions = {
                         Button(
                             onClick = onSaveClick,
-                            modifier = Modifier.padding(end = 8.dp),
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .heightIn(min = 48.dp),
                             enabled = selectedSubject.isNotBlank() && selectedClassType.isNotBlank()
                         ) {
                             Text("Zapisz", style = MaterialTheme.typography.labelLarge)
@@ -203,7 +212,7 @@ fun AbsenceAddEditScreen(
                     .padding(paddingValues)
                     .verticalScroll(scrollState)
                     .padding(horizontal = 16.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 AbsenceClickableFieldRow(
                     label = "Data nieobecności",
@@ -253,7 +262,7 @@ fun AbsenceAddEditScreen(
 
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                     ),
                     shape = RoundedCornerShape(16.dp)
                 ) {
@@ -283,7 +292,7 @@ fun AbsenceAddEditScreen(
                     }
                 }
 
-                TextField(
+                OutlinedTextField(
                     value = reason,
                     onValueChange = onReasonChange,
                     label = { Text("Powód / Opis (opcjonalnie)") },
@@ -292,11 +301,11 @@ fun AbsenceAddEditScreen(
                         .fillMaxWidth()
                         .heightIn(min = 120.dp),
                     maxLines = 5,
-                    colors = absenceAppTextFieldColors(),
-                    shape = AbsenceAppTextFieldShape
+                    colors = absenceOutlinedTextFieldColors(),
+                    shape = AbsenceAppShape
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -325,7 +334,7 @@ private fun AbsenceAppDropdownMenu(
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-        TextField(
+        OutlinedTextField(
             value = selectedOption,
             onValueChange = {},
             readOnly = true,
@@ -341,13 +350,8 @@ private fun AbsenceAppDropdownMenu(
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
-            colors = ExposedDropdownMenuDefaults.textFieldColors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            shape = AbsenceAppTextFieldShape
+            colors = absenceOutlinedTextFieldColors(),
+            shape = AbsenceAppShape
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
@@ -367,4 +371,28 @@ private fun formatAbsenceAddEditDate(timestamp: Long): String {
     return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
         .format(Date(timestamp))
         .replaceFirstChar { it.uppercase() }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AbsenceAddEditScreenPreview() {
+    MyUZTheme {
+        AbsenceAddEditScreen(
+            isEditMode = false,
+            selectedSubject = "Matematyka",
+            onSubjectChange = {},
+            subjectsList = listOf("Matematyka", "Fizyka", "Programowanie"),
+            selectedClassType = "L",
+            onClassTypeChange = {},
+            classTypesList = listOf("W", "L", "C"),
+            dateMillis = System.currentTimeMillis(),
+            onDateChange = {},
+            isExcused = true,
+            onExcusedChange = {},
+            reason = "Wizyta u lekarza",
+            onReasonChange = {},
+            onSaveClick = {},
+            onNavigateBack = {}
+        )
+    }
 }

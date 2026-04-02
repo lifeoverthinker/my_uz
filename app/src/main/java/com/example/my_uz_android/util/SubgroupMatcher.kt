@@ -51,8 +51,8 @@ object SubgroupMatcher {
 
     private fun tokenizeCsv(raw: String?): List<String> {
         return raw
-            ?.split(",")
-            ?.map { it.trim().lowercase() }
+            ?.split(Regex("[,;/|\\s]+"))
+            ?.map { alias(it.trim().lowercase()) }
             ?.filter { it.isNotBlank() }
             ?: emptyList()
     }

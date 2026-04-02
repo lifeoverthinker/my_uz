@@ -19,11 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.DatePicker
 import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -108,14 +110,17 @@ enum class AppGradeType {
 }
 
 @Composable
-private fun gradeAppTextFieldColors() = TextFieldDefaults.colors(
-    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-    focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-    unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+private fun gradeAppOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    cursorColor = MaterialTheme.colorScheme.primary
 )
 
-private val GradeAppTextFieldShape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+private val GradeAppShape = RoundedCornerShape(16.dp)
 
 @Composable
 private fun GradeClickableFieldRow(
@@ -125,46 +130,50 @@ private fun GradeClickableFieldRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(GradeAppTextFieldShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .clickable(onClick = onClick)
+            .clip(GradeAppShape)
+            .clickable(onClick = onClick),
+        shape = GradeAppShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 0.dp
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (iconRes != null) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (iconRes != null) {
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Column {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
-            Column {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp
+            )
         }
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            thickness = 1.dp
-        )
     }
 }
 
@@ -203,6 +212,7 @@ fun AddEditGradeScreen(
     val scrollState = rememberScrollState()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         topBar = {
             TopAppBar(
                 title = if (isEditMode) "Edytuj wpis" else "Dodaj wpis",
@@ -212,7 +222,9 @@ fun AddEditGradeScreen(
                 actions = {
                     Button(
                         onClick = onSaveClick,
-                        modifier = Modifier.padding(end = 8.dp),
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .heightIn(min = 48.dp),
                         enabled = selectedSubject.isNotBlank() && selectedClassType.isNotBlank()
                     ) {
                         Text("Zapisz", style = MaterialTheme.typography.labelLarge)
@@ -226,8 +238,8 @@ fun AddEditGradeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -256,25 +268,23 @@ fun AddEditGradeScreen(
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                TextField(
-                    value = title,
-                    onValueChange = onTitleChange,
-                    label = { Text("Tytuł") },
-                    placeholder = { Text("np. Kolokwium 1") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = gradeAppTextFieldColors(),
-                    shape = GradeAppTextFieldShape
-                )
+            OutlinedTextField(
+                value = title,
+                onValueChange = onTitleChange,
+                label = { Text("Tytuł") },
+                placeholder = { Text("np. Kolokwium 1") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                colors = gradeAppOutlinedTextFieldColors(),
+                shape = GradeAppShape
+            )
 
-                GradeClickableFieldRow(
-                    label = "Data",
-                    value = formatGradeAddEditDate(selectedDateMillis) ?: "Wybierz datę",
-                    iconRes = R.drawable.ic_calendar,
-                    onClick = { showDatePicker = true }
-                )
-            }
+            GradeClickableFieldRow(
+                label = "Data",
+                value = formatGradeAddEditDate(selectedDateMillis) ?: "Wybierz datę",
+                iconRes = R.drawable.ic_calendar,
+                onClick = { showDatePicker = true }
+            )
 
             GradeAppDropdownMenu(
                 label = "Przedmiot",
@@ -316,7 +326,7 @@ fun AddEditGradeScreen(
 
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -358,14 +368,14 @@ fun AddEditGradeScreen(
                         }
 
                         AppGradeType.POINTS -> {
-                            TextField(
+                            OutlinedTextField(
                                 value = pointsScored,
                                 onValueChange = onPointsScoredChange,
                                 label = { Text("Liczba punktów") },
                                 modifier = Modifier.fillMaxWidth(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                colors = gradeAppTextFieldColors(),
-                                shape = GradeAppTextFieldShape
+                                colors = gradeAppOutlinedTextFieldColors(),
+                                shape = GradeAppShape
                             )
                         }
 
@@ -415,7 +425,7 @@ fun AddEditGradeScreen(
                         enter = expandVertically(),
                         exit = shrinkVertically()
                     ) {
-                        TextField(
+                        OutlinedTextField(
                             value = weight,
                             onValueChange = onWeightChange,
                             label = { Text("Waga (opcjonalnie)") },
@@ -428,27 +438,27 @@ fun AddEditGradeScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
-                            colors = gradeAppTextFieldColors(),
-                            shape = GradeAppTextFieldShape
+                            colors = gradeAppOutlinedTextFieldColors(),
+                            shape = GradeAppShape
                         )
                     }
                 }
             }
 
-            TextField(
+            OutlinedTextField(
                 value = comment,
                 onValueChange = onCommentChange,
                 label = { Text("Opis (opcjonalnie)") },
                 placeholder = { Text("Dodatkowe informacje, uwagi...") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 100.dp),
+                    .heightIn(min = 120.dp),
                 maxLines = 5,
-                colors = gradeAppTextFieldColors(),
-                shape = GradeAppTextFieldShape
+                colors = gradeAppOutlinedTextFieldColors(),
+                shape = GradeAppShape
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 
@@ -478,7 +488,7 @@ private fun GradeAppDropdownMenu(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
     ) {
-        TextField(
+        OutlinedTextField(
             value = selectedOption,
             onValueChange = {},
             readOnly = true,
@@ -487,13 +497,8 @@ private fun GradeAppDropdownMenu(
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
-            colors = ExposedDropdownMenuDefaults.textFieldColors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            shape = GradeAppTextFieldShape
+            colors = gradeAppOutlinedTextFieldColors(),
+            shape = GradeAppShape
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -517,4 +522,40 @@ private fun formatGradeAddEditDate(millis: Long?): String? {
     return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
         .format(Date(millis))
         .replaceFirstChar { it.uppercase() }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AddEditGradeScreenPreview() {
+    MyUZTheme {
+        AddEditGradeScreen(
+            isEditMode = false,
+            selectedQuickType = "Kolokwium",
+            onQuickTypeSelect = {},
+            gradeType = AppGradeType.SCALE,
+            onGradeTypeChange = {},
+            gradeValue = "4.5",
+            onGradeValueChange = {},
+            pointsScored = "18",
+            onPointsScoredChange = {},
+            activityCount = 2,
+            onActivityCountChange = {},
+            weight = "2",
+            onWeightChange = {},
+            selectedSubject = "Matematyka",
+            onSubjectChange = {},
+            subjectsList = listOf("Matematyka", "Fizyka", "Programowanie"),
+            selectedClassType = "W",
+            onClassTypeChange = {},
+            classTypesList = listOf("W", "L", "C"),
+            selectedDateMillis = System.currentTimeMillis(),
+            onDateChange = {},
+            title = "Kolokwium 1",
+            onTitleChange = {},
+            comment = "Krótki komentarz do oceny",
+            onCommentChange = {},
+            onSaveClick = {},
+            onBackClick = {}
+        )
+    }
 }

@@ -71,7 +71,12 @@ fun TimePicker(
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         text = {
-            androidx.compose.material3.TimePicker(state = timePickerState)
+            androidx.compose.material3.TimePicker(
+                state = timePickerState,
+                colors = TimePickerDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
+            )
         }
     )
 }

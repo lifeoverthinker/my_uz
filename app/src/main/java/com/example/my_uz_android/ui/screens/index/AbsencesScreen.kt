@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.AbsenceEntity
-import com.example.my_uz_android.ui.components.EmptyStateMessage
+import com.example.my_uz_android.ui.components.AbsencesEmptyState
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.Instant
 import java.time.ZoneId
@@ -44,19 +44,10 @@ fun AbsencesScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (absencesState.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                EmptyStateMessage(
-                    title = "Czyste konto!",
-                    message = "Brak nieobecności do wyświetlenia.\nOby tak dalej!",
-                    iconRes = R.drawable.college_students_rafiki,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+            AbsencesEmptyState(
+                iconRes = R.drawable.students_rafiki,
+                modifier = Modifier.fillMaxSize()
+            )
         } else {
             LazyColumn(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
@@ -164,7 +155,7 @@ private fun ExpandableAbsenceCard(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
 
-                subjectData.types.forEach { typeGroup ->
+                subjectData.types.forEachIndexed { typeIndex, typeGroup ->
                     val count = typeGroup.absences.size
                     val limit = typeGroup.limit
                     val isLimitReached = count >= limit
@@ -298,6 +289,14 @@ private fun ExpandableAbsenceCard(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
+                    }
+
+                    if (typeIndex < subjectData.types.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
                     }
                 }
             }

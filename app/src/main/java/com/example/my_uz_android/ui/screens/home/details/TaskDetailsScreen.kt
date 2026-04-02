@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,10 +16,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
-import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.theme.MyUZTheme
@@ -34,19 +34,23 @@ fun TaskDetailsScreenRoute(
     val uiState by viewModel.uiState.collectAsState()
     val task = uiState.task
 
-    if (uiState.isLoading || task == null) {
+    if (uiState.isLoading) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surfaceContainerLowest),
             contentAlignment = Alignment.Center
         ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator()
-            } else {
-                Text("Nie znaleziono szczegółów zadania.", color = MaterialTheme.colorScheme.error)
-            }
+            CircularProgressIndicator()
         }
+        return
+    }
+
+    if (task == null) {
+        EmptyDetailsState(
+            title = "Brak danych zadania",
+            description = "Nie udało się pobrać szczegółów tego zadania."
+        )
         return
     }
 
@@ -54,9 +58,7 @@ fun TaskDetailsScreenRoute(
         task = task,
         onBackClick = onNavigateBack,
         onEditClick = { onEditClick(task.id) },
-        onDeleteClick = {
-            viewModel.deleteTask(onSuccess = onNavigateBack)
-        },
+        onDeleteClick = { viewModel.deleteTask(onSuccess = onNavigateBack) },
         onDuplicateClick = onDuplicateClick
     )
 }
@@ -106,7 +108,7 @@ fun TaskDetailsScreen(
                                     text = { Text("Duplikuj") },
                                     leadingIcon = {
                                         Icon(
-                                            painterResource(R.drawable.ic_copy),
+                                            painter = painterResource(R.drawable.ic_copy),
                                             contentDescription = null,
                                             modifier = Modifier.size(20.dp)
                                         )
@@ -120,7 +122,7 @@ fun TaskDetailsScreen(
                                     text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
                                     leadingIcon = {
                                         Icon(
-                                            painterResource(R.drawable.ic_trash),
+                                            painter = painterResource(R.drawable.ic_trash),
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.error,
                                             modifier = Modifier.size(20.dp)
@@ -143,47 +145,55 @@ fun TaskDetailsScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.Top
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .padding(top = 8.dp)
-                            .size(24.dp),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.Top
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(16.dp)
-                                .background(Color(0xFF2196F3), RoundedCornerShape(4.dp))
-                        )
-                    }
+                                .padding(top = 6.dp)
+                                .size(22.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .background(Color(0xFF2196F3), RoundedCornerShape(4.dp))
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.width(24.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
 
-                    Column {
-                        Text(
-                            text = task.title,
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = formatDate(task.dueDate),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column {
+                            Text(
+                                text = task.title,
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = formatDate(task.dueDate),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
                 if (!task.subjectName.isNullOrBlank()) {
-                    DetailRow(
+                    DetailRowCard(
                         iconRes = R.drawable.ic_graduation_hat,
                         label = "Przedmiot",
                         value = task.subjectName ?: ""
@@ -191,7 +201,7 @@ fun TaskDetailsScreen(
                 }
 
                 if (task.hasReminder && task.reminderTime != null) {
-                    DetailRow(
+                    DetailRowCard(
                         iconRes = R.drawable.ic_bell,
                         label = "Przypomnienie",
                         value = formatDateTime(task.reminderTime)
@@ -200,16 +210,14 @@ fun TaskDetailsScreen(
 
                 task.description?.let {
                     if (it.isNotBlank()) {
-                        DetailRow(
+                        DetailRowCard(
                             iconRes = R.drawable.ic_menu_2,
-                            label = null,
+                            label = "Opis",
                             value = it,
                             isMultiline = true
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
             }
 
             if (showDeleteDialog) {
@@ -245,56 +253,129 @@ fun DeleteConfirmationDialog(
             TextButton(onClick = onDismiss) {
                 Text("Anuluj")
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     )
 }
 
 @Composable
-private fun DetailRow(
+private fun DetailRowCard(
     iconRes: Int,
     label: String?,
     value: String,
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
     isMultiline: Boolean = false
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        Row(
             modifier = Modifier
-                .padding(top = if (isMultiline) 4.dp else 0.dp)
-                .size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(24.dp))
-        Column {
-            if (label != null) {
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(top = if (isMultiline) 3.dp else 0.dp)
+                    .size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                if (label != null) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = value.ifEmpty { "-" },
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = valueColor
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDetailsState(
+    title: String,
+    description: String
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(40.dp)
+            )
             Text(
-                text = value.ifEmpty { "-" },
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = valueColor
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
 private fun formatDate(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp))
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+        .format(Date(timestamp))
         .replaceFirstChar { it.uppercase() }
 }
 
 private fun formatDateTime(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy, HH:mm", Locale("pl", "PL")).format(Date(timestamp))
+    return SimpleDateFormat("EEEE, d MMMM yyyy, HH:mm", Locale("pl", "PL"))
+        .format(Date(timestamp))
         .replaceFirstChar { it.uppercase() }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TaskDetailsScreenPreview() {
+    MyUZTheme {
+        TaskDetailsScreen(
+            task = TaskEntity(
+                id = 1,
+                title = "Przygotować prezentację",
+                description = "Dodać slajdy o architekturze Compose.",
+                dueDate = System.currentTimeMillis(),
+                isCompleted = false,
+                subjectName = "Programowanie",
+                classType = "L",
+                hasReminder = true,
+                reminderTime = System.currentTimeMillis() + 3600_000,
+                priority = 1
+            ),
+            onBackClick = {},
+            onEditClick = {},
+            onDeleteClick = {},
+            onDuplicateClick = {}
+        )
+    }
 }

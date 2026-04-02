@@ -17,6 +17,7 @@ class SubgroupMatcherTest {
     @Test
     fun `matchesSubgroups should return true for common tokens`() {
         assertTrue(SubgroupMatcher.matchesSubgroups("all", listOf("x1")))
+        assertTrue(SubgroupMatcher.matchesSubgroups("  ALL  ", listOf("x1")))
         assertTrue(SubgroupMatcher.matchesSubgroups("-", listOf("x1")))
         assertTrue(SubgroupMatcher.matchesSubgroups("brak", listOf("x1")))
         assertTrue(SubgroupMatcher.matchesSubgroups("w", listOf("x1")))
@@ -35,6 +36,15 @@ class SubgroupMatcherTest {
         assertTrue(SubgroupMatcher.matchesSubgroups("L1, L2, C3", listOf("l1")))
         assertTrue(SubgroupMatcher.matchesSubgroups("L1, L2", listOf("c1, l2")))
         assertTrue(SubgroupMatcher.matchesSubgroups("c3", listOf("x1", " C3 ")))
+        assertTrue(SubgroupMatcher.matchesSubgroups("  l1 ,  c2  ", listOf("  L1  ")))
+        assertTrue(SubgroupMatcher.matchesSubgroups("C3", listOf("x1", " l2 , c3 ")))
+    }
+
+    @Test
+    fun `matchesSubgroups should support semicolon slash and spaces as separators`() {
+        assertTrue(SubgroupMatcher.matchesSubgroups("L1/L2", listOf("l2")))
+        assertTrue(SubgroupMatcher.matchesSubgroups("C1;C2", listOf("c2")))
+        assertTrue(SubgroupMatcher.matchesSubgroups("G1 G2", listOf("g2")))
     }
 
     @Test

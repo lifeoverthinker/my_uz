@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,7 +39,7 @@ fun AbsenceDetailsScreenRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val absence = uiState.absence
 
-    if (uiState.isLoading || absence == null) {
+    if (uiState.isLoading) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -46,6 +48,14 @@ fun AbsenceDetailsScreenRoute(
         ) {
             CircularProgressIndicator()
         }
+        return
+    }
+
+    if (absence == null) {
+        EmptyDetailsState(
+            title = "Brak danych nieobecności",
+            description = "Nie udało się pobrać szczegółów tej nieobecności."
+        )
         return
     }
 
@@ -82,10 +92,8 @@ fun AbsenceDetailsScreen(
     val colorIndex = getClassColorIndex(subjectName)
     val accentColor = getAppAccentColor(colorIndex, isDark)
 
-    // Zielony komentarz:
-    // Zostawiamy kolor statusu 1:1 względem obecnego UX (zielony + akcent dla nieusprawiedliwionej).
     val statusText = if (isExcused) "Usprawiedliwiona" else "Nieusprawiedliwiona"
-    val statusColor = if (isExcused) Color(0xFF388E3C) else getAppAccentColor(5, isDark)
+    val statusColor = if (isExcused) Color(0xFF388E3C) else MaterialTheme.colorScheme.error
     val statusIcon = if (isExcused) R.drawable.ic_check_circle_broken else R.drawable.ic_close
 
     Surface(
@@ -158,49 +166,57 @@ fun AbsenceDetailsScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.Top
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .padding(top = 8.dp)
-                            .size(24.dp),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.Top
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(16.dp)
-                                .background(
-                                    color = accentColor,
-                                    shape = RoundedCornerShape(4.dp)
-                                )
-                        )
-                    }
+                                .padding(top = 6.dp)
+                                .size(22.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .background(
+                                        color = accentColor,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.width(24.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
 
-                    Column {
-                        Text(
-                            text = subjectName.ifBlank { "Nieznany przedmiot" },
-                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = formatAbsenceDetailsDate(dateMillis),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column {
+                            Text(
+                                text = subjectName.ifBlank { "Nieznany przedmiot" },
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = formatAbsenceDetailsDate(dateMillis),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                DetailRow(
+                DetailRowCard(
                     iconRes = statusIcon,
                     iconTint = statusColor,
                     label = "Status",
@@ -209,23 +225,20 @@ fun AbsenceDetailsScreen(
                     isValueHighlight = true
                 )
 
-                DetailRow(
+                DetailRowCard(
                     iconRes = R.drawable.ic_stand,
                     label = "Rodzaj zajęć",
                     value = classType
                 )
 
                 if (reason.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    DetailRow(
+                    DetailRowCard(
                         iconRes = R.drawable.ic_menu_2,
-                        label = null,
+                        label = "Powód / opis",
                         value = reason,
                         isMultiline = true
                     )
                 }
-
-                Spacer(modifier = Modifier.height(32.dp))
             }
 
             if (showDeleteDialog) {
@@ -243,7 +256,7 @@ fun AbsenceDetailsScreen(
 }
 
 @Composable
-private fun DetailRow(
+private fun DetailRowCard(
     iconRes: Int,
     iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     label: String?,
@@ -252,39 +265,82 @@ private fun DetailRow(
     isValueHighlight: Boolean = false,
     isMultiline: Boolean = false
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            tint = iconTint,
+        Row(
             modifier = Modifier
-                .padding(top = if (isMultiline) 4.dp else 0.dp)
-                .size(24.dp)
-        )
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier
+                    .padding(top = if (isMultiline) 3.dp else 0.dp)
+                    .size(22.dp)
+            )
 
-        Spacer(modifier = Modifier.width(24.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-        Column {
-            if (label != null) {
+            Column {
+                if (label != null) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = value.ifEmpty { "-" },
+                    style = if (isValueHighlight) MaterialTheme.typography.titleLarge
+                    else MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = valueColor
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDetailsState(
+    title: String,
+    description: String
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(40.dp)
+            )
             Text(
-                text = value.ifEmpty { "-" },
-                style = if (isValueHighlight) {
-                    MaterialTheme.typography.titleLarge
-                } else {
-                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
-                },
-                color = valueColor
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -305,7 +361,7 @@ fun AbsenceDetailsScreenPreview() {
             classType = "Laboratorium",
             dateMillis = System.currentTimeMillis(),
             isExcused = true,
-            reason = "Zwolnienie lekarskie dostarczone do dziekanatu w dniu 12.05.",
+            reason = "Zwolnienie lekarskie dostarczone do dziekanatu.",
             onNavigateBack = {},
             onEditClick = {},
             onDeleteClick = {},

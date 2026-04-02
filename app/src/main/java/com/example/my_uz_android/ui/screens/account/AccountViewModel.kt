@@ -26,7 +26,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val AUTO_SAVE_DEBOUNCE_MS = 1500L
+private const val AUTO_SAVE_DEBOUNCE_MS = 1000L
 private const val SAVED_FEEDBACK_MS = 3000L
 private const val GROUP_SUGGESTIONS_LIMIT = 8
 

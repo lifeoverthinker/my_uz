@@ -132,6 +132,21 @@ class UniversityRepository(
     private val supabase: Postgrest,
     private val context: Context
 ) {
+    private fun tokenizeSubgroups(rawValues: List<String>): List<String> {
+        return rawValues
+            .asSequence()
+            .flatMap { it.split(Regex("[,;/|\\s]+")) .asSequence() }
+            .map { it.trim().uppercase() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .toList()
+    }
+
+    private fun tokenizeSubgroups(rawValue: String?): List<String> {
+        if (rawValue.isNullOrBlank()) return emptyList()
+        return tokenizeSubgroups(listOf(rawValue))
+    }
+
     /** Bezpieczne parsowanie dat, usuwa strefy czasowe, z którymi koliduje LocalDateTime. */
     private fun parseDateSafe(dateString: String?): LocalDateTime? {
         if (dateString.isNullOrBlank()) return null
@@ -163,7 +178,7 @@ class UniversityRepository(
                 filter { eq("grupa_id", grupaId) }
             }.decodeList<ClassScheduleDto>()
 
-            val safeSubgroups = subgroups.map { it.trim().uppercase() }.filter { it.isNotBlank() }
+            val safeSubgroups = tokenizeSubgroups(subgroups)
 
             // ZAAWANSOWANE FILTROWANIE
             // Jeśli student nie wybrał żadnych podgrup lub celowo wybrał "ALL", dajemy mu wszystkie zajęcia
@@ -183,7 +198,7 @@ class UniversityRepository(
 
                     // 2. Sprawdź, czy podgrupa z zajęć z bazy pasuje do wybranych przez studenta
                     // Baza może zwrócić np. "B, II" albo "I/II". Rozbijamy to na kawałki:
-                    val classSubgroups = rawSub.split(Regex("[,/|]")).map { it.trim() }
+                    val classSubgroups = tokenizeSubgroups(listOf(rawSub))
 
                     safeSubgroups.any { userSub ->
                         classSubgroups.contains(userSub) || rawSub == userSub || rawSub.contains(userSub)
@@ -341,7 +356,7 @@ class UniversityRepository(
      * (wykorzystywany przy opcji 'pociągnij aby odświeżyć' w kalendarzu).
      */
     suspend fun refreshSchedule(groupCode: String, subgroup: String?, classRepository: ClassRepository): NetworkResult<Unit> {
-        val subgroups = if (subgroup.isNullOrBlank()) emptyList() else listOf(subgroup)
+        val subgroups = tokenizeSubgroups(subgroup)
         return when (val result = getSchedule(groupCode, subgroups)) {
             is NetworkResult.Success -> {
                 val downloadedClasses = result.data ?: emptyList()

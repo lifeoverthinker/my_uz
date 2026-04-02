@@ -2,13 +2,10 @@ package com.example.my_uz_android.ui.screens.home.details
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.EventEntity
-import com.example.my_uz_android.data.repositories.EventRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 /**
  * Stan UI ekranu szczegółów wydarzenia.
@@ -28,67 +25,42 @@ data class EventDetailsUiState(
  * ViewModel szczegółów wydarzenia.
  *
  * Odpowiada za:
- * - pobranie wydarzenia po ID,
+ * - przygotowanie mockowanego wydarzenia po ID z nawigacji,
  * - utrzymanie stanu loading/success/error,
- * - usunięcie wydarzenia z bazy.
+ * - brak operacji usuwania (brak persystencji wydarzen).
  */
 class EventDetailsViewModel(
-    savedStateHandle: SavedStateHandle,
-    private val eventRepository: EventRepository
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val eventId: Int = checkNotNull(savedStateHandle["eventId"])
+    private val eventId: Int = savedStateHandle.get<Int>("eventId")
+        ?: savedStateHandle.get<String>("eventId")?.toIntOrNull()
+        ?: 0
 
     private val _uiState = MutableStateFlow(EventDetailsUiState(isLoading = true))
     val uiState: StateFlow<EventDetailsUiState> = _uiState.asStateFlow()
 
     init {
-        loadEvent()
+        loadMockEvent()
     }
 
     /**
-     * Ładuje wydarzenie z bazy danych.
-     *
-     * Zasada:
-     * - brak rekordu = stan błędu (bez sztucznych danych mock),
-     * - wyjątek = stan błędu technicznego.
+     * Ładuje sztuczne wydarzenie do podglądu.
      */
-    private fun loadEvent() {
-        viewModelScope.launch {
-            _uiState.value = EventDetailsUiState(isLoading = true)
+    private fun loadMockEvent() {
+        val fakeEvent = EventEntity(
+            id = eventId,
+            title = "Wydarzenie pokazowe #$eventId",
+            description = "To jest statyczny podglad wydarzenia. Szczegoly nie sa pobierane z bazy danych.",
+            date = "Sobota, 10 maja 2026",
+            location = "Kampus B, Budynek A",
+            timeRange = "10:00 - 12:00"
+        )
 
-            runCatching { eventRepository.getEventById(eventId) }
-                .onSuccess { event ->
-                    if (event != null) {
-                        _uiState.value = EventDetailsUiState(
-                            eventEntity = event,
-                            isLoading = false,
-                            error = null
-                        )
-                    } else {
-                        _uiState.value = EventDetailsUiState(
-                            eventEntity = null,
-                            isLoading = false,
-                            error = "Nie znaleziono wydarzenia o ID=$eventId"
-                        )
-                    }
-                }
-                .onFailure { throwable ->
-                    _uiState.value = EventDetailsUiState(
-                        eventEntity = null,
-                        isLoading = false,
-                        error = throwable.message ?: "Błąd pobierania wydarzenia"
-                    )
-                }
-        }
-    }
-
-    /**
-     * Usuwa aktualne wydarzenie z bazy.
-     */
-    fun deleteEvent() {
-        viewModelScope.launch {
-            uiState.value.eventEntity?.let { eventRepository.deleteEvent(it) }
-        }
+        _uiState.value = EventDetailsUiState(
+            eventEntity = fakeEvent,
+            isLoading = false,
+            error = null
+        )
     }
 }

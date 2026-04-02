@@ -27,7 +27,7 @@ import com.example.my_uz_android.ui.components.TopBarActionIcon
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IndexScreen(
-    onSubjectClick: (String) -> Unit,
+    onSubjectClick: (String, String) -> Unit,
     onAddGradeClick: () -> Unit,
     onAddAbsenceClick: () -> Unit,
     onEditAbsenceClick: (Int) -> Unit,
@@ -67,18 +67,16 @@ fun IndexScreen(
                                 onDismissRequest = { showFilterMenu = false }
                             ) {
                                 gradesState.userCourses.forEach { course ->
-                                    val normalizedCode = course.groupCode.trim().uppercase()
+                                    val normalizedCode = course.groupCode.trim().lowercase()
                                     val isSelected = gradesState.selectedGroupCodes.contains(normalizedCode)
 
                                     DropdownMenuItem(
                                         text = { Text(course.fieldOfStudy ?: course.groupCode) },
-                                        trailingIcon = {
-                                            if (isSelected) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.ic_check),
-                                                    contentDescription = null
-                                                )
-                                            }
+                                        leadingIcon = {
+                                            Checkbox(
+                                                checked = isSelected,
+                                                onCheckedChange = null
+                                            )
                                         },
                                         onClick = {
                                             // Zielony komentarz:

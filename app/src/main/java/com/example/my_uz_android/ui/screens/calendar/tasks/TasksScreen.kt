@@ -205,7 +205,7 @@ fun TasksScreen(
                         title = if (selectedTab == 0) "Brak aktywnych zadań" else "Brak zaliczonych zadań",
                         subtitle = "Twoja lista jest pusta",
                         message = "Dodaj nowe zadanie przyciskiem +",
-                        iconRes = R.drawable.calendar_rafiki
+                        iconRes = R.drawable.to_do_list_rafiki
                     )
                 } else {
                     TasksList(

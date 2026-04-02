@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,10 +39,23 @@ fun GradeDetailsScreenRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val grade = uiState.grade
 
-    if (uiState.isLoading || grade == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    if (uiState.isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest),
+            contentAlignment = Alignment.Center
+        ) {
             CircularProgressIndicator()
         }
+        return
+    }
+
+    if (grade == null) {
+        EmptyDetailsState(
+            title = "Brak danych oceny",
+            description = "Nie udało się pobrać szczegółów tej oceny."
+        )
         return
     }
 
@@ -89,203 +104,259 @@ fun GradeDetailsScreen(
     val colorIndex = getClassColorIndex(subjectName)
     val accentColor = getAppAccentColor(colorIndex, isDark)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = "",
-                navigationIcon = R.drawable.ic_close,
-                isNavigationIconFilled = true,
-                onNavigationClick = onNavigateBack,
-                containerColor = Color.Transparent,
-                actions = {
-                    TopBarActionIcon(
-                        icon = R.drawable.ic_edit,
-                        isFilled = true,
-                        onClick = onEditGrade
-                    )
-                    Box {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = "",
+                    navigationIcon = R.drawable.ic_close,
+                    isNavigationIconFilled = true,
+                    onNavigationClick = onNavigateBack,
+                    containerColor = Color.Transparent,
+                    actions = {
                         TopBarActionIcon(
-                            icon = R.drawable.ic_dots_vertical,
+                            icon = R.drawable.ic_edit,
                             isFilled = true,
-                            onClick = { showMenu = true }
+                            onClick = onEditGrade
                         )
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Duplikuj") },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_copy),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onDuplicateClick()
-                                }
+                        Box {
+                            TopBarActionIcon(
+                                icon = R.drawable.ic_dots_vertical,
+                                isFilled = true,
+                                onClick = { showMenu = true }
                             )
-                            DropdownMenuItem(
-                                text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_trash),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(20.dp)
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Duplikuj") },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_copy),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onDuplicateClick()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_trash),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        showDeleteDialog = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+                )
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 6.dp)
+                                .size(22.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .background(
+                                        color = accentColor,
+                                        shape = RoundedCornerShape(4.dp)
                                     )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    showDeleteDialog = true
-                                }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = formatGradeDetailsDate(dateMillis),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 }
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Box(
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .size(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .background(
-                                color = accentColor,
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                    )
+
+                val gradeLabel = if (isPointsOrActivity) {
+                    "Punkty / Aktywność"
+                } else {
+                    if (!weightText.isNullOrEmpty()) "Ocena • Waga: $weightText" else "Ocena"
                 }
 
-                Spacer(modifier = Modifier.width(24.dp))
+                DetailRowCard(
+                    iconRes = R.drawable.ic_trophy,
+                    label = gradeLabel,
+                    value = gradeText,
+                    isValueHighlight = true
+                )
 
-                Column {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = formatGradeDetailsDate(dateMillis),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                DetailRowCard(
+                    iconRes = R.drawable.ic_graduation_hat,
+                    label = "Przedmiot",
+                    value = subjectName
+                )
+
+                DetailRowCard(
+                    iconRes = R.drawable.ic_stand,
+                    label = "Rodzaj zajęć",
+                    value = classType
+                )
+
+                if (!comment.isNullOrEmpty()) {
+                    DetailRowCard(
+                        iconRes = R.drawable.ic_menu_2,
+                        label = "Komentarz",
+                        value = comment,
+                        isMultiline = true
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val gradeLabel = if (isPointsOrActivity) {
-                "Punkty / Aktywność"
-            } else {
-                if (!weightText.isNullOrEmpty()) "Ocena • Waga: $weightText" else "Ocena"
-            }
-
-            DetailRow(
-                iconRes = R.drawable.ic_trophy,
-                label = gradeLabel,
-                value = gradeText,
-                isValueHighlight = true
-            )
-
-            DetailRow(
-                iconRes = R.drawable.ic_graduation_hat,
-                label = "Przedmiot",
-                value = subjectName
-            )
-
-            DetailRow(
-                iconRes = R.drawable.ic_stand,
-                label = "Rodzaj zajęć",
-                value = classType
-            )
-
-            if (!comment.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                DetailRow(
-                    iconRes = R.drawable.ic_menu_2,
-                    label = null,
-                    value = comment,
-                    isMultiline = true
+            if (showDeleteDialog) {
+                DeleteConfirmationDialog(
+                    onConfirm = {
+                        onDeleteGrade()
+                        showDeleteDialog = false
+                    },
+                    onDismiss = { showDeleteDialog = false },
+                    itemType = "ocenę"
                 )
             }
-
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-
-        if (showDeleteDialog) {
-            DeleteConfirmationDialog(
-                onConfirm = {
-                    onDeleteGrade()
-                    showDeleteDialog = false
-                },
-                onDismiss = { showDeleteDialog = false },
-                itemType = "ocenę"
-            )
         }
     }
 }
 
 @Composable
-private fun DetailRow(
+private fun DetailRowCard(
     iconRes: Int,
     label: String?,
     value: String,
     isValueHighlight: Boolean = false,
     isMultiline: Boolean = false
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        Row(
             modifier = Modifier
-                .padding(top = if (isMultiline) 4.dp else 0.dp)
-                .size(24.dp)
-        )
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(top = if (isMultiline) 3.dp else 0.dp)
+                    .size(22.dp)
+            )
 
-        Spacer(modifier = Modifier.width(24.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-        Column {
-            if (label != null) {
+            Column {
+                if (label != null) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = value.ifEmpty { "-" },
+                    style = if (isValueHighlight) MaterialTheme.typography.titleLarge
+                    else MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = if (isValueHighlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
+        }
+    }
+}
 
+@Composable
+private fun EmptyDetailsState(
+    title: String,
+    description: String
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(40.dp)
+            )
             Text(
-                text = value.ifEmpty { "-" },
-                style = if (isValueHighlight) MaterialTheme.typography.titleLarge
-                else MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = if (isValueHighlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
