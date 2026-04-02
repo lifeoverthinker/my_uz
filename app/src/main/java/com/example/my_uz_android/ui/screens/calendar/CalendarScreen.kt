@@ -1,24 +1,37 @@
 package com.example.my_uz_android.ui.screens.calendar
 
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
-import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.ui.components.CalendarTopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.screens.calendar.components.ScheduleView
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -33,6 +46,38 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
 
+private fun Modifier.calendarDaySwipeGestureCalendarScreen(
+    selectedDate: LocalDate,
+    isMonthView: Boolean,
+    density: androidx.compose.ui.unit.Density,
+    onSwipeNext: () -> Unit,
+    onSwipePrevious: () -> Unit
+): Modifier {
+    return pointerInput(selectedDate, isMonthView) {
+        val swipeThresholdPx = with(density) { 72.dp.toPx() }
+        var accumulatedDx by mutableFloatStateOf(0f)
+        var accumulatedDy by mutableFloatStateOf(0f)
+
+        detectHorizontalDragGestures(
+            onDragStart = {
+                accumulatedDx = 0f
+                accumulatedDy = 0f
+            },
+            onHorizontalDrag = { change, dragAmount ->
+                accumulatedDx += dragAmount
+                accumulatedDy += abs(change.position.y - change.previousPosition.y)
+            },
+            onDragEnd = {
+                val isHorizontalIntent = abs(accumulatedDx) > accumulatedDy
+                val passedThreshold = abs(accumulatedDx) >= swipeThresholdPx
+                if (isHorizontalIntent && passedThreshold) {
+                    if (accumulatedDx < 0) onSwipeNext() else onSwipePrevious()
+                }
+            }
+        )
+    }
+}
+
 @Composable
 fun CalendarScreen(
     onOpenDrawer: () -> Unit,
@@ -45,7 +90,6 @@ fun CalendarScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // odśwież plan przy każdym wejściu na ekran
     LaunchedEffect(Unit) {
         viewModel.refreshMyPlan()
     }
@@ -56,9 +100,9 @@ fun CalendarScreen(
         onSearchClick = onSearchClick,
         onAccountClick = onAccountClick,
         onClassClick = onClassClick,
-        onDateSelected = { viewModel.setSelectedDate(it) },
-        onToggleMonthView = { viewModel.setMonthView(it) },
-        onToggleGroupVisibility = { viewModel.toggleGroupVisibility(it) }
+        onDateSelected = viewModel::setSelectedDate,
+        onToggleMonthView = viewModel::setMonthView,
+        onToggleGroupVisibility = viewModel::toggleGroupVisibility
     )
 }
 
@@ -109,11 +153,8 @@ fun CalendarScreenContent(
         onDateSelected(newDate)
 
         scope.launch {
-            if (isMonthView) {
-                monthState.scrollToMonth(YearMonth.from(newDate))
-            } else {
-                weekState.scrollToWeek(newDate)
-            }
+            if (isMonthView) monthState.scrollToMonth(YearMonth.from(newDate))
+            else weekState.scrollToWeek(newDate)
         }
     }
 
@@ -121,17 +162,21 @@ fun CalendarScreenContent(
         monthState.firstVisibleMonth.yearMonth
     } else {
         val weekDays = weekState.firstVisibleWeek.days
-        if (weekDays.isNotEmpty()) YearMonth.from(weekDays.first().date) else YearMonth.from(
-            selectedDate
-        )
+        if (weekDays.isNotEmpty()) YearMonth.from(weekDays.first().date) else YearMonth.from(selectedDate)
     }
 
-    val monthName = visibleMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
+    val monthName = visibleMonth.month
+        .getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
         .replaceFirstChar { it.titlecase(Locale("pl")) }
 
     val currentRealWorldYear = YearMonth.now(ZoneId.of("Europe/Warsaw")).year
-    val calendarTitle =
-        if (visibleMonth.year == currentRealWorldYear) monthName else "$monthName ${visibleMonth.year}"
+    val calendarTitle = if (visibleMonth.year == currentRealWorldYear) monthName else "$monthName ${visibleMonth.year}"
+
+    val isDark = when (uiState.themeMode) {
+        "DARK" -> true
+        "LIGHT" -> false
+        else -> isSystemInDarkTheme()
+    }
 
     Scaffold(
         topBar = {
@@ -140,36 +185,33 @@ fun CalendarScreenContent(
                 isExpanded = isMonthView,
                 onNavigationClick = onOpenDrawer,
                 onTitleClick = { onToggleMonthView(!isMonthView) },
-                // Używamy bloku 'actions', by zbudować własne ikonki i menu bezpośrednio w pasku
                 actions = {
                     if (uiState.userCourses.size > 1) {
-                        // Box trzyma razem ikonkę ORAZ menu, dzięki czemu otworzy się idealnie pod nią!
                         Box {
-                            IconButton(onClick = { isFilterExpanded = true }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_filter),
-                                    contentDescription = "Filtruj",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            TopBarActionIcon(
+                                icon = R.drawable.ic_filter,
+                                onClick = { isFilterExpanded = true },
+                                isFilled = true
+                            )
 
                             DropdownMenu(
                                 expanded = isFilterExpanded,
                                 onDismissRequest = { isFilterExpanded = false }
                             ) {
                                 uiState.userCourses.forEach { course ->
-                                    val isSelected =
-                                        uiState.selectedGroupCodes.contains(course.groupCode)
+                                    val isSelected = uiState.selectedGroupCodes.contains(course.groupCode)
                                     DropdownMenuItem(
-                                        text = { Text(course.fieldOfStudy ?: course.groupCode) },
-                                        trailingIcon = {
-                                            if (isSelected) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = "Wybrane",
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
+                                        text = {
+                                            Text(
+                                                text = course.fieldOfStudy ?: course.groupCode,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Checkbox(
+                                                checked = isSelected,
+                                                onCheckedChange = null
+                                            )
                                         },
                                         onClick = { onToggleGroupVisibility(course.groupCode) }
                                     )
@@ -178,14 +220,11 @@ fun CalendarScreenContent(
                         }
                     }
 
-                    // Ikonka lupy (zawsze na prawo od filtra)
-                    IconButton(onClick = onSearchClick) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Szukaj",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
+                    TopBarActionIcon(
+                        icon = R.drawable.ic_search,
+                        onClick = onSearchClick,
+                        isFilled = true
+                    )
                 }
             )
         }
@@ -194,42 +233,15 @@ fun CalendarScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .pointerInput(selectedDate, isMonthView) {
-                    val swipeThresholdPx = with(density) { 72.dp.toPx() }
-                    var accumulatedDx = 0f
-                    var accumulatedDy = 0f
-
-                    detectHorizontalDragGestures(
-                        onDragStart = {
-                            accumulatedDx = 0f
-                            accumulatedDy = 0f
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            accumulatedDx += dragAmount
-                            accumulatedDy += kotlin.math.abs(change.position.y - change.previousPosition.y)
-                        },
-                        onDragEnd = {
-                            val isHorizontalIntent = kotlin.math.abs(accumulatedDx) > accumulatedDy
-                            val passedThreshold = kotlin.math.abs(accumulatedDx) >= swipeThresholdPx
-
-                            if (isHorizontalIntent && passedThreshold) {
-                                if (accumulatedDx < 0) {
-                                    navigateDay(offsetDays = 1, direction = DaySwipeDirection.NEXT)
-                                } else {
-                                    navigateDay(
-                                        offsetDays = -1,
-                                        direction = DaySwipeDirection.PREVIOUS
-                                    )
-                                }
-                            }
-                        }
-                    )
-                }
+                .calendarDaySwipeGestureCalendarScreen(
+                    selectedDate = selectedDate,
+                    isMonthView = isMonthView,
+                    density = density,
+                    onSwipeNext = { navigateDay(1, DaySwipeDirection.NEXT) },
+                    onSwipePrevious = { navigateDay(-1, DaySwipeDirection.PREVIOUS) }
+                )
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // TUTAJ USUNĄŁEM TEN BOX Z MENU, KTÓRY POWODOWAŁ BŁĄD.
-                // Został nam czysty ScheduleView!
-
                 ScheduleView(
                     calendarState = monthState,
                     weekState = weekState,
@@ -245,6 +257,7 @@ fun CalendarScreenContent(
                     tasks = uiState.tasks,
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
+                    isDarkMode = isDark,
                     modifier = Modifier.weight(1f),
                     showHeader = false
                 )
@@ -277,7 +290,7 @@ fun CalendarScreenPreview() {
                 ),
                 selectedGroupCodes = setOf("12IN"),
                 visibleClasses = emptyList(),
-                tasks = emptyList() // Dostarczamy pustą listę zadań dla Preview
+                tasks = emptyList()
             ),
             onOpenDrawer = {},
             onSearchClick = {},

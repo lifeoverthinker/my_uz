@@ -23,7 +23,6 @@ import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.MyUZTheme
 
-// --- WRAPPER DLA NAWIGACJI ---
 @Composable
 fun EventDetailsScreen(
     onBackClick: () -> Unit,
@@ -32,7 +31,7 @@ fun EventDetailsScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     if (uiState.isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLowest), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else if (uiState.eventEntity != null) {
@@ -41,103 +40,104 @@ fun EventDetailsScreen(
             onBackClick = onBackClick
         )
     } else {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLowest), contentAlignment = Alignment.Center) {
             Text("Nie znaleziono szczegółów wydarzenia.", color = MaterialTheme.colorScheme.error)
         }
     }
 }
 
-// --- BEZSTANOWY WIDOK ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventDetailsContent(
     event: EventEntity,
     onBackClick: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = "",
-                navigationIcon = R.drawable.ic_close,
-                isNavigationIconFilled = true,
-                onNavigationClick = onBackClick,
-                actions = {
-                    // Brak akcji Edytuj / Usuń - to globalne wydarzenia!
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // --- Nagłówek ---
-            Row(
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = "",
+                    navigationIcon = R.drawable.ic_close,
+                    isNavigationIconFilled = true,
+                    onNavigationClick = onBackClick,
+                    actions = {},
+                    containerColor = Color.Transparent
+                )
+            }
+        ) { paddingValues ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.Top
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Box(
+                Row(
                     modifier = Modifier
-                        .padding(top = 8.dp)
-                        .size(24.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(16.dp)
-                            .background(Color(0xFF4CAF50), RoundedCornerShape(4.dp)) // Zielony dla wydarzeń
+                            .padding(top = 8.dp)
+                            .size(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .background(Color(0xFF4CAF50), RoundedCornerShape(4.dp))
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(24.dp))
+
+                    Column {
+                        Text(
+                            text = event.title,
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${event.date} • ${event.timeRange}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (event.location.isNotBlank()) {
+                    DetailRow(
+                        iconRes = R.drawable.ic_marker_pin,
+                        label = "Miejsce",
+                        value = event.location
                     )
                 }
 
-                Spacer(modifier = Modifier.width(24.dp))
-
-                Column {
-                    Text(
-                        text = event.title,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${event.date} • ${event.timeRange}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                if (event.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DetailRow(
+                        iconRes = R.drawable.ic_menu_2,
+                        label = null,
+                        value = event.description,
+                        isMultiline = true
                     )
                 }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Lokalizacja ---
-            if (event.location.isNotBlank()) {
-                DetailRow(
-                    iconRes = R.drawable.ic_marker_pin,
-                    label = "Miejsce",
-                    value = event.location
-                )
-            }
-
-            // --- Opis ---
-            if (event.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                DetailRow(
-                    iconRes = R.drawable.ic_menu_2,
-                    label = null,
-                    value = event.description,
-                    isMultiline = true
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
-// --- Komponent Pomocniczy dla Wierszy ---
 @Composable
 private fun DetailRow(
     iconRes: Int,
@@ -173,23 +173,5 @@ private fun DetailRow(
                 color = valueColor
             )
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun EventDetailsScreenPreview() {
-    MyUZTheme {
-        EventDetailsContent(
-            event = EventEntity(
-                id = 1,
-                title = "Juwenalia 2026",
-                description = "Największa impreza roku! Muzyka na żywo, food trucki i mnóstwo atrakcji studenckich na kampusie B.",
-                date = "Piątek, 20 maja 2026",
-                location = "Kampus B, Uniwersytet Zielonogórski",
-                timeRange = "18:00 - 02:00"
-            ),
-            onBackClick = {}
-        )
     }
 }

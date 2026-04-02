@@ -27,6 +27,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.MyUZTheme
 
 @Composable
@@ -115,12 +116,10 @@ fun EditPersonalDataScreenContent(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Edytuj profil") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(painterResource(R.drawable.ic_chevron_left), "Wróć", tint = MaterialTheme.colorScheme.onBackground)
-                    }
-                },
+                title = "Edytuj profil",
+                navigationIcon = R.drawable.ic_chevron_left,
+                onNavigationClick = onNavigateBack,
+                isNavigationIconFilled = true,
                 actions = {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -141,10 +140,7 @@ fun EditPersonalDataScreenContent(
                             )
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                }
             )
         }
     ) { innerPadding ->
@@ -272,7 +268,7 @@ fun EditPersonalDataScreenContent(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = CardDefaults.outlinedCardBorder()
-                ) {
+                    ) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {

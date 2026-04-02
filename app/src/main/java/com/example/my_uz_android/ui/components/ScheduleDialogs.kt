@@ -124,7 +124,7 @@ fun TeacherInfoDialog(
                             }
                         },
                         shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), // Subtelniejsze tło
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.fillMaxWidth(),
                         tonalElevation = 0.dp
                     ) {
@@ -144,8 +144,23 @@ fun TeacherInfoDialog(
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
                             )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Kopiuj",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_copy),
+                                    contentDescription = "Kopiuj",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -179,7 +194,7 @@ private fun BaseScheduleDialog(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 20.sp // Google Calendar style size
+                    fontSize = 20.sp
                 ),
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -197,7 +212,7 @@ private fun BaseScheduleDialog(
         dismissButton = dismissButton,
         shape = MaterialTheme.shapes.extraLarge,
         containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp // Kluczowe dla płaskiego wyglądu
+        tonalElevation = 0.dp
     )
 }
 

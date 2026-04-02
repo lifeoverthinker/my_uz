@@ -49,7 +49,7 @@ fun ClassDetailsScreen(
     }
 
     if (uiState.isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLowest), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else if (uiState.classEntity != null) {
@@ -59,7 +59,7 @@ fun ClassDetailsScreen(
             isTeacherPlan = isTeacherPlan
         )
     } else {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerLowest), contentAlignment = Alignment.Center) {
             Text("Nie znaleziono szczegółów zajęć.", color = MaterialTheme.colorScheme.error)
         }
     }
@@ -85,110 +85,114 @@ fun ClassDetailsContent(
         day.getDisplayName(TextStyle.FULL, Locale("pl", "PL")).replaceFirstChar { it.uppercase() }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = "",
-                navigationIcon = R.drawable.ic_close,
-                isNavigationIconFilled = true,
-                onNavigationClick = onBackClick,
-                actions = { }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // --- Nagłówek ---
-            Row(
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = "",
+                    navigationIcon = R.drawable.ic_close,
+                    isNavigationIconFilled = true,
+                    onNavigationClick = onBackClick,
+                    actions = { },
+                    containerColor = Color.Transparent
+                )
+            }
+        ) { paddingValues ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.Top
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Box(
+                // --- Nagłówek ---
+                Row(
                     modifier = Modifier
-                        .padding(top = 8.dp)
-                        .size(24.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(16.dp)
-                            .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp))
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(24.dp))
-
-                Column {
-                    Text(
-                        text = classEntity.subjectName,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "$dateOrDayText • ${classEntity.startTime} - ${classEntity.endTime}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Miejsce (Sala) ---
-            if (!classEntity.room.isNullOrBlank()) {
-                DetailRow(
-                    iconRes = R.drawable.ic_marker_pin,
-                    label = "Miejsce",
-                    value = "Sala ${classEntity.room}"
-                )
-            }
-
-            // --- Warunkowe Renderowanie Zależne od Typu Planu ---
-            if (!isTeacherPlan) {
-                // Dla Studenta/Grupy - pokazujemy Prowadzącego, ukrywamy Grupy
-                if (!classEntity.teacherName.isNullOrBlank()) {
-                    val teacherDetails = buildString {
-                        append(classEntity.teacherName)
-                        if (!classEntity.teacherEmail.isNullOrBlank()) append("\n${classEntity.teacherEmail}")
-                        if (!classEntity.teacherInstitute.isNullOrBlank()) append("\n${classEntity.teacherInstitute}")
+                            .padding(top = 8.dp)
+                            .size(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp))
+                        )
                     }
+
+                    Spacer(modifier = Modifier.width(24.dp))
+
+                    Column {
+                        Text(
+                            text = classEntity.subjectName,
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "$dateOrDayText • ${classEntity.startTime} - ${classEntity.endTime}",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- Miejsce (Sala) ---
+                if (!classEntity.room.isNullOrBlank()) {
                     DetailRow(
-                        iconRes = R.drawable.ic_user,
-                        label = "Prowadzący",
-                        value = teacherDetails,
-                        isMultiline = true
+                        iconRes = R.drawable.ic_marker_pin,
+                        label = "Miejsce",
+                        value = "Sala ${classEntity.room}"
                     )
                 }
-            } else {
-                // Dla Nauczyciela - pokazujemy Grupę, ukrywamy Prowadzącego
-                val groupInfo = buildString {
-                    append(classEntity.groupCode)
-                    if (!classEntity.subgroup.isNullOrBlank()) append(" (Podgrupa: ${classEntity.subgroup})")
+
+                if (!isTeacherPlan) {
+                    if (!classEntity.teacherName.isNullOrBlank()) {
+                        val teacherDetails = buildString {
+                            append(classEntity.teacherName)
+                            if (!classEntity.teacherEmail.isNullOrBlank()) append("\n${classEntity.teacherEmail}")
+                            if (!classEntity.teacherInstitute.isNullOrBlank()) append("\n${classEntity.teacherInstitute}")
+                        }
+                        DetailRow(
+                            iconRes = R.drawable.ic_user,
+                            label = "Prowadzący",
+                            value = teacherDetails,
+                            isMultiline = true
+                        )
+                    }
+                } else {
+                    val groupInfo = buildString {
+                        append(classEntity.groupCode)
+                        if (!classEntity.subgroup.isNullOrBlank()) append(" (Podgrupa: ${classEntity.subgroup})")
+                    }
+                    if (groupInfo.isNotBlank()) {
+                        DetailRow(
+                            iconRes = R.drawable.ic_users,
+                            label = "Grupa",
+                            value = groupInfo
+                        )
+                    }
                 }
-                if (groupInfo.isNotBlank()) {
-                    DetailRow(
-                        iconRes = R.drawable.ic_users,
-                        label = "Grupa",
-                        value = groupInfo
-                    )
-                }
+
+                DetailRow(
+                    iconRes = R.drawable.ic_stand,
+                    label = "Rodzaj zajęć",
+                    value = ClassTypeUtils.getFullName(classEntity.classType)
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
-
-            // --- Rodzaj zajęć ---
-            DetailRow(
-                iconRes = R.drawable.ic_stand,
-                label = "Rodzaj zajęć",
-                value = ClassTypeUtils.getFullName(classEntity.classType)
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -228,57 +232,5 @@ private fun DetailRow(
                 color = valueColor
             )
         }
-    }
-}
-
-@Preview(showBackground = true, name = "Szczegóły - Plan Studenta")
-@Composable
-fun StudentClassDetailsPreview() {
-    MyUZTheme {
-        ClassDetailsContent(
-            classEntity = ClassEntity(
-                id = 1,
-                subjectName = "Algorytmy i Struktury Danych",
-                classType = "W",
-                startTime = "08:15",
-                endTime = "09:45",
-                dayOfWeek = 1,
-                date = "2024-10-14",
-                groupCode = "31-INF-S",
-                subgroup = null,
-                teacherName = "Prof. dr hab. inż. Jan Kowalski",
-                teacherEmail = "j.kowalski@iie.uz.zgora.pl",
-                teacherInstitute = "Instytut Informatyki",
-                room = "A-2, s. 101"
-            ),
-            onBackClick = {},
-            isTeacherPlan = false
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "Szczegóły - Plan Wykładowcy")
-@Composable
-fun TeacherClassDetailsPreview() {
-    MyUZTheme {
-        ClassDetailsContent(
-            classEntity = ClassEntity(
-                id = 1,
-                subjectName = "Algorytmy i Struktury Danych",
-                classType = "W",
-                startTime = "08:15",
-                endTime = "09:45",
-                dayOfWeek = 1,
-                date = "2024-10-14",
-                groupCode = "31-INF-S",
-                subgroup = "L1",
-                teacherName = "Prof. dr hab. inż. Jan Kowalski",
-                teacherEmail = "j.kowalski@iie.uz.zgora.pl",
-                teacherInstitute = "Instytut Informatyki",
-                room = "A-2, s. 101"
-            ),
-            onBackClick = {},
-            isTeacherPlan = true
-        )
     }
 }

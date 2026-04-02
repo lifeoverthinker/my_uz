@@ -21,7 +21,9 @@ data class TaskEntity(
     val endDate: Long = Instant.now().toEpochMilli(),
     val color: Int = 0xFF68548E.toInt(),
     val isCompleted: Boolean = false,
-    val subjectId: Int? = null
+    val subjectId: Int? = null,
+    val hasReminder: Boolean = false,
+    val reminderTime: Long? = null
 ) {
     // Helper dla kompatybilności
     val classSubject: String? get() = subjectName

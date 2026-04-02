@@ -1,15 +1,14 @@
 package com.example.my_uz_android.ui
 
+import android.app.Application
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.lifecycle.ViewModelProvider
 import com.example.my_uz_android.MyUZApplication
-
 import com.example.my_uz_android.data.db.AppDatabase
 import com.example.my_uz_android.util.BackupManager
-
 import com.example.my_uz_android.ui.screens.account.AccountViewModel
 import com.example.my_uz_android.ui.screens.account.SettingsViewModel
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
@@ -28,11 +27,19 @@ object AppViewModelProvider {
     val Factory = viewModelFactory {
 
         initializer {
+            // 1. Pobieramy instancję Application z Extras
+            val application = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]) as Application
+
+            // 2. Pobieramy aplikację do wstrzyknięcia zależności
+            val myUzApplication = application as MyUZApplication
+
             HomeViewModel(
-                settingsRepository = myUZApplication().container.settingsRepository,
-                classRepository = myUZApplication().container.classRepository,
-                tasksRepository = myUZApplication().container.tasksRepository,
-                universityRepository = myUZApplication().container.universityRepository
+                application = application, // Przekazujemy wymagane Application
+                settingsRepository = myUzApplication.container.settingsRepository,
+                classRepository = myUzApplication.container.classRepository,
+                tasksRepository = myUzApplication.container.tasksRepository,
+                universityRepository = myUzApplication.container.universityRepository,
+                notificationsRepository = myUzApplication.container.notificationsRepository
             )
         }
 
@@ -44,6 +51,8 @@ object AppViewModelProvider {
 
         initializer {
             TaskAddEditViewModel(
+                // DODANO PRZEKAZANIE APPLICATION:
+                application = myUZApplication(),
                 savedStateHandle = createSavedStateHandle(),
                 tasksRepository = myUZApplication().container.tasksRepository,
                 classRepository = myUZApplication().container.classRepository
@@ -76,7 +85,6 @@ object AppViewModelProvider {
                 gradesRepository = myUZApplication().container.gradesRepository,
                 classRepository = myUZApplication().container.classRepository,
                 settingsRepository = myUZApplication().container.settingsRepository,
-                // DODANO BRAKUJĄCE REPOZYTORIUM:
                 userCourseRepository = myUZApplication().container.userCourseRepository
             )
         }
@@ -101,7 +109,6 @@ object AppViewModelProvider {
             AbsencesViewModel(
                 absenceRepository = myUZApplication().container.absenceRepository,
                 classRepository = myUZApplication().container.classRepository,
-                // DODANO BRAKUJĄCE REPOZYTORIA:
                 settingsRepository = myUZApplication().container.settingsRepository,
                 userCourseRepository = myUZApplication().container.userCourseRepository
             )
@@ -118,7 +125,9 @@ object AppViewModelProvider {
             AddEditAbsenceViewModel(
                 savedStateHandle = createSavedStateHandle(),
                 absenceRepository = myUZApplication().container.absenceRepository,
-                classRepository = myUZApplication().container.classRepository
+                classRepository = myUZApplication().container.classRepository,
+                settingsRepository = myUZApplication().container.settingsRepository,
+                userCourseRepository = myUZApplication().container.userCourseRepository
             )
         }
 
@@ -133,9 +142,7 @@ object AppViewModelProvider {
 
         initializer {
             SettingsViewModel(
-                // ✅ TUTAJ PRZEKAZUJEMY NASZ NOWY BACKUP MANAGER:
                 backupManager = BackupManager(AppDatabase.getDatabase(myUZApplication())),
-
                 settingsRepository = myUZApplication().container.settingsRepository,
                 universityRepository = myUZApplication().container.universityRepository,
                 classRepository = myUZApplication().container.classRepository,

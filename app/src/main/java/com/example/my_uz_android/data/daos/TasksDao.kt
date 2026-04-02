@@ -19,7 +19,7 @@ interface TasksDao {
     fun getIncompleteTasks(): Flow<List<TaskEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(task: TaskEntity)
+    suspend fun insert(task: TaskEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(tasks: List<TaskEntity>)

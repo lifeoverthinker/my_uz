@@ -3,15 +3,17 @@ package com.example.my_uz_android.ui.screens.index
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.GradeEntity
+import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.GradesRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UserCourseRepository
+import com.example.my_uz_android.util.GradeCalculator
+import com.example.my_uz_android.util.SubgroupMatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import com.example.my_uz_android.util.GradeCalculator
 
 data class ClassTypeState(
     val name: String,
@@ -33,7 +35,13 @@ data class GradesUiState(
     val isLoading: Boolean = false,
     val allGrades: List<GradeEntity> = emptyList(),
     val userCourses: List<UserCourseEntity> = emptyList(),
-    val selectedGroupCodes: Set<String> = emptySet()
+    val selectedGroupCodes: Set<String> = emptySet(),
+    val isPlanSelected: Boolean = false
+)
+
+private data class ActiveCourseFilter(
+    val groupCode: String,
+    val subgroupRaw: String?
 )
 
 class GradesViewModel(
@@ -44,6 +52,7 @@ class GradesViewModel(
 ) : ViewModel() {
 
     private val _selectedGroups = MutableStateFlow<Set<String>>(emptySet())
+    private var isGroupsInitialized = false
 
     val uiState: StateFlow<GradesUiState> = combine(
         gradesRepository.getAllGradesStream(),
@@ -51,100 +60,160 @@ class GradesViewModel(
         userCourseRepository.getAllUserCoursesStream(),
         settingsRepository.getSettingsStream(),
         _selectedGroups
-    ) { grades, allClasses, courses, settings, selectedGroups ->
+    ) { grades, allClasses, courses, settings, selectedGroupsRaw ->
 
+        fun normalizeGroupCode(v: String?): String = v?.trim()?.uppercase().orEmpty()
+        fun normalizeSubject(v: String?): String = v?.trim()?.lowercase().orEmpty()
+        fun normalizeType(v: String?): String {
+            val raw = v?.trim().orEmpty()
+            return if (raw.isBlank()) "Inne" else raw
+        }
+
+        // 1) Kursy UI: główny + dodatkowe
         val allCoursesForUi = mutableListOf<UserCourseEntity>()
-        settings?.selectedGroupCode?.let { mainCode ->
+        settings?.selectedGroupCode?.let { main ->
             allCoursesForUi.add(
                 UserCourseEntity(
                     id = -1,
-                    groupCode = mainCode,
-                    fieldOfStudy = settings.fieldOfStudy ?: mainCode,
-                    semester = settings.currentSemester
+                    groupCode = main,
+                    fieldOfStudy = settings.fieldOfStudy ?: main,
+                    semester = settings.currentSemester,
+                    selectedSubgroup = settings.selectedSubgroup
                 )
             )
         }
-        allCoursesForUi.addAll(courses)
-
-        val activeCodes = if (selectedGroups.isEmpty()) {
-            val codes = allCoursesForUi.map { it.groupCode }.toMutableSet()
-            codes
-        } else {
-            selectedGroups
+        courses.forEach { course ->
+            val code = normalizeGroupCode(course.groupCode)
+            if (allCoursesForUi.none { normalizeGroupCode(it.groupCode) == code }) {
+                allCoursesForUi.add(course)
+            }
         }
 
-        val classesForSelectedGroups = allClasses.filter { activeCodes.contains(it.groupCode) }
-        val courseMap = allCoursesForUi.associateBy { it.groupCode }
-        val subjectToCourseMap = classesForSelectedGroups.associate {
-            val course = courseMap[it.groupCode]
-            it.subjectName to (course?.fieldOfStudy ?: course?.groupCode ?: it.groupCode)
+        val allUserCodes = allCoursesForUi.map { normalizeGroupCode(it.groupCode) }.toSet()
+
+        // 2) Stabilna inicjalizacja selected groups (jak w CalendarVM)
+        val activeCodes: Set<String> = run {
+            val selectedNormalized = selectedGroupsRaw.map { normalizeGroupCode(it) }.toSet()
+
+            if (!isGroupsInitialized && allUserCodes.isNotEmpty()) {
+                _selectedGroups.value = allUserCodes
+                isGroupsInitialized = true
+                allUserCodes
+            } else {
+                val source = if (selectedNormalized.isNotEmpty()) selectedNormalized else _selectedGroups.value
+                source.map { normalizeGroupCode(it) }.filter { it in allUserCodes }.toSet()
+            }
         }
 
-        val subjectsFromSchedule = classesForSelectedGroups
-            .groupBy { it.subjectName }
-            .map { (subjectName, subjectClasses) ->
-                val classTypes = subjectClasses.map { it.classType }.distinct().sorted()
-                subjectName to classTypes
-            }
-            .sortedBy { it.first }
+        // 3) Filtry per groupCode z podgrupami
+        val activeFilters = buildActiveFilters(settings, courses)
+            .filter { normalizeGroupCode(it.groupCode) in activeCodes }
 
-        val subjects = subjectsFromSchedule.map { (subjectName, classTypes) ->
-            val subjectGrades = grades.filter { it.subjectName == subjectName }
+        val filtersByGroup = activeFilters.groupBy { normalizeGroupCode(it.groupCode) }
 
-            val types = classTypes.map { typeName ->
-                val typeGrades = subjectGrades.filter { it.classType == typeName }
-                val rawTypeAverage = GradeCalculator.calculateGPA(typeGrades)
-                val typeAverage = if (rawTypeAverage > 0.0) rawTypeAverage else null
+        // 4) Klasy widoczne: najpierw groupCode, potem wspólny matcher podgrup
+        val activeClasses = allClasses.filter { clazz ->
+            val groupCode = normalizeGroupCode(clazz.groupCode)
+            if (groupCode !in activeCodes) return@filter false
 
-                ClassTypeState(name = typeName, average = typeAverage, grades = typeGrades)
-            }
-
-            val rawSubjectAverage = GradeCalculator.calculateGPA(subjectGrades)
-            val subjectAverage = if (rawSubjectAverage > 0.0) rawSubjectAverage else null
-
-            val courseName = subjectToCourseMap[subjectName] ?: "Inne"
-
-            SubjectState(
-                code = subjectName.take(3).uppercase(),
-                name = subjectName,
-                courseName = courseName,
-                average = subjectAverage,
-                types = types
+            val filtersForGroup = filtersByGroup[groupCode] ?: return@filter false
+            SubgroupMatcher.matches(
+                classSubgroupRaw = clazz.subgroup,
+                selectedSubgroupsRaw = filtersForGroup.map { it.subgroupRaw }
             )
         }
 
-        val allGradesForAverage = grades.filter {
-            subjectsFromSchedule.any { s -> s.first == it.subjectName }
+        // Mapowanie subject -> groupCode (dla przypisania kierunku)
+        val subjectToGroup = activeClasses
+            .groupBy { normalizeSubject(it.subjectName) }
+            .mapValues { (_, list) -> normalizeGroupCode(list.firstOrNull()?.groupCode) }
+            .filterValues { it.isNotBlank() }
+
+        val courseMap = allCoursesForUi.associateBy { normalizeGroupCode(it.groupCode) }
+
+        // 5) Oceny aktywne: jeśli brak mapowania do planu, nie gubimy (historyczne)
+        val activeGrades = grades.filter { grade ->
+            val group = subjectToGroup[normalizeSubject(grade.subjectName)]
+            if (group.isNullOrBlank()) true else group in activeCodes
         }
 
-        val rawOverallAverage = GradeCalculator.calculateGPA(allGradesForAverage)
-        val overallAverage = if (rawOverallAverage > 0.0) rawOverallAverage else null
+        val subjectsFromClasses = activeClasses.map { normalizeSubject(it.subjectName) }.toSet()
+        val subjectsFromGrades = activeGrades.map { normalizeSubject(it.subjectName) }.toSet()
+        val allSubjects = (subjectsFromClasses + subjectsFromGrades).toList().sorted()
+
+        val subjects = allSubjects.mapNotNull { subjectKey ->
+            val classesForSubject = activeClasses.filter { normalizeSubject(it.subjectName) == subjectKey }
+            val gradesForSubject = activeGrades.filter { normalizeSubject(it.subjectName) == subjectKey }
+
+            if (classesForSubject.isEmpty() && gradesForSubject.isEmpty()) return@mapNotNull null
+
+            val displayName = classesForSubject.firstOrNull()?.subjectName
+                ?: gradesForSubject.firstOrNull()?.subjectName
+                ?: subjectKey
+
+            val typesFromClasses = classesForSubject.map { normalizeType(it.classType) }
+            val typesFromGrades = gradesForSubject.map { normalizeType(it.classType) }
+            val allTypes = (typesFromClasses + typesFromGrades).distinct().sorted()
+
+            val typeStates = allTypes.map { typeName ->
+                val gradesForType = gradesForSubject.filter { normalizeType(it.classType) == typeName }
+                val avgRaw = GradeCalculator.calculateGPA(gradesForType)
+                ClassTypeState(
+                    name = typeName,
+                    average = if (avgRaw > 0.0) avgRaw else null,
+                    grades = gradesForType
+                )
+            }
+
+            val subjAvgRaw = GradeCalculator.calculateGPA(gradesForSubject)
+            val mappedGroup = subjectToGroup[subjectKey]
+            val courseName = if (!mappedGroup.isNullOrBlank()) {
+                val c = courseMap[mappedGroup]
+                c?.fieldOfStudy ?: c?.groupCode ?: mappedGroup
+            } else {
+                "Inne / Dawne"
+            }
+
+            SubjectState(
+                code = displayName.take(3).uppercase(),
+                name = displayName,
+                courseName = courseName,
+                average = if (subjAvgRaw > 0.0) subjAvgRaw else null,
+                types = typeStates
+            )
+        }
+
+        val overallRaw = GradeCalculator.calculateGPA(activeGrades)
 
         GradesUiState(
             subjects = subjects,
-            average = overallAverage,
+            average = if (overallRaw > 0.0) overallRaw else null,
             isLoading = false,
             allGrades = grades,
             userCourses = allCoursesForUi,
-            selectedGroupCodes = activeCodes
+            selectedGroupCodes = activeCodes,
+            isPlanSelected = (settings?.selectedGroupCode?.isNotBlank() == true) || courses.isNotEmpty()
         )
     }
         .flowOn(Dispatchers.Default)
+        .distinctUntilChanged()
         .stateIn(
             viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
+            SharingStarted.WhileSubscribed(5000),
             GradesUiState(isLoading = true)
         )
 
     fun toggleGroupVisibility(groupCode: String) {
+        val normalized = groupCode.trim().uppercase()
         val current = _selectedGroups.value.toMutableSet()
-        if (current.contains(groupCode)) current.remove(groupCode) else current.add(groupCode)
+        if (current.contains(normalized)) current.remove(normalized) else current.add(normalized)
         _selectedGroups.value = current
     }
 
     suspend fun isPlanSelected(): Boolean {
         val settings = settingsRepository.getSettingsStream().first()
-        return !settings?.selectedGroupCode.isNullOrBlank()
+        val courses = userCourseRepository.getAllUserCoursesStream().first()
+        return !settings?.selectedGroupCode.isNullOrBlank() || courses.isNotEmpty()
     }
 
     fun deleteGrade(grade: GradeEntity) {
@@ -155,14 +224,19 @@ class GradesViewModel(
         viewModelScope.launch { gradesRepository.insertGrade(grade.copy(id = 0)) }
     }
 
-    // NOWE: Szybki zapis dla modala
     fun saveGrade(grade: GradeEntity) {
         viewModelScope.launch {
-            if (grade.id == 0) {
-                gradesRepository.insertGrade(grade)
-            } else {
-                gradesRepository.updateGrade(grade)
-            }
+            if (grade.id == 0) gradesRepository.insertGrade(grade) else gradesRepository.updateGrade(grade)
         }
+    }
+
+    private fun buildActiveFilters(
+        settings: SettingsEntity?,
+        courses: List<UserCourseEntity>
+    ): List<ActiveCourseFilter> {
+        val out = mutableListOf<ActiveCourseFilter>()
+        settings?.selectedGroupCode?.let { out.add(ActiveCourseFilter(it, settings.selectedSubgroup)) }
+        courses.forEach { out.add(ActiveCourseFilter(it.groupCode, it.selectedSubgroup)) }
+        return out
     }
 }

@@ -1,16 +1,16 @@
 package com.example.my_uz_android.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable // DODANE
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -19,15 +19,62 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
-import com.example.my_uz_android.ui.theme.extendedColors
+
+/**
+ * REUŻYWALNA IKONA NA OKRĄGŁYM TLE (Odwzorowana z Figmy)
+ * Dopasowana do Material 3 Light/Dark
+ */
+@Composable
+fun TopBarActionIcon(
+    icon: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    iconTint: Color = MaterialTheme.colorScheme.onSurface,
+    isLoading: Boolean = false,
+    isFilled: Boolean = true
+) {
+    val finalBackgroundColor = if (isFilled) backgroundColor else Color.Transparent
+    
+    Box(
+        modifier = modifier
+            .size(48.dp) // Wielkość klikalnego obszaru wg MD (48dp)
+            .clip(CircleShape)
+            .clickable(enabled = !isLoading, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp) // Wielkość kółka (background) - MD standard
+                .background(color = finalBackgroundColor, shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = iconTint
+                )
+            } else {
+                Icon(
+                    painter = painterResource(id = icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp), // Ikona 24x24 (8dp paddingu wewnątrz kółka 40dp)
+                    tint = iconTint
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun BaseTopBarContainer(
     modifier: Modifier = Modifier,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
     content: @Composable RowScope.() -> Unit
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.background,
+        color = backgroundColor,
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
@@ -35,6 +82,7 @@ private fun BaseTopBarContainer(
                 .statusBarsPadding()
                 .height(72.dp)
                 .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
             content = content
         )
@@ -45,61 +93,128 @@ private fun BaseTopBarContainer(
 fun TopAppBar(
     title: String,
     subtitle: String? = null,
-    navigationIcon: Int? = R.drawable.ic_chevron_left,
+    navigationIcon: Int? = null,
     onNavigationClick: () -> Unit = {},
-    isNavigationIconFilled: Boolean = false,
-    isCenterAligned: Boolean = false, // PRZYWRÓCONE
-    actions: @Composable RowScope.() -> Unit = {},
-    bottomContent: @Composable (() -> Unit)? = null // PRZYWRÓCONE
+    isNavigationIconFilled: Boolean = true,
+    isCenterAligned: Boolean = false,
+    isFilled: Boolean = true,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    bottomContent: @Composable (() -> Unit)? = null,
+    titleClickable: Boolean = false,
+    onTitleClick: () -> Unit = {},
+    titleIcon: Int? = null,
+    titleColor: Color? = null,
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.background,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.background(containerColor)) {
+        BaseTopBarContainer(backgroundColor = containerColor) {
             Row(
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .height(72.dp)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.weight(1f, fill = false),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (isCenterAligned) Arrangement.Center else Arrangement.spacedBy(16.dp)
             ) {
                 if (navigationIcon != null) {
                     TopBarActionIcon(
                         icon = navigationIcon,
                         onClick = onNavigationClick,
-                        isFilled = isNavigationIconFilled
+                        isFilled = isNavigationIconFilled,
+                        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     )
-                    Spacer(Modifier.width(12.dp))
                 }
 
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .clickable(enabled = titleClickable, onClick = onTitleClick)
+                        .padding(vertical = 4.dp),
                     horizontalAlignment = if (isCenterAligned) Alignment.CenterHorizontally else Alignment.Start
                 ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontFamily = InterFontFamily,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 20.sp
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (titleColor != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .background(color = titleColor, shape = RoundedCornerShape(4.dp))
+                            )
+                        }
+                        Text(
+                            text = title,
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = if (subtitle != null) FontWeight.Medium else FontWeight.SemiBold,
+                                fontSize = if (subtitle != null) 16.sp else 24.sp,
+                                lineHeight = if (subtitle != null) 24.sp else 32.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (titleIcon != null) {
+                            Icon(
+                                painter = painterResource(id = titleIcon),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                     if (!subtitle.isNullOrEmpty()) {
                         Text(
                             text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 actions()
             }
-            bottomContent?.invoke() // WYWOŁANIE DOLNEJ ZAWARTOŚCI
         }
+        bottomContent?.invoke()
     }
+}
+
+@Composable
+fun AddEditTopAppBar(
+    title: String,
+    onBackClick: () -> Unit,
+    onSaveClick: () -> Unit,
+    saveButtonEnabled: Boolean = true,
+    titleColor: Color? = null
+) {
+    TopAppBar(
+        title = title,
+        navigationIcon = R.drawable.ic_chevron_left,
+        onNavigationClick = onBackClick,
+        isNavigationIconFilled = true,
+        titleColor = titleColor,
+        actions = {
+            Button(
+                onClick = onSaveClick,
+                enabled = saveButtonEnabled,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(100.dp),
+                modifier = Modifier.height(40.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    "Zapisz",
+                    style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                )
+            }
+        }
+    )
 }
 
 @Composable
@@ -108,46 +223,50 @@ fun CalendarTopAppBar(
     isExpanded: Boolean,
     onNavigationClick: () -> Unit,
     onTitleClick: () -> Unit,
-    actions: @Composable RowScope.() -> Unit
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
-    BaseTopBarContainer {
-        TopBarActionIcon(
-            icon = R.drawable.ic_menu,
-            onClick = onNavigationClick,
-            isFilled = true
-        )
-
-        Spacer(Modifier.width(12.dp))
-
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clickable { onTitleClick() }, // TERAZ DZIAŁA
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                style = TextStyle(
-                    fontFamily = InterFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 22.sp
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Icon(
-                painter = painterResource(if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-        actions()
-    }
+    TopAppBar(
+        title = title,
+        navigationIcon = R.drawable.ic_menu,
+        onNavigationClick = onNavigationClick,
+        titleClickable = true,
+        onTitleClick = onTitleClick,
+        titleIcon = if (isExpanded) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down,
+        isNavigationIconFilled = true,
+        actions = actions
+    )
 }
 
+@Composable
+fun PreviewTopAppBar(
+    title: String,
+    subtitle: String? = null,
+    isFavorite: Boolean = false,
+    onBackClick: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    actionIcon: Int? = null,
+    onActionClick: () -> Unit = {}
+) {
+    TopAppBar(
+        title = title,
+        subtitle = subtitle,
+        navigationIcon = R.drawable.ic_chevron_left,
+        onNavigationClick = onBackClick,
+        isNavigationIconFilled = true,
+        actions = {
+            if (actionIcon != null) {
+                TopBarActionIcon(icon = actionIcon, onClick = onActionClick, isFilled = true)
+            }
+            TopBarActionIcon(
+                icon = if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart,
+                onClick = onFavoriteClick,
+                isFilled = true,
+                iconTint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    )
+}
 
-/**
- * PASEK WYSZUKIWANIA
- */
 @Composable
 fun SearchTopAppBar(
     query: String,
@@ -155,106 +274,38 @@ fun SearchTopAppBar(
     onBackClick: () -> Unit
 ) {
     Surface(
-        color = extendedColors.buttonBackground,
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 4.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .statusBarsPadding()
                 .height(72.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 16.dp)
         ) {
-            IconButton(onClick = onBackClick) {
-                Icon(painterResource(R.drawable.ic_chevron_left), "Wstecz")
-            }
-
-            Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                if (query.isEmpty()) {
-                    Text("Szukaj...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.6f))
-                }
-                BasicTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    singleLine = true
-                )
-            }
-
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(painterResource(R.drawable.ic_close), "Wyczyść")
-                }
-            }
-        }
-    }
-}
-
-/**
- * REUŻYWALNA IKONA NA OKRĄGŁYM TLE
- */
-
-@Composable
-fun TopBarActionIcon(
-    icon: Int,
-    onClick: () -> Unit,
-    isFilled: Boolean = false,
-    isLoading: Boolean = false,
-    tint: Color = extendedColors.iconText
-) {
-    IconButton(
-        onClick = onClick,
-        enabled = !isLoading,
-        modifier = Modifier
-            .size(48.dp)
-            .then(
-                if (isFilled) Modifier.background(extendedColors.homeButtonBackground, CircleShape)
-                else Modifier
-            )
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
-                color = tint
-            )
-        } else {
-            Icon(
-                painter = painterResource(id = icon),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = tint
-            )
-        }
-    }
-}
-
-/**
- * SPECJALISTYCZNY PASEK DLA PODGLĄDU (Preview)
- */
-@Composable
-fun PreviewTopAppBar(
-    title: String,
-    subtitle: String,
-    onBackClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
-    isFavorite: Boolean,
-    actionIcon: Int,
-    onActionClick: () -> Unit
-) {
-    TopAppBar(
-        title = title,
-        subtitle = subtitle,
-        onNavigationClick = onBackClick,
-        actions = {
-            TopBarActionIcon(icon = actionIcon, onClick = onActionClick)
             TopBarActionIcon(
-                icon = if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart,
-                tint = if (isFavorite) Color.Red else extendedColors.iconText,
-                onClick = onFavoriteClick
+                icon = R.drawable.ic_chevron_left,
+                onClick = onBackClick,
+                isFilled = true,
+                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            TextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Szukaj...") },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+                singleLine = true
             )
         }
-    )
+    }
 }

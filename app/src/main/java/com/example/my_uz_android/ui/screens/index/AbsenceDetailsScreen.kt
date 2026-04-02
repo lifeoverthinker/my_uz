@@ -1,6 +1,7 @@
 package com.example.my_uz_android.ui.screens.index
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,15 +15,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.theme.getAppAccentColor
+import com.example.my_uz_android.ui.theme.getClassColorIndex
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
-// --- WRAPPER DLA NAWIGACJI ---
 @Composable
 fun AbsenceDetailsScreenRoute(
     viewModel: AbsenceDetailsViewModel,
@@ -30,11 +34,16 @@ fun AbsenceDetailsScreenRoute(
     onEditClick: (Int) -> Unit,
     onDuplicateClick: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val absence = uiState.absence
 
     if (uiState.isLoading || absence == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest),
+            contentAlignment = Alignment.Center
+        ) {
             CircularProgressIndicator()
         }
         return
@@ -42,7 +51,7 @@ fun AbsenceDetailsScreenRoute(
 
     AbsenceDetailsScreen(
         subjectName = absence.subjectName ?: "",
-        classType = ClassTypeUtils.getFullName(absence.classType), // <--- Tutaj zmiana na pełną nazwę!
+        classType = ClassTypeUtils.getFullName(absence.classType),
         dateMillis = absence.date,
         isExcused = absence.isExcused,
         reason = absence.description ?: "",
@@ -53,8 +62,6 @@ fun AbsenceDetailsScreenRoute(
     )
 }
 
-// Reszta pliku pozostaje bez zmian (wklejam dla wygody całą treść z dołu)
-// --- BEZSTANOWY WIDOK ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AbsenceDetailsScreen(
@@ -71,166 +78,170 @@ fun AbsenceDetailsScreen(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = "",
-                navigationIcon = R.drawable.ic_close,
-                isNavigationIconFilled = true,
-                onNavigationClick = onNavigateBack,
-                actions = {
-                    TopBarActionIcon(
-                        icon = R.drawable.ic_edit,
-                        onClick = onEditClick
-                    )
-                    Box {
+    val isDark = isSystemInDarkTheme()
+    val colorIndex = getClassColorIndex(subjectName)
+    val accentColor = getAppAccentColor(colorIndex, isDark)
+
+    // Zielony komentarz:
+    // Zostawiamy kolor statusu 1:1 względem obecnego UX (zielony + akcent dla nieusprawiedliwionej).
+    val statusText = if (isExcused) "Usprawiedliwiona" else "Nieusprawiedliwiona"
+    val statusColor = if (isExcused) Color(0xFF388E3C) else getAppAccentColor(5, isDark)
+    val statusIcon = if (isExcused) R.drawable.ic_check_circle_broken else R.drawable.ic_close
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = "",
+                    navigationIcon = R.drawable.ic_close,
+                    isNavigationIconFilled = true,
+                    onNavigationClick = onNavigateBack,
+                    containerColor = Color.Transparent,
+                    actions = {
                         TopBarActionIcon(
-                            icon = R.drawable.ic_dots_vertical,
-                            onClick = { showMenu = true }
+                            icon = R.drawable.ic_edit,
+                            isFilled = true,
+                            onClick = onEditClick
                         )
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Duplikuj") },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_copy),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onDuplicateClick()
-                                }
+                        Box {
+                            TopBarActionIcon(
+                                icon = R.drawable.ic_dots_vertical,
+                                isFilled = true,
+                                onClick = { showMenu = true }
                             )
-                            DropdownMenuItem(
-                                text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_trash),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    showDeleteDialog = true
-                                }
-                            )
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Duplikuj") },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_copy),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onDuplicateClick()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_trash),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        showDeleteDialog = true
+                                    }
+                                )
+                            }
                         }
                     }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // --- Nagłówek ---
-            Row(
+                )
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.Top
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Box(
+                Row(
                     modifier = Modifier
-                        .padding(top = 8.dp)
-                        .size(24.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.Top
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(16.dp)
-                            .background(
-                                color = if (isExcused) Color(0xFF4285F4) else MaterialTheme.colorScheme.error,
-                                shape = RoundedCornerShape(4.dp)
-                            )
-                    )
+                            .padding(top = 8.dp)
+                            .size(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .background(
+                                    color = accentColor,
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(24.dp))
+
+                    Column {
+                        Text(
+                            text = subjectName.ifBlank { "Nieznany przedmiot" },
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = formatAbsenceDetailsDate(dateMillis),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                Column {
-                    Text(
-                        text = subjectName.ifBlank { "Nieznany przedmiot" },
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Normal),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = formatDate(dateMillis),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Status ---
-            val statusText = if (isExcused) "Usprawiedliwiona" else "Nieusprawiedliwiona"
-            val statusColor = if (isExcused) Color(0xFF388E3C) else MaterialTheme.colorScheme.error
-            val statusIcon = if (isExcused) R.drawable.ic_check_circle_broken else R.drawable.ic_close
-
-            DetailRow(
-                iconRes = statusIcon,
-                iconTint = statusColor,
-                label = "Status",
-                value = statusText,
-                valueColor = statusColor,
-                isValueHighlight = true
-            )
-
-            DetailRow(
-                iconRes = R.drawable.ic_stand,
-                label = "Rodzaj zajęć",
-                value = classType
-            )
-
-            if (reason.isNotBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
                 DetailRow(
-                    iconRes = R.drawable.ic_menu_2,
-                    label = null, // Ukrywamy szary nagłówek
-                    value = reason,
-                    isMultiline = true
+                    iconRes = statusIcon,
+                    iconTint = statusColor,
+                    label = "Status",
+                    value = statusText,
+                    valueColor = statusColor,
+                    isValueHighlight = true
                 )
+
+                DetailRow(
+                    iconRes = R.drawable.ic_stand,
+                    label = "Rodzaj zajęć",
+                    value = classType
+                )
+
+                if (reason.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DetailRow(
+                        iconRes = R.drawable.ic_menu_2,
+                        label = null,
+                        value = reason,
+                        isMultiline = true
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-
-        // --- Dialog Usuwania ---
-        if (showDeleteDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Usuń nieobecność") },
-                text = { Text("Czy na pewno chcesz usunąć tę nieobecność? Tej operacji nie można cofnąć.") },
-                confirmButton = {
-                    TextButton(onClick = {
+            if (showDeleteDialog) {
+                DeleteConfirmationDialog(
+                    onConfirm = {
                         onDeleteClick()
                         showDeleteDialog = false
-                    }) {
-                        Text("Usuń", color = MaterialTheme.colorScheme.error)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj") }
-                }
-            )
+                    },
+                    onDismiss = { showDeleteDialog = false },
+                    itemType = "nieobecność"
+                )
+            }
         }
     }
 }
 
-// --- Komponent Pomocniczy dla Wierszy ---
 @Composable
 private fun DetailRow(
     iconRes: Int,
@@ -268,18 +279,21 @@ private fun DetailRow(
             }
             Text(
                 text = value.ifEmpty { "-" },
-                style = if (isValueHighlight)
+                style = if (isValueHighlight) {
                     MaterialTheme.typography.titleLarge
-                else
-                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                } else {
+                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                },
                 color = valueColor
             )
         }
     }
 }
 
-private fun formatDate(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp)).replaceFirstChar { it.uppercase() }
+private fun formatAbsenceDetailsDate(timestamp: Long): String {
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+        .format(Date(timestamp))
+        .replaceFirstChar { it.uppercase() }
 }
 
 @Preview(showBackground = true)

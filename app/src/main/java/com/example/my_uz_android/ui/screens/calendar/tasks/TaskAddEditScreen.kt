@@ -25,11 +25,11 @@ import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.util.*
 
-// --- WRAPPER DLA NAWIGACJI ---
 @Composable
 fun TaskAddEditScreenRoute(
     viewModel: TaskAddEditViewModel,
@@ -42,13 +42,10 @@ fun TaskAddEditScreenRoute(
         if (isSaved) onNavigateBack()
     }
 
-    val dateMillis = uiState.startDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    val dateMillis = uiState.startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    val reminderDateMillis = uiState.reminderDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
     var selectedQuickType by remember { mutableStateOf("") }
-    var hasReminder by remember { mutableStateOf(false) }
-    var reminderDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
-    var reminderHour by remember { mutableStateOf(8) }
-    var reminderMinute by remember { mutableStateOf(0) }
 
     val subjectsList = uiState.availableSubjects.map { it.first }
     val classTypesList = uiState.availableSubjects.find { it.first == uiState.classSubject }?.second ?: emptyList()
@@ -68,7 +65,7 @@ fun TaskAddEditScreenRoute(
 
         selectedDateMillis = dateMillis,
         onDateChange = { millis ->
-            val date = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+            val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
             viewModel.updateStartDate(date)
             viewModel.updateEndDate(date)
         },
@@ -79,17 +76,22 @@ fun TaskAddEditScreenRoute(
             viewModel.updateStartTime(LocalTime.of(h, m))
         },
 
-        hasReminder = hasReminder,
-        onHasReminderChange = { hasReminder = it },
+        hasReminder = uiState.hasReminder,
+        onHasReminderChange = { viewModel.updateHasReminder(it) },
         reminderDateMillis = reminderDateMillis,
-        onReminderDateChange = { reminderDateMillis = it },
-        reminderHour = reminderHour,
-        reminderMinute = reminderMinute,
-        onReminderTimeChange = { h, m -> reminderHour = h; reminderMinute = m },
+        onReminderDateChange = { millis ->
+            val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+            viewModel.updateReminderDate(date)
+        },
+        reminderHour = uiState.reminderTime.hour,
+        reminderMinute = uiState.reminderTime.minute,
+        onReminderTimeChange = { h, m ->
+            viewModel.updateReminderTime(LocalTime.of(h, m))
+        },
 
         selectedSubject = uiState.classSubject ?: "",
         onSubjectChange = { newSubject ->
-            viewModel.updateClassSubject(newSubject)
+            viewModel.updateSubjectName(newSubject)
             viewModel.updateClassType("")
         },
         subjectsList = subjectsList,
@@ -104,11 +106,10 @@ fun TaskAddEditScreenRoute(
         onDescriptionChange = { viewModel.updateDescription(it) },
 
         onSaveClick = { viewModel.saveTask() },
-        onNavigateBack = onNavigateBack
+        onBackClick = onNavigateBack
     )
 }
 
-// --- WSPÓLNE STYLE ---
 @Composable
 private fun getAppTextFieldColors() = TextFieldDefaults.colors(
     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
@@ -162,7 +163,6 @@ private fun ClickableFieldRow(
     }
 }
 
-// --- BEZSTANOWY WIDOK ---
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TaskAddEditScreen(
@@ -196,7 +196,7 @@ fun TaskAddEditScreen(
     description: String,
     onDescriptionChange: (String) -> Unit,
     onSaveClick: () -> Unit,
-    onNavigateBack: () -> Unit
+    onBackClick: () -> Unit
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -211,7 +211,7 @@ fun TaskAddEditScreen(
                 title = if (isEditMode) "Edytuj zadanie" else "Dodaj zadanie",
                 navigationIcon = R.drawable.ic_close,
                 isNavigationIconFilled = true,
-                onNavigationClick = onNavigateBack,
+                onNavigationClick = onBackClick,
                 actions = {
                     Button(
                         onClick = onSaveClick,
@@ -232,14 +232,27 @@ fun TaskAddEditScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. SZYBKI WYBÓR
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "SZYBKI WYBÓR",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                val quickTypes = listOf("Zadanie domowe", "Projekt", "Egzamin", "Kolokwium", "Prezentacja", "Raport")
+
+                /**
+                 * Szybki wybór dla zadań:
+                 * celowo bez "Aktywność" (to opcja wyłącznie dla ocen).
+                 */
+                val quickTypes = listOf(
+                    "Kolokwium",
+                    "Egzamin",
+                    "Wejściówka",
+                    "Projekt",
+                    "Prezentacja",
+                    "Zadanie domowe",
+                    "Odpowiedź ustna"
+                )
+
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(quickTypes) { type ->
                         FilterChip(
@@ -251,7 +264,6 @@ fun TaskAddEditScreen(
                 }
             }
 
-            // 2. TYTUŁ ZADANIA
             TextField(
                 value = title,
                 onValueChange = onTitleChange,
@@ -263,7 +275,6 @@ fun TaskAddEditScreen(
                 shape = AppTextFieldShape
             )
 
-            // 5. CAŁY DZIEŃ PRZEŁĄCZNIK
             Row(
                 modifier = Modifier.fillMaxWidth().clickable { onAllDayChange(!isAllDay) }.padding(vertical = 4.dp, horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -273,7 +284,6 @@ fun TaskAddEditScreen(
                 Switch(checked = isAllDay, onCheckedChange = { onAllDayChange(it) })
             }
 
-            // 3. DATA WYKONANIA
             ClickableFieldRow(
                 label = "Data wykonania",
                 value = formatDate(selectedDateMillis),
@@ -281,7 +291,6 @@ fun TaskAddEditScreen(
                 onClick = { showDatePicker = true }
             )
 
-            // 4. CZAS WYKONANIA
             AnimatedVisibility(visible = !isAllDay, enter = expandVertically(), exit = shrinkVertically()) {
                 ClickableFieldRow(
                     label = "Godzina wykonania",
@@ -292,7 +301,6 @@ fun TaskAddEditScreen(
                 )
             }
 
-            // 6. PRZYPOMNIENIE
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().clickable { onHasReminderChange(!hasReminder) }.padding(vertical = 4.dp, horizontal = 4.dp),
@@ -327,7 +335,6 @@ fun TaskAddEditScreen(
                 }
             }
 
-            // 7. PRZEDMIOT
             AppDropdownMenu(
                 label = "Przedmiot (opcjonalnie)",
                 selectedOption = selectedSubject,
@@ -335,24 +342,29 @@ fun TaskAddEditScreen(
                 onOptionSelected = onSubjectChange
             )
 
-            // 8. RODZAJ ZAJĘĆ
             AnimatedVisibility(visible = selectedSubject.isNotEmpty() && classTypesList.isNotEmpty(), enter = expandVertically(), exit = shrinkVertically()) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("RODZAJ ZAJĘĆ", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         classTypesList.forEach { type ->
                             FilterChip(
                                 selected = selectedClassType == type,
                                 onClick = { onClassTypeChange(type) },
                                 label = { Text(ClassTypeUtils.getFullName(type)) },
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primaryContainer)
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             )
                         }
                     }
                 }
             }
 
-            // 9. PRIORYTET
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("PRIORYTET", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -362,7 +374,6 @@ fun TaskAddEditScreen(
                 }
             }
 
-            // 10. OPIS
             TextField(
                 value = description,
                 onValueChange = onDescriptionChange,
@@ -378,7 +389,6 @@ fun TaskAddEditScreen(
         }
     }
 
-    // Okna Dialogowe
     if (showDatePicker) DatePicker(date = selectedDateMillis, onDateSelected = { onDateChange(it); showDatePicker = false }, onDismiss = { showDatePicker = false })
     if (showReminderDatePicker) DatePicker(date = reminderDateMillis, onDateSelected = { onReminderDateChange(it); showReminderDatePicker = false }, onDismiss = { showReminderDatePicker = false })
 
@@ -423,5 +433,8 @@ fun AppDropdownMenu(label: String, selectedOption: String, options: List<String>
     }
 }
 
-private fun formatDate(timestamp: Long): String = SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp)).replaceFirstChar { it.uppercase() }
-private fun formatDateShort(timestamp: Long): String = SimpleDateFormat("dd.MM.yyyy", Locale("pl", "PL")).format(Date(timestamp))
+private fun formatDate(timestamp: Long): String =
+    SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp)).replaceFirstChar { it.uppercase() }
+
+private fun formatDateShort(timestamp: Long): String =
+    SimpleDateFormat("dd.MM.yyyy", Locale("pl", "PL")).format(Date(timestamp))

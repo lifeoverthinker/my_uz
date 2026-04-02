@@ -20,25 +20,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.DatePicker
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun AddEditGradeScreenRoute(
     viewModel: AddEditGradeViewModel,
     onNavigateBack: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val isSaved by viewModel.isSaved.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
 
     LaunchedEffect(isSaved) {
-        if (isSaved) {
-            onNavigateBack()
-        }
+        if (isSaved) onNavigateBack()
     }
 
     var selectedQuickType by remember { mutableStateOf("") }
@@ -51,7 +51,10 @@ fun AddEditGradeScreenRoute(
     }
 
     val subjectsList = uiState.availableSubjects.map { it.first }
-    val classTypesList = uiState.availableSubjects.find { it.first == uiState.subjectName }?.second ?: emptyList()
+    val classTypesList = uiState.availableSubjects
+        .find { it.first == uiState.subjectName }
+        ?.second
+        .orEmpty()
 
     AddEditGradeScreen(
         isEditMode = uiState.gradeId > 0,
@@ -59,7 +62,6 @@ fun AddEditGradeScreenRoute(
         onQuickTypeSelect = { type ->
             selectedQuickType = type
             viewModel.updateDescription(type)
-            // Automatyczne przełączanie na Plusy jeśli wybrano Aktywność
             if (type.lowercase() == "aktywność") {
                 viewModel.updateGradeType(GradeType.ACTIVITY)
             }
@@ -76,33 +78,27 @@ fun AddEditGradeScreenRoute(
         gradeValue = uiState.gradeValue?.toString() ?: "5.0",
         onGradeValueChange = { viewModel.updateGradeValue(it.toDoubleOrNull()) },
         pointsScored = uiState.customGradeValue,
-        onPointsScoredChange = { viewModel.updateCustomGradeValue(it) },
+        onPointsScoredChange = viewModel::updateCustomGradeValue,
         activityCount = uiState.customGradeValue.toIntOrNull() ?: 1,
         onActivityCountChange = { viewModel.updateCustomGradeValue(it.toString()) },
         weight = uiState.weight,
-        onWeightChange = { viewModel.updateWeight(it) },
-
+        onWeightChange = viewModel::updateWeight,
         selectedSubject = uiState.subjectName ?: "",
         onSubjectChange = { newSubject ->
             viewModel.updateSubjectName(newSubject)
             viewModel.updateClassType("")
         },
         subjectsList = subjectsList,
-
         selectedClassType = uiState.classType ?: "",
-        onClassTypeChange = { viewModel.updateClassType(it) },
+        onClassTypeChange = viewModel::updateClassType,
         classTypesList = classTypesList,
-
         selectedDateMillis = uiState.date,
-        onDateChange = { viewModel.updateDate(it) },
-
+        onDateChange = viewModel::updateDate,
         title = uiState.description,
-        onTitleChange = { viewModel.updateDescription(it) },
-
+        onTitleChange = viewModel::updateDescription,
         comment = uiState.comment,
-        onCommentChange = { viewModel.updateComment(it) },
-
-        onSaveClick = { viewModel.saveGrade() },
+        onCommentChange = viewModel::updateComment,
+        onSaveClick = viewModel::saveGrade,
         onBackClick = onNavigateBack
     )
 }
@@ -112,17 +108,17 @@ enum class AppGradeType {
 }
 
 @Composable
-private fun getAppTextFieldColors() = TextFieldDefaults.colors(
+private fun gradeAppTextFieldColors() = TextFieldDefaults.colors(
     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
     focusedIndicatorColor = MaterialTheme.colorScheme.primary,
     unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
 )
 
-private val AppTextFieldShape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+private val GradeAppTextFieldShape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
 
 @Composable
-private fun ClickableFieldRow(
+private fun GradeClickableFieldRow(
     label: String,
     value: String,
     iconRes: Int?,
@@ -132,9 +128,9 @@ private fun ClickableFieldRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(AppTextFieldShape)
+            .clip(GradeAppTextFieldShape)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .clickable { onClick() }
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier
@@ -152,9 +148,17 @@ private fun ClickableFieldRow(
                 Spacer(modifier = Modifier.width(16.dp))
             }
             Column {
-                Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(text = value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
         HorizontalDivider(
@@ -231,8 +235,16 @@ fun AddEditGradeScreen(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                // Dodano pozycję "Aktywność" do szybkiego wyboru!
-                val quickTypes = listOf("Kolokwium", "Egzamin", "Aktywność", "Wejściówka", "Projekt", "Prezentacja", "Zadanie domowe", "Odpowiedź ustna")
+                val quickTypes = listOf(
+                    "Kolokwium",
+                    "Egzamin",
+                    "Aktywność",
+                    "Wejściówka",
+                    "Projekt",
+                    "Prezentacja",
+                    "Zadanie domowe",
+                    "Odpowiedź ustna"
+                )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(quickTypes) { type ->
                         FilterChip(
@@ -252,19 +264,19 @@ fun AddEditGradeScreen(
                     placeholder = { Text("np. Kolokwium 1") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    colors = getAppTextFieldColors(),
-                    shape = AppTextFieldShape
+                    colors = gradeAppTextFieldColors(),
+                    shape = GradeAppTextFieldShape
                 )
 
-                ClickableFieldRow(
+                GradeClickableFieldRow(
                     label = "Data",
-                    value = formatMillisToDate(selectedDateMillis) ?: "Wybierz datę",
+                    value = formatGradeAddEditDate(selectedDateMillis) ?: "Wybierz datę",
                     iconRes = R.drawable.ic_calendar,
                     onClick = { showDatePicker = true }
                 )
             }
 
-            AppDropdownMenu(
+            GradeAppDropdownMenu(
                 label = "Przedmiot",
                 selectedOption = selectedSubject,
                 options = subjectsList,
@@ -288,11 +300,10 @@ fun AddEditGradeScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         classTypesList.forEach { type ->
-                            val fullName = ClassTypeUtils.getFullName(type)
                             FilterChip(
                                 selected = selectedClassType == type,
                                 onClick = { onClassTypeChange(type) },
-                                label = { Text(fullName) },
+                                label = { Text(ClassTypeUtils.getFullName(type)) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -304,7 +315,9 @@ fun AddEditGradeScreen(
             }
 
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                ),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
@@ -319,11 +332,13 @@ fun AddEditGradeScreen(
                             onClick = { onGradeTypeChange(AppGradeType.SCALE) },
                             shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
                         ) { Text("Skala") }
+
                         SegmentedButton(
                             selected = gradeType == AppGradeType.POINTS,
                             onClick = { onGradeTypeChange(AppGradeType.POINTS) },
                             shape = RoundedCornerShape(0.dp)
                         ) { Text("Punkty") }
+
                         SegmentedButton(
                             selected = gradeType == AppGradeType.ACTIVITY,
                             onClick = { onGradeTypeChange(AppGradeType.ACTIVITY) },
@@ -334,13 +349,14 @@ fun AddEditGradeScreen(
                     when (gradeType) {
                         AppGradeType.SCALE -> {
                             val gradeOptions = listOf("5.0", "4.5", "4.0", "3.5", "3.0", "2.5", "2.0")
-                            AppDropdownMenu(
+                            GradeAppDropdownMenu(
                                 label = "Wybierz ocenę",
                                 selectedOption = gradeValue,
                                 options = gradeOptions,
                                 onOptionSelected = onGradeValueChange
                             )
                         }
+
                         AppGradeType.POINTS -> {
                             TextField(
                                 value = pointsScored,
@@ -348,10 +364,11 @@ fun AddEditGradeScreen(
                                 label = { Text("Liczba punktów") },
                                 modifier = Modifier.fillMaxWidth(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                colors = getAppTextFieldColors(),
-                                shape = AppTextFieldShape
+                                colors = gradeAppTextFieldColors(),
+                                shape = GradeAppTextFieldShape
                             )
                         }
+
                         AppGradeType.ACTIVITY -> {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -360,17 +377,35 @@ fun AddEditGradeScreen(
                             ) {
                                 FilledIconButton(
                                     onClick = { if (activityCount > 0) onActivityCountChange(activityCount - 1) },
-                                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                                ) { Icon(painterResource(R.drawable.ic_minus), contentDescription = "Odejmij", modifier = Modifier.size(24.dp)) }
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                    )
+                                ) {
+                                    Icon(
+                                        painterResource(R.drawable.ic_minus),
+                                        contentDescription = "Odejmij",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+
                                 Text(
                                     text = activityCount.toString(),
                                     style = MaterialTheme.typography.headlineMedium,
                                     modifier = Modifier.padding(horizontal = 32.dp)
                                 )
+
                                 FilledIconButton(
                                     onClick = { onActivityCountChange(activityCount + 1) },
-                                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                                ) { Icon(painterResource(R.drawable.ic_plus), contentDescription = "Dodaj", modifier = Modifier.size(24.dp)) }
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                ) {
+                                    Icon(
+                                        painterResource(R.drawable.ic_plus),
+                                        contentDescription = "Dodaj",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -387,10 +422,14 @@ fun AddEditGradeScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
-                                Icon(painterResource(R.drawable.ic_scales), contentDescription = null, modifier = Modifier.size(20.dp))
+                                Icon(
+                                    painterResource(R.drawable.ic_scales),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             },
-                            colors = getAppTextFieldColors(),
-                            shape = AppTextFieldShape
+                            colors = gradeAppTextFieldColors(),
+                            shape = GradeAppTextFieldShape
                         )
                     }
                 }
@@ -405,8 +444,8 @@ fun AddEditGradeScreen(
                     .fillMaxWidth()
                     .heightIn(min = 100.dp),
                 maxLines = 5,
-                colors = getAppTextFieldColors(),
-                shape = AppTextFieldShape
+                colors = gradeAppTextFieldColors(),
+                shape = GradeAppTextFieldShape
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -427,13 +466,14 @@ fun AddEditGradeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppDropdownMenu(
+private fun GradeAppDropdownMenu(
     label: String,
     selectedOption: String,
     options: List<String>,
     onOptionSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
@@ -444,14 +484,16 @@ fun AppDropdownMenu(
             readOnly = true,
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.fillMaxWidth().menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
             colors = ExposedDropdownMenuDefaults.textFieldColors(
                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                 focusedIndicatorColor = MaterialTheme.colorScheme.primary,
                 unfocusedIndicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
             ),
-            shape = AppTextFieldShape
+            shape = GradeAppTextFieldShape
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -460,14 +502,19 @@ fun AppDropdownMenu(
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option) },
-                    onClick = { onOptionSelected(option); expanded = false }
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }
                 )
             }
         }
     }
 }
 
-private fun formatMillisToDate(millis: Long?): String? {
+private fun formatGradeAddEditDate(millis: Long?): String? {
     if (millis == null) return null
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(millis)).replaceFirstChar { it.uppercase() }
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+        .format(Date(millis))
+        .replaceFirstChar { it.uppercase() }
 }

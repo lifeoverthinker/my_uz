@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.data.models.EventEntity
@@ -23,15 +24,18 @@ import com.example.my_uz_android.ui.theme.extendedColors
  * @param event Obiekt [EventEntity] zawierający dane wydarzenia do wyświetlenia.
  * @param onClick Akcja wywoływana po kliknięciu w kartę.
  * @param modifier Modyfikator układu dla karty.
+ * @param backgroundColor Opcjonalny kolor tła karty.
  */
 @Composable
 fun EventCard(
     event: EventEntity,
     onClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    backgroundColor: Color? = null
 ) {
-    val cardBackgroundColor = extendedColors.eventCardBackground
-    val contentColor = MaterialTheme.colorScheme.onSurface
+    val cardBackgroundColor = backgroundColor ?: extendedColors.eventCardBackground
+    val titleColor = MaterialTheme.colorScheme.onSurface
+    val descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(
         modifier = modifier
@@ -45,7 +49,7 @@ fun EventCard(
         Text(
             text = event.title,
             style = MaterialTheme.typography.titleSmall.copy(
-                color = contentColor
+                color = titleColor
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -54,7 +58,7 @@ fun EventCard(
         Text(
             text = event.description,
             style = MaterialTheme.typography.bodySmall.copy(
-                color = contentColor
+                color = descriptionColor
             ),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis

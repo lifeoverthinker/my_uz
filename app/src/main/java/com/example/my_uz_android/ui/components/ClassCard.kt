@@ -3,6 +3,7 @@ package com.example.my_uz_android.ui.components
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -55,13 +57,15 @@ fun ClassCard(
     accentColor: Color = MaterialTheme.colorScheme.primary,
     showBadge: Boolean = true,
     hasDeadlines: Boolean = false,
-    isTeacherPlan: Boolean = false, // Parametr zachowany dla kompatybilności wstecznej z innymi ekranami
+    isTeacherPlan: Boolean = false,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val titleColor = MaterialTheme.colorScheme.onSurface
     val detailsColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val avatarTextColor = Color.White
+    
+    // Dynamiczny kolor tekstu w kółku na podstawie jasności akcentu
+    val avatarTextColor = if (accentColor.luminance() > 0.5f) Color(0xFF1D192B) else Color.White
 
     val isPast = remember(classItem) {
         try {
@@ -229,44 +233,6 @@ private fun ClassCardHomePreview() {
     }
 }
 
-@Preview(showBackground = true, name = "ClassCard • CALENDAR (przyszłość)")
-@Composable
-private fun ClassCardCalendarUpcomingPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Fizyka",
-                classType = "L",
-                date = LocalDate.now().plusDays(1).toString(),
-                startTime = "12:00",
-                endTime = "13:30",
-                room = "B-203"
-            ),
-            type = ClassCardType.CALENDAR,
-            showBadge = true
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "ClassCard • CALENDAR (przeszłość)")
-@Composable
-private fun ClassCardCalendarPastPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Chemia",
-                classType = "C",
-                date = LocalDate.now().minusDays(1).toString(),
-                startTime = "10:00",
-                endTime = "11:30",
-                room = "C-105"
-            ),
-            type = ClassCardType.CALENDAR,
-            showBadge = true
-        )
-    }
-}
-
 private fun sampleClassEntity(
     subjectName: String,
     classType: String,
@@ -285,72 +251,3 @@ private fun sampleClassEntity(
     groupCode = "",
     subgroup = null
 )
-
-@Preview(
-    showBackground = true,
-    name = "ClassCard • HOME (Dark)",
-    uiMode = Configuration.UI_MODE_NIGHT_YES
-)
-@Composable
-private fun ClassCardHomeDarkPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Matematyka",
-                classType = "W",
-                date = LocalDate.now().toString(),
-                startTime = "08:00",
-                endTime = "09:30",
-                room = "A-101"
-            ),
-            type = ClassCardType.HOME,
-            showBadge = true
-        )
-    }
-}
-
-@Preview(
-    showBackground = true,
-    name = "ClassCard • CALENDAR (przyszłość) (Dark)",
-    uiMode = Configuration.UI_MODE_NIGHT_YES
-)
-@Composable
-private fun ClassCardCalendarUpcomingDarkPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Fizyka",
-                classType = "L",
-                date = LocalDate.now().plusDays(1).toString(),
-                startTime = "12:00",
-                endTime = "13:30",
-                room = "B-203"
-            ),
-            type = ClassCardType.CALENDAR,
-            showBadge = true
-        )
-    }
-}
-
-@Preview(
-    showBackground = true,
-    name = "ClassCard • CALENDAR (przeszłość) (Dark)",
-    uiMode = Configuration.UI_MODE_NIGHT_YES
-)
-@Composable
-private fun ClassCardCalendarPastDarkPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Chemia",
-                classType = "C",
-                date = LocalDate.now().minusDays(1).toString(),
-                startTime = "10:00",
-                endTime = "11:30",
-                room = "C-105"
-            ),
-            type = ClassCardType.CALENDAR,
-            showBadge = true
-        )
-    }
-}

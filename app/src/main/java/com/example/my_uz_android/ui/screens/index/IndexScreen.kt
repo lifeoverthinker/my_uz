@@ -1,131 +1,186 @@
+// java/com/example/my_uz_android/ui/screens/index/IndexScreen.kt
+
 package com.example.my_uz_android.ui.screens.index
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
-import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
-import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
-import com.example.my_uz_android.ui.screens.index.components.IndexTabs
-import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IndexScreen(
-    initialTab: Int = 0,
-    onGradeDetailsClick: (Int) -> Unit,
-    onNavigateToClassTypeGrades: (String, String) -> Unit,
-    onAddGradeClick: (String?, String?) -> Unit,
-    onAddAbsenceClick: (String?, String?) -> Unit,
+    onSubjectClick: (String) -> Unit,
+    onAddGradeClick: () -> Unit,
+    onAddAbsenceClick: () -> Unit,
     onEditAbsenceClick: (Int) -> Unit,
-    calendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    onAddGradeSpecificClick: (String, String) -> Unit = { _, _ -> },
+    onAddAbsenceSpecificClick: (String, String) -> Unit = { _, _ -> }
 ) {
-    val uiState by calendarViewModel.uiState.collectAsState()
-    val pagerState = rememberPagerState(initialPage = initialTab) { 2 }
-    val scope = rememberCoroutineScope()
+    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+
+    // Zielony komentarz:
+    // Wspólny poziom VM zapewnia spójny filtr kierunków między zakładkami Oceny/Nieobecności.
+    val gradesViewModel: GradesViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val absencesViewModel: AbsencesViewModel = viewModel(factory = AppViewModelProvider.Factory)
+
+    val gradesState by gradesViewModel.uiState.collectAsStateWithLifecycle()
+
+    var showFilterMenu by remember { mutableStateOf(false) }
+    val multiplePlans = gradesState.userCourses.size > 1
 
     Scaffold(
         topBar = {
-            IndexTopBar(
-                userCourses = uiState.userCourses,
-                selectedGroupCodes = uiState.selectedGroupCodes,
-                currentTab = pagerState.currentPage,
-                onTabSelected = { scope.launch { pagerState.animateScrollToPage(it) } },
-                onToggleGroupVisibility = { calendarViewModel.toggleGroupVisibility(it) },
-                onAddClick = {
-                    if (pagerState.currentPage == 0) onAddGradeClick(null, null)
-                    else onAddAbsenceClick(null, null)
-                }
-            )
-        }
-    ) { padding -> // POPRAWIONE: Klamra była źle zamknięta w poprzedniej wersji
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.padding(padding),
-            userScrollEnabled = true
-        ) { page ->
-            if (page == 0) {
-                val gradesViewModel: GradesViewModel = viewModel(factory = AppViewModelProvider.Factory)
-                GradesScreen(
-                    viewModel = gradesViewModel,
-                    onGradeDetailsClick = onGradeDetailsClick,
-                    onNavigateToClassTypeGrades = onNavigateToClassTypeGrades,
-                    onAddGradeClick = onAddGradeClick
-                )
-            } else {
-                val absencesViewModel: AbsencesViewModel = viewModel(factory = AppViewModelProvider.Factory)
-                AbsencesScreen(
-                    viewModel = absencesViewModel,
-                    onEditAbsenceClick = onEditAbsenceClick,
-                    onAddAbsenceClick = onAddAbsenceClick
-                )
-            }
-        }
-    } // ZAMKNIĘCIE Scaffold
-} // ZAMKNIĘCIE funkcji IndexScreen
-
-@Composable
-fun IndexTopBar(
-    userCourses: List<UserCourseEntity>,
-    selectedGroupCodes: Set<String>,
-    currentTab: Int,
-    onTabSelected: (Int) -> Unit,
-    onToggleGroupVisibility: (String) -> Unit,
-    onAddClick: () -> Unit
-) {
-    var isFilterExpanded by remember { mutableStateOf(false) }
-
-    val subtitleText = if (userCourses.size > 1 && selectedGroupCodes.size == 1) {
-        userCourses.find { it.groupCode == selectedGroupCodes.first() }?.fieldOfStudy
-    } else null
-
-    TopAppBar(
-        title = "Indeks",
-        subtitle = subtitleText,
-        navigationIcon = null,
-        actions = {
-            if (userCourses.size > 1) {
-                Box {
-                    TopBarActionIcon(
-                        icon = R.drawable.ic_filter,
-                        isFilled = true,
-                        onClick = { isFilterExpanded = true }
-                    )
-                    DropdownMenu(
-                        expanded = isFilterExpanded,
-                        onDismissRequest = { isFilterExpanded = false }
-                    ) {
-                        userCourses.forEach { course ->
-                            DropdownMenuItem(
-                                text = { Text(course.fieldOfStudy ?: course.groupCode) },
-                                onClick = { onToggleGroupVisibility(course.groupCode) },
-                                trailingIcon = {
-                                    if (selectedGroupCodes.contains(course.groupCode))
-                                        Icon(painterResource(R.drawable.ic_check_square_broken), null, Modifier.size(20.dp))
-                                }
+            TopAppBar(
+                title = "Indeks",
+                navigationIcon = null,
+                actions = {
+                    if (multiplePlans) {
+                        Box {
+                            TopBarActionIcon(
+                                icon = R.drawable.ic_filter,
+                                // Zielony komentarz:
+                                // Zgodnie z UX: ikona filtra ma zawsze mieć koło tła.
+                                isFilled = true,
+                                onClick = { showFilterMenu = true }
                             )
+
+                            DropdownMenu(
+                                expanded = showFilterMenu,
+                                onDismissRequest = { showFilterMenu = false }
+                            ) {
+                                gradesState.userCourses.forEach { course ->
+                                    val normalizedCode = course.groupCode.trim().uppercase()
+                                    val isSelected = gradesState.selectedGroupCodes.contains(normalizedCode)
+
+                                    DropdownMenuItem(
+                                        text = { Text(course.fieldOfStudy ?: course.groupCode) },
+                                        trailingIcon = {
+                                            if (isSelected) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_check),
+                                                    contentDescription = null
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            // Zielony komentarz:
+                                            // Jeden klik synchronizuje filtr w obu VM,
+                                            // żeby Oceny i Nieobecności pokazywały ten sam zestaw kierunków.
+                                            gradesViewModel.toggleGroupVisibility(course.groupCode)
+                                            absencesViewModel.toggleGroupVisibility(course.groupCode)
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
+
+                    TopBarActionIcon(
+                        icon = R.drawable.ic_plus,
+                        isFilled = true,
+                        onClick = {
+                            if (selectedTabIndex == 0) onAddGradeClick() else onAddAbsenceClick()
+                        }
+                    )
                 }
-            }
-            TopBarActionIcon(
-                icon = R.drawable.ic_plus,
-                isFilled = true,
-                onClick = onAddClick
             )
         },
-        bottomContent = {
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                IndexTabs(selectedTabIndex = currentTab, onTabSelected = onTabSelected)
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            FilterTabRow(
+                selectedTabIndex = selectedTabIndex,
+                onTabSelected = { selectedTabIndex = it },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            if (selectedTabIndex == 0) {
+                GradesScreen(
+                    viewModel = gradesViewModel,
+                    onSubjectClick = onSubjectClick,
+                    onAddGradeClick = onAddGradeSpecificClick
+                )
+            } else {
+                AbsencesScreen(
+                    viewModel = absencesViewModel,
+                    onAddAbsenceClick = onAddAbsenceSpecificClick,
+                    onEditAbsenceClick = onEditAbsenceClick
+                )
             }
         }
-    )
+    }
+}
+
+@Composable
+private fun FilterTabRow(
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        listOf("Oceny", "Nieobecności").forEachIndexed { index, title ->
+            val isSelected = selectedTabIndex == index
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { onTabSelected(index) }
+                    .then(
+                        if (isSelected) {
+                            Modifier.background(
+                                MaterialTheme.colorScheme.secondaryContainer,
+                                RoundedCornerShape(8.dp)
+                            )
+                        } else {
+                            Modifier.border(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline,
+                                RoundedCornerShape(8.dp)
+                            )
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 14.sp
+                    ),
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        }
+    }
 }

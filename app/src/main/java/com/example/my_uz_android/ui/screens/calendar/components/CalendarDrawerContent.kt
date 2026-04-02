@@ -31,11 +31,9 @@ fun CalendarDrawerContent(
 ) {
     val scrollState = rememberScrollState()
 
-    // Filtrowanie po Stringach (zgodnie z "dobrym starym kodem")
     val groupFavorites = favorites.filter { it.type == "group" }
     val teacherFavorites = favorites.filter { it.type == "teacher" }
 
-    // Kolory pobierane z motywu
     val backgroundColor = MaterialTheme.colorScheme.surface
 
     Column(
@@ -78,14 +76,13 @@ fun CalendarDrawerContent(
                 )
             }
         } else {
-            // Napis gdy brak grup
             EmptyFavoritesText("Brak ulubionych grup")
         }
 
         DrawerDivider()
 
-        // --- Sekcja: Nauczyciele ---
-        DrawerSectionHeader(text = "Nauczyciele")
+        // --- Sekcja: Wykładowcy ---
+        DrawerSectionHeader(text = "Wykładowcy")
         if (teacherFavorites.isNotEmpty()) {
             teacherFavorites.forEach { fav ->
                 DrawerItem(
@@ -96,8 +93,7 @@ fun CalendarDrawerContent(
                 )
             }
         } else {
-            // Napis gdy brak nauczycieli
-            EmptyFavoritesText("Brak ulubionych nauczycieli")
+            EmptyFavoritesText("Brak ulubionych wykładowców")
         }
     }
 }

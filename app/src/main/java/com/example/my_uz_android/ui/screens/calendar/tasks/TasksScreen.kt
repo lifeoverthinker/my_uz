@@ -1,40 +1,98 @@
 package com.example.my_uz_android.ui.screens.calendar.tasks
 
 import android.widget.Toast
-import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.TopAppBar
-import com.example.my_uz_android.ui.components.TaskCard
-import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.components.EmptyStateMessage
+import com.example.my_uz_android.ui.components.TaskCard
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
+import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import kotlinx.coroutines.launch
-import java.time.*
+import java.time.Instant
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
+import java.time.format.TextStyle as JavaTextStyle
+import java.util.Locale
+
+private fun taskDateTasksScreen(dueDateMillis: Long): LocalDate {
+    return Instant.ofEpochMilli(dueDateMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -47,35 +105,56 @@ fun TasksScreen(
     viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory),
     calendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val tasks by viewModel.tasksStream.collectAsState(initial = emptyList())
-    val calendarUiState by calendarViewModel.uiState.collectAsState()
-    val sharedCode by viewModel.sharedCode.collectAsState()
-    val isSharing by viewModel.isSharing.collectAsState()
-    val importStatus by viewModel.importStatus.collectAsState()
-    val isImporting by viewModel.isImporting.collectAsState()
+    val tasks by viewModel.tasksStream.collectAsStateWithLifecycle(initialValue = emptyList())
+    val calendarUiState by calendarViewModel.uiState.collectAsStateWithLifecycle()
+    val sharedCode by viewModel.sharedCode.collectAsStateWithLifecycle()
+    val isSharing by viewModel.isSharing.collectAsStateWithLifecycle()
+    val shareError by viewModel.shareError.collectAsStateWithLifecycle()
+    val importStatus by viewModel.importStatus.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    var showShareOptionsDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
+    var showConfirmShareDialog by remember { mutableStateOf(false) }
+    var showGeneratedCodeDialog by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf<TaskEntity?>(null) }
+    var showImportSuccessDialog by remember { mutableStateOf(false) }
+    var lastImportMessage by remember { mutableStateOf("") }
+
     var selectedTab by remember { mutableStateOf(0) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var selectedTasks by remember { mutableStateOf(setOf<Int>()) }
 
-    LaunchedEffect(viewModel.shareError, importStatus) {
-        viewModel.shareError.value?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
-        importStatus?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
-        viewModel.clearError()
+    LaunchedEffect(shareError) {
+        val message = shareError ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        viewModel.clearShareError()
+    }
+
+    LaunchedEffect(importStatus) {
+        val status = importStatus ?: return@LaunchedEffect
+        if (status.contains("zaimportowano", ignoreCase = true)) {
+            lastImportMessage = status
+            showImportSuccessDialog = true
+        } else {
+            Toast.makeText(context, status, Toast.LENGTH_SHORT).show()
+        }
+        viewModel.clearImportStatus()
+    }
+
+    LaunchedEffect(sharedCode) {
+        if (sharedCode != null) showGeneratedCodeDialog = true
     }
 
     val groupedTasks = remember(tasks, selectedTab) {
-        tasks.filter { if (selectedTab == 0) !it.isCompleted else it.isCompleted }
+        tasks
+            .filter { task -> if (selectedTab == 0) !task.isCompleted else task.isCompleted }
             .sortedBy { it.dueDate }
-            .groupBy {
-                YearMonth.from(Instant.ofEpochMilli(it.dueDate).atZone(ZoneId.systemDefault()).toLocalDate())
-            }
+            .groupBy { YearMonth.from(taskDateTasksScreen(it.dueDate)) }
     }
 
     ModalNavigationDrawer(
@@ -87,12 +166,14 @@ fun TasksScreen(
                 currentScreen = "tasks",
                 onMyPlanClick = {
                     calendarViewModel.selectMyPlan()
-                    scope.launch { drawerState.close() }; onCalendarClick()
+                    scope.launch { drawerState.close() }
+                    onCalendarClick()
                 },
                 onTasksClick = { scope.launch { drawerState.close() } },
                 onFavoriteClick = { fav ->
                     calendarViewModel.selectFavoritePlan(fav)
-                    scope.launch { drawerState.close() }; onCalendarClick()
+                    scope.launch { drawerState.close() }
+                    onCalendarClick()
                 },
                 onCloseDrawer = { scope.launch { drawerState.close() } }
             )
@@ -103,17 +184,22 @@ fun TasksScreen(
                 TasksTopBar(
                     isSelectionMode = isSelectionMode,
                     selectedTab = selectedTab,
-                    isLoading = isSharing || isImporting,
-                    onSelectionClose = { isSelectionMode = false; selectedTasks = emptySet() },
+                    onSelectionClose = {
+                        isSelectionMode = false
+                        selectedTasks = emptySet()
+                    },
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onAddClick = onAddTaskClick,
-                    onShareAll = { viewModel.shareMyTasks() },
-                    onImportClick = { showImportDialog = true },
+                    onShareClick = { showShareOptionsDialog = true },
                     onTabChange = { selectedTab = it }
                 )
             }
         ) { padding ->
-            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            ) {
                 if (groupedTasks.isEmpty()) {
                     EmptyStateMessage(
                         title = if (selectedTab == 0) "Brak aktywnych zadań" else "Brak zaliczonych zadań",
@@ -129,79 +215,249 @@ fun TasksScreen(
                         onTaskClick = { id ->
                             if (isSelectionMode) {
                                 selectedTasks = if (selectedTasks.contains(id)) selectedTasks - id else selectedTasks + id
-                            } else onTaskClick(id)
+                            } else {
+                                onTaskClick(id)
+                            }
                         },
                         onToggleTask = { viewModel.toggleTaskCompletion(it) },
-                        onDeleteTask = { viewModel.deleteTask(it) },
-                        onConfirmSelection = {
-                            viewModel.shareMyTasks(selectedTasks)
-                            isSelectionMode = false; selectedTasks = emptySet()
-                        }
+                        onDeleteRequest = { taskToDelete = it }
                     )
+                }
+
+                if (isSelectionMode && selectedTasks.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 32.dp)
+                    ) {
+                        Button(
+                            onClick = { showConfirmShareDialog = true },
+                            shape = RoundedCornerShape(100.dp),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = "Zatwierdź wybrane: ${selectedTasks.size}",
+                                style = TextStyle(
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 14.sp
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 
-    if (sharedCode != null && !isSelectionMode) {
+    if (showShareOptionsDialog) {
+        ShareOptionsModal(
+            onSelectAll = {
+                viewModel.shareMyTasks()
+                showShareOptionsDialog = false
+            },
+            onSelectTasks = {
+                isSelectionMode = true
+                showShareOptionsDialog = false
+            },
+            onImportClick = {
+                showShareOptionsDialog = false
+                showImportDialog = true
+            },
+            onDismiss = { showShareOptionsDialog = false }
+        )
+    }
+
+    if (showConfirmShareDialog) {
         AlertDialog(
-            onDismissRequest = { viewModel.clearSharedCode() },
-            title = { Text("Zadania gotowe!") },
-            text = { Text("Kod do udostępnienia: $sharedCode") },
+            onDismissRequest = { showConfirmShareDialog = false },
+            title = {
+                Text(
+                    "Udostępnić zadania?",
+                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold)
+                )
+            },
+            text = { Text("Zaznaczono ${selectedTasks.size} zadań do udostępnienia.") },
             confirmButton = {
-                TextButton(onClick = {
-                    clipboardManager.setText(AnnotatedString(sharedCode!!))
+                TextButton(
+                    onClick = {
+                        viewModel.shareMyTasks(selectedTasks)
+                        showConfirmShareDialog = false
+                        isSelectionMode = false
+                        selectedTasks = emptySet()
+                    }
+                ) { Text("Udostępnij") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmShareDialog = false }) { Text("Anuluj") }
+            }
+        )
+    }
+
+    if (showGeneratedCodeDialog) {
+        GeneratedCodeModal(
+            code = sharedCode,
+            isLoading = isSharing,
+            onCopy = {
+                sharedCode?.let {
+                    clipboardManager.setText(AnnotatedString(it))
+                    Toast.makeText(context, "Skopiowano kod", Toast.LENGTH_SHORT).show()
+                    showGeneratedCodeDialog = false
                     viewModel.clearSharedCode()
-                }) { Text("Kopiuj kod") }
+                }
+            },
+            onDismiss = {
+                showGeneratedCodeDialog = false
+                viewModel.clearSharedCode()
             }
         )
     }
 
     if (showImportDialog) {
         ImportDialog(
-            onImport = { viewModel.importTasks(it); showImportDialog = false },
+            onImport = {
+                viewModel.importTasks(it)
+                showImportDialog = false
+            },
             onDismiss = { showImportDialog = false }
         )
     }
-}
 
-// --- KOMPONENTY WIZUALNE ---
+    if (showImportSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportSuccessDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(48.dp)
+                )
+            },
+            title = {
+                Text(
+                    "Zadania zaimportowane!",
+                    style = TextStyle(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                )
+            },
+            text = {
+                Text(
+                    lastImportMessage,
+                    style = TextStyle(fontFamily = InterFontFamily, fontSize = 16.sp),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showImportSuccessDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Super!") }
+            }
+        )
+    }
+
+    if (taskToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            title = {
+                Text(
+                    "Usuń zadanie",
+                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
+                )
+            },
+            text = { Text("Czy na pewno chcesz trwale usunąć zadanie \"${taskToDelete?.title}\"?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // Zielony komentarz: usuwamy wyłącznie po explicit confirm.
+                        taskToDelete?.let { viewModel.deleteTask(it) }
+                        taskToDelete = null
+                    }
+                ) { Text("Usuń", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { taskToDelete = null }) { Text("Anuluj") }
+            }
+        )
+    }
+}
 
 @Composable
 fun TasksTopBar(
     isSelectionMode: Boolean,
     selectedTab: Int,
-    isLoading: Boolean,
     onSelectionClose: () -> Unit,
     onOpenDrawer: () -> Unit,
     onAddClick: () -> Unit,
-    onShareAll: () -> Unit,
-    onImportClick: () -> Unit,
+    onShareClick: () -> Unit,
     onTabChange: (Int) -> Unit
 ) {
     TopAppBar(
-        title = if (isSelectionMode) "Wybierz zadania" else "Terminarz",
+        title = "Terminarz",
         navigationIcon = if (isSelectionMode) R.drawable.ic_close else R.drawable.ic_menu,
         onNavigationClick = if (isSelectionMode) onSelectionClose else onOpenDrawer,
-        isNavigationIconFilled = !isSelectionMode, // KÓŁKO TYLKO GDY NIE MA TRYBU ZAZNACZANIA
+        isNavigationIconFilled = true,
         actions = {
-            if (!isSelectionMode) {
-                TopBarActionIcon(icon = R.drawable.ic_import, onClick = onImportClick, isLoading = isLoading, isFilled = true)
-                TopBarActionIcon(icon = R.drawable.ic_share, onClick = onShareAll, isLoading = isLoading, isFilled = true)
-            }
             TopBarActionIcon(icon = R.drawable.ic_plus, onClick = onAddClick, isFilled = true)
+            if (!isSelectionMode) {
+                TopBarActionIcon(icon = R.drawable.ic_share, onClick = onShareClick, isFilled = true)
+            }
         },
         bottomContent = {
-            // TABS WRACAJĄ DO GÓRNEGO PASKA, MAJĄ PADDINGI I BRAK PODKREŚLENIA
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                TabRow(
-                    selectedTabIndex = selectedTab,
-                    containerColor = Color.Transparent,
-                    divider = {}
-                ) {
-                    Tab(selected = selectedTab == 0, onClick = { onTabChange(0) }, text = { Text("Aktywne") })
-                    Tab(selected = selectedTab == 1, onClick = { onTabChange(1) }, text = { Text("Zaliczone") })
+            Column {
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = Color.Transparent,
+                        divider = {},
+                        indicator = { tabPositions ->
+                            if (selectedTab < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    ) {
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { onTabChange(0) },
+                            text = {
+                                Text(
+                                    "Aktywne",
+                                    color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = TextStyle(
+                                        fontFamily = InterFontFamily,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp
+                                    )
+                                )
+                            }
+                        )
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { onTabChange(1) },
+                            text = {
+                                Text(
+                                    "Zaliczone",
+                                    color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = TextStyle(
+                                        fontFamily = InterFontFamily,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp
+                                    )
+                                )
+                            }
+                        )
+                    }
                 }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
             }
         }
     )
@@ -214,82 +470,388 @@ fun TasksList(
     selectedTasks: Set<Int>,
     onTaskClick: (Int) -> Unit,
     onToggleTask: (TaskEntity) -> Unit,
-    onDeleteTask: (TaskEntity) -> Unit,
-    onConfirmSelection: () -> Unit
+    onDeleteRequest: (TaskEntity) -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
-        ) {
-            groupedTasks.forEach { (month, tasks) ->
-                item {
-                    Text(
-                        text = month.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale("pl")).uppercase(),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            letterSpacing = 1.2.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                items(tasks, key = { it.id }) { task ->
-                    val isSelected = isSelectionMode && selectedTasks.contains(task.id)
-
-                    // Opatulamy Twoją kartę w Boxa, który zarządza klikaniem i tłem
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp) // Odstępy od brzegów
-                            .clip(RoundedCornerShape(16.dp))
-                            // W trybie wyboru podświetlamy tło karty:
-                            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                            .clickable { onTaskClick(task.id) }
-                            .padding(if (isSelected) 4.dp else 0.dp)
-                    ) {
-                        // Wywołanie BEZ brakujących parametrów (TaskCard ich nie potrzebuje)
-                        TaskCard(task = task)
-                    }
-                }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
+    ) {
+        groupedTasks.forEach { (month, tasks) ->
+            item {
+                Text(
+                    text = month.month.getDisplayName(JavaTextStyle.FULL, Locale("pl"))
+                        .replaceFirstChar { it.titlecase() } + " ${month.year}",
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                    style = TextStyle(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp
+                    ),
+                    color = MaterialTheme.colorScheme.secondary
+                )
             }
-        }
 
-        // Pływający przycisk udostępniania
-        if (isSelectionMode && selectedTasks.isNotEmpty()) {
-            ExtendedFloatingActionButton(
-                onClick = onConfirmSelection,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 24.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(painterResource(R.drawable.ic_share), contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Udostępnij (${selectedTasks.size})")
+            itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
+                val isSelected = isSelectionMode && selectedTasks.contains(task.id)
+                val date = taskDateTasksScreen(task.dueDate)
+                val prevDate = tasks.getOrNull(index - 1)?.let { taskDateTasksScreen(it.dueDate) }
+                val isFirstInDay = prevDate != date
+
+                SwipeToDismissItem(
+                    task = task,
+                    isSelectionMode = isSelectionMode,
+                    isSelected = isSelected,
+                    onTaskClick = { onTaskClick(task.id) },
+                    onToggleTask = { onToggleTask(task) },
+                    onDeleteRequest = { onDeleteRequest(task) },
+                    date = date,
+                    showDate = isFirstInDay
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeToDismissItem(
+    task: TaskEntity,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onTaskClick: () -> Unit,
+    onToggleTask: () -> Unit,
+    onDeleteRequest: () -> Unit,
+    date: LocalDate,
+    showDate: Boolean
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (isSelectionMode) return@rememberSwipeToDismissBoxState false
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onToggleTask()
+                    false
+                }
+
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onDeleteRequest()
+                    false
+                }
+
+                else -> false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = !isSelectionMode,
+        enableDismissFromEndToStart = !isSelectionMode,
+        backgroundContent = {
+            val bgColor = when (dismissState.dismissDirection) {
+                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50)
+                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error
+                else -> Color.Transparent
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(bgColor),
+                contentAlignment = when (dismissState.dismissDirection) {
+                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                    else -> Alignment.Center
+                }
+            ) {
+                val icon = when (dismissState.dismissDirection) {
+                    SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Done
+                    SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
+                    else -> null
+                }
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
+            }
+        }
+    ) {
+        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        val cardColor = if (isSelected && isSelectionMode) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+        } else {
+            getAppBackgroundColor(1, isDark)
+        }
+        val borderColor = if (isSelected && isSelectionMode) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.Transparent
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(if (isSelectionMode) Color.Transparent else MaterialTheme.colorScheme.surface)
+                .clickable(enabled = isSelectionMode) { onTaskClick() }
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(modifier = Modifier.width(36.dp)) {
+                if (showDate) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = date.dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale("pl")),
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight(500),
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = date.dayOfMonth.toString(),
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight(500),
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onTaskClick() },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary,
+                        uncheckedColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+            }
+
+            TaskCard(
+                task = task,
+                modifier = Modifier
+                    .weight(1f)
+                    .border(
+                        width = 2.dp,
+                        color = borderColor,
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                onTaskClick = onTaskClick,
+                backgroundColor = cardColor,
+                isDarkMode = isDark
+            )
+        }
+    }
+}
+
+@Composable
+fun ShareOptionsModal(
+    onSelectAll: () -> Unit,
+    onSelectTasks: () -> Unit,
+    onImportClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        title = null,
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Udostępnij zadania",
+                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 18.sp),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Button(
+                    onClick = onSelectAll,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Text("Udostępnij wszystko")
+                }
+
+                OutlinedButton(
+                    onClick = onSelectTasks,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Text("Wybierz zadania")
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                TextButton(
+                    onClick = onImportClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_import),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            "Importuj zadania",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun GeneratedCodeModal(
+    code: String?,
+    isLoading: Boolean,
+    onCopy: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        title = null,
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Kod udostępniania",
+                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    } else {
+                        Text(
+                            text = code ?: "------",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 42.sp,
+                                letterSpacing = 2.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = onCopy,
+                    enabled = code != null,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Skopiuj kod")
+                }
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Zamknij", style = TextStyle(fontWeight = FontWeight.SemiBold))
+                }
+            }
+        }
+    )
+}
+
 @Composable
 fun ImportDialog(onImport: (String) -> Unit, onDismiss: () -> Unit) {
     var code by remember { mutableStateOf("") }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Importuj zadania") },
-        text = {
-            OutlinedTextField(
-                value = code,
-                onValueChange = { if (it.length <= 6) code = it.uppercase() },
-                label = { Text("Kod 6-znakowy") },
-                singleLine = true
+        title = {
+            Text(
+                "Importuj zadania",
+                style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             )
         },
-        confirmButton = {
-            Button(onClick = { onImport(code) }, enabled = code.length == 6) { Text("Importuj") }
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Wpisz 6-znakowy kod, aby pobrać zadania.",
+                    style = TextStyle(fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                )
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { if (it.length <= 6) code = it.uppercase() },
+                    label = { Text("Kod") },
+                    placeholder = { Text("ABC123") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj") } }
+        confirmButton = {
+            TextButton(
+                onClick = { onImport(code) },
+                enabled = code.length == 6
+            ) { Text("Importuj") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Anuluj") }
+        }
     )
 }

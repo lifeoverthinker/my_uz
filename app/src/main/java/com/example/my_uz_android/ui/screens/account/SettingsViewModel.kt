@@ -15,6 +15,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
+private const val SAVE_FEEDBACK_DURATION_MS = 1200L
+
 data class SettingsUiState(
     val settings: SettingsEntity? = null,
     val uniqueClassTypes: List<String> = emptyList(),
@@ -37,69 +39,106 @@ class SettingsViewModel(
     private val eventRepository: EventRepository
 ) : ViewModel() {
 
+    /*** Zielony komentarz: Jedno źródło prawdy dla ekranu ustawień. */
     private val _uiState = MutableStateFlow(SettingsUiState(isLoading = true))
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
     private val gson = Gson()
 
     init {
-        loadData()
+        observeSettingsAndClassTypes()
     }
 
-    private fun loadData() {
+    /*** Zielony komentarz: Stała, stabilna obserwacja settings + typów zajęć bez dublowania źródeł stanu w UI. */
+    private fun observeSettingsAndClassTypes() {
         viewModelScope.launch {
             combine(
                 settingsRepository.getSettingsStream(),
                 classRepository.getAllClassesStream()
             ) { settings, classes ->
                 val uniqueTypes = classes
+                    .asSequence()
                     .map { it.classType.trim() }
                     .filter { it.isNotBlank() }
                     .distinct()
                     .sorted()
+                    .toList()
 
-                Pair(settings, uniqueTypes)
-            }.collect { (settings, uniqueTypes) ->
-                val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
-                var colorMap: Map<String, Int> = try {
-                    gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-                } catch (e: Exception) {
-                    emptyMap()
-                }
-
-                if (colorMap.isEmpty() && uniqueTypes.isNotEmpty() && settings != null) {
-                    colorMap = uniqueTypes.associateWith { type ->
-                        abs(type.hashCode()) % ClassColorPalette.size
-                    }
-                    val newJson = gson.toJson(colorMap)
-                    settingsRepository.insertSettings(settings.copy(classColorsJson = newJson))
-                }
-
-                _uiState.update { currentState ->
-                    currentState.copy(
+                settings to uniqueTypes
+            }
+                .distinctUntilChanged()
+                .collect { (settings, uniqueTypes) ->
+                    val parsedColorMap = parseClassColorMap(settings?.classColorsJson)
+                    val ensuredMap = ensureColorMapForTypes(
                         settings = settings,
-                        uniqueClassTypes = uniqueTypes,
-                        classColorMap = colorMap,
-                        isLoading = false
+                        uniqueTypes = uniqueTypes,
+                        currentMap = parsedColorMap
                     )
+
+                    _uiState.update { state ->
+                        state.copy(
+                            settings = settings,
+                            uniqueClassTypes = uniqueTypes,
+                            classColorMap = ensuredMap,
+                            isLoading = false
+                        )
+                    }
                 }
+        }
+    }
+
+    private fun parseClassColorMap(json: String?): Map<String, Int> {
+        return try {
+            val type = object : TypeToken<Map<String, Int>>() {}.type
+            gson.fromJson<Map<String, Int>>(json ?: "{}", type) ?: emptyMap()
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    /*** Zielony komentarz: Gwarantuje, że każdy typ zajęć ma kolor — brak "dziur" po synchronizacji planu. */
+    private suspend fun ensureColorMapForTypes(
+        settings: SettingsEntity?,
+        uniqueTypes: List<String>,
+        currentMap: Map<String, Int>
+    ): Map<String, Int> {
+        if (settings == null || uniqueTypes.isEmpty()) return currentMap
+
+        val normalizedMap = currentMap.toMutableMap()
+        var changed = false
+
+        uniqueTypes.forEach { type ->
+            if (!normalizedMap.containsKey(type)) {
+                normalizedMap[type] = abs(type.hashCode()) % ClassColorPalette.size
+                changed = true
             }
         }
+
+        if (changed) {
+            settingsRepository.insertSettings(settings.copy(classColorsJson = gson.toJson(normalizedMap)))
+        }
+
+        return normalizedMap
     }
 
     private fun triggerSaveFeedback() {
         viewModelScope.launch {
             _uiState.update { it.copy(isSaved = true) }
-            delay(1500)
+            delay(SAVE_FEEDBACK_DURATION_MS)
             _uiState.update { it.copy(isSaved = false) }
         }
     }
 
-    fun setThemeMode(mode: ThemeMode) {
+    private fun updateSettings(transform: (SettingsEntity) -> SettingsEntity) {
         val current = _uiState.value.settings ?: return
         viewModelScope.launch {
-            settingsRepository.insertSettings(current.copy(themeMode = mode.name))
+            settingsRepository.insertSettings(transform(current))
             triggerSaveFeedback()
         }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        updateSettings { it.copy(themeMode = mode.name) }
     }
 
     fun updateClassColor(classType: String, colorIndex: Int) {
@@ -107,69 +146,54 @@ class SettingsViewModel(
         val currentMap = _uiState.value.classColorMap.toMutableMap()
         currentMap[classType.trim()] = colorIndex
 
-        val newJson = gson.toJson(currentMap)
         viewModelScope.launch {
-            settingsRepository.insertSettings(current.copy(classColorsJson = newJson))
+            settingsRepository.insertSettings(current.copy(classColorsJson = gson.toJson(currentMap)))
             triggerSaveFeedback()
         }
     }
 
     fun toggleOfflineMode(enabled: Boolean) {
-        val current = _uiState.value.settings ?: return
-        viewModelScope.launch {
-            settingsRepository.insertSettings(current.copy(offlineModeEnabled = enabled))
-            triggerSaveFeedback()
-        }
+        updateSettings { it.copy(offlineModeEnabled = enabled) }
     }
 
     fun toggleNotifications(enabled: Boolean) {
-        val current = _uiState.value.settings ?: return
-        viewModelScope.launch {
-            settingsRepository.insertSettings(current.copy(notificationsEnabled = enabled))
-            triggerSaveFeedback()
-        }
-    }
-
-    fun toggleTasksNotifications(enabled: Boolean) {
-        val current = _uiState.value.settings ?: return
-        viewModelScope.launch {
-            settingsRepository.insertSettings(current.copy(notificationsTasks = enabled))
-            triggerSaveFeedback()
-        }
+        updateSettings { it.copy(notificationsEnabled = enabled) }
     }
 
     fun toggleClassesNotifications(enabled: Boolean) {
-        val current = _uiState.value.settings ?: return
-        viewModelScope.launch {
-            settingsRepository.insertSettings(current.copy(notificationsClasses = enabled))
-            triggerSaveFeedback()
-        }
+        updateSettings { it.copy(notificationsClasses = enabled) }
     }
 
     suspend fun createBackupJson(selectedTypes: Set<BackupDataType>): String =
         withContext(Dispatchers.IO) {
             val backup = ManualBackupData(
-                settings = if (selectedTypes.contains(BackupDataType.SETTINGS)) settingsRepository.getSettingsStream().first() else null,
-                classes = if (selectedTypes.contains(BackupDataType.CLASSES)) classRepository.getAllClassesStream().first() else emptyList(),
-                tasks = if (selectedTypes.contains(BackupDataType.TASKS)) tasksRepository.getAllTasks().first() else emptyList(),
-                grades = if (selectedTypes.contains(BackupDataType.GRADES)) gradesRepository.getAllGradesStream().first() else emptyList(),
-                absences = if (selectedTypes.contains(BackupDataType.ABSENCES)) absenceRepository.getAllAbsencesStream().first() else emptyList(),
-                events = if (selectedTypes.contains(BackupDataType.EVENTS)) eventRepository.getAllEvents().first() else emptyList()
+                settings = if (BackupDataType.SETTINGS in selectedTypes) settingsRepository.getSettingsStream().first() else null,
+                classes = if (BackupDataType.CLASSES in selectedTypes) classRepository.getAllClassesStream().first() else emptyList(),
+                tasks = if (BackupDataType.TASKS in selectedTypes) tasksRepository.getAllTasks().first() else emptyList(),
+                grades = if (BackupDataType.GRADES in selectedTypes) gradesRepository.getAllGradesStream().first() else emptyList(),
+                absences = if (BackupDataType.ABSENCES in selectedTypes) absenceRepository.getAllAbsencesStream().first() else emptyList()
             )
             gson.toJson(backup)
         }
 
     fun previewBackupFile(jsonString: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, importMessage = null) }
             try {
                 val data = gson.fromJson(jsonString, ManualBackupData::class.java)
                 _uiState.update {
-                    it.copy(backupPreview = data, showImportDialog = true, isLoading = false)
+                    it.copy(
+                        backupPreview = data,
+                        showImportDialog = true,
+                        isLoading = false
+                    )
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _uiState.update {
-                    it.copy(importMessage = "Błędny format pliku", isLoading = false)
+                    it.copy(
+                        importMessage = "Błędny format pliku backupu",
+                        isLoading = false
+                    )
                 }
             }
         }
@@ -177,64 +201,80 @@ class SettingsViewModel(
 
     fun confirmImport(selectedTypes: Set<BackupDataType>) {
         val data = _uiState.value.backupPreview ?: return
+
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.update { it.copy(isLoading = true, showImportDialog = false) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    showImportDialog = false,
+                    importMessage = null
+                )
+            }
+
             try {
-                if (selectedTypes.contains(BackupDataType.SETTINGS) && data.settings != null) {
-                    settingsRepository.insertSettings(data.settings)
+                if (BackupDataType.SETTINGS in selectedTypes) {
+                    settingsRepository.clearSettings()
+                    data.settings?.let { settingsRepository.insertSettings(it) }
                 }
-                if (selectedTypes.contains(BackupDataType.CLASSES)) {
+
+                if (BackupDataType.CLASSES in selectedTypes) {
                     classRepository.deleteAllClasses()
                     classRepository.insertClasses(data.classes)
                 }
-                if (selectedTypes.contains(BackupDataType.TASKS)) {
+
+                if (BackupDataType.TASKS in selectedTypes) {
+                    tasksRepository.deleteAllTasks()
                     tasksRepository.insertTasks(data.tasks)
                 }
-                if (selectedTypes.contains(BackupDataType.GRADES)) {
+
+                if (BackupDataType.GRADES in selectedTypes) {
+                    gradesRepository.deleteAllGrades()
                     gradesRepository.insertGrades(data.grades)
                 }
-                if (selectedTypes.contains(BackupDataType.ABSENCES)) {
+
+                if (BackupDataType.ABSENCES in selectedTypes) {
+                    absenceRepository.deleteAllAbsences()
                     absenceRepository.insertAbsences(data.absences)
                 }
-                if (selectedTypes.contains(BackupDataType.EVENTS)) {
-                    eventRepository.insertEvents(data.events)
-                }
+
                 withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(isLoading = false, importMessage = "Import zakończony") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            importMessage = "Import zakończony pomyślnie",
+                            backupPreview = null
+                        )
+                    }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(isLoading = false, importMessage = "Błąd importu") }
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            importMessage = "Błąd importu danych"
+                        )
+                    }
                 }
             }
         }
     }
 
     fun cancelImport() {
-        _uiState.update { it.copy(showImportDialog = false) }
+        _uiState.update { it.copy(showImportDialog = false, backupPreview = null) }
     }
 
-    // --- FUNKCJE DLA BackupSettingsSection.kt ---
     fun exportDatabase(onResult: (String) -> Unit) {
         viewModelScope.launch {
-            try {
-                val json = backupManager.exportData()
-                onResult(json)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            runCatching { backupManager.exportData() }
+                .onSuccess { onResult(it) }
         }
     }
 
     fun importDatabase(json: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
-            try {
-                backupManager.importData(json)
-                onSuccess()
-            } catch (e: Exception) {
-                e.printStackTrace()
-                onError(e.localizedMessage ?: "Nieznany błąd podczas importu")
-            }
+            runCatching { backupManager.importData(json) }
+                .onSuccess { onSuccess() }
+                .onFailure { onError(it.localizedMessage ?: "Nieznany błąd podczas importu") }
         }
     }
 }

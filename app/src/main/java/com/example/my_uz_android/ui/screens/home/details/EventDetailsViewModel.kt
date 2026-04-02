@@ -10,11 +10,28 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * Stan UI ekranu szczegółów wydarzenia.
+ *
+ * Zawiera:
+ * - dane wydarzenia (jeśli istnieje),
+ * - flagę ładowania,
+ * - komunikat błędu do bezpiecznego renderowania stanu pustego.
+ */
 data class EventDetailsUiState(
     val eventEntity: EventEntity? = null,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val error: String? = null
 )
 
+/**
+ * ViewModel szczegółów wydarzenia.
+ *
+ * Odpowiada za:
+ * - pobranie wydarzenia po ID,
+ * - utrzymanie stanu loading/success/error,
+ * - usunięcie wydarzenia z bazy.
+ */
 class EventDetailsViewModel(
     savedStateHandle: SavedStateHandle,
     private val eventRepository: EventRepository
@@ -29,52 +46,49 @@ class EventDetailsViewModel(
         loadEvent()
     }
 
+    /**
+     * Ładuje wydarzenie z bazy danych.
+     *
+     * Zasada:
+     * - brak rekordu = stan błędu (bez sztucznych danych mock),
+     * - wyjątek = stan błędu technicznego.
+     */
     private fun loadEvent() {
         viewModelScope.launch {
-            try {
-                val event = eventRepository.getEventById(eventId)
+            _uiState.value = EventDetailsUiState(isLoading = true)
 
-                if (event != null) {
+            runCatching { eventRepository.getEventById(eventId) }
+                .onSuccess { event ->
+                    if (event != null) {
+                        _uiState.value = EventDetailsUiState(
+                            eventEntity = event,
+                            isLoading = false,
+                            error = null
+                        )
+                    } else {
+                        _uiState.value = EventDetailsUiState(
+                            eventEntity = null,
+                            isLoading = false,
+                            error = "Nie znaleziono wydarzenia o ID=$eventId"
+                        )
+                    }
+                }
+                .onFailure { throwable ->
                     _uiState.value = EventDetailsUiState(
-                        eventEntity = event,
-                        isLoading = false
-                    )
-                } else {
-                    // Jeśli nie ma w bazie, utwórz mock event
-                    _uiState.value = EventDetailsUiState(
-                        eventEntity = EventEntity(
-                            id = eventId,
-                            title = "Juwenalia 2026",
-                            description = "Największa impreza roku! Muzyka na żywo, food trucki i mnóstwo atrakcji.",
-                            date = "Piątek, 20 maja 2026",
-                            location = "Kampus A, Uniwersytet Zielonogórski",
-                            timeRange = "18:00 - 02:00"
-                        ),
-                        isLoading = false
+                        eventEntity = null,
+                        isLoading = false,
+                        error = throwable.message ?: "Błąd pobierania wydarzenia"
                     )
                 }
-            } catch (e: Exception) {
-                // W przypadku błędu też pokaż mock
-                _uiState.value = EventDetailsUiState(
-                    eventEntity = EventEntity(
-                        id = eventId,
-                        title = "Przykładowe wydarzenie",
-                        description = "Opis wydarzenia",
-                        date = "Wkrótce",
-                        location = "Do ustalenia",
-                        timeRange = "TBA"
-                    ),
-                    isLoading = false
-                )
-            }
         }
     }
 
+    /**
+     * Usuwa aktualne wydarzenie z bazy.
+     */
     fun deleteEvent() {
         viewModelScope.launch {
-            _uiState.value.eventEntity?.let {
-                eventRepository.deleteEvent(it)
-            }
+            uiState.value.eventEntity?.let { eventRepository.deleteEvent(it) }
         }
     }
 }

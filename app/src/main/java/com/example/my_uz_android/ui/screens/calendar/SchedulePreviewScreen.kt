@@ -2,9 +2,27 @@ package com.example.my_uz_android.ui.screens.calendar
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -16,7 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
-import com.example.my_uz_android.data.models.TaskEntity // <-- Dodany brakujący import
+import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.PreviewTopAppBar
 import com.example.my_uz_android.ui.components.SubgroupFilterDialog
@@ -32,6 +50,40 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import kotlin.math.abs
+import androidx.compose.foundation.layout.height
+
+private fun Modifier.calendarDaySwipeGestureSchedulePreviewScreen(
+    selectedDate: LocalDate,
+    isMonthView: Boolean,
+    density: androidx.compose.ui.unit.Density,
+    onSwipeNext: () -> Unit,
+    onSwipePrevious: () -> Unit
+): Modifier {
+    return pointerInput(selectedDate, isMonthView) {
+        val swipeThresholdPx = with(density) { 72.dp.toPx() }
+        var accumulatedDx by mutableFloatStateOf(0f)
+        var accumulatedDy by mutableFloatStateOf(0f)
+
+        detectHorizontalDragGestures(
+            onDragStart = {
+                accumulatedDx = 0f
+                accumulatedDy = 0f
+            },
+            onHorizontalDrag = { change, dragAmount ->
+                accumulatedDx += dragAmount
+                accumulatedDy += abs(change.position.y - change.previousPosition.y)
+            },
+            onDragEnd = {
+                val isHorizontalIntent = abs(accumulatedDx) > accumulatedDy
+                val passedThreshold = abs(accumulatedDx) >= swipeThresholdPx
+
+                if (isHorizontalIntent && passedThreshold) {
+                    if (accumulatedDx < 0) onSwipeNext() else onSwipePrevious()
+                }
+            }
+        )
+    }
+}
 
 @Composable
 fun SchedulePreviewScreen(
@@ -59,6 +111,12 @@ fun SchedulePreviewScreen(
         } ?: classes.firstOrNull { it.teacherName?.isNotBlank() == true }
     }
 
+    val isDark = when (uiState.themeMode) {
+        "DARK" -> true
+        "LIGHT" -> false
+        else -> isSystemInDarkTheme()
+    }
+
     SchedulePreviewScreenContent(
         classes = classes,
         tasks = uiState.tasks,
@@ -68,6 +126,7 @@ fun SchedulePreviewScreen(
         isTeacher = isTeacher,
         teacherData = teacherData,
         isLoading = uiState.isLoading,
+        isDarkMode = isDark,
         onBackClick = { navController.popBackStack() },
         onFavoriteClick = {
             viewModel.toggleFavorite(
@@ -92,6 +151,7 @@ fun SchedulePreviewScreenContent(
     isTeacher: Boolean,
     teacherData: ClassEntity?,
     isLoading: Boolean,
+    isDarkMode: Boolean,
     onBackClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onClassClick: (ClassEntity) -> Unit
@@ -107,6 +167,7 @@ fun SchedulePreviewScreenContent(
 
     LaunchedEffect(availableSubgroups) {
         if (selectedSubgroups.isEmpty() && availableSubgroups.isNotEmpty()) {
+            // Zielony komentarz: domyślnie zaznaczamy wszystkie dostępne podgrupy.
             selectedSubgroups = availableSubgroups.toSet()
         }
     }
@@ -120,7 +181,6 @@ fun SchedulePreviewScreenContent(
     val currentMonth = remember { YearMonth.now(ZoneId.of("Europe/Warsaw")) }
     val startMonth = remember { currentMonth.minusMonths(24) }
     val endMonth = remember { currentMonth.plusMonths(24) }
-    val firstDayOfWeek = DayOfWeek.MONDAY
 
     var selectedDate by remember { mutableStateOf(currentDate) }
     var isMonthView by remember { mutableStateOf(false) }
@@ -129,14 +189,15 @@ fun SchedulePreviewScreenContent(
     val weekState = rememberWeekCalendarState(
         startDate = startMonth.atStartOfMonth(),
         endDate = endMonth.atEndOfMonth(),
-        firstDayOfWeek = firstDayOfWeek,
+        firstDayOfWeek = DayOfWeek.MONDAY
     )
     val monthState = rememberCalendarState(
         startMonth = startMonth,
         endMonth = endMonth,
-        firstDayOfWeek = firstDayOfWeek,
+        firstDayOfWeek = DayOfWeek.MONDAY,
         firstVisibleMonth = currentMonth
     )
+
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
@@ -148,11 +209,8 @@ fun SchedulePreviewScreenContent(
         selectedDate = newDate
 
         scope.launch {
-            if (isMonthView) {
-                monthState.scrollToMonth(YearMonth.from(newDate))
-            } else {
-                weekState.scrollToWeek(newDate)
-            }
+            if (isMonthView) monthState.scrollToMonth(YearMonth.from(newDate))
+            else weekState.scrollToWeek(newDate)
         }
     }
 
@@ -177,99 +235,87 @@ fun SchedulePreviewScreenContent(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .pointerInput(selectedDate, isMonthView) {
-                    val swipeThresholdPx = with(density) { 72.dp.toPx() }
-                    var accumulatedDx = 0f
-                    var accumulatedDy = 0f
-
-                    detectHorizontalDragGestures(
-                        onDragStart = {
-                            accumulatedDx = 0f
-                            accumulatedDy = 0f
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            accumulatedDx += dragAmount
-                            accumulatedDy += abs(change.position.y - change.previousPosition.y)
-                        },
-                        onDragEnd = {
-                            val isHorizontalIntent = abs(accumulatedDx) > accumulatedDy
-                            val passedThreshold = abs(accumulatedDx) >= swipeThresholdPx
-
-                            if (isHorizontalIntent && passedThreshold) {
-                                if (accumulatedDx < 0) {
-                                    navigateDay(offsetDays = 1, direction = DaySwipeDirection.NEXT)
-                                } else {
-                                    navigateDay(offsetDays = -1, direction = DaySwipeDirection.PREVIOUS)
-                                }
-                            }
-                        }
-                    )
-                },
+                .calendarDaySwipeGestureSchedulePreviewScreen(
+                    selectedDate = selectedDate,
+                    isMonthView = isMonthView,
+                    density = density,
+                    onSwipeNext = { navigateDay(1, DaySwipeDirection.NEXT) },
+                    onSwipePrevious = { navigateDay(-1, DaySwipeDirection.PREVIOUS) }
+                ),
             label = "ScheduleLoadingTransition"
         ) { loading ->
-            if (loading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 3.dp
-                    )
-                }
-            } else if (classes.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_info_circle),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(48.dp)
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            text = "Brak zajęć",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "W wybranym planie nie znaleziono żadnych zaplanowanych zajęć.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            when {
+                loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 3.dp
                         )
                     }
                 }
-            } else {
-                ScheduleView(
-                    calendarState = monthState,
-                    weekState = weekState,
-                    selectedDate = selectedDate,
-                    isMonthView = isMonthView,
-                    swipeDirection = swipeDirection,
-                    onDateSelected = { date ->
-                        swipeDirection = null
-                        selectedDate = date
-                        if (isMonthView) {
-                            isMonthView = false
-                            scope.launch { weekState.scrollToWeek(date) }
-                        }
-                    },
-                    onToggleView = {
-                        isMonthView = !isMonthView
-                        scope.launch {
-                            if (isMonthView) monthState.scrollToMonth(YearMonth.from(selectedDate))
-                            else weekState.scrollToWeek(selectedDate)
-                        }
-                    },
-                    classes = filteredClasses,
 
-                    // TUTAJ ZMIANA: Pusta lista zadań dla wyszukiwanych i ulubionych planów
-                    tasks = emptyList(),
+                classes.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_info_circle),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = "Brak zajęć",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "W wybranym planie nie znaleziono żadnych zaplanowanych zajęć.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                }
 
-                    classColorMap = classColorMap,
-                    onClassClick = onClassClick,
-                    isTeacherPlan = isTeacher,
-                    showHeader = true,
-                    modifier = Modifier.fillMaxSize()
-                )
+                else -> {
+                    ScheduleView(
+                        calendarState = monthState,
+                        weekState = weekState,
+                        selectedDate = selectedDate,
+                        isMonthView = isMonthView,
+                        swipeDirection = swipeDirection,
+                        onDateSelected = { date ->
+                            swipeDirection = null
+                            selectedDate = date
+                            if (isMonthView) {
+                                isMonthView = false
+                                scope.launch { weekState.scrollToWeek(date) }
+                            }
+                        },
+                        onToggleView = {
+                            isMonthView = !isMonthView
+                            scope.launch {
+                                if (isMonthView) monthState.scrollToMonth(YearMonth.from(selectedDate))
+                                else weekState.scrollToWeek(selectedDate)
+                            }
+                        },
+                        classes = filteredClasses,
+                        tasks = emptyList(),
+                        classColorMap = classColorMap,
+                        onClassClick = onClassClick,
+                        isDarkMode = isDarkMode,
+                        isTeacherPlan = isTeacher,
+                        showHeader = true,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
     }
@@ -313,13 +359,14 @@ fun SchedulePreviewScreenPreview() {
                     subgroup = "L1"
                 )
             ),
-            tasks = emptyList(), // <-- Wypełniony brakujący parametr
+            tasks = emptyList(),
             classColorMap = emptyMap(),
             planName = "Dr inż. Jan Kowalski",
             isFavorite = false,
             isTeacher = true,
             teacherData = null,
             isLoading = false,
+            isDarkMode = false,
             onBackClick = {},
             onFavoriteClick = {},
             onClassClick = {}

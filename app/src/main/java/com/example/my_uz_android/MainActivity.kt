@@ -9,12 +9,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.example.my_uz_android.data.models.SettingsEntity
@@ -27,50 +25,39 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Pobieramy repozytorium ustawień z kontenera aplikacji
         val settingsRepo = (application as MyUZApplication).container.settingsRepository
 
         setContent {
-            // Reagujemy na wymogi Androida 13+ dotyczące powiadomień lokalnych
             RequestNotificationPermission()
 
-            val settingsState by settingsRepo.getSettingsStream().collectAsState(initial = null)
+            // FIX: null to poprawny stan (np. świeża instalacja), więc dajemy domyślne ustawienia.
+            val settingsState by settingsRepo
+                .getSettingsStream()
+                .collectAsState(initial = null)
 
-            if (settingsState != null) {
-                val currentSettings = settingsState ?: SettingsEntity()
-                val isSystemDark = isSystemInDarkTheme()
+            val currentSettings = settingsState ?: SettingsEntity()
+            val isSystemDark = isSystemInDarkTheme()
 
-                // Logika wyboru motywu (Dark/Light/System)
-                val useDarkTheme = when (currentSettings.themeMode) {
-                    ThemeMode.DARK.name -> true
-                    ThemeMode.LIGHT.name -> false
-                    else -> isSystemDark
-                }
+            val useDarkTheme = when (currentSettings.themeMode) {
+                ThemeMode.DARK.name -> true
+                ThemeMode.LIGHT.name -> false
+                else -> isSystemDark
+            }
 
-                // Decyzja o tym, czy pokazać Landing (pierwsze uruchomienie), czy od razu plan
-                val startDest = if (currentSettings.isFirstRun) "landing" else Screen.Main.route
+            val startDest = if (currentSettings.isFirstRun) "landing" else Screen.Main.route
 
-                MyUZTheme(darkTheme = useDarkTheme) {
-                    AppNavigation(
-                        startDestination = startDest,
-                        deepLinkIntent = intent
-                    )
-                }
-            } else {
-                // Stan ładowania podczas inicjalizacji bazy danych przy starcie
-                MyUZTheme(darkTheme = isSystemInDarkTheme()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
+            MyUZTheme(darkTheme = useDarkTheme) {
+                AppNavigation(
+                    startDestination = startDest,
+                    deepLinkIntent = intent
+                )
             }
         }
     }
 }
 
 /**
- * Funkcja prosząca o uprawnienie POST_NOTIFICATIONS (Android 13+).
- * Bez tego użytkownik nie zobaczy powiadomień o zajęciach i zadaniach wysyłanych przez Worker.
+ * Prośba o uprawnienie POST_NOTIFICATIONS (Android 13+).
  */
 @Composable
 fun RequestNotificationPermission() {
@@ -78,9 +65,7 @@ fun RequestNotificationPermission() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val launcher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            // Tu można dodać ewentualny log lub Snackbar, jeśli użytkownik odmówił zgody
-        }
+        ) { _ -> }
 
         LaunchedEffect(Unit) {
             val permission = Manifest.permission.POST_NOTIFICATIONS

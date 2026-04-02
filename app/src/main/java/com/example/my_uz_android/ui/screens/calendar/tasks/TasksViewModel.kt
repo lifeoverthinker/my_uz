@@ -41,7 +41,6 @@ class TasksViewModel(
         }
     }
 
-    // ZMODYFIKOWANE: Przyjmuje opcjonalny set z wybranymi zadaniami
     fun shareMyTasks(selectedTaskIds: Set<Int>? = null) {
         viewModelScope.launch {
             _isSharing.value = true
@@ -49,8 +48,7 @@ class TasksViewModel(
             try {
                 val allTasks = tasksStream.first()
 
-                // Filtrujemy zadania, jeśli przekazano konkretne ID
-                val tasksToShare = if (selectedTaskIds != null && selectedTaskIds.isNotEmpty()) {
+                val tasksToShare = if (!selectedTaskIds.isNullOrEmpty()) {
                     allTasks.filter { selectedTaskIds.contains(it.id) }
                 } else {
                     allTasks
@@ -58,13 +56,8 @@ class TasksViewModel(
 
                 if (tasksToShare.isNotEmpty()) {
                     when (val result = tasksRepository.shareTasks(tasksToShare)) {
-                        is NetworkResult.Success -> {
-                            _sharedCode.value = result.data
-                        }
-                        is NetworkResult.Error -> {
-                            _shareError.value = result.message
-                        }
-                        else -> {}
+                        is NetworkResult.Success -> _sharedCode.value = result.data
+                        is NetworkResult.Error -> _shareError.value = result.message
                     }
                 } else {
                     _shareError.value = "Brak zadań do udostępnienia."
@@ -88,10 +81,10 @@ class TasksViewModel(
                         val count = result.data?.size ?: 0
                         _importStatus.value = "Pomyślnie zaimportowano $count zadań!"
                     }
+
                     is NetworkResult.Error -> {
                         _importStatus.value = result.message
                     }
-                    else -> {}
                 }
             } catch (e: Exception) {
                 _importStatus.value = "Błąd krytyczny: ${e.message}"
@@ -102,8 +95,20 @@ class TasksViewModel(
     }
 
     fun clearSharedCode() = _sharedCode.update { null }
-    fun clearError() {
+
+    fun clearShareError() {
         _shareError.value = null
+    }
+
+    fun clearImportStatus() {
         _importStatus.value = null
+    }
+
+    /**
+     * Zachowane dla kompatybilności starszego kodu.
+     */
+    fun clearError() {
+        clearShareError()
+        clearImportStatus()
     }
 }

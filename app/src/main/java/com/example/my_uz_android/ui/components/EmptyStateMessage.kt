@@ -1,192 +1,179 @@
 package com.example.my_uz_android.ui.components
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.theme.MyUZTheme
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.sp
+import com.example.my_uz_android.ui.theme.InterFontFamily
 
+/**
+ * Komponent dla stanów pustych na pełnych ekranach.
+ * Wykorzystuje piękne ilustracje (rafiki) z folderu drawable.
+ */
 @Composable
 fun EmptyStateMessage(
     title: String,
     message: String,
+    iconRes: Int,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    iconRes: Int? = null,
-    imageVector: ImageVector? = null,
-    imageSize: Dp = 240.dp,
-    hint: String? = null,
     actionText: String? = null,
     onActionClick: (() -> Unit)? = null
 ) {
-    val isCompact = imageSize <= 120.dp
-    val padding = if (isCompact) 16.dp else 32.dp
-    val hasIcon = iconRes != null || imageVector != null
-
-    val bgColor = if (isCompact) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.background
-    val shape = if (isCompact) RoundedCornerShape(16.dp) else RoundedCornerShape(0.dp)
-
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = bgColor,
-        shape = shape
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        if (isCompact) {
-            // --- UKŁAD KOMPAKTOWY ---
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(padding)
+        // Używamy Image zamiast Icon dla ilustracji, aby zachować kolory
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            modifier = Modifier
+                .size(240.dp) // Zwiększony rozmiar dla ilustracji
+                .padding(bottom = 16.dp),
+            contentScale = ContentScale.Fit
+        )
+        
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall.copy(
+                fontWeight = FontWeight.Bold,
+                fontFamily = InterFontFamily
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+        
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontFamily = InterFontFamily
+                ),
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontFamily = InterFontFamily
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        
+        if (actionText != null && onActionClick != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onActionClick,
+                shape = RoundedCornerShape(12.dp)
             ) {
-                if (hasIcon) {
-                    when {
-                        iconRes != null -> Image(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = null,
-                            modifier = Modifier.size(imageSize)
-                        )
-                        imageVector != null -> Icon(
-                            imageVector = imageVector,
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                        )
-                    }
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Start
-                    )
-                    if (subtitle != null) {
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary,
-                            textAlign = TextAlign.Start
-                        )
-                    }
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Start
-                    )
-                }
-            }
-        } else {
-            // --- UKŁAD PIONOWY ---
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.padding(padding)
-            ) {
-                when {
-                    iconRes != null -> Image(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(imageSize)
-                            .padding(bottom = 8.dp)
-                    )
-                    imageVector != null -> Icon(
-                        imageVector = imageVector,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                    )
-                    else -> Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                    )
-                }
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-
-                if (subtitle != null) {
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = MaterialTheme.colorScheme.primary,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-
-                hint?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                if (actionText != null && onActionClick != null) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = onActionClick,
-                        modifier = Modifier.height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Text(
-                            text = actionText,
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
-                        )
-                    }
-                }
+                Text(text = actionText)
             }
         }
     }
 }
 
-// --- NOWY KOMPONENT NA KARTY PUSTYCH STANÓW (DASHBOARD) ---
+/**
+ * SPECJALISTYCZNA KARTA DLA PUSTYCH STANÓW NA DASHBOARDZIE (Home)
+ * Odwzorowana dokładnie z Figmy - używa małych ikon w białym kwadracie.
+ */
 @Composable
 fun DashboardEmptyCard(
     title: String,
     message: String,
     iconRes: Int,
     containerColor: Color,
-    contentColor: Color,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = containerColor,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(12.dp)
+        ) {
+            // Ikona w kwadraciku - używa theme by pasowało do dark mode
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLowest, // Zamiast sztywnego Color.White
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            
+            // Tytuł
+            Text(
+                text = title,
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 16.sp,
+                    lineHeight = 24.sp
+                ),
+                color = accentColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            // Wiadomość
+            Text(
+                text = message,
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+// java/com/example/my_uz_android/ui/components/EmptyStateMessage.kt
+
+@Composable
+fun DashboardActionEmptyCard(
+    title: String,
+    message: String,
+    iconRes: Int,
+    actionText: String,
+    onActionClick: () -> Unit,
+    containerColor: Color,
+    accentColor: Color,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -196,35 +183,59 @@ fun DashboardEmptyCard(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(vertical = 24.dp, horizontal = 16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(24.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = MaterialTheme.colorScheme.surfaceContainerLowest,
                 modifier = Modifier.size(48.dp)
             ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Box(contentAlignment = Alignment.Center) {
                     Icon(
                         painter = painterResource(id = iconRes),
                         contentDescription = null,
-                        tint = contentColor,
-                        modifier = Modifier.size(24.dp)
+                        tint = accentColor,
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
+
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = contentColor
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp
+                ),
+                color = accentColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Button(
+                onClick = onActionClick,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor)
+            ) {
+                Text(text = actionText, color = MaterialTheme.colorScheme.surfaceContainerLowest)
+            }
         }
     }
 }

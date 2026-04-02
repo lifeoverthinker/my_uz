@@ -40,11 +40,12 @@ class SettingsLogicTest {
             classColorsJson = "{}"
         )
 
-        // Definiujemy zachowanie mocka dla wywołania suspend
+        // Definiujemy zachowanie mocka dla wywołania suspend wewnątrz DAO
         coEvery { settingsDao.insertOrUpdate(updatedSettings) } returns Unit
 
         // When
-        settingsRepository.insertOrUpdate(updatedSettings)
+        // POPRAWKA: Używamy prawidłowej nazwy funkcji z SettingsRepository
+        settingsRepository.insertSettings(updatedSettings)
 
         // Then
         // Weryfikujemy, czy dao.insertOrUpdate zostało wywołane dokładnie raz z odpowiednim obiektem

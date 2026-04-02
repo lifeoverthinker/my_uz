@@ -18,6 +18,8 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.theme.MyUZTheme
 
 @Composable
@@ -31,8 +33,6 @@ fun PersonalDataScreen(
     val selectedGender by viewModel.selectedGender.collectAsState()
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val selectedSubgroups by viewModel.mainSelectedSubgroups.collectAsState()
-
-    // NAPRAWA: Zbieramy całe obiekty kursów zamiast tylko tekstów (kodów)
     val additionalCourses by viewModel.additionalUserCourses.collectAsState()
 
     PersonalDataScreenContent(
@@ -65,29 +65,18 @@ fun PersonalDataScreenContent(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Dane osobowe") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            painterResource(R.drawable.ic_chevron_left),
-                            "Wróć",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                },
+                title = "Dane osobowe",
+                navigationIcon = R.drawable.ic_chevron_left,
+                onNavigationClick = onNavigateBack,
+                isNavigationIconFilled = true,
                 actions = {
-                    IconButton(onClick = onNavigateToEdit) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_edit),
-                            contentDescription = "Edytuj",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                    TopBarActionIcon(
+                        icon = R.drawable.ic_edit,
+                        onClick = onNavigateToEdit,
+                        isFilled = true,
+                        iconTint = MaterialTheme.colorScheme.primary
+                    )
+                }
             )
         }
     ) { innerPadding ->
@@ -135,7 +124,7 @@ fun PersonalDataScreenContent(
                         ) {
                             sortedSubgroups.forEach { subgroup ->
                                 Surface(
-                                    color = MaterialTheme.colorScheme.primaryContainer, // Poprawione na kolor z motywu
+                                    color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text(
@@ -145,7 +134,7 @@ fun PersonalDataScreenContent(
                                             vertical = 6.dp
                                         ),
                                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer // Poprawiony kontrast
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                             }
@@ -153,7 +142,6 @@ fun PersonalDataScreenContent(
                     }
                 }
 
-                // NAPRAWA: Rozbudowane wyświetlanie dla grup dodatkowych
                 if (additionalCourses.isNotEmpty()) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -182,7 +170,6 @@ fun PersonalDataScreenContent(
                                     modifier = Modifier.padding(top = 2.dp)
                                 )
 
-                                // NAPRAWA: Zapewnienie rozdzielenia spacji i sortowania alfabetycznego (jak w koncie gł.)
                                 val subgroups =
                                     course.selectedSubgroup?.split(",")?.map { it.trim() }
                                         ?.filter { it.isNotBlank() }?.sorted()

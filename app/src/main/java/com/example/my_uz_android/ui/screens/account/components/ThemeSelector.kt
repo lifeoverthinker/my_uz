@@ -8,12 +8,47 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.data.models.ThemeMode
+
+/*** Zielony komentarz: Stałe UI wyciągnięte poza Composable, aby nie tworzyć ich ponownie przy każdej rekompozycji. */
+private val ThemeTileShape = RoundedCornerShape(12.dp)
+private val ThemeModeLabelsPl = mapOf(
+    ThemeMode.LIGHT to "Jasny",
+    ThemeMode.DARK to "Ciemny",
+    ThemeMode.SYSTEM to "System"
+)
+
+@Immutable
+private data class ThemeTileColors(
+    val background: androidx.compose.ui.graphics.Color,
+    val content: androidx.compose.ui.graphics.Color,
+    val border: androidx.compose.ui.graphics.Color
+)
+
+/*** Zielony komentarz: Mały helper centralizuje logikę kolorów i usuwa duplikację if-else. */
+@Composable
+private fun resolveThemeTileColors(isSelected: Boolean): ThemeTileColors {
+    val scheme = MaterialTheme.colorScheme
+    return if (isSelected) {
+        ThemeTileColors(
+            background = scheme.primaryContainer,
+            content = scheme.onPrimaryContainer,
+            border = scheme.primary
+        )
+    } else {
+        ThemeTileColors(
+            background = scheme.surfaceVariant.copy(alpha = 0.4f),
+            content = scheme.onSurfaceVariant,
+            border = scheme.outlineVariant.copy(alpha = 0.3f)
+        )
+    }
+}
 
 @Composable
 fun ThemeSelector(
@@ -27,27 +62,19 @@ fun ThemeSelector(
     ) {
         ThemeMode.entries.forEach { mode ->
             val isSelected = selectedTheme == mode
-
-            val bgColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-            val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-            val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-
-            val themeName = when (mode.name) {
-                "LIGHT" -> "Jasny"
-                "DARK" -> "Ciemny"
-                else -> "System"
-            }
+            val colors = resolveThemeTileColors(isSelected)
+            val themeName = ThemeModeLabelsPl[mode] ?: "System"
 
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .height(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(bgColor)
+                    .clip(ThemeTileShape)
+                    .background(colors.background)
                     .border(
                         width = 1.dp,
-                        color = borderColor,
-                        shape = RoundedCornerShape(12.dp)
+                        color = colors.border,
+                        shape = ThemeTileShape
                     )
                     .clickable { onThemeSelected(mode) },
                 contentAlignment = Alignment.Center
@@ -56,7 +83,7 @@ fun ThemeSelector(
                     text = themeName,
                     fontWeight = FontWeight.Medium,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = contentColor
+                    color = colors.content
                 )
             }
         }

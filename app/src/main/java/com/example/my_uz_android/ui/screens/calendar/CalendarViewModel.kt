@@ -4,12 +4,29 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.my_uz_android.data.models.*
-import com.example.my_uz_android.data.repositories.*
+import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.data.models.FavoriteEntity
+import com.example.my_uz_android.data.models.SettingsEntity
+import com.example.my_uz_android.data.models.TaskEntity
+import com.example.my_uz_android.data.models.UserCourseEntity
+import com.example.my_uz_android.data.repositories.ClassRepository
+import com.example.my_uz_android.data.repositories.FavoritesRepository
+import com.example.my_uz_android.data.repositories.SettingsRepository
+import com.example.my_uz_android.data.repositories.TasksRepository
+import com.example.my_uz_android.data.repositories.UniversityRepository
+import com.example.my_uz_android.data.repositories.UserCourseRepository
 import com.example.my_uz_android.util.NetworkResult
+import com.example.my_uz_android.util.SubgroupMatcher
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -34,7 +51,13 @@ data class CalendarUiState(
     val error: String? = null,
     val selectedDate: LocalDate = LocalDate.now(ZoneId.of("Europe/Warsaw")),
     val isMonthView: Boolean = false,
-    val temporaryClassForDetails: ClassEntity? = null
+    val temporaryClassForDetails: ClassEntity? = null,
+    val themeMode: String = "SYSTEM"
+)
+
+private data class ActiveCourseFilterCalendarVM(
+    val groupCode: String,
+    val subgroupRaw: String?
 )
 
 class CalendarViewModel(
@@ -48,6 +71,7 @@ class CalendarViewModel(
 ) : AndroidViewModel(application) {
 
     private val gson = Gson()
+
     private val _selectedGroups = MutableStateFlow<Set<String>>(emptySet())
     private val _previewState = MutableStateFlow<List<ClassEntity>>(emptyList())
     private val _currentSource = MutableStateFlow<ScheduleSource>(ScheduleSource.MyPlan)
@@ -56,120 +80,72 @@ class CalendarViewModel(
     private val _isLoadingNetwork = MutableStateFlow(false)
     private val _temporaryClassForDetails = MutableStateFlow<ClassEntity?>(null)
 
+    private var isGroupsInitialized = false
+
     val uiState: StateFlow<CalendarUiState> = combine(
-        userCourseRepository.getAllUserCoursesStream()
-            .onEach { Log.d("CalendarVM", "userCourses stream: emituje ${it.size} elementów") },
-        classRepository.getAllClassesStream()
-            .onEach { Log.d("CalendarVM", "myClasses stream: emituje ${it.size} elementów") },
-        favoritesRepository.favoritesStream.onEach {
-            Log.d(
-                "CalendarVM",
-                "favorites stream: emituje ${it.size} elementów"
-            )
-        },
-        settingsRepository.getSettingsStream().onEach {
-            Log.d(
-                "CalendarVM",
-                "settings stream: wyemitowano wartość (null=${it == null})"
-            )
-        },
-        _selectedGroups.onEach {
-            Log.d(
-                "CalendarVM",
-                "selectedGroups stream: emituje ${it.size} elementów"
-            )
-        },
-        _currentSource.onEach { Log.d("CalendarVM", "currentSource stream: $it") },
-        _previewState.onEach {
-            Log.d(
-                "CalendarVM",
-                "previewState stream: emituje ${it.size} elementów"
-            )
-        },
-        _selectedDate.onEach { Log.d("CalendarVM", "selectedDate stream: $it") },
-        _isMonthView.onEach { Log.d("CalendarVM", "isMonthView stream: $it") },
-        _isLoadingNetwork.onEach { Log.d("CalendarVM", "isLoadingNetwork stream: $it") },
-        tasksRepository.getAllTasks()
-            .onEach { Log.d("CalendarVM", "tasks stream: emituje ${it.size} elementów") },
-        _temporaryClassForDetails.onEach {
-            Log.d(
-                "CalendarVM",
-                "temporaryClass stream: (null=${it == null})"
-            )
-        }
+        userCourseRepository.getAllUserCoursesStream(),
+        classRepository.getAllClassesStream(),
+        favoritesRepository.favoritesStream,
+        settingsRepository.getSettingsStream(),
+        _selectedGroups,
+        _currentSource,
+        _previewState,
+        _selectedDate,
+        _isMonthView,
+        _isLoadingNetwork,
+        tasksRepository.getAllTasks(),
+        _temporaryClassForDetails
     ) { args: Array<Any?> ->
         try {
+            @Suppress("UNCHECKED_CAST")
             val courses = args[0] as List<UserCourseEntity>
+            @Suppress("UNCHECKED_CAST")
             val myClasses = args[1] as List<ClassEntity>
+            @Suppress("UNCHECKED_CAST")
             val favorites = args[2] as List<FavoriteEntity>
             val settings = args[3] as SettingsEntity?
-            val selectedCodes = args[4] as Set<String>
+            @Suppress("UNCHECKED_CAST")
+            val selectedCodesRaw = args[4] as Set<String>
             val source = args[5] as ScheduleSource
+            @Suppress("UNCHECKED_CAST")
             val previewClasses = args[6] as List<ClassEntity>
             val selectedDate = args[7] as LocalDate
             val isMonthView = args[8] as Boolean
             val isLoadingNet = args[9] as Boolean
+            @Suppress("UNCHECKED_CAST")
             val tasks = args[10] as List<TaskEntity>
             val tempClass = args[11] as ClassEntity?
 
-            Log.d("CalendarVM", "Combine odpalił! Budowanie stanu UI...")
+            val colorMap = parseColorMapCalendarVM(settings?.classColorsJson)
+            val allCoursesForUi = buildAllCoursesForUiCalendarVM(settings, courses)
+            val allUserCodes = allCoursesForUi.map { normalizeGroupCodeCalendarVM(it.groupCode) }.toSet()
 
-            val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
-            val colorMap: Map<String, Int> = try {
-                gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-            } catch (e: Exception) {
-                Log.e("CalendarVM", "Błąd parsowania kolorów JSON", e)
-                emptyMap()
-            }
+            val selectedCodes = initializeGroupsIfNeededCalendarVM(allUserCodes, selectedCodesRaw)
 
-            // BUDOWANIE KURSÓW
-            val allCoursesForUi = mutableListOf<UserCourseEntity>()
-            settings?.selectedGroupCode?.let { mainCode ->
-                allCoursesForUi.add(
-                    UserCourseEntity(
-                        id = -1,
-                        groupCode = mainCode,
-                        fieldOfStudy = settings.fieldOfStudy ?: mainCode,
-                        semester = settings.currentSemester
-                    )
-                )
-            }
-            allCoursesForUi.addAll(courses)
+            val activeCodes = selectedCodes
+                .map { normalizeGroupCodeCalendarVM(it) }
+                .filter { it in allUserCodes }
+                .toSet()
 
-            // BUDOWANIE AKTYWNYCH KODÓW
-            val activeCodes = if (selectedCodes.isEmpty()) {
-                allCoursesForUi.map { it.groupCode }.toMutableSet()
-            } else {
-                selectedCodes
-            }
+            val activeFilters = buildActiveFiltersCalendarVM(settings, courses)
+                .filter { normalizeGroupCodeCalendarVM(it.groupCode) in activeCodes }
 
-            // Filtrowanie
             val classesToShow = when (source) {
                 is ScheduleSource.MyPlan -> {
-                    // Jeśli NIE mamy żadnych zdefiniowanych kodów (bo np. dane z bazy
-                    // jeszcze nie doszły lub użytkownik nie wybrał żadnej grupy z ustawień)
-                    // ZAWSZE wyświetl wszystkie dostępne w bazie zajęcia jako zabezpieczenie.
-                    if (activeCodes.isEmpty() && settings?.selectedGroupCode == null) {
-                        Log.w(
-                            "CalendarVM",
-                            "Brak ustawień i aktywnych kodów! Awaryjnie pokazuję wszystkie zajęcia."
-                        )
-                        myClasses
-                    } else if (activeCodes.isEmpty()) {
-                        // Jeśli są ustawienia, ale activeCodes chwilowo puste
-                        myClasses
-                    } else {
-                        myClasses.filter { activeCodes.contains(it.groupCode) }
+                    val classesInActiveGroups = myClasses.filter {
+                        normalizeGroupCodeCalendarVM(it.groupCode) in activeCodes
                     }
+                    filterMyPlanClassesCalendarVM(classesInActiveGroups, activeFilters)
                 }
 
-                else -> previewClasses
+                is ScheduleSource.Favorite,
+                is ScheduleSource.Preview -> previewClasses
             }
 
-            val resourceId = when (source) {
+            val selectedResourceId = when (source) {
                 is ScheduleSource.Favorite -> source.resourceId
                 is ScheduleSource.Preview -> source.resourceId
-                else -> null
+                is ScheduleSource.MyPlan -> null
             }
 
             CalendarUiState(
@@ -180,7 +156,7 @@ class CalendarViewModel(
                 tasks = tasks,
                 classColorMap = colorMap,
                 currentSource = source,
-                selectedResourceId = resourceId,
+                selectedResourceId = selectedResourceId,
                 selectedPlanName = when (source) {
                     is ScheduleSource.MyPlan -> "Mój Plan"
                     is ScheduleSource.Favorite -> source.name
@@ -189,23 +165,26 @@ class CalendarViewModel(
                 isLoading = isLoadingNet,
                 selectedDate = selectedDate,
                 isMonthView = isMonthView,
-                temporaryClassForDetails = tempClass
+                temporaryClassForDetails = tempClass,
+                themeMode = settings?.themeMode ?: "SYSTEM"
             )
         } catch (e: Exception) {
-            Log.e("CalendarVM", "Błąd w trakcie mapowania stanu UI w combine!", e)
+            Log.e("CalendarVM", "Błąd mapowania stanu UI", e)
             CalendarUiState(error = e.localizedMessage, isLoading = false)
         }
-    }.catch { e ->
-        Log.e("CalendarVM", "Krytyczny błąd! Złapano wyjątek na poziomie całego potoku Flow.", e)
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        CalendarUiState(isLoading = false) // Start without loading to avoid initial splash
-    )
+    }
+        .catch { e -> Log.e("CalendarVM", "Błąd Flow uiState", e) }
+        .distinctUntilChanged()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            CalendarUiState(isLoading = false)
+        )
 
     fun toggleGroupVisibility(groupCode: String) {
+        val normalized = normalizeGroupCodeCalendarVM(groupCode)
         val current = _selectedGroups.value.toMutableSet()
-        if (current.contains(groupCode)) current.remove(groupCode) else current.add(groupCode)
+        if (current.contains(normalized)) current.remove(normalized) else current.add(normalized)
         _selectedGroups.value = current
     }
 
@@ -215,36 +194,38 @@ class CalendarViewModel(
 
     fun toggleFavorite(name: String, type: String) {
         viewModelScope.launch {
-            try {
+            runCatching {
                 val existing = uiState.value.favorites.find { it.name == name }
-                if (existing != null) favoritesRepository.deleteFavorite(existing)
-                else favoritesRepository.insertFavorite(
-                    FavoriteEntity(
-                        resourceId = name,
-                        name = name,
-                        type = type
+                if (existing != null) {
+                    favoritesRepository.deleteFavorite(existing)
+                } else {
+                    favoritesRepository.insertFavorite(
+                        FavoriteEntity(
+                            resourceId = name,
+                            name = name,
+                            type = type
+                        )
                     )
-                )
-            } catch (e: Exception) {
-                Log.e("CalendarVM", "Błąd przy zmianie statusu ulubionych", e)
+                }
+            }.onFailure {
+                Log.e("CalendarVM", "Błąd zapisu ulubionych", it)
             }
         }
     }
 
     fun selectFavoritePlan(favorite: FavoriteEntity) {
         _previewState.value = emptyList()
-        _currentSource.value =
-            ScheduleSource.Favorite(favorite.resourceId, favorite.name, favorite.type)
-        loadNetworkSchedule(favorite.name, favorite.type)
+        _currentSource.value = ScheduleSource.Favorite(favorite.resourceId, favorite.name, favorite.type)
+        loadNetworkScheduleCalendarVM(favorite.name, favorite.type)
     }
 
     fun selectPreviewPlan(name: String, type: String) {
         _previewState.value = emptyList()
         _currentSource.value = ScheduleSource.Preview(name, name, type)
-        loadNetworkSchedule(name, type)
+        loadNetworkScheduleCalendarVM(name, type)
     }
 
-    private fun loadNetworkSchedule(name: String, type: String) {
+    private fun loadNetworkScheduleCalendarVM(name: String, type: String) {
         viewModelScope.launch {
             _isLoadingNetwork.value = true
             try {
@@ -254,41 +235,43 @@ class CalendarViewModel(
                     universityRepository.getSchedule(name, emptyList())
                 }
 
-                if (result is NetworkResult.Success) {
-                    Log.d("CalendarVM", "Pobrano plan z sieci: ${result.data?.size} zajęć")
-                    _previewState.value = result.data ?: emptyList()
+                _previewState.value = if (result is NetworkResult.Success) {
+                    result.data ?: emptyList()
                 } else {
-                    Log.e("CalendarVM", "Błąd sieci podczas pobierania planu")
+                    emptyList()
                 }
             } catch (e: Exception) {
-                Log.e("CalendarVM", "Wyjątek podczas pobierania planu sieciowego", e)
+                Log.e("CalendarVM", "Błąd pobierania planu z sieci", e)
+                _previewState.value = emptyList()
             } finally {
                 _isLoadingNetwork.value = false
             }
         }
     }
 
-    /**
-     * Odświeża plan z Supabase na żądanie.
-     * Wywołuj to z CalendarScreen przy wejściu użytkownika na ekran.
-     */
     fun refreshMyPlan() {
         viewModelScope.launch {
             val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch
-            val groupCode = settings.selectedGroupCode ?: return@launch
+            val groupCodes = mutableListOf<Pair<String, String?>>()
+
+            settings.selectedGroupCode?.let { code ->
+                groupCodes.add(code to settings.selectedSubgroup)
+            }
+
+            val extraCourses = userCourseRepository.getAllUserCoursesStream().firstOrNull().orEmpty()
+            extraCourses.forEach { course ->
+                groupCodes.add(course.groupCode to course.selectedSubgroup)
+            }
+
+            if (groupCodes.isEmpty()) return@launch
 
             _isLoadingNetwork.value = true
             try {
-                val result = universityRepository.refreshSchedule(
-                    groupCode = groupCode,
-                    subgroup = settings.selectedSubgroup,  // pojedynczy String?
-                    classRepository = classRepository
-                )
-                if (result is NetworkResult.Error) {
-                    Log.e("CalendarVM", "Błąd odświeżania planu: ${result.message}")
+                groupCodes.forEach { (code, subgroup) ->
+                    universityRepository.refreshSchedule(code, subgroup, classRepository)
                 }
             } catch (e: Exception) {
-                Log.e("CalendarVM", "Wyjątek podczas odświeżania planu", e)
+                Log.e("CalendarVM", "Błąd odświeżania planu", e)
             } finally {
                 _isLoadingNetwork.value = false
             }
@@ -305,5 +288,98 @@ class CalendarViewModel(
 
     fun setTemporaryClassForDetails(classEntity: ClassEntity?) {
         _temporaryClassForDetails.value = classEntity
+    }
+
+    private fun parseColorMapCalendarVM(rawJson: String?): Map<String, Int> {
+        return try {
+            val type = object : TypeToken<Map<String, Int>>() {}.type
+            gson.fromJson<Map<String, Int>>(rawJson ?: "{}", type) ?: emptyMap()
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun buildAllCoursesForUiCalendarVM(
+        settings: SettingsEntity?,
+        courses: List<UserCourseEntity>
+    ): List<UserCourseEntity> {
+        val result = mutableListOf<UserCourseEntity>()
+
+        settings?.selectedGroupCode?.let { mainCode ->
+            result.add(
+                UserCourseEntity(
+                    id = -1,
+                    groupCode = mainCode,
+                    fieldOfStudy = settings.fieldOfStudy ?: mainCode,
+                    semester = settings.currentSemester,
+                    selectedSubgroup = settings.selectedSubgroup
+                )
+            )
+        }
+
+        courses.forEach { course ->
+            val normalized = normalizeGroupCodeCalendarVM(course.groupCode)
+            if (result.none { normalizeGroupCodeCalendarVM(it.groupCode) == normalized }) {
+                result.add(course)
+            }
+        }
+
+        return result
+    }
+
+    private fun buildActiveFiltersCalendarVM(
+        settings: SettingsEntity?,
+        courses: List<UserCourseEntity>
+    ): List<ActiveCourseFilterCalendarVM> {
+        val filters = mutableListOf<ActiveCourseFilterCalendarVM>()
+
+        settings?.selectedGroupCode?.let {
+            filters.add(ActiveCourseFilterCalendarVM(it, settings.selectedSubgroup))
+        }
+        courses.forEach {
+            filters.add(ActiveCourseFilterCalendarVM(it.groupCode, it.selectedSubgroup))
+        }
+
+        return filters
+    }
+
+    private fun initializeGroupsIfNeededCalendarVM(
+        allUserCodes: Set<String>,
+        selectedCodesRaw: Set<String>
+    ): Set<String> {
+        val normalizedSelected = selectedCodesRaw.map { normalizeGroupCodeCalendarVM(it) }.toSet()
+
+        if (!isGroupsInitialized && allUserCodes.isNotEmpty()) {
+            _selectedGroups.value = allUserCodes
+            isGroupsInitialized = true
+            return allUserCodes
+        }
+
+        if (normalizedSelected.isNotEmpty()) return normalizedSelected
+
+        val current = _selectedGroups.value.map { normalizeGroupCodeCalendarVM(it) }.toSet()
+        return if (current.isNotEmpty()) current else allUserCodes
+    }
+
+    private fun filterMyPlanClassesCalendarVM(
+        classes: List<ClassEntity>,
+        activeFilters: List<ActiveCourseFilterCalendarVM>
+    ): List<ClassEntity> {
+        // Zielony komentarz: grupujemy filtry po kodzie, a dopasowanie podgrup delegujemy do jednego wspólnego SubgroupMatcher.
+        val filtersByGroup = activeFilters.groupBy { normalizeGroupCodeCalendarVM(it.groupCode) }
+
+        return classes.filter { classItem ->
+            val group = normalizeGroupCodeCalendarVM(classItem.groupCode)
+            val filtersForGroup = filtersByGroup[group] ?: return@filter false
+
+            SubgroupMatcher.matches(
+                classSubgroupRaw = classItem.subgroup,
+                selectedSubgroupsRaw = filtersForGroup.map { it.subgroupRaw }
+            )
+        }
+    }
+
+    private fun normalizeGroupCodeCalendarVM(value: String?): String {
+        return value?.trim()?.uppercase().orEmpty()
     }
 }

@@ -2,252 +2,258 @@ package com.example.my_uz_android.ui.screens.index
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.GradeEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
-import com.example.my_uz_android.ui.screens.index.components.GradeListItem
+import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.util.ClassTypeUtils
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-// Importy dla FlowRow
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SubjectGradesScreen(
     subjectName: String,
-    classType: String,
-    onNavigateBack: () -> Unit,
+    onBackClick: () -> Unit,
     onGradeClick: (Int) -> Unit,
-    onAddGradeClick: () -> Unit,
+    onAddGradeClick: (String, String) -> Unit,
     viewModel: GradesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-
-    val filteredGrades = uiState.allGrades.filter {
-        it.subjectName == subjectName && it.classType == classType
-    }
-
-    val gradesForAvg = filteredGrades.filter { !it.isPoints && it.grade != -1.0 && it.weight > 0 }
-    val pointsSum = filteredGrades.filter { it.isPoints }.sumOf { it.grade }
-    val plusCount = filteredGrades.count { it.grade == -1.0 }
-    val finalGrade = filteredGrades.find { it.description?.contains("końcow", ignoreCase = true) == true }
-
-    val average = if (gradesForAvg.isNotEmpty()) {
-        val sum = gradesForAvg.sumOf { it.grade * it.weight }
-        val weightSum = gradesForAvg.sumOf { it.weight }
-        if (weightSum > 0) sum / weightSum else 0.0
-    } else null
-
-    // Stan modala
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val subject = uiState.subjects.find { it.name == subjectName }
     var showFinalGradeDialog by remember { mutableStateOf(false) }
+    var gradeToDelete by remember { mutableStateOf<GradeEntity?>(null) }
+    
+    val isDark = isSystemInDarkTheme()
 
     if (showFinalGradeDialog) {
         FinalGradeDialog(
-            currentGrade = finalGrade?.grade,
-            onDismiss = { showFinalGradeDialog = false },
-            onConfirm = { newGrade ->
-                val semester = filteredGrades.firstOrNull()?.semester ?: 1
-                val entity = finalGrade?.copy(
-                    grade = newGrade,
-                    date = System.currentTimeMillis()
-                ) ?: GradeEntity(
-                    id = 0,
-                    subjectName = subjectName,
-                    classType = classType,
-                    grade = newGrade,
-                    weight = 0, // Waga 0 zapobiega zaburzaniu średniej z innych ocen
-                    description = "Ocena końcowa",
-                    comment = null,
-                    date = System.currentTimeMillis(),
-                    semester = semester,
-                    isPoints = false
-                )
-                viewModel.saveGrade(entity)
-                showFinalGradeDialog = false
-            }
+            onConfirm = { showFinalGradeDialog = false },
+            onDismiss = { showFinalGradeDialog = false }
         )
     }
+
+    if (gradeToDelete != null) {
+        DeleteConfirmationDialog(
+            onConfirm = {
+                viewModel.deleteGrade(gradeToDelete!!)
+                gradeToDelete = null
+            },
+            onDismiss = { gradeToDelete = null },
+            itemType = "ocenę"
+        )
+    }
+
+    val classTypeSubtitle = subject?.types?.joinToString(", ") {
+        ClassTypeUtils.getFullName(it.name)
+    } ?: ""
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = ClassTypeUtils.getFullName(classType),
-                subtitle = subjectName,
-                onNavigationClick = onNavigateBack,
+                title = subjectName,
+                subtitle = classTypeSubtitle,
                 navigationIcon = R.drawable.ic_chevron_left,
+                onNavigationClick = onBackClick,
+                isNavigationIconFilled = true,
                 actions = {
                     TopBarActionIcon(
                         icon = R.drawable.ic_plus,
-                        onClick = onAddGradeClick
+                        isFilled = true,
+                        onClick = {
+                            val preferredType = subject?.types?.firstOrNull()?.name.orEmpty()
+                            onAddGradeClick(subjectName, preferredType)
+                        }
                     )
                 }
             )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
-        ) {
-
-            item {
-                SubjectStatsCard(average = average, points = pointsSum, pluses = plusCount)
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    ) { paddingValues ->
+        if (subject == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Brak danych", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        } else {
+            val totalPoints = subject.types.flatMap { it.grades }.filter { it.isPoints }.sumOf { it.grade }
+            val activitiesCount = subject.types.flatMap { it.grades }.size
+            val overallAverage = subject.average?.let { String.format("%.1f", it) } ?: "-"
+            val pointsText = if (totalPoints % 1.0 == 0.0) totalPoints.toInt().toString() else totalPoints.toString()
 
-            item {
-                FinalGradeMinimalButton(
-                    finalGrade = finalGrade?.grade,
-                    onClick = { showFinalGradeDialog = true }
-                )
-            }
-
-            item {
-                Text(
-                    text = "Historia wpisów",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            if (filteredGrades.isEmpty()) {
-                item {
-                    Text(
-                        text = "Brak wpisów",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                items(filteredGrades.sortedByDescending { it.date }, key = { it.id }) { grade ->
-                    GradeListItem(
-                        grade = grade,
-                        onClick = { onGradeClick(grade.id) },
-                        onDelete = { viewModel.deleteGrade(it) },
-                        onDuplicate = { viewModel.duplicateGrade(it) }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SubjectStatsCard(average: Double?, points: Double, pluses: Int) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = average?.let { String.format("%.2f", it) } ?: "-",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text("Średnia", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-
-            Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.outlineVariant))
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = if (points % 1.0 == 0.0) "${points.toInt()}" else "$points",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text("Punkty", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-
-            Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.outlineVariant))
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "$pluses",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text("Aktywności", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
-fun FinalGradeMinimalButton(finalGrade: Double?, onClick: () -> Unit) {
-    Surface(
-        color = Color.Transparent,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-    ) {
-        Row(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Średnia końcowa",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = if (finalGrade != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
-                Text(
-                    text = finalGrade?.toString() ?: "Wpisz",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (finalGrade != null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        DetailSummaryItem(
+                            value = overallAverage,
+                            label = "Średnia",
+                            modifier = Modifier.weight(1f),
+                            valueColor = MaterialTheme.colorScheme.primary
+                        )
+                        Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)))
+                        DetailSummaryItem(
+                            value = if (totalPoints > 0) pointsText else "-",
+                            label = "Punkty",
+                            modifier = Modifier.weight(1f),
+                            valueColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Box(modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)))
+                        DetailSummaryItem(
+                            value = activitiesCount.toString(),
+                            label = "Aktywności",
+                            modifier = Modifier.weight(1f),
+                            valueColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Oceny",
+                                style = TextStyle(
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 16.sp,
+                                    lineHeight = 24.sp
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "+ Dodaj ocenę końcową",
+                                style = TextStyle(
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 12.sp,
+                                    lineHeight = 16.sp
+                                ),
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable { showFinalGradeDialog = true }
+                            )
+                        }
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            val allGrades = subject.types.flatMap { type -> type.grades.map { it to type.name } }
+                                .sortedByDescending { it.first.date }
+
+                            allGrades.forEachIndexed { index, (grade, typeName) ->
+                                val dismissState = rememberSwipeToDismissBoxState(
+                                    confirmValueChange = {
+                                        if (it == SwipeToDismissBoxValue.EndToStart) {
+                                            gradeToDelete = grade
+                                            false
+                                        } else false
+                                    }
+                                )
+
+                                SwipeToDismissBox(
+                                    state = dismissState,
+                                    enableDismissFromStartToEnd = false,
+                                    backgroundContent = {
+                                        Box(
+                                            Modifier
+                                                .fillMaxSize()
+                                                .padding(vertical = 4.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(MaterialTheme.colorScheme.error),
+                                            contentAlignment = Alignment.CenterEnd
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Usuń",
+                                                tint = Color.White,
+                                                modifier = Modifier.padding(horizontal = 24.dp)
+                                            )
+                                        }
+                                    },
+                                    content = {
+                                        GradeCardRow(grade = grade, onClick = { onGradeClick(grade.id) })
+                                    }
+                                )
+
+                                if (index < allGrades.size - 1) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        thickness = 1.dp,
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-// NOWY MODAL
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FinalGradeDialog(
-    currentGrade: Double?,
-    onDismiss: () -> Unit,
-    onConfirm: (Double) -> Unit
+    onConfirm: (Double) -> Unit,
+    onDismiss: () -> Unit
 ) {
-    val grades = listOf(2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0)
-    var selectedGrade by remember { mutableStateOf(currentGrade ?: 5.0) }
+    val grades = listOf(2.0, 3.0, 3.5, 4.0, 4.5, 5.0)
+    var selectedGrade by remember { mutableStateOf(grades.last()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Średnia końcowa", style = MaterialTheme.typography.titleLarge) },
+        title = { Text(text = "Dodaj ocenę końcową", style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)) },
         text = {
-            Column {
-                Text("Wybierz średnią z przedmiotu:", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Wybierz ocenę końcową z przedmiotu:", style = TextStyle(fontFamily = InterFontFamily))
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -257,25 +263,130 @@ fun FinalGradeDialog(
                         FilterChip(
                             selected = selectedGrade == grade,
                             onClick = { selectedGrade = grade },
-                            label = { Text(grade.toString()) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                            label = { Text(grade.toString()) }
                         )
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selectedGrade) }) {
-                Text("Zapisz")
-            }
+            TextButton(onClick = { onConfirm(selectedGrade) }) { Text("Zatwierdź") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Anuluj", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            TextButton(onClick = onDismiss) { Text("Anuluj") }
         }
     )
+}
+
+@Composable
+private fun DetailSummaryItem(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 24.sp),
+            color = valueColor
+        )
+        Text(
+            text = label,
+            style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Normal, fontSize = 14.sp),
+            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
+    val dateStr = Instant.ofEpochMilli(grade.date)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .format(DateTimeFormatter.ofPattern("dd MMM yyyy", Locale("pl")))
+    
+    val displayValue = when {
+        grade.grade == -1.0 -> "+"
+        grade.grade % 1.0 == 0.0 -> grade.grade.toInt().toString()
+        else -> grade.grade.toString()
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable { onClick() }
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Ocena Circle (Box)
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(100.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = displayValue,
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                ),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        // Tytuł i Data
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.Start,
+        ) {
+            Text(
+                text = grade.description.takeIf { !it.isNullOrBlank() } ?: (if (grade.isPoints) "Punkty" else "Aktywność"),
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = dateStr,
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        // Waga (opcjonalnie)
+        if (!grade.isPoints && grade.weight > 0 && grade.grade != -1.0) {
+            Text(
+                text = "Waga: ${if (grade.weight % 1.0 == 0.0) grade.weight.toInt() else grade.weight}",
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }

@@ -2,6 +2,7 @@
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,7 +12,22 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -20,8 +36,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +59,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
@@ -41,6 +70,8 @@ import com.example.my_uz_android.ui.components.ClassCardType
 import com.example.my_uz_android.ui.screens.calendar.DaySwipeDirection
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.getAppAccentColor
+import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
@@ -48,19 +79,33 @@ import com.kizitonwose.calendar.compose.weekcalendar.WeekCalendarState
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.daysOfWeek
 import kotlinx.coroutines.delay
-import java.time.*
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.YearMonth
+import java.time.ZoneId
 import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 import kotlin.math.abs
-import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
-import androidx.compose.runtime.LaunchedEffect
-import kotlinx.coroutines.delay
 
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
 private val HourColWidth = 56.dp
+private const val InitialScrollDelayMsScheduleView = 10L
+
+private fun parseMinutesFromTimeScheduleView(time: String, fallbackMinutes: Int): Int {
+    val parts = time.split(":")
+    if (parts.size < 2) return fallbackMinutes
+    val hour = parts[0].toIntOrNull() ?: return fallbackMinutes
+    val minute = parts[1].toIntOrNull() ?: return fallbackMinutes
+    return (hour * 60 + minute).coerceAtLeast(0)
+}
+
+private fun taskDateInPolandScheduleView(task: TaskEntity): LocalDate {
+    return Instant.ofEpochMilli(task.dueDate).atZone(PolandZone).toLocalDate()
+}
 
 @OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +121,7 @@ fun ScheduleView(
     tasks: List<TaskEntity>,
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
+    isDarkMode: Boolean = isSystemInDarkTheme(),
     isTeacherPlan: Boolean = false,
     availableDirections: List<String> = emptyList(),
     selectedDirections: Set<String> = emptySet(),
@@ -86,33 +132,33 @@ fun ScheduleView(
     val scrollState = rememberScrollState()
     val density = LocalDensity.current
 
-    LaunchedEffect(selectedDate) {
-        // Małe opóźnienie, aby Compose zdążyło obliczyć layout (można poeksperymentować z 10-50ms)
-        delay(10)
+    val tasksByDate = remember(tasks) {
+        tasks.groupBy(::taskDateInPolandScheduleView)
+    }
+
+    LaunchedEffect(selectedDate, classes) {
+        // Zielony komentarz: małe opóźnienie stabilizuje pomiar/scroll po zmianie dnia i recomposition.
+        delay(InitialScrollDelayMsScheduleView)
 
         val isToday = selectedDate == LocalDate.now(PolandZone)
-        val classesForToday = classes.filter { it.date == selectedDate.toString() }
+        val classesForDay = classes.filter { it.date == selectedDate.toString() }
 
         val targetMinute = when {
             isToday -> {
                 val now = LocalTime.now(PolandZone)
-                // Godzina przed aktualną godziną
                 (now.hour * 60 + now.minute - 60).coerceAtLeast(0)
             }
-            classesForToday.isNotEmpty() -> {
-                val firstClassMinute = classesForToday.minOfOrNull {
-                    try {
-                        val parts = it.startTime.split(":")
-                        parts[0].toInt() * 60 + parts[1].toInt()
-                    } catch (e: Exception) { 8 * 60 }
+
+            classesForDay.isNotEmpty() -> {
+                val firstClassMinute = classesForDay.minOfOrNull {
+                    parseMinutesFromTimeScheduleView(it.startTime, fallbackMinutes = 8 * 60)
                 } ?: (8 * 60)
-                // Godzina przed pierwszymi zajęciami
                 (firstClassMinute - 60).coerceAtLeast(0)
             }
-            else -> 8 * 60 // Domyślnie 8:00 dla pustych dni
+
+            else -> 8 * 60
         }
 
-        // Używamy scrollTo zamiast animateScrollTo dla natychmiastowego efektu
         scrollState.scrollTo(with(density) { targetMinute.dp.toPx() }.toInt())
     }
 
@@ -126,14 +172,12 @@ fun ScheduleView(
                 calendarState.firstVisibleMonth.yearMonth
             } else {
                 val weekDays = weekState.firstVisibleWeek.days
-                if (weekDays.isNotEmpty()) weekDays.first().date.let { YearMonth.from(it) }
-                else YearMonth.now(PolandZone)
+                if (weekDays.isNotEmpty()) YearMonth.from(weekDays.first().date) else YearMonth.now(PolandZone)
             }
 
-            val monthName =
-                visibleMonth.month.getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
-                    .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
-            val monthTitle = "$monthName ${visibleMonth.year}"
+            val monthName = visibleMonth.month
+                .getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
+                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
 
             Box(
                 modifier = Modifier
@@ -147,18 +191,19 @@ fun ScheduleView(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = monthTitle,
+                        text = "$monthName ${visibleMonth.year}",
                         style = TextStyle(
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 24.sp,
-                            lineHeight = 24.sp,
-                            letterSpacing = 0.sp
+                            lineHeight = 24.sp
                         ),
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Icon(
-                        painter = painterResource(if (isMonthView) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down),
+                        painter = painterResource(
+                            if (isMonthView) R.drawable.ic_chevron_up else R.drawable.ic_chevron_down
+                        ),
                         contentDescription = null,
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onBackground
@@ -175,35 +220,34 @@ fun ScheduleView(
             )
         }
 
-        Row(modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
                 DaysOfWeekTitle(daysOfWeek = daysOfWeek(firstDayOfWeek = DayOfWeek.MONDAY))
             }
         }
 
-        Row(modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
             Spacer(modifier = Modifier.width(HourColWidth))
             Box(modifier = Modifier.weight(1f)) {
                 if (isMonthView) {
                     HorizontalCalendar(
                         state = calendarState,
                         dayContent = { day ->
-                            val dayTasks = tasks.filter {
-                                val taskDate = Instant.ofEpochMilli(it.dueDate).atZone(PolandZone)
-                                    .toLocalDate()
-                                taskDate == day.date
-                            }
                             CalendarDay(
                                 date = day.date,
                                 isDateInMonth = day.position == DayPosition.MonthDate,
                                 isSelected = selectedDate == day.date,
-                                tasksForDay = dayTasks,
-                                onClick = { onDateSelected(it) }
+                                tasksForDay = tasksByDate[day.date].orEmpty(),
+                                onClick = onDateSelected
                             )
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -212,17 +256,12 @@ fun ScheduleView(
                     WeekCalendar(
                         state = weekState,
                         dayContent = { day ->
-                            val dayTasks = tasks.filter {
-                                val taskDate = Instant.ofEpochMilli(it.dueDate).atZone(PolandZone)
-                                    .toLocalDate()
-                                taskDate == day.date
-                            }
                             CalendarDay(
                                 date = day.date,
                                 isDateInMonth = true,
                                 isSelected = selectedDate == day.date,
-                                tasksForDay = dayTasks,
-                                onClick = { onDateSelected(it) }
+                                tasksForDay = tasksByDate[day.date].orEmpty(),
+                                onClick = onDateSelected
                             )
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -235,10 +274,8 @@ fun ScheduleView(
             targetState = selectedDate,
             transitionSpec = {
                 val isNext = swipeDirection != DaySwipeDirection.PREVIOUS
-                val enterOffset: (Int) -> Int =
-                    { fullWidth -> if (isNext) fullWidth else -fullWidth }
-                val exitOffset: (Int) -> Int =
-                    { fullWidth -> if (isNext) -fullWidth else fullWidth }
+                val enterOffset: (Int) -> Int = { fullWidth -> if (isNext) fullWidth else -fullWidth }
+                val exitOffset: (Int) -> Int = { fullWidth -> if (isNext) -fullWidth else fullWidth }
 
                 (slideInHorizontally(
                     animationSpec = tween(300),
@@ -262,6 +299,7 @@ fun ScheduleView(
                 classesForDay = animatedClassesForDay,
                 classColorMap = classColorMap,
                 onClassClick = onClassClick,
+                isDarkMode = isDarkMode,
                 isTeacherPlan = isTeacherPlan,
                 scrollState = scrollState
             )
@@ -288,12 +326,7 @@ fun CalendarFilterRow(
             FilterChip(
                 selected = isSelected,
                 onClick = { onDirectionToggled(direction, !isSelected) },
-                label = {
-                    Text(
-                        text = direction,
-                        style = MaterialTheme.typography.labelMedium
-                    )
-                },
+                label = { Text(text = direction, style = MaterialTheme.typography.labelMedium) },
                 leadingIcon = if (isSelected) {
                     {
                         Icon(
@@ -320,6 +353,7 @@ private fun DayTimelineContent(
     classesForDay: List<ClassEntity>,
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
+    isDarkMode: Boolean,
     isTeacherPlan: Boolean,
     scrollState: androidx.compose.foundation.ScrollState
 ) {
@@ -334,23 +368,29 @@ private fun DayTimelineContent(
                 title = "Brak zajęć",
                 subtitle = "Zasłużony odpoczynek",
                 message = "W tym dniu nie masz żadnych zaplanowanych zajęć. Ciesz się wolnym czasem!",
-                iconRes = R.drawable.calendar_rafiki // Oczywiście podmień na zasób ze swojej Figmy
+                iconRes = R.drawable.calendar_rafiki
             )
         }
     } else {
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)) {
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    repeat(24) { index -> HourRow(hour = index) }
+                    repeat(24) { hour -> HourRow(hour = hour) }
                 }
 
-                BoxWithConstraints(modifier = Modifier
-                    .matchParentSize()
-                    .padding(start = 56.dp)) {
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = HourColWidth)
+                ) {
                     val eventLayouts = remember(classesForDay) {
                         com.example.my_uz_android.util.calculateEventLayouts(classesForDay)
                     }
@@ -364,6 +404,7 @@ private fun DayTimelineContent(
                             totalCols = layoutInfo.totalCols,
                             maxWidthDp = maxWidth,
                             onClassClick = onClassClick,
+                            isDarkMode = isDarkMode,
                             isTeacherPlan = isTeacherPlan
                         )
                     }
@@ -386,7 +427,8 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
                     .weight(1f)
                     .height(24.dp),
                 text = dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale("pl"))
-                    .replaceFirstChar { it.titlecase() }.take(1),
+                    .replaceFirstChar { it.titlecase() }
+                    .take(1),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -407,18 +449,22 @@ fun CalendarDay(
     val primaryColor = MaterialTheme.colorScheme.primary
 
     val textColor = if (isDateInMonth) {
-        if (isSelected) MaterialTheme.colorScheme.onPrimary
-        else if (isToday) primaryColor
-        else MaterialTheme.colorScheme.onSurface
-    } else MaterialTheme.colorScheme.outlineVariant
+        when {
+            isSelected -> MaterialTheme.colorScheme.onPrimary
+            isToday -> primaryColor
+            else -> MaterialTheme.colorScheme.onSurface
+        }
+    } else {
+        MaterialTheme.colorScheme.outlineVariant
+    }
 
     val circleSize = if (isSelected || isToday) 28.dp else 24.dp
     val circleColor = if (isSelected && isDateInMonth) primaryColor else Color.Transparent
-    val borderModifier = if (isToday && !isSelected && isDateInMonth) Modifier.border(
-        1.dp,
-        primaryColor,
-        CircleShape
-    ) else Modifier
+    val borderModifier = if (isToday && !isSelected && isDateInMonth) {
+        Modifier.border(1.dp, primaryColor, CircleShape)
+    } else {
+        Modifier
+    }
 
     Box(
         modifier = Modifier
@@ -480,15 +526,15 @@ fun CalendarDay(
 
 @Composable
 fun HourRow(hour: Int) {
-    val rowHeight = HourHeight
     val textYOffset = (-8).dp
-    val verticalLinePos = HourColWidth
     val horizontalLineStart = HourColWidth - 8.dp
     val dividerColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
 
-    Box(modifier = Modifier
-        .fillMaxWidth()
-        .height(rowHeight)) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(HourHeight)
+    ) {
         if (hour != 0) {
             HorizontalDivider(
                 modifier = Modifier
@@ -504,7 +550,7 @@ fun HourRow(hour: Int) {
             modifier = Modifier
                 .fillMaxHeight()
                 .width(1.dp)
-                .padding(start = verticalLinePos),
+                .padding(start = HourColWidth),
             thickness = 1.dp,
             color = dividerColor
         )
@@ -536,43 +582,48 @@ fun ScheduledClassItem(
     classColorMap: Map<String, Int>,
     colIndex: Int,
     totalCols: Int,
-    maxWidthDp: androidx.compose.ui.unit.Dp,
+    maxWidthDp: Dp,
     onClassClick: (ClassEntity) -> Unit,
+    isDarkMode: Boolean,
     isTeacherPlan: Boolean = false
 ) {
-    val startParts = classEntity.startTime.split(":")
-    val startMinutes = startParts[0].toInt() * 60 + startParts[1].toInt()
-    val endParts = classEntity.endTime.split(":")
-    val endMinutes = endParts[0].toInt() * 60 + endParts[1].toInt()
-    val durationMinutes = endMinutes - startMinutes
-
-    val topOffset = startMinutes.dp
-    val height = durationMinutes.dp
+    val (startMinutes, durationMinutes) = remember(classEntity) {
+        val start = parseMinutesFromTimeScheduleView(classEntity.startTime, fallbackMinutes = 8 * 60)
+        val end = parseMinutesFromTimeScheduleView(classEntity.endTime, fallbackMinutes = start + 90)
+        start to maxOf(15, end - start)
+    }
 
     val columnWidth = maxWidthDp / totalCols
     val startXOffset = columnWidth * colIndex
 
     val now = LocalDateTime.now(PolandZone)
-    val classStartDateTime =
-        LocalDateTime.of(selectedDate, LocalTime.of(startParts[0].toInt(), startParts[1].toInt()))
+    val classStartDateTime = runCatching {
+        val parts = classEntity.startTime.split(":")
+        val hour = parts.getOrNull(0)?.toIntOrNull() ?: 0
+        val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+        LocalDateTime.of(selectedDate, LocalTime.of(hour, minute))
+    }.getOrElse { now.minusDays(1) }
+
     val isFuture = now.isBefore(classStartDateTime)
 
     val assignedColorIndex = classColorMap[classEntity.classType]
         ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
-    val colorSet = ClassColorPalette.getOrElse(assignedColorIndex) { ClassColorPalette[0] }
+
+    val bgColor = getAppBackgroundColor(assignedColorIndex, isDarkMode)
+    val accentColor = getAppAccentColor(assignedColorIndex, isDarkMode)
 
     Box(
         modifier = Modifier
+            .offset(x = startXOffset, y = startMinutes.dp)
             .width(columnWidth)
-            .padding(bottom = 2.dp, end = 4.dp)
-            .offset(x = startXOffset, y = topOffset)
-            .height(height)
+            .height(durationMinutes.dp)
+            .padding(end = 4.dp, bottom = 2.dp)
     ) {
         ClassCard(
             classItem = classEntity,
             type = ClassCardType.CALENDAR,
-            backgroundColor = colorSet.lightBg,
-            accentColor = colorSet.lightAccent,
+            backgroundColor = bgColor,
+            accentColor = accentColor,
             showBadge = isFuture,
             isTeacherPlan = isTeacherPlan,
             onClick = { onClassClick(classEntity) },
@@ -584,6 +635,7 @@ fun ScheduledClassItem(
 @Composable
 fun CurrentTimeIndicator() {
     var currentTime by remember { mutableStateOf(LocalTime.now(PolandZone)) }
+
     LaunchedEffect(Unit) {
         while (true) {
             currentTime = LocalTime.now(PolandZone)
@@ -592,13 +644,12 @@ fun CurrentTimeIndicator() {
     }
 
     val minutesFromMidnight = currentTime.hour * 60 + currentTime.minute
-    val topOffset = minutesFromMidnight.dp
     val indicatorColor = MaterialTheme.colorScheme.error
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .offset(y = topOffset)
+            .offset(y = minutesFromMidnight.dp)
             .height(12.dp),
         contentAlignment = Alignment.CenterStart
     ) {

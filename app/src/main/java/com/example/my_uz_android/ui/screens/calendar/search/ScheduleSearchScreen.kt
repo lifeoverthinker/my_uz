@@ -1,13 +1,34 @@
 package com.example.my_uz_android.ui.screens.calendar.search
 
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -15,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.FavoriteEntity
@@ -22,8 +44,6 @@ import com.example.my_uz_android.ui.components.EmptyStateMessage
 import com.example.my_uz_android.ui.components.SearchTopAppBar
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.theme.MyUZTheme
-import com.example.my_uz_android.ui.components.EmptyStateMessage
-import com.example.my_uz_android.ui.components.DashboardEmptyCard
 
 @Composable
 fun ScheduleSearchScreen(
@@ -31,7 +51,7 @@ fun ScheduleSearchScreen(
     searchViewModel: ScheduleSearchViewModel,
     calendarViewModel: CalendarViewModel
 ) {
-    val uiState by searchViewModel.uiState.collectAsState()
+    val uiState by searchViewModel.uiState.collectAsStateWithLifecycle()
 
     ScheduleSearchContent(
         uiState = uiState,
@@ -39,7 +59,11 @@ fun ScheduleSearchScreen(
         onBackClick = { navController.popBackStack() },
         onItemClick = { item ->
             calendarViewModel.selectFavoritePlan(
-                FavoriteEntity(name = item.name, type = item.type, resourceId = item.name)
+                FavoriteEntity(
+                    name = item.name,
+                    type = item.type,
+                    resourceId = item.name
+                )
             )
             navController.navigate("schedule_preview")
         },
@@ -81,44 +105,70 @@ fun ScheduleSearchContent(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyStateMessage(
                         title = "Brak wyników",
-                        subtitle = "Nie znaleźliśmy tego, czego szukasz",
-                        message = "Spróbuj wpisać inną nazwę grupy lub nazwisko prowadzącego. Upewnij się, że nie ma literówek.",
-                        iconRes = R.drawable.paper_map_rafiki, // Pasuje do szukania drogi/planu
+                        subtitle = "Nie znaleziono pasujących pozycji",
+                        message = "Spróbuj wpisać kod grupy, fragment nazwy kierunku lub nazwisko prowadzącego.",
+                        iconRes = R.drawable.paper_map_rafiki,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     if (groups.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Grupy",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                        item { SearchSectionHeader(title = "Grupy") }
+                        items(
+                            items = groups,
+                            key = { "group_${it.name}" }
+                        ) { item ->
+                            SearchListItem(
+                                item = item,
+                                onClick = { onItemClick(item) },
+                                onFavoriteClick = { onFavoriteClick(item) }
                             )
-                        }
-                        items(groups) { item ->
-                            SearchListItem(item, { onItemClick(item) }, { onFavoriteClick(item) })
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                thickness = 1.dp
+                            )
                         }
                     }
 
                     if (teachers.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Nauczyciele",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                        item { SearchSectionHeader(title = "Nauczyciele") }
+                        items(
+                            items = teachers,
+                            key = { "teacher_${it.name}" }
+                        ) { item ->
+                            SearchListItem(
+                                item = item,
+                                onClick = { onItemClick(item) },
+                                onFavoriteClick = { onFavoriteClick(item) }
                             )
-                        }
-                        items(teachers) { item ->
-                            SearchListItem(item, { onItemClick(item) }, { onFavoriteClick(item) })
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                thickness = 1.dp
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SearchSectionHeader(title: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                .padding(horizontal = 24.dp, vertical = 10.dp)
+        )
     }
 }
 
@@ -132,7 +182,7 @@ fun SearchListItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 16.dp, horizontal = 24.dp),
+            .padding(vertical = 14.dp, horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -146,7 +196,7 @@ fun SearchListItem(
 
         Spacer(modifier = Modifier.width(20.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
@@ -157,7 +207,7 @@ fun SearchListItem(
 
             Text(
                 text = if (item.type == "group") "Grupa studencka" else "Nauczyciel",
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

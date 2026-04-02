@@ -1,6 +1,7 @@
 package com.example.my_uz_android.ui.screens.index
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,18 +10,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
+import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.theme.getAppAccentColor
+import com.example.my_uz_android.ui.theme.getClassColorIndex
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
-// --- WRAPPER DLA NAWIGACJI ---
 @Composable
 fun GradeDetailsScreenRoute(
     viewModel: GradeDetailsViewModel,
@@ -28,7 +34,7 @@ fun GradeDetailsScreenRoute(
     onEditGrade: (Int) -> Unit,
     onDuplicateGrade: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val grade = uiState.grade
 
     if (uiState.isLoading || grade == null) {
@@ -38,17 +44,14 @@ fun GradeDetailsScreenRoute(
         return
     }
 
-    // Formatowanie wyświetlania oceny
-    val gradeText = if (grade.isPoints) {
-        "${if (grade.grade % 1.0 == 0.0) grade.grade.toInt() else grade.grade} pkt"
-    } else if (grade.grade == -1.0) {
-        "Aktywność (+)"
-    } else {
-        grade.grade.toString()
+    val gradeText = when {
+        grade.isPoints -> "${if (grade.grade % 1.0 == 0.0) grade.grade.toInt() else grade.grade} pkt"
+        grade.grade == -1.0 -> "Aktywność (+)"
+        else -> grade.grade.toString()
     }
 
     GradeDetailsScreen(
-        title = grade.description ?: (if (grade.isPoints) "Punkty" else "Ocena"),
+        title = grade.description ?: if (grade.isPoints) "Punkty" else "Ocena",
         dateMillis = grade.date,
         subjectName = grade.subjectName,
         classType = ClassTypeUtils.getFullName(grade.classType),
@@ -58,14 +61,11 @@ fun GradeDetailsScreenRoute(
         comment = grade.comment,
         onNavigateBack = onNavigateBack,
         onEditGrade = { onEditGrade(grade.id) },
-        onDeleteGrade = {
-            viewModel.deleteGrade(onSuccess = { onNavigateBack() })
-        },
+        onDeleteGrade = { viewModel.deleteGrade(onSuccess = onNavigateBack) },
         onDuplicateClick = onDuplicateGrade
     )
 }
 
-// --- BEZSTANOWY WIDOK (STATELESS UI) ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GradeDetailsScreen(
@@ -85,6 +85,10 @@ fun GradeDetailsScreen(
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    val isDark = isSystemInDarkTheme()
+    val colorIndex = getClassColorIndex(subjectName)
+    val accentColor = getAppAccentColor(colorIndex, isDark)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -92,15 +96,17 @@ fun GradeDetailsScreen(
                 navigationIcon = R.drawable.ic_close,
                 isNavigationIconFilled = true,
                 onNavigationClick = onNavigateBack,
+                containerColor = Color.Transparent,
                 actions = {
                     TopBarActionIcon(
                         icon = R.drawable.ic_edit,
+                        isFilled = true,
                         onClick = onEditGrade
                     )
-
                     Box {
                         TopBarActionIcon(
                             icon = R.drawable.ic_dots_vertical,
+                            isFilled = true,
                             onClick = { showMenu = true }
                         )
                         DropdownMenu(
@@ -111,30 +117,37 @@ fun GradeDetailsScreen(
                                 text = { Text("Duplikuj") },
                                 leadingIcon = {
                                     Icon(
-                                        painterResource(R.drawable.ic_copy),
+                                        painter = painterResource(R.drawable.ic_copy),
                                         contentDescription = null,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 },
-                                onClick = { showMenu = false; onDuplicateClick() }
+                                onClick = {
+                                    showMenu = false
+                                    onDuplicateClick()
+                                }
                             )
                             DropdownMenuItem(
                                 text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = {
                                     Icon(
-                                        painterResource(R.drawable.ic_trash),
+                                        painter = painterResource(R.drawable.ic_trash),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 },
-                                onClick = { showMenu = false; showDeleteDialog = true }
+                                onClick = {
+                                    showMenu = false
+                                    showDeleteDialog = true
+                                }
                             )
                         }
                     }
                 }
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -142,17 +155,15 @@ fun GradeDetailsScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // --- Nagłówek (Zrównany w osi z detalami) ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.Top
             ) {
-                // Miejsce na ikonę (zajmuje 24dp szerokości, tak jak ikony poniżej)
                 Box(
                     modifier = Modifier
-                        .padding(top = 8.dp) // Wyrównanie do pierwszej linii tekstu
+                        .padding(top = 8.dp)
                         .size(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -160,16 +171,14 @@ fun GradeDetailsScreen(
                         modifier = Modifier
                             .size(16.dp)
                             .background(
-                                color = androidx.compose.ui.graphics.Color(0xFFF57C00), // Pełna ścieżka do Color
+                                color = accentColor,
                                 shape = RoundedCornerShape(4.dp)
                             )
                     )
                 }
 
-                // Odstęp (24dp, tak jak poniżej)
                 Spacer(modifier = Modifier.width(24.dp))
 
-                // Tytuł i data (Złączone wg wytycznych Google Calendar)
                 Column {
                     Text(
                         text = title,
@@ -178,7 +187,7 @@ fun GradeDetailsScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = formatDate(dateMillis),
+                        text = formatGradeDetailsDate(dateMillis),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -187,7 +196,6 @@ fun GradeDetailsScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // --- 1. Wartość oceny i Waga ---
             val gradeLabel = if (isPointsOrActivity) {
                 "Punkty / Aktywność"
             } else {
@@ -201,26 +209,23 @@ fun GradeDetailsScreen(
                 isValueHighlight = true
             )
 
-            // --- 2. Przedmiot ---
             DetailRow(
-                iconRes = R.drawable.ic_graduation_hat, // Zmiana ikony na czepek absolwenta
+                iconRes = R.drawable.ic_graduation_hat,
                 label = "Przedmiot",
                 value = subjectName
             )
 
-            // --- 3. Rodzaj zajęć ---
             DetailRow(
-                iconRes = R.drawable.ic_stand, // Zmiana ikony na stojak
+                iconRes = R.drawable.ic_stand,
                 label = "Rodzaj zajęć",
                 value = classType
             )
 
-            // --- 4. Opis / Notatka (Tylko tekst, bez małej etykiety) ---
             if (!comment.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 DetailRow(
                     iconRes = R.drawable.ic_menu_2,
-                    label = null, // Przekazujemy null, aby ukryć podpis "Opis"
+                    label = null,
                     value = comment,
                     isMultiline = true
                 )
@@ -229,30 +234,23 @@ fun GradeDetailsScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        // --- Dialog Usuwania ---
         if (showDeleteDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Usuń ocenę") },
-                text = { Text("Czy na pewno chcesz usunąć tę ocenę? Tej operacji nie można cofnąć.") },
-                confirmButton = {
-                    TextButton(onClick = { onDeleteGrade(); showDeleteDialog = false }) {
-                        Text("Usuń", color = MaterialTheme.colorScheme.error)
-                    }
+            DeleteConfirmationDialog(
+                onConfirm = {
+                    onDeleteGrade()
+                    showDeleteDialog = false
                 },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj") }
-                }
+                onDismiss = { showDeleteDialog = false },
+                itemType = "ocenę"
             )
         }
     }
 }
 
-// --- Komponent Pomocniczy dla Wierszy ---
 @Composable
 private fun DetailRow(
     iconRes: Int,
-    label: String?, // Jeśli null, etykieta się nie wyświetli (dla opisu)
+    label: String?,
     value: String,
     isValueHighlight: Boolean = false,
     isMultiline: Boolean = false
@@ -263,7 +261,6 @@ private fun DetailRow(
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
     ) {
-        // Zawsze 24dp rozmiaru
         Icon(
             painter = painterResource(id = iconRes),
             contentDescription = null,
@@ -273,11 +270,9 @@ private fun DetailRow(
                 .size(24.dp)
         )
 
-        // Zawsze 24dp odstępu - gwarantuje to linię prostą
         Spacer(modifier = Modifier.width(24.dp))
 
         Column {
-            // Etykieta (np. "Rodzaj zajęć") - Wyświetla się na górze, jeśli jest podana
             if (label != null) {
                 Text(
                     text = label,
@@ -286,33 +281,26 @@ private fun DetailRow(
                 )
             }
 
-            // Wartość (np. "Laboratorium") - Wyświetla się na dole
-            if (isValueHighlight) {
-                Text(
-                    text = value.ifEmpty { "-" },
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            } else {
-                Text(
-                    text = value.ifEmpty { "-" },
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+            Text(
+                text = value.ifEmpty { "-" },
+                style = if (isValueHighlight) MaterialTheme.typography.titleLarge
+                else MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = if (isValueHighlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }
 
-private fun formatDate(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL")).format(Date(timestamp))
+private fun formatGradeDetailsDate(timestamp: Long): String {
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+        .format(Date(timestamp))
         .replaceFirstChar { it.uppercase() }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun GradeDetailsScreenPreview() {
-    MaterialTheme {
+    MyUZTheme {
         GradeDetailsScreen(
             title = "Kolokwium 1",
             dateMillis = System.currentTimeMillis(),

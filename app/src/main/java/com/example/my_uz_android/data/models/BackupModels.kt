@@ -5,8 +5,7 @@ enum class BackupDataType(val displayName: String) {
     CLASSES("Plan zajęć"),
     TASKS("Zadania"),
     GRADES("Oceny"),
-    ABSENCES("Nieobecności"),
-    EVENTS("Wydarzenia")
+    ABSENCES("Nieobecności")
 }
 
 data class ManualBackupData(
@@ -14,6 +13,5 @@ data class ManualBackupData(
     val classes: List<ClassEntity>,
     val tasks: List<TaskEntity>,
     val grades: List<GradeEntity>,
-    val absences: List<AbsenceEntity>,
-    val events: List<EventEntity>
+    val absences: List<AbsenceEntity>
 )

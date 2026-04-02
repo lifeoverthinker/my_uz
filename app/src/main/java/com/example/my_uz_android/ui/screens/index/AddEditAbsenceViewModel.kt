@@ -4,8 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.AbsenceEntity
+import com.example.my_uz_android.data.models.SettingsEntity
+import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.repositories.AbsenceRepository
 import com.example.my_uz_android.data.repositories.ClassRepository
+import com.example.my_uz_android.data.repositories.SettingsRepository
+import com.example.my_uz_android.data.repositories.UserCourseRepository
+import com.example.my_uz_android.util.SubgroupMatcher
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -18,23 +23,30 @@ data class AddEditAbsenceUiState(
     val availableSubjects: List<Pair<String, List<String>>> = emptyList()
 )
 
+private data class AddEditAbsenceCourseFilter(
+    val groupCode: String,
+    val subgroupRaw: String?
+)
+
 class AddEditAbsenceViewModel(
     savedStateHandle: SavedStateHandle,
     private val absenceRepository: AbsenceRepository,
-    private val classRepository: ClassRepository
+    private val classRepository: ClassRepository,
+    private val settingsRepository: SettingsRepository,
+    private val userCourseRepository: UserCourseRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditAbsenceUiState())
     val uiState: StateFlow<AddEditAbsenceUiState> = _uiState.asStateFlow()
 
-    // ✅ Flaga zapisu/usunięcia
+    // Zielony komentarz: sygnał „zapisano/usunięto” do nawigacji wstecz.
     private val _isSaved = MutableStateFlow(false)
     val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
 
     private var loadedAbsenceId: Int? = null
 
     init {
-        loadAvailableSubjects()
+        loadAvailableSubjectsFilteredByPlan()
 
         val absenceId = savedStateHandle.get<Int>("absenceId")
         if (absenceId != null && absenceId != -1 && absenceId != 0) {
@@ -63,7 +75,6 @@ class AddEditAbsenceViewModel(
         loadedAbsenceId = absenceId
 
         viewModelScope.launch {
-            // Pobieramy listę i filtrujemy, bo getAbsenceById może nie być w DAO
             val allAbsences = absenceRepository.getAllAbsencesStream().first()
             val absence = allAbsences.find { it.id == absenceId }
 
@@ -81,19 +92,76 @@ class AddEditAbsenceViewModel(
         }
     }
 
-    private fun loadAvailableSubjects() {
+    /**
+     * Zielony komentarz:
+     * Formularz pobiera listę przedmiotów/typów z TYCH SAMYCH danych,
+     * które są widoczne dla usera po filtrach kierunków i podgrup.
+     */
+    private fun loadAvailableSubjectsFilteredByPlan() {
         viewModelScope.launch {
-            classRepository.getAllClassesStream().collect { classes ->
-                val subjectsMap = classes.groupBy { it.subjectName }
-                    .mapValues { (_, classList) ->
-                        classList.map { it.classType }.distinct().sorted()
-                    }
-                    .toList()
-                    .sortedBy { it.first }
-
+            combine(
+                classRepository.getAllClassesStream(),
+                settingsRepository.getSettingsStream(),
+                userCourseRepository.getAllUserCoursesStream()
+            ) { classes, settings, courses ->
+                buildAvailableSubjects(classes, settings, courses)
+            }.collect { subjectsMap ->
                 _uiState.update { it.copy(availableSubjects = subjectsMap) }
             }
         }
+    }
+
+    private fun buildAvailableSubjects(
+        classes: List<com.example.my_uz_android.data.models.ClassEntity>,
+        settings: SettingsEntity?,
+        courses: List<UserCourseEntity>
+    ): List<Pair<String, List<String>>> {
+
+        fun normalizeGroupCode(v: String?): String = v?.trim()?.uppercase().orEmpty()
+        fun normalizeType(v: String?): String = v?.trim().orEmpty().ifBlank { "Inne" }
+
+        // 1) aktywne grupy = główna + dodatkowe
+        val activeCodes = buildSet {
+            settings?.selectedGroupCode?.takeIf { it.isNotBlank() }?.let { add(normalizeGroupCode(it)) }
+            courses.forEach { add(normalizeGroupCode(it.groupCode)) }
+        }
+
+        if (activeCodes.isEmpty()) return emptyList()
+
+        // 2) filtry podgrup per groupCode
+        val filters = mutableListOf<AddEditAbsenceCourseFilter>()
+        settings?.selectedGroupCode?.let {
+            filters.add(AddEditAbsenceCourseFilter(it, settings.selectedSubgroup))
+        }
+        courses.forEach {
+            filters.add(AddEditAbsenceCourseFilter(it.groupCode, it.selectedSubgroup))
+        }
+        val filtersByGroup = filters.groupBy { normalizeGroupCode(it.groupCode) }
+
+        // 3) klasy widoczne wg group + SubgroupMatcher
+        val visibleClasses = classes.filter { clazz ->
+            val groupCode = normalizeGroupCode(clazz.groupCode)
+            if (groupCode !in activeCodes) return@filter false
+
+            val filtersForGroup = filtersByGroup[groupCode] ?: return@filter false
+
+            SubgroupMatcher.matches(
+                classSubgroupRaw = clazz.subgroup,
+                selectedSubgroupsRaw = filtersForGroup.map { it.subgroupRaw }
+            )
+        }
+
+        // 4) mapa przedmiot -> typy zajęć
+        return visibleClasses
+            .groupBy { it.subjectName }
+            .mapValues { (_, classList) ->
+                classList
+                    .map { normalizeType(it.classType) }
+                    .distinct()
+                    .sorted()
+            }
+            .toList()
+            .sortedBy { it.first.lowercase() }
     }
 
     fun updateSubjectName(name: String?) {
@@ -126,7 +194,6 @@ class AddEditAbsenceViewModel(
             )
 
             absenceRepository.insertAbsence(entity)
-            // ✅ Sygnał zapisu
             _isSaved.value = true
         }
     }
@@ -142,7 +209,6 @@ class AddEditAbsenceViewModel(
                     classType = state.classType ?: ""
                 )
                 absenceRepository.deleteAbsence(entity)
-                // ✅ Sygnał usunięcia
                 _isSaved.value = true
             }
         }

@@ -21,19 +21,15 @@ class ClassRepository(private val classDao: ClassDao) {
         temporaryClass = classEntity
     }
 
-    // NAPRAWA KRYTYCZNA: Dodano ochronę przepływu. Jeśli zapytanie do bazy wywoła błąd,
-    // flow złapie wyjątek i wyemituje pustą listę zamiast przerwać cały potok UI w ViewModelu.
     fun getAllClassesStream(): Flow<List<ClassEntity>> = classDao.getAllClasses()
-        .onStart { Log.d("ClassRepository", "Rozpoczynam nasłuchiwanie strumienia klas z DB") }
-        .onEach { Log.d("ClassRepository", "Baza danych wyemitowała: ${it.size} klas") }
         .catch { e ->
-            Log.e("ClassRepository", "Wystąpił błąd podczas nasłuchiwania getAllClasses", e)
+            Log.e("ClassRepository", "Błąd getAllClasses", e)
             emit(emptyList())
         }
 
     fun getClassesForDayStream(dayOfWeek: Int): Flow<List<ClassEntity>> = classDao.getClassesForDay(dayOfWeek)
         .catch { e ->
-            Log.e("ClassRepository", "Wystąpił błąd dla getClassesForDayStream", e)
+            Log.e("ClassRepository", "Błąd getClassesForDayStream", e)
             emit(emptyList())
         }
 
@@ -43,7 +39,7 @@ class ClassRepository(private val classDao: ClassDao) {
         } else {
             classDao.getClassById(id)
                 .catch { e ->
-                    Log.e("ClassRepository", "Błąd podczas getClassByIdStream", e)
+                    Log.e("ClassRepository", "Błąd getClassByIdStream", e)
                     emit(null)
                 }
         }
@@ -51,11 +47,14 @@ class ClassRepository(private val classDao: ClassDao) {
 
     suspend fun updateClasses(classes: List<ClassEntity>) {
         try {
+            // Zawsze czyścimy i wstawiamy nowe, aby uniknąć problemów z nieaktualnym planem
             classDao.deleteAll()
-            classDao.insertAll(classes)
-            Log.d("ClassRepository", "Zaktualizowano klasy. Nowa liczba to: ${classes.size}")
+            if (classes.isNotEmpty()) {
+                classDao.insertAll(classes)
+            }
+            Log.d("ClassRepository", "Zaktualizowano bazę zajęć. Liczba: ${classes.size}")
         } catch (e: Exception) {
-            Log.e("ClassRepository", "Błąd podczas updateClasses", e)
+            Log.e("ClassRepository", "Błąd updateClasses", e)
         }
     }
 
@@ -63,35 +62,29 @@ class ClassRepository(private val classDao: ClassDao) {
         try {
             classDao.deleteByGroupCode(groupCode)
             classDao.insertAll(newClasses)
-            Log.d("ClassRepository", "Zsynchronizowano grupę: $groupCode. Wstawiono: ${newClasses.size} zajęć.")
         } catch (e: Exception) {
-            Log.e("ClassRepository", "Błąd podczas syncGroupClasses dla kodu $groupCode", e)
+            Log.e("ClassRepository", "Błąd syncGroupClasses", e)
         }
     }
 
     suspend fun insertClasses(classes: List<ClassEntity>) {
-        try { classDao.insertAll(classes) }
-        catch (e: Exception) { Log.e("ClassRepository", "Błąd insertClasses", e) }
+        try { classDao.insertAll(classes) } catch (e: Exception) { }
     }
 
     suspend fun insertClass(classEntity: ClassEntity) {
-        try { classDao.insertClass(classEntity) }
-        catch (e: Exception) { Log.e("ClassRepository", "Błąd insertClass", e) }
+        try { classDao.insertClass(classEntity) } catch (e: Exception) { }
     }
 
     suspend fun deleteAllClasses() {
-        try { classDao.deleteAll() }
-        catch (e: Exception) { Log.e("ClassRepository", "Błąd deleteAllClasses", e) }
+        try { classDao.deleteAll() } catch (e: Exception) { }
     }
 
     suspend fun deleteClass(classEntity: ClassEntity) {
-        try { classDao.delete(classEntity) }
-        catch (e: Exception) { Log.e("ClassRepository", "Błąd deleteClass", e) }
+        try { classDao.delete(classEntity) } catch (e: Exception) { }
     }
 
     suspend fun updateClass(classEntity: ClassEntity) {
-        try { classDao.update(classEntity) }
-        catch (e: Exception) { Log.e("ClassRepository", "Błąd updateClass", e) }
+        try { classDao.update(classEntity) } catch (e: Exception) { }
     }
 
     fun getUpcomingClasses(limit: Int = Int.MAX_VALUE): Flow<List<ClassEntity>> {
@@ -99,30 +92,21 @@ class ClassRepository(private val classDao: ClassDao) {
             val now = LocalDateTime.now()
             val today = now.toLocalDate()
 
-            // 1. Odrzucamy przeszłe zajęcia
             val upcoming = classes.filter { classItem ->
                 try {
-                    val classDate = LocalDate.parse(classItem.date) // Format: yyyy-MM-dd
-                    if (classDate.isBefore(today)) {
-                        false // Minione dni
-                    } else if (classDate.isEqual(today)) {
+                    val classDate = LocalDate.parse(classItem.date)
+                    if (classDate.isBefore(today)) false
+                    else if (classDate.isEqual(today)) {
                         val endTime = LocalTime.parse(classItem.endTime)
-                        val endDateTime = LocalDateTime.of(today, endTime)
-                        endDateTime.isAfter(now) // Zwraca true, jeśli zajęcia wciąż trwają lub są przed nami
-                    } else {
-                        true // Przyszłe dni
-                    }
-                } catch (e: Exception) {
-                    false // W razie błędu parsowania ignorujemy wpis
-                }
+                        LocalDateTime.of(today, endTime).isAfter(now)
+                    } else true
+                } catch (e: Exception) { false }
             }
 
-            // 2. Szukamy najbliższej daty z dostępnymi zajęciami
             val nextDate = upcoming.mapNotNull {
                 try { LocalDate.parse(it.date) } catch (e: Exception) { null }
             }.minOrNull()
 
-            // 3. Zwracamy zajęcia z tego najbliższego dnia (posortowane po czasie)
             if (nextDate != null) {
                 upcoming.filter { it.date == nextDate.toString() }
                     .sortedBy { it.startTime }

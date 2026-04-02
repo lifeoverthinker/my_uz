@@ -6,10 +6,11 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:name=".MyUZApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -30,13 +31,11 @@
         <activity android:name=".MainActivity"
             android:exported="true">
 
-            <!-- Ten intent-filter już pewnie masz: -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- DODAJ TEN NOWY: -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -55,6 +54,11 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/my_uz_widget_info" />
         </receiver>
+
+        <receiver
+            android:name=".util.AppAlarmReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>

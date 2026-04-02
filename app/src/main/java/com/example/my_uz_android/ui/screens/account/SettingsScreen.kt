@@ -20,25 +20,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
-import com.example.my_uz_android.data.models.BackupDataType // <--- OTO BRAKUJĄCY IMPORT!
+import com.example.my_uz_android.data.models.BackupDataType
 import com.example.my_uz_android.data.models.ThemeMode
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.screens.account.components.ThemeSelector
 import com.example.my_uz_android.ui.theme.ClassColorPalette
-import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.ui.graphics.luminance
+
+// --- MAIN SCREEN ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +56,6 @@ fun SettingsScreen(
     val activeSettings = uiState.settings
 
     var showExportDialog by remember { mutableStateOf(false) }
-    // ZMIANA: Używamy .entries zamiast .values()
     var exportSelection by remember { mutableStateOf(BackupDataType.entries.toSet()) }
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -76,20 +77,18 @@ fun SettingsScreen(
                 title = "Ustawienia",
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onBackClick,
-                isNavigationIconFilled = false,
+                isNavigationIconFilled = true,
                 actions = {
                     AnimatedVisibility(
                         visible = uiState.isSaved,
                         enter = fadeIn(),
                         exit = fadeOut()
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_check),
-                            contentDescription = "Zapisano",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier
-                                .padding(end = 16.dp)
-                                .size(24.dp)
+                        TopBarActionIcon(
+                            icon = R.drawable.ic_check,
+                            onClick = {},
+                            isFilled = true,
+                            iconTint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -154,13 +153,6 @@ fun SettingsScreen(
 
                     if (activeSettings?.notificationsEnabled == true) {
                         SettingsToggleItem(
-                            iconRes = R.drawable.ic_book_open,
-                            title = "Zadania",
-                            description = "Przypomnienie dzień wcześniej o 8:00",
-                            isChecked = activeSettings.notificationsTasks,
-                            onCheckedChange = { viewModel.toggleTasksNotifications(it) }
-                        )
-                        SettingsToggleItem(
                             iconRes = R.drawable.ic_clock,
                             title = "Zajęcia",
                             description = "15 minut przed rozpoczęciem",
@@ -183,7 +175,7 @@ fun SettingsScreen(
                         title = "Eksportuj dane",
                         description = "Zapisz kopię do pliku JSON",
                         onClick = {
-                            exportSelection = BackupDataType.entries.toSet() // ZMIANA
+                            exportSelection = BackupDataType.entries.toSet()
                             showExportDialog = true
                         }
                     )
@@ -226,12 +218,14 @@ fun SettingsScreen(
         DataTypeSelectionDialog(
             title = "Importuj dane",
             confirmText = "Przywróć",
-            initialSelection = BackupDataType.entries.toSet(), // ZMIANA
+            initialSelection = BackupDataType.entries.toSet(),
             onDismiss = { viewModel.cancelImport() },
             onConfirm = { selection -> viewModel.confirmImport(selection) }
         )
     }
 }
+
+// --- COMPONENTS ---
 
 @Composable
 fun SettingsHeader(title: String) {
@@ -327,6 +321,8 @@ fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelec
     }
 }
 
+// --- DIALOGS ---
+
 @Composable
 fun DataTypeSelectionDialog(
     title: String,
@@ -338,20 +334,29 @@ fun DataTypeSelectionDialog(
     var selection by remember { mutableStateOf(initialSelection) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, // Zgodne z udostępnianiem
+        shape = RoundedCornerShape(28.dp),
+        title = {
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                BackupDataType.entries.forEach { type -> // ZMIANA
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                BackupDataType.entries.forEach { type ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
                             .clickable {
                                 selection = if (selection.contains(type)) selection - type else selection + type
                             }
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 8.dp)
                     ) {
                         Checkbox(
                             checked = selection.contains(type),
@@ -359,23 +364,29 @@ fun DataTypeSelectionDialog(
                                 selection = if (isChecked) selection + type else selection - type
                             }
                         )
-                        Text(type.displayName, style = MaterialTheme.typography.bodyLarge)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = type.displayName,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
                     }
                 }
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(selection) }) {
-                Text(confirmText)
+            TextButton(onClick = { onConfirm(selection) }) {
+                Text(confirmText, style = MaterialTheme.typography.labelLarge)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj")
+                Text("Anuluj", style = MaterialTheme.typography.labelLarge)
             }
         }
     )
 }
+
+// --- UTILS ---
 
 private suspend fun saveBackupToFile(context: Context, uri: Uri, viewModel: SettingsViewModel, selection: Set<BackupDataType>) {
     withContext(Dispatchers.IO) {

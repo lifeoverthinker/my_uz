@@ -1,57 +1,77 @@
 package com.example.my_uz_android.ui.components
 
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZoneOffset
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.window.DialogProperties
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePicker(
-    date: Long,
+    date: Long?,
     onDateSelected: (Long) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit
 ) {
-    val initialUtcTime = remember(date) {
-        val localDate = Instant.ofEpochMilli(date)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-        localDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    }
-
-    val dateState = rememberDatePickerState(initialSelectedDateMillis = initialUtcTime)
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = date ?: System.currentTimeMillis()
+    )
 
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(
-                onClick = { dateState.selectedDateMillis?.let { onDateSelected(it) } }
-            ) {
-                Text("OK", style = MaterialTheme.typography.labelLarge)
+            TextButton(onClick = {
+                datePickerState.selectedDateMillis?.let { onDateSelected(it) }
+            }) {
+                Text("OK")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj", color = MaterialTheme.colorScheme.outline)
+                Text("Anuluj")
             }
         },
-        shape = MaterialTheme.shapes.extraLarge,
         colors = DatePickerDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        tonalElevation = 0.dp,
-        modifier = modifier
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
     ) {
         androidx.compose.material3.DatePicker(
-            state = dateState,
-            showModeToggle = false,
+            state = datePickerState,
             colors = DatePickerDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             )
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimePicker(
+    initialHour: Int = 12,
+    initialMinute: Int = 0,
+    onTimeSelected: (Int, Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val timePickerState = rememberTimePickerState(
+        initialHour = initialHour,
+        initialMinute = initialMinute,
+        is24Hour = true
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        confirmButton = {
+            TextButton(onClick = { onTimeSelected(timePickerState.hour, timePickerState.minute) }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Anuluj")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        text = {
+            androidx.compose.material3.TimePicker(state = timePickerState)
+        }
+    )
 }
