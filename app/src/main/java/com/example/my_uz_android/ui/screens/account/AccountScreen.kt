@@ -205,6 +205,7 @@ private fun StudyDirectionsSection(
         ?.takeIf { fallbackDirections.contains(it) }
         ?: fallbackDirections.firstOrNull()
         ?: "-"
+    val hasNoStudyDirections = fallbackDirections.isEmpty() && fallbackGroup.isNullOrBlank()
 
     var isDropdownExpanded by remember { mutableStateOf(false) }
 
@@ -271,6 +272,24 @@ private fun StudyDirectionsSection(
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Uzupełnij profil, aby zobaczyć dane studiów.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (hasNoStudyDirections) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_info_circle),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Brak przypisanych kierunków. Przejdz do ustawien, aby dodac swoj plan zajec.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

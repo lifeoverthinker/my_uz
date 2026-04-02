@@ -14,7 +14,6 @@ import com.example.my_uz_android.util.NetworkResult
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -173,6 +172,17 @@ class AccountViewModel(
             .toList()
     }
 
+    private fun normalizeSubgroupCsv(raw: Set<String>, hasMainGroup: Boolean): String? {
+        if (!hasMainGroup) return null
+        return raw
+            .asSequence()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+            .joinToString(",")
+    }
+
     private fun normalizeForSearch(input: String): String = input.filter { it.isLetterOrDigit() }
 
     private fun buildFilteredGroups(
@@ -213,6 +223,7 @@ class AccountViewModel(
             .collect { (settings, courses) ->
                 if (settings != null) {
                     currentSettings = settings
+                    val hasMainGroup = !settings.selectedGroupCode.isNullOrBlank()
 
                     if (!isEditingProfile) {
                         val parts = (settings.userName ?: "").split(" ", limit = 2)
@@ -232,13 +243,16 @@ class AccountViewModel(
                                 launch { loadSubgroupsForGroup(group) }
                             }
                             _mainSelectedSubgroups.value = parseSubgroups(settings.selectedSubgroup)
+                        } ?: run {
+                            _availableSubgroups.value = emptyList()
+                            _mainSelectedSubgroups.value = emptySet()
                         }
                     }
 
                     val activeDir = settings.activeDirectionCode ?: settings.selectedGroupCode
                     _activeDirection.value = activeDir
 
-                    if (activeDir == settings.selectedGroupCode) {
+                    if (activeDir == settings.selectedGroupCode && hasMainGroup) {
                         _faculty.value = settings.faculty ?: ""
                         _fieldOfStudy.value = settings.fieldOfStudy ?: ""
                         _studyMode.value = settings.studyMode ?: ""
@@ -250,6 +264,11 @@ class AccountViewModel(
                             _fieldOfStudy.value = activeCourse.fieldOfStudy ?: ""
                             _studyMode.value = activeCourse.studyMode ?: ""
                             _selectedSubgroups.value = parseSubgroups(activeCourse.selectedSubgroup)
+                        } else {
+                            _faculty.value = ""
+                            _fieldOfStudy.value = ""
+                            _studyMode.value = ""
+                            _selectedSubgroups.value = emptySet()
                         }
                     }
 
@@ -260,6 +279,9 @@ class AccountViewModel(
                 }
 
                 _additionalUserCourses.value = courses
+                _additionalSubgroupsMap.update { map ->
+                    map.filterKeys { code -> courses.any { it.groupCode == code } }
+                }
 
                 courses.forEach { course ->
                     if (!_additionalSubgroupsMap.value.containsKey(course.groupCode)) {
@@ -367,11 +389,19 @@ class AccountViewModel(
 
     fun clearMainGroup() {
         isEditingProfile = true
+        val previousMainGroup = _selectedGroup.value
         _selectedGroup.value = null
+        _selectedSubgroups.value = emptySet()
         _mainSelectedSubgroups.value = emptySet()
+        _availableSubgroups.value = emptyList()
         _mainFaculty.value = ""
         _mainFieldOfStudy.value = ""
         _mainStudyMode.value = ""
+
+        if (_activeDirection.value == previousMainGroup) {
+            _activeDirection.value = _additionalUserCourses.value.firstOrNull()?.groupCode
+        }
+
         _triggerSave.tryEmit(Unit)
     }
 
@@ -406,14 +436,6 @@ class AccountViewModel(
             semester = 1
         )
         userCourseRepository.insertUserCourse(tempCourse)
-
-        /**
-         * Po dodaniu kierunku domyślnie powinien być od razu aktywny i widoczny w kalendarzu.
-         * Ustawiamy activeDirectionCode na nowy kod, żeby UI i filtry nie "migały" między źródłami.
-         */
-        currentSettings?.let { settings ->
-            settingsRepository.insertSettings(settings.copy(activeDirectionCode = code))
-        }
 
         _loadingSubgroupsFor.update { it + code }
 
@@ -488,6 +510,8 @@ class AccountViewModel(
     fun removeAdditionalCourse(course: UserCourseEntity) = viewModelScope.launch {
         userCourseRepository.deleteUserCourse(course)
 
+        _additionalSubgroupsMap.update { it - course.groupCode }
+
         if (_activeDirection.value == course.groupCode) {
             _activeDirection.value = _selectedGroup.value
             currentSettings?.let { settings ->
@@ -495,7 +519,18 @@ class AccountViewModel(
             }
         }
 
-        _additionalUserCourses.update { list -> list.filter { it.groupCode != course.groupCode } }
+        val updatedCourses = _additionalUserCourses.value.filter { it.groupCode != course.groupCode }
+        _additionalUserCourses.value = updatedCourses
+
+        if (updatedCourses.isEmpty() && _selectedGroup.value.isNullOrBlank()) {
+            _activeDirection.value = null
+            _faculty.value = ""
+            _fieldOfStudy.value = ""
+            _studyMode.value = ""
+            _selectedSubgroups.value = emptySet()
+            _mainSelectedSubgroups.value = emptySet()
+        }
+
         _triggerSave.tryEmit(Unit)
     }
 
@@ -518,14 +553,10 @@ class AccountViewModel(
 
         val fullName = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
         val gender = if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
-        val mainSubgroups = _mainSelectedSubgroups.value.joinToString(",")
         val newMainGroup = _selectedGroup.value
+        val mainSubgroups = normalizeSubgroupCsv(_mainSelectedSubgroups.value, hasMainGroup = !newMainGroup.isNullOrBlank())
 
-        val newActiveDirection = if (currentSettings?.selectedGroupCode != newMainGroup) {
-            _activeDirection.value ?: newMainGroup
-        } else {
-            _activeDirection.value ?: newMainGroup
-        }
+        val newActiveDirection = _activeDirection.value ?: newMainGroup
 
         val newSettings = currentSettings?.copy(
             userName = fullName,

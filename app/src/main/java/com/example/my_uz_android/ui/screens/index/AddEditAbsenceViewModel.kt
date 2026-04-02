@@ -39,7 +39,6 @@ class AddEditAbsenceViewModel(
     private val _uiState = MutableStateFlow(AddEditAbsenceUiState())
     val uiState: StateFlow<AddEditAbsenceUiState> = _uiState.asStateFlow()
 
-    // Zielony komentarz: sygnał „zapisano/usunięto” do nawigacji wstecz.
     private val _isSaved = MutableStateFlow(false)
     val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
 
@@ -92,11 +91,6 @@ class AddEditAbsenceViewModel(
         }
     }
 
-    /**
-     * Zielony komentarz:
-     * Formularz pobiera listę przedmiotów/typów z TYCH SAMYCH danych,
-     * które są widoczne dla usera po filtrach kierunków i podgrup.
-     */
     private fun loadAvailableSubjectsFilteredByPlan() {
         viewModelScope.launch {
             combine(
@@ -120,7 +114,6 @@ class AddEditAbsenceViewModel(
         fun normalizeGroupCode(v: String?): String = v?.trim()?.uppercase().orEmpty()
         fun normalizeType(v: String?): String = v?.trim().orEmpty().ifBlank { "Inne" }
 
-        // 1) aktywne grupy = główna + dodatkowe
         val activeCodes = buildSet {
             settings?.selectedGroupCode?.takeIf { it.isNotBlank() }?.let { add(normalizeGroupCode(it)) }
             courses.forEach { add(normalizeGroupCode(it.groupCode)) }
@@ -128,7 +121,6 @@ class AddEditAbsenceViewModel(
 
         if (activeCodes.isEmpty()) return emptyList()
 
-        // 2) filtry podgrup per groupCode
         val filters = mutableListOf<AddEditAbsenceCourseFilter>()
         settings?.selectedGroupCode?.let {
             filters.add(AddEditAbsenceCourseFilter(it, settings.selectedSubgroup))
@@ -138,20 +130,26 @@ class AddEditAbsenceViewModel(
         }
         val filtersByGroup = filters.groupBy { normalizeGroupCode(it.groupCode) }
 
-        // 3) klasy widoczne wg group + SubgroupMatcher
         val visibleClasses = classes.filter { clazz ->
             val groupCode = normalizeGroupCode(clazz.groupCode)
             if (groupCode !in activeCodes) return@filter false
 
             val filtersForGroup = filtersByGroup[groupCode] ?: return@filter false
+            val selectedSubgroupsRaw = filtersForGroup.map { it.subgroupRaw }
+
+            /**
+             * Jeśli dla grupy nie ma żadnej wybranej podgrupy,
+             * pokazujemy wszystkie zajęcia tej grupy.
+             */
+            val hasAnySelectedSubgroup = selectedSubgroupsRaw.any { !it.isNullOrBlank() }
+            if (!hasAnySelectedSubgroup) return@filter true
 
             SubgroupMatcher.matches(
                 classSubgroupRaw = clazz.subgroup,
-                selectedSubgroupsRaw = filtersForGroup.map { it.subgroupRaw }
+                selectedSubgroupsRaw = selectedSubgroupsRaw
             )
         }
 
-        // 4) mapa przedmiot -> typy zajęć
         return visibleClasses
             .groupBy { it.subjectName }
             .mapValues { (_, classList) ->

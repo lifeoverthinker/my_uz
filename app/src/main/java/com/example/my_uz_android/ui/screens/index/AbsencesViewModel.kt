@@ -130,9 +130,18 @@ class AbsencesViewModel(
             if (groupCode !in activeCodes) return@filter false
 
             val filtersForGroup = filtersByGroup[groupCode] ?: return@filter false
+            val selectedSubgroupsRaw = filtersForGroup.map { it.subgroupRaw }
+
+            /**
+             * Jeśli dla grupy nie ma żadnej wybranej podgrupy,
+             * pokazujemy wszystkie zajęcia tej grupy.
+             */
+            val hasAnySelectedSubgroup = selectedSubgroupsRaw.any { !it.isNullOrBlank() }
+            if (!hasAnySelectedSubgroup) return@filter true
+
             SubgroupMatcher.matches(
                 classSubgroupRaw = clazz.subgroup,
-                selectedSubgroupsRaw = filtersForGroup.map { it.subgroupRaw }
+                selectedSubgroupsRaw = selectedSubgroupsRaw
             )
         }
 
@@ -147,8 +156,6 @@ class AbsencesViewModel(
             }
             .filterValues { it.isNotBlank() }
 
-        // Zielony komentarz:
-        // Historyczne nieobecności również zostają widoczne (nawet jeśli nie da się ich zmapować do aktywnego planu).
         val validAbsences = absences
 
         return validAbsences
@@ -194,8 +201,6 @@ class AbsencesViewModel(
         val selectedNormalized = selectedGroupsRaw.map { normalizeGroupCodeAbsencesVm(it) }.toSet()
 
         return if (!isGroupsInitialized && allUserCodes.isNotEmpty()) {
-            // Zielony komentarz:
-            // Stabilna inicjalizacja filtrów: pierwsze wejście = wszystkie kursy użytkownika aktywne.
             _selectedGroups.value = allUserCodes
             isGroupsInitialized = true
             allUserCodes

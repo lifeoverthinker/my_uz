@@ -59,7 +59,10 @@ fun PersonalDataScreenContent(
     onNavigateBack: () -> Unit,
     onNavigateToEdit: () -> Unit
 ) {
-    val sortedSubgroups = selectedSubgroups.toList().sorted()
+    val hasMainGroup = !selectedGroup.isNullOrBlank()
+    val sortedSubgroups = if (hasMainGroup) selectedSubgroups.toList().sorted() else emptyList()
+    val hasAdditionalCourses = additionalCourses.isNotEmpty()
+    val hasAnyStudyData = hasMainGroup || sortedSubgroups.isNotEmpty() || hasAdditionalCourses
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -102,84 +105,107 @@ fun PersonalDataScreenContent(
             }
 
             PersonalDataGroup(title = "Zapisane grupy") {
-                DataItem(label = "Grupa główna", value = selectedGroup ?: "Brak przypisanej grupy")
-
-                if (sortedSubgroups.isNotEmpty()) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Wybrane podgrupy",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                if (!hasAnyStudyData) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_info_circle),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            sortedSubgroups.forEach { subgroup ->
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text(
-                                        text = subgroup,
-                                        modifier = Modifier.padding(
-                                            horizontal = 12.dp,
-                                            vertical = 6.dp
-                                        ),
-                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
+                        Text(
+                            text = "Brak przypisanych kierunkow i podgrup.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    if (hasMainGroup) {
+                        DataItem(label = "Grupa glowna", value = selectedGroup.orEmpty())
+                    }
+
+                    if (sortedSubgroups.isNotEmpty()) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Wybrane podgrupy",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                sortedSubgroups.forEach { subgroup ->
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(
+                                            text = subgroup,
+                                            modifier = Modifier.padding(
+                                                horizontal = 12.dp,
+                                                vertical = 6.dp
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                if (additionalCourses.isNotEmpty()) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Grupy dodatkowe",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                    if (hasAdditionalCourses) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
 
-                        additionalCourses.forEachIndexed { index, course ->
-                            Column(modifier = Modifier.padding(bottom = if (index < additionalCourses.size - 1) 16.dp else 0.dp)) {
-                                Text(
-                                    text = course.groupCode,
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = course.fieldOfStudy ?: "Brak danych",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 2.dp)
-                                )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Grupy dodatkowe",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
 
-                                val subgroups =
-                                    course.selectedSubgroup?.split(",")?.map { it.trim() }
-                                        ?.filter { it.isNotBlank() }?.sorted()
-                                if (!subgroups.isNullOrEmpty()) {
+                            additionalCourses.forEachIndexed { index, course ->
+                                Column(modifier = Modifier.padding(bottom = if (index < additionalCourses.size - 1) 16.dp else 0.dp)) {
                                     Text(
-                                        text = "Podgrupy: ${subgroups.joinToString(", ")}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(top = 4.dp)
+                                        text = course.groupCode,
+                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
+                                    Text(
+                                        text = course.fieldOfStudy ?: "Brak danych",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+
+                                    val subgroups = course.selectedSubgroup
+                                        ?.split(",")
+                                        ?.map { it.trim() }
+                                        ?.filter { it.isNotBlank() }
+                                        ?.sorted()
+
+                                    if (!subgroups.isNullOrEmpty()) {
+                                        Text(
+                                            text = "Podgrupy: ${subgroups.joinToString(", ")}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

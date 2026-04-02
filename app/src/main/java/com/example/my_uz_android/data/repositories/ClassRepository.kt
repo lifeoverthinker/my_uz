@@ -92,28 +92,27 @@ class ClassRepository(private val classDao: ClassDao) {
             val now = LocalDateTime.now()
             val today = now.toLocalDate()
 
-            val upcoming = classes.filter { classItem ->
-                try {
-                    val classDate = LocalDate.parse(classItem.date)
-                    if (classDate.isBefore(today)) false
-                    else if (classDate.isEqual(today)) {
-                        val endTime = LocalTime.parse(classItem.endTime)
-                        LocalDateTime.of(today, endTime).isAfter(now)
-                    } else true
-                } catch (e: Exception) { false }
-            }
-
-            val nextDate = upcoming.mapNotNull {
-                try { LocalDate.parse(it.date) } catch (e: Exception) { null }
-            }.minOrNull()
-
-            if (nextDate != null) {
-                upcoming.filter { it.date == nextDate.toString() }
-                    .sortedBy { it.startTime }
-                    .take(limit)
-            } else {
-                emptyList()
-            }
+            classes
+                .filter { classItem ->
+                    try {
+                        val classDate = LocalDate.parse(classItem.date)
+                        when {
+                            classDate.isBefore(today) -> false
+                            classDate.isEqual(today) -> {
+                                val endTime = LocalTime.parse(classItem.endTime)
+                                LocalDateTime.of(today, endTime).isAfter(now)
+                            }
+                            else -> true
+                        }
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+                .sortedWith(
+                    compareBy<ClassEntity> { it.date }
+                        .thenBy { it.startTime }
+                )
+                .take(limit)
         }
     }
 }

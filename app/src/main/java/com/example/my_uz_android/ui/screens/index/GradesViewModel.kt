@@ -3,7 +3,6 @@ package com.example.my_uz_android.ui.screens.index
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.GradeEntity
-import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.GradesRepository
@@ -39,11 +38,6 @@ data class GradesUiState(
     val isPlanSelected: Boolean = false
 )
 
-private data class ActiveCourseFilter(
-    val groupCode: String,
-    val subgroupRaw: String?
-)
-
 class GradesViewModel(
     private val gradesRepository: GradesRepository,
     private val classRepository: ClassRepository,
@@ -69,7 +63,6 @@ class GradesViewModel(
             return if (raw.isBlank()) "Inne" else raw
         }
 
-        // 1) Kursy UI: główny + dodatkowe
         val allCoursesForUi = mutableListOf<UserCourseEntity>()
         settings?.selectedGroupCode?.let { main ->
             allCoursesForUi.add(
@@ -91,10 +84,8 @@ class GradesViewModel(
 
         val allUserCodes = allCoursesForUi.map { normalizeGroupCode(it.groupCode) }.toSet()
 
-        // 2) Stabilna inicjalizacja selected groups (jak w CalendarVM)
-        val activeCodes: Set<String> = run {
+        val activeCodesUpper: Set<String> = run {
             val selectedNormalized = selectedGroupsRaw.map { normalizeGroupCode(it) }.toSet()
-
             if (!isGroupsInitialized && allUserCodes.isNotEmpty()) {
                 _selectedGroups.value = allUserCodes
                 isGroupsInitialized = true
@@ -105,25 +96,19 @@ class GradesViewModel(
             }
         }
 
-        // 3) Filtry per groupCode z podgrupami
-        val activeFilters = buildActiveFilters(settings, courses)
-            .filter { normalizeGroupCode(it.groupCode) in activeCodes }
+        val activeCodesLower = activeCodesUpper.map { it.lowercase() }.toSet()
 
-        val filtersByGroup = activeFilters.groupBy { normalizeGroupCode(it.groupCode) }
-
-        // 4) Klasy widoczne: najpierw groupCode, potem wspólny matcher podgrup
+        // Wspolna mapa uprawnien podgrup oparta o intersection
+        val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, courses, activeCodesLower)
         val activeClasses = allClasses.filter { clazz ->
-            val groupCode = normalizeGroupCode(clazz.groupCode)
-            if (groupCode !in activeCodes) return@filter false
-
-            val filtersForGroup = filtersByGroup[groupCode] ?: return@filter false
-            SubgroupMatcher.matches(
-                classSubgroupRaw = clazz.subgroup,
-                selectedSubgroupsRaw = filtersForGroup.map { it.subgroupRaw }
+            SubgroupMatcher.isClassVisible(
+                clazz.groupCode,
+                clazz.classType,
+                clazz.subgroup,
+                userEnrollments
             )
         }
 
-        // Mapowanie subject -> groupCode (dla przypisania kierunku)
         val subjectToGroup = activeClasses
             .groupBy { normalizeSubject(it.subjectName) }
             .mapValues { (_, list) -> normalizeGroupCode(list.firstOrNull()?.groupCode) }
@@ -131,10 +116,9 @@ class GradesViewModel(
 
         val courseMap = allCoursesForUi.associateBy { normalizeGroupCode(it.groupCode) }
 
-        // 5) Oceny aktywne: jeśli brak mapowania do planu, nie gubimy (historyczne)
         val activeGrades = grades.filter { grade ->
             val group = subjectToGroup[normalizeSubject(grade.subjectName)]
-            if (group.isNullOrBlank()) true else group in activeCodes
+            if (group.isNullOrBlank()) true else group in activeCodesUpper
         }
 
         val subjectsFromClasses = activeClasses.map { normalizeSubject(it.subjectName) }.toSet()
@@ -191,7 +175,7 @@ class GradesViewModel(
             isLoading = false,
             allGrades = grades,
             userCourses = allCoursesForUi,
-            selectedGroupCodes = activeCodes,
+            selectedGroupCodes = activeCodesUpper,
             isPlanSelected = (settings?.selectedGroupCode?.isNotBlank() == true) || courses.isNotEmpty()
         )
     }
@@ -216,27 +200,8 @@ class GradesViewModel(
         return !settings?.selectedGroupCode.isNullOrBlank() || courses.isNotEmpty()
     }
 
-    fun deleteGrade(grade: GradeEntity) {
-        viewModelScope.launch { gradesRepository.deleteGrade(grade) }
-    }
+    fun deleteGrade(grade: GradeEntity) { viewModelScope.launch { gradesRepository.deleteGrade(grade) } }
+    fun duplicateGrade(grade: GradeEntity) { viewModelScope.launch { gradesRepository.insertGrade(grade.copy(id = 0)) } }
+    fun saveGrade(grade: GradeEntity) { viewModelScope.launch { if (grade.id == 0) gradesRepository.insertGrade(grade) else gradesRepository.updateGrade(grade) } }
 
-    fun duplicateGrade(grade: GradeEntity) {
-        viewModelScope.launch { gradesRepository.insertGrade(grade.copy(id = 0)) }
-    }
-
-    fun saveGrade(grade: GradeEntity) {
-        viewModelScope.launch {
-            if (grade.id == 0) gradesRepository.insertGrade(grade) else gradesRepository.updateGrade(grade)
-        }
-    }
-
-    private fun buildActiveFilters(
-        settings: SettingsEntity?,
-        courses: List<UserCourseEntity>
-    ): List<ActiveCourseFilter> {
-        val out = mutableListOf<ActiveCourseFilter>()
-        settings?.selectedGroupCode?.let { out.add(ActiveCourseFilter(it, settings.selectedSubgroup)) }
-        courses.forEach { out.add(ActiveCourseFilter(it.groupCode, it.selectedSubgroup)) }
-        return out
-    }
 }

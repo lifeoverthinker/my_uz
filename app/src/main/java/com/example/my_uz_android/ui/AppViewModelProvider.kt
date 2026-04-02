@@ -34,12 +34,13 @@ object AppViewModelProvider {
             val myUzApplication = application as MyUZApplication
 
             HomeViewModel(
-                application = application, // Przekazujemy wymagane Application
+                application = application,
                 settingsRepository = myUzApplication.container.settingsRepository,
                 classRepository = myUzApplication.container.classRepository,
                 tasksRepository = myUzApplication.container.tasksRepository,
                 universityRepository = myUzApplication.container.universityRepository,
-                notificationsRepository = myUzApplication.container.notificationsRepository
+                notificationsRepository = myUzApplication.container.notificationsRepository,
+                userCourseRepository = myUzApplication.container.userCourseRepository // DODANE
             )
         }
 

@@ -7,12 +7,15 @@ import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.models.TaskEntity
+import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.NotificationsRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.TasksRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
-import com.example.my_uz_android.widget.triggerWidgetUpdate // Upewnij się, że importujesz poprawnie funkcję
+import com.example.my_uz_android.data.repositories.UserCourseRepository
+import com.example.my_uz_android.util.SubgroupMatcher
+import com.example.my_uz_android.widget.triggerWidgetUpdate
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,38 +44,30 @@ data class HomeUiState(
     val isPlanSelected: Boolean = false,
     val classColorMap: Map<String, Int> = emptyMap(),
     val themeMode: String = "SYSTEM",
-    // NOWE POLE: Flaga określająca, czy wyświetlić czerwoną kropkę na ikonie dzwonka
     val hasUnreadNotifications: Boolean = false
 )
 
-// UWAGA: Zmieniono dziedziczenie z ViewModel() na AndroidViewModel(application)
-// aby mieć dostęp do kontekstu wymaganego przez triggerWidgetUpdate
 class HomeViewModel(
     application: Application,
     private val settingsRepository: SettingsRepository,
     private val classRepository: ClassRepository,
     private val tasksRepository: TasksRepository,
     private val universityRepository: UniversityRepository,
-    // DODANE: Repozytorium powiadomień do nasłuchiwania statusu (nieprzeczytane)
-    private val notificationsRepository: NotificationsRepository
+    private val notificationsRepository: NotificationsRepository,
+    private val userCourseRepository: UserCourseRepository
 ) : AndroidViewModel(application) {
 
     private val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("pl"))
     private val gson = Gson()
 
     init {
-        // Obserwujemy zmiany w zajęciach i ustawieniach,
-        // aby automatycznie odświeżyć widżet, gdy zajdzie taka potrzeba
         viewModelScope.launch {
             combine(
                 classRepository.getUpcomingClasses(),
                 settingsRepository.getSettingsStream()
             ) { classes, settings ->
-                // Ta funkcja anonimowa zostaje wywołana, gdy zmienią się klasy lub ustawienia
                 Pair(classes, settings)
             }.collectLatest {
-                // Za każdym razem, gdy otrzymamy nowe dane z bazy, wyzwalamy aktualizację widżetu.
-                // WorkManager zapewni, że nie zostaną wykonane dublujące się zadania.
                 triggerWidgetUpdate(getApplication())
             }
         }
@@ -81,10 +76,10 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = combine(
         settingsRepository.getSettingsStream(),
         classRepository.getUpcomingClasses(),
+        userCourseRepository.getAllUserCoursesStream(),
         tasksRepository.getAllTasks(),
-        // DODANE: Nasłuchiwanie na liczbę nieodczytanych powiadomień
         notificationsRepository.getUnreadCount()
-    ) { settings: SettingsEntity?, upcomingClasses: List<ClassEntity>, tasks: List<TaskEntity>, unreadCount: Int ->
+    ) { settings: SettingsEntity?, upcomingClasses: List<ClassEntity>, courses: List<UserCourseEntity>, tasks: List<TaskEntity>, unreadCount: Int ->
 
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
@@ -120,12 +115,23 @@ class HomeViewModel(
 
         val isPlanSelected = hasGroup
 
-        val classesForToday = upcomingClasses.filter {
+        // Zunifikowana regula intersection dla podgrup (wspolna z Calendar/Grades)
+        val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, courses)
+        val visibleClasses = upcomingClasses.filter { classItem ->
+            SubgroupMatcher.isClassVisible(
+                classItem.groupCode,
+                classItem.classType,
+                classItem.subgroup,
+                userEnrollments
+            )
+        }
+
+        val classesForToday = visibleClasses.filter {
             it.date == today.toString() && runCatching { LocalTime.parse(it.endTime).isAfter(nowTime) }.getOrDefault(true)
         }
 
         val tomorrow = today.plusDays(1)
-        val classesForTomorrow = upcomingClasses.filter {
+        val classesForTomorrow = visibleClasses.filter {
             it.date == tomorrow.toString()
         }
 
@@ -141,32 +147,10 @@ class HomeViewModel(
             .sortedBy { it.dueDate }
             .take(5)
 
-        // Dodanie kilku sztucznych wydarzeń
         val mockEvents = listOf(
-            EventEntity(
-                id = 1,
-                title = "Juwenalia 2026",
-                description = "Największa impreza roku studentów UZ! Koncerty, jedzenie i mnóstwo zabawy na kampusie.",
-                date = "Piątek, 20 maja 2026",
-                location = "Kampus B",
-                timeRange = "18:00 - 02:00"
-            ),
-            EventEntity(
-                id = 2,
-                title = "Dzień Otwarty UZ",
-                description = "Poznaj ofertę edukacyjną naszej uczelni i porozmawiaj z wykładowcami.",
-                date = "Środa, 15 kwietnia 2026",
-                location = "Budynek Główny",
-                timeRange = "10:00 - 15:00"
-            ),
-            EventEntity(
-                id = 3,
-                title = "Hackathon MyUZ",
-                description = "24 godziny programowania, tworzenia i rywalizacji o nagrody. Pokaż co potrafisz!",
-                date = "Sobota, 10 maja 2026",
-                location = "Centrum Komputerowe",
-                timeRange = "09:00 - 09:00 (+1 dzień)"
-            )
+            EventEntity(id = 1, title = "Juwenalia 2026", description = "Największa impreza...", date = "Piątek, 20 maja 2026", location = "Kampus B", timeRange = "18:00 - 02:00"),
+            EventEntity(id = 2, title = "Dzień Otwarty UZ", description = "Poznaj ofertę edukacyjną...", date = "Środa, 15 kwietnia 2026", location = "Budynek Główny", timeRange = "10:00 - 15:00"),
+            EventEntity(id = 3, title = "Hackathon MyUZ", description = "24 godziny programowania...", date = "Sobota, 10 maja 2026", location = "Centrum Komputerowe", timeRange = "09:00 - 09:00 (+1 dzień)")
         )
 
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
@@ -190,7 +174,6 @@ class HomeViewModel(
             isLoading = false,
             isPlanSelected = isPlanSelected,
             classColorMap = classColorMap,
-            // DODANE: Jeśli jest > 0 nieprzeczytanych powiadomień, flagujemy to jako true
             hasUnreadNotifications = unreadCount > 0,
             themeMode = settings?.themeMode ?: "SYSTEM"
         )
