@@ -1,6 +1,7 @@
 package com.example.my_uz_android.ui.screens.home.details
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 
 @Composable
 fun EventDetailsScreen(
@@ -65,6 +67,9 @@ fun EventDetailsContent(
     event: EventEntity,
     onBackClick: () -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
+    val squareColor = getAppBackgroundColor(2, isDark) // 2 = ColorSetGreen
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -95,8 +100,7 @@ fun EventDetailsContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow
+                    color = Color.Transparent
                 ) {
                     Row(
                         modifier = Modifier
@@ -113,7 +117,7 @@ fun EventDetailsContent(
                             Box(
                                 modifier = Modifier
                                     .size(14.dp)
-                                    .background(Color(0xFF4CAF50), RoundedCornerShape(4.dp))
+                                    .background(squareColor, RoundedCornerShape(4.dp))
                             )
                         }
 
@@ -168,8 +172,7 @@ private fun DetailRowCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer
+        color = Color.Transparent
     ) {
         Row(
             modifier = Modifier

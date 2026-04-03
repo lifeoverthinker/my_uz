@@ -22,8 +22,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.theme.MyUZTheme
-import com.example.my_uz_android.ui.theme.getAppAccentColor
-import com.example.my_uz_android.ui.theme.getClassColorIndex
+import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -101,8 +100,7 @@ fun GradeDetailsScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val isDark = isSystemInDarkTheme()
-    val colorIndex = getClassColorIndex(subjectName)
-    val accentColor = getAppAccentColor(colorIndex, isDark)
+    val squareColor = getAppBackgroundColor(5, isDark) // 5 = ColorSetPink
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -181,8 +179,7 @@ fun GradeDetailsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow
+                    color = Color.Transparent
                 ) {
                     Row(
                         modifier = Modifier
@@ -200,7 +197,7 @@ fun GradeDetailsScreen(
                                 modifier = Modifier
                                     .size(14.dp)
                                     .background(
-                                        color = accentColor,
+                                        color = squareColor,
                                         shape = RoundedCornerShape(4.dp)
                                     )
                             )
@@ -274,6 +271,30 @@ fun GradeDetailsScreen(
 }
 
 @Composable
+fun DeleteConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    itemType: String
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Potwierdź usunięcie") },
+        text = { Text("Czy na pewno chcesz usunąć to $itemType? Te zmiany są nieodwracalne.") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Usuń", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Anuluj")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    )
+}
+
+@Composable
 private fun DetailRowCard(
     iconRes: Int,
     label: String?,
@@ -285,8 +306,7 @@ private fun DetailRowCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer
+        color = Color.Transparent
     ) {
         Row(
             modifier = Modifier

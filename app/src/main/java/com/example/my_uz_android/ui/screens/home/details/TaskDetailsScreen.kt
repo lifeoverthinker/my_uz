@@ -1,6 +1,7 @@
 package com.example.my_uz_android.ui.screens.home.details
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +22,7 @@ import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -74,6 +76,9 @@ fun TaskDetailsScreen(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val isDark = isSystemInDarkTheme()
+    val squareColor = getAppBackgroundColor(1, isDark) // 1 = ColorSetBlue
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -152,8 +157,7 @@ fun TaskDetailsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow
+                    color = Color.Transparent
                 ) {
                     Row(
                         modifier = Modifier
@@ -170,7 +174,7 @@ fun TaskDetailsScreen(
                             Box(
                                 modifier = Modifier
                                     .size(14.dp)
-                                    .background(Color(0xFF2196F3), RoundedCornerShape(4.dp))
+                                    .background(squareColor, RoundedCornerShape(4.dp))
                             )
                         }
 
@@ -270,8 +274,7 @@ private fun DetailRowCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer
+        color = Color.Transparent
     ) {
         Row(
             modifier = Modifier

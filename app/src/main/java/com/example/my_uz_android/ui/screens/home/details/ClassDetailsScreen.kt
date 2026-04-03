@@ -1,6 +1,7 @@
 package com.example.my_uz_android.ui.screens.home.details
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,7 @@ import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -98,6 +100,9 @@ fun ClassDetailsContent(
         day.getDisplayName(TextStyle.FULL, Locale("pl", "PL")).replaceFirstChar { it.uppercase() }
     }
 
+    val isDark = isSystemInDarkTheme()
+    val squareColor = getAppBackgroundColor(0, isDark) // 0 = ColorSetPurple
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -128,8 +133,7 @@ fun ClassDetailsContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow
+                    color = Color.Transparent
                 ) {
                     Row(
                         modifier = Modifier
@@ -146,7 +150,7 @@ fun ClassDetailsContent(
                             Box(
                                 modifier = Modifier
                                     .size(14.dp)
-                                    .background(Color(0xFF9C27B0), RoundedCornerShape(4.dp))
+                                    .background(squareColor, RoundedCornerShape(4.dp))
                             )
                         }
 
@@ -178,16 +182,11 @@ fun ClassDetailsContent(
 
                 if (!isTeacherPlan) {
                     if (!classEntity.teacherName.isNullOrBlank()) {
-                        val teacherDetails = buildString {
-                            append(classEntity.teacherName)
-                            if (!classEntity.teacherEmail.isNullOrBlank()) append("\n${classEntity.teacherEmail}")
-                            if (!classEntity.teacherInstitute.isNullOrBlank()) append("\n${classEntity.teacherInstitute}")
-                        }
                         DetailRowCard(
                             iconRes = R.drawable.ic_user,
                             label = "Prowadzący",
-                            value = teacherDetails,
-                            isMultiline = true
+                            value = classEntity.teacherName,
+                            isMultiline = false
                         )
                     }
                 } else {
@@ -226,8 +225,7 @@ private fun DetailRowCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer
+        color = Color.Transparent
     ) {
         Row(
             modifier = Modifier
