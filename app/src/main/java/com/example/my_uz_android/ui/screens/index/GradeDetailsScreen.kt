@@ -257,7 +257,7 @@ fun GradeDetailsScreen(
             }
 
             if (showDeleteDialog) {
-                DeleteConfirmationDialog(
+                GradeDeleteDialog(
                     onConfirm = {
                         onDeleteGrade()
                         showDeleteDialog = false
@@ -271,7 +271,7 @@ fun GradeDetailsScreen(
 }
 
 @Composable
-fun DeleteConfirmationDialog(
+private fun GradeDeleteDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     itemType: String

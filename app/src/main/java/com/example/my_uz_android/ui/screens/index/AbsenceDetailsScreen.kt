@@ -236,7 +236,7 @@ fun AbsenceDetailsScreen(
             }
 
             if (showDeleteDialog) {
-                DeleteConfirmationDialog(
+                AbsenceDeleteDialog(
                     onConfirm = {
                         onDeleteClick()
                         showDeleteDialog = false
@@ -250,7 +250,7 @@ fun AbsenceDetailsScreen(
 }
 
 @Composable
-fun DeleteConfirmationDialog(
+private fun AbsenceDeleteDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     itemType: String
