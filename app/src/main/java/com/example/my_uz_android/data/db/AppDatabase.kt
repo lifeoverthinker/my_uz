@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.my_uz_android.data.daos.*
 import com.example.my_uz_android.data.models.*
 
@@ -17,9 +19,9 @@ import com.example.my_uz_android.data.models.*
         SettingsEntity::class,
         FavoriteEntity::class,
         UserCourseEntity::class,
-        NotificationEntity::class // DODANE: Encja powiadomień
+        NotificationEntity::class
     ],
-    version = 9, // Podbita wersja (zmień na 8, skoro znowu zmieniamy schemat)
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,7 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun settingsDao(): SettingsDao
     abstract fun favoritesDao(): FavoritesDao
     abstract fun userCourseDao(): UserCourseDao
-    abstract fun notificationDao(): NotificationDao // DODANE: DAO powiadomień
+    abstract fun notificationDao(): NotificationDao
 
     companion object {
         @Volatile
@@ -44,7 +46,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    // Czyści bazę przy zmianie wersji (idealne na fazę testów)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

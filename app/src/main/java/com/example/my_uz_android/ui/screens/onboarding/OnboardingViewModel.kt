@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.screens.onboarding
 
+/**
+ * ViewModel procesu onboardingu odpowiedzialny za stan kroków i zapis konfiguracji.
+ * Integruje dane użytkownika z ustawieniami aplikacji oraz źródłami uczelnianymi,
+ * aby po pierwszym uruchomieniu przygotować kompletny profil pracy.
+ */
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.SettingsEntity
@@ -11,13 +17,19 @@ import com.example.my_uz_android.util.NetworkResult
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/**
+ * Zarządza stanem i logiką procesu onboardingu.
+ *
+ * @param settingsRepository Repozytorium ustawień aplikacji.
+ * @param universityRepository Repozytorium danych uczelnianych.
+ * @param classRepository Repozytorium zajęć.
+ */
 class OnboardingViewModel(
     private val settingsRepository: SettingsRepository,
     private val universityRepository: UniversityRepository,
     private val classRepository: ClassRepository
 ) : ViewModel() {
 
-    // --- Stany UI ---
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
@@ -26,7 +38,6 @@ class OnboardingViewModel(
 
     val totalPages = 6
 
-    // --- Dane Użytkownika ---
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
@@ -36,7 +47,6 @@ class OnboardingViewModel(
     private val _selectedGender = MutableStateFlow<UserGender?>(null)
     val selectedGender: StateFlow<UserGender?> = _selectedGender.asStateFlow()
 
-    // --- Wybór Grupy ---
     private val _groupSearchQuery = MutableStateFlow("")
     val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
 
@@ -49,10 +59,8 @@ class OnboardingViewModel(
     private val _selectedSubgroups = MutableStateFlow<Set<String>>(emptySet())
     val selectedSubgroups: StateFlow<Set<String>> = _selectedSubgroups.asStateFlow()
 
-    // Lista grup z serwera
     private val _allGroups = MutableStateFlow<List<String>>(emptyList())
 
-    // Filtrowanie grup
     val filteredGroups: StateFlow<List<String>> = combine(
         _groupSearchQuery,
         _allGroups
@@ -61,7 +69,7 @@ class OnboardingViewModel(
             emptyList()
         } else {
             allGroups.filter { it.contains(query, ignoreCase = true) }
-                .sorted() // Sortowanie alfabetyczne
+                .sorted()
                 .take(5)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -74,13 +82,11 @@ class OnboardingViewModel(
         viewModelScope.launch {
             when (val result = universityRepository.getGroupCodes()) {
                 is NetworkResult.Success -> {
-                    // POPRAWKA: Filtrowanie pustych wartości i "null" oraz sortowanie
                     val groups = (result.data ?: emptyList())
                         .filter { !it.isNullOrBlank() && it != "null" }
                         .sorted()
                     _allGroups.value = groups
                 }
-
                 else -> {
                     _allGroups.value = emptyList()
                 }
@@ -88,32 +94,36 @@ class OnboardingViewModel(
         }
     }
 
-    // --- Metody obsługi UI ---
-
+    /** Przechodzi do następnego kroku onboardingu. */
     fun onNextClick() {
         if (_currentPage.value < totalPages - 1) {
             _currentPage.value += 1
         }
     }
 
+    /** Wraca do poprzedniego kroku onboardingu. */
     fun onBackClick() {
         if (_currentPage.value > 0) {
             _currentPage.value -= 1
         }
     }
 
+    /** Ustawia imię użytkownika w stanie formularza. */
     fun setUserName(name: String) {
         _userName.value = name
     }
 
+    /** Ustawia nazwisko użytkownika w stanie formularza. */
     fun setUserSurname(surname: String) {
         _userSurname.value = surname
     }
 
+    /** Ustawia formę zwrotu użytkownika. */
     fun setGender(gender: UserGender) {
         _selectedGender.value = gender
     }
 
+    /** Aktualizuje zapytanie wyszukiwania grupy i resetuje wybór przy pustej frazie. */
     fun setGroupSearchQuery(query: String) {
         _groupSearchQuery.value = query
         if (query.isBlank()) {
@@ -123,6 +133,7 @@ class OnboardingViewModel(
         }
     }
 
+    /** Wybiera grupę i inicjuje pobranie dostępnych podgrup. */
     fun selectGroup(group: String) {
         _selectedGroup.value = group
         _groupSearchQuery.value = group
@@ -135,13 +146,11 @@ class OnboardingViewModel(
             _isLoading.value = true
             when (val result = universityRepository.getSubgroups(group)) {
                 is NetworkResult.Success -> {
-                    // POPRAWKA: Filtrowanie podgrup (żeby nie pokazywało pustej opcji)
                     val subgroups = (result.data ?: emptyList())
                         .filter { !it.isNullOrBlank() && it != "null" }
                         .sorted()
                     _availableSubgroups.value = subgroups
                 }
-
                 else -> {
                     _availableSubgroups.value = emptyList()
                 }
@@ -150,6 +159,7 @@ class OnboardingViewModel(
         }
     }
 
+    /** Przełącza zaznaczenie podgrupy w formularzu onboardingu. */
     fun toggleSubgroup(subgroup: String) {
         val current = _selectedSubgroups.value.toMutableSet()
         if (current.contains(subgroup)) {
@@ -160,7 +170,11 @@ class OnboardingViewModel(
         _selectedSubgroups.value = current
     }
 
-    // Funkcja Skip (Pomiń) - zachowana oryginalna logika
+    /**
+     * Pomija onboarding i zapisuje profil gościa.
+     *
+     * @param onSuccess Callback wywoływany po poprawnym zapisie ustawień.
+     */
     fun skipOnboarding(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -170,7 +184,7 @@ class OnboardingViewModel(
             val guestSettings = SettingsEntity(
                 id = currentSettings?.id ?: 0,
                 userName = "Gość",
-                isAnonymous = true, // Ustawiamy flagę anonimowości
+                isAnonymous = true,
                 selectedGroupCode = null,
                 activeDirectionCode = null,
                 selectedSubgroup = null,
@@ -179,20 +193,22 @@ class OnboardingViewModel(
                 isDarkMode = currentSettings?.isDarkMode ?: false
             )
 
-            settingsRepository.insertOrUpdate(guestSettings)
+            settingsRepository.insertSettings(guestSettings)
 
             _isLoading.value = false
             onSuccess()
         }
     }
 
-    // Funkcja Zapisu - zachowana oryginalna logika (pobieranie szczegółów grupy)
-// Funkcja Zapisu
+    /**
+     * Zapisuje dane podane w onboardingu i kończy konfigurację pierwszego uruchomienia.
+     *
+     * @param onSuccess Callback wywoływany po poprawnym zapisie ustawień.
+     */
     fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
 
-            // Pobieranie szczegółów grupy (Wydział, Kierunek, Tryb)
             var fetchedFaculty: String? = null
             var fetchedFieldOfStudy: String? = null
             var fetchedStudyMode: String? = null
@@ -214,7 +230,6 @@ class OnboardingViewModel(
             val genderString =
                 if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
 
-            // NAPRAWA: Zapis bez spacji między przecinkami, tak aby multiselect w AccountViewModel widział je poprawnie
             val subgroupsString = _selectedSubgroups.value.joinToString(",")
 
             val newSettings = SettingsEntity(
@@ -232,11 +247,10 @@ class OnboardingViewModel(
                 studyMode = fetchedStudyMode
             )
 
-            settingsRepository.insertOrUpdate(newSettings)
+            settingsRepository.insertSettings(newSettings)
 
             _isLoading.value = false
             onSuccess()
         }
     }
 }
-

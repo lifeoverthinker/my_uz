@@ -2,7 +2,17 @@ package com.example.my_uz_android.data.models
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
+/**
+ * Encja reprezentująca ocenę ucznia przypisaną do konkretnego przedmiotu.
+ * * UWAGA BIZNESOWA:
+ * Powiązanie tej encji z zajęciami ([ClassEntity]) opiera się niejawnie na dopasowaniu
+ * pól [subjectName] oraz [classType]. Domyślna wartość [classType] to puste pole ("").
+ * Może to prowadzić do błędów w wyświetlaniu indeksu, jeśli ocena dla formy
+ * takiej jak "Laboratorium" zostanie zapisana z pustym typem zajęć.
+ */
+@Serializable
 @Entity(tableName = "grades")
 data class GradeEntity(
     @PrimaryKey(autoGenerate = true)
@@ -15,6 +25,5 @@ data class GradeEntity(
     val comment: String? = null,
     val date: Long,
     val semester: Int = 1,
-    // NOWE POLE: Flaga oznaczająca, czy to są punkty
     val isPoints: Boolean = false
 )

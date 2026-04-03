@@ -1,9 +1,17 @@
 package com.example.my_uz_android.data.repositories
 
+import android.util.Log
 import com.example.my_uz_android.data.daos.ClassDao
 import com.example.my_uz_android.data.models.ClassEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.map
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 
 class ClassRepository(private val classDao: ClassDao) {
 
@@ -14,31 +22,97 @@ class ClassRepository(private val classDao: ClassDao) {
     }
 
     fun getAllClassesStream(): Flow<List<ClassEntity>> = classDao.getAllClasses()
+        .catch { e ->
+            Log.e("ClassRepository", "Błąd getAllClasses", e)
+            emit(emptyList())
+        }
 
-    fun getClassesForDayStream(dayOfWeek: Int): Flow<List<ClassEntity>> =
-        classDao.getClassesForDay(dayOfWeek)
+    fun getClassesForDayStream(dayOfWeek: Int): Flow<List<ClassEntity>> = classDao.getClassesForDay(dayOfWeek)
+        .catch { e ->
+            Log.e("ClassRepository", "Błąd getClassesForDayStream", e)
+            emit(emptyList())
+        }
 
     fun getClassByIdStream(id: Int): Flow<ClassEntity?> {
         return if (id == -1) {
             flowOf(temporaryClass)
         } else {
             classDao.getClassById(id)
+                .catch { e ->
+                    Log.e("ClassRepository", "Błąd getClassByIdStream", e)
+                    emit(null)
+                }
         }
     }
 
     suspend fun updateClasses(classes: List<ClassEntity>) {
-        classDao.deleteAll()
-        classDao.insertAll(classes)
+        try {
+            // Zawsze czyścimy i wstawiamy nowe, aby uniknąć problemów z nieaktualnym planem
+            classDao.deleteAll()
+            if (classes.isNotEmpty()) {
+                classDao.insertAll(classes)
+            }
+            Log.d("ClassRepository", "Zaktualizowano bazę zajęć. Liczba: ${classes.size}")
+        } catch (e: Exception) {
+            Log.e("ClassRepository", "Błąd updateClasses", e)
+        }
     }
 
     suspend fun syncGroupClasses(groupCode: String, newClasses: List<ClassEntity>) {
-        classDao.deleteByGroupCode(groupCode)
-        classDao.insertAll(newClasses)
+        try {
+            classDao.deleteByGroupCode(groupCode)
+            classDao.insertAll(newClasses)
+        } catch (e: Exception) {
+            Log.e("ClassRepository", "Błąd syncGroupClasses", e)
+        }
     }
 
-    suspend fun insertClasses(classes: List<ClassEntity>) = classDao.insertAll(classes)
-    suspend fun insertClass(classEntity: ClassEntity) = classDao.insertClass(classEntity)
-    suspend fun deleteAllClasses() = classDao.deleteAll()
-    suspend fun deleteClass(classEntity: ClassEntity) = classDao.delete(classEntity)
-    suspend fun updateClass(classEntity: ClassEntity) = classDao.update(classEntity)
+    suspend fun insertClasses(classes: List<ClassEntity>) {
+        try { classDao.insertAll(classes) } catch (e: Exception) { }
+    }
+
+    suspend fun insertClass(classEntity: ClassEntity) {
+        try { classDao.insertClass(classEntity) } catch (e: Exception) { }
+    }
+
+    suspend fun deleteAllClasses() {
+        try { classDao.deleteAll() } catch (e: Exception) { }
+    }
+
+    suspend fun deleteClass(classEntity: ClassEntity) {
+        try { classDao.delete(classEntity) } catch (e: Exception) { }
+    }
+
+    suspend fun updateClass(classEntity: ClassEntity) {
+        try { classDao.update(classEntity) } catch (e: Exception) { }
+    }
+
+    fun getUpcomingClasses(limit: Int = Int.MAX_VALUE): Flow<List<ClassEntity>> {
+        return getAllClassesStream().map { classes ->
+            val now = LocalDateTime.now()
+            val today = now.toLocalDate()
+
+            classes
+                .filter { classItem ->
+                    try {
+                        val classDate = LocalDate.parse(classItem.date)
+                        when {
+                            classDate.isBefore(today) -> false
+                            classDate.isEqual(today) -> {
+                                val endTime = LocalTime.parse(classItem.endTime)
+                                LocalDateTime.of(today, endTime).isAfter(now)
+                            }
+                            else -> true
+                        }
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+                .sortedWith(
+                    compareBy<ClassEntity> { it.date }
+                        .thenBy { it.startTime }
+                )
+                .take(limit)
+        }
+    }
 }

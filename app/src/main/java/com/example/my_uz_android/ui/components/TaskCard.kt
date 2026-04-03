@@ -1,10 +1,15 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Komponent karty zadania wykorzystywany na ekranach dashboardu i list zadań.
+ * Udostępnia spójny sposób prezentacji tytułu, przedmiotu i stanu realizacji
+ * z zachowaniem zgodności wizualnej z pozostałymi kartami aplikacji.
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -12,98 +17,89 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.data.models.TaskEntity
-import com.example.my_uz_android.ui.theme.extendedColors
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
+import com.example.my_uz_android.ui.theme.InterFontFamily
 
+/**
+ * Komponent wyświetlający zadanie (Task) ze statusem ukończenia i terminem.
+ * Budowa i paddingi identyczne jak w EventCard.
+ *
+ * @param task Dane zadania do wyświetlenia.
+ * @param onTaskClick Akcja wykonywana po kliknięciu karty.
+ * @param modifier Modyfikator układu Compose.
+ * @param backgroundColor Opcjonalny kolor tła karty.
+ * @param isDarkMode Flaga określająca użycie kolorów trybu ciemnego.
+ */
 @Composable
 fun TaskCard(
     task: TaskEntity,
     onTaskClick: () -> Unit = {},
     modifier: Modifier = Modifier,
-    showDayMarker: Boolean = true
+    backgroundColor: Color? = null,
+    isDarkMode: Boolean = isSystemInDarkTheme()
 ) {
     val isCompleted = task.isCompleted
+    
+    // Domyślny kolor niebieski dla zadań
+    val baseBackgroundColor = backgroundColor ?: if (isDarkMode) Color(0xFF233436) else Color(0xFFD8FCFF)
 
-    val baseBackgroundColor = MaterialTheme.extendedColors.taskCardBackground // pastelowe tło Task
-
-    // ZMIANA: Zamiast alpha (przezroczystości), używamy solidnego koloru surfaceVariant
-    val cardBackgroundColor = if (isCompleted)
+    val cardBackgroundColor = if (isCompleted) {
         MaterialTheme.colorScheme.surfaceVariant
-    else
+    } else {
         baseBackgroundColor
+    }
 
-    val titleColor = Color(0xFF1D192B)
+    // Kolory tekstu dostosowane do trybu
+    val titleColor = MaterialTheme.colorScheme.onSurface
+    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+
     val textDecoration = if (isCompleted) TextDecoration.LineThrough else null
 
     Column(
         modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 84.dp) // Taka sama wysokość minimalna jak EventCard
             .clip(RoundedCornerShape(8.dp))
             .background(cardBackgroundColor)
             .clickable { onTaskClick() }
             .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp) // Identyczne rozmieszczenie jak w EventCard
     ) {
         Text(
             text = task.title,
-            style = MaterialTheme.typography.titleSmall.copy(
+            style = TextStyle(
+                fontFamily = InterFontFamily,
+                fontWeight = FontWeight(500),
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
                 color = titleColor,
                 textDecoration = textDecoration
             ),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
         )
 
-        // Wyświetlanie daty i przedmiotu
-        val dateText = formatTaskDateShort(task.dueDate)
         val subjectText = task.subjectName?.takeIf { it.isNotBlank() }
-        val fullText = subjectText?.let { "$dateText • $it" } ?: dateText
-
-        if (fullText.isNotBlank()) {
+        if (subjectText != null) {
             Text(
-                text = fullText,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = titleColor
+                text = subjectText,
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight(400),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    color = secondaryColor
                 ),
-                maxLines = 1,
+                maxLines = 2, // Pozwalamy na 2 linie, by wysokość była spójna z EventCard (który ma 2 linie opisu)
                 overflow = TextOverflow.Ellipsis
             )
         }
-    }
-}
-
-private fun formatTaskDateShort(dueDate: Long): String {
-    return try {
-        val date = Instant.ofEpochMilli(dueDate)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-
-        val today = LocalDate.now()
-        val tomorrow = today.plusDays(1)
-
-        when {
-            date == today -> "Dziś"
-            date == tomorrow -> "Jutro"
-            else -> {
-                val dayAbbr = when (date.dayOfWeek.value) {
-                    1 -> "Pn"; 2 -> "Wt"; 3 -> "Śr"; 4 -> "Czw";
-                    5 -> "Pt"; 6 -> "Sob"; 7 -> "Ndz"; else -> "??"
-                }
-                val monthAbbr = when (date.monthValue) {
-                    1 -> "sty"; 2 -> "lut"; 3 -> "mar"; 4 -> "kwi"
-                    5 -> "maj"; 6 -> "cze"; 7 -> "lip"; 8 -> "sie"
-                    9 -> "wrz"; 10 -> "paź"; 11 -> "lis"; 12 -> "gru"
-                    else -> ""
-                }
-                "${dayAbbr}, ${date.dayOfMonth} $monthAbbr"
-            }
-        }
-    } catch (_: Exception) {
-        ""
     }
 }

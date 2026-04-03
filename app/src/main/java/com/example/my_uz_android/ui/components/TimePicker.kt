@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Dedykowany komponent dialogu wyboru czasu dla formularzy aplikacji.
+ * Zapewnia spójny wygląd Material 3 oraz obsługę wejścia/wyjścia czasu
+ * w formacie używanym przez warstwę UI.
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,8 +16,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Renderuje dialog wyboru godziny na podstawie wartości tekstowej HH:mm.
+ *
+ * @param time Aktualna wartość czasu w formacie HH:mm.
+ * @param onTimeSelected Callback zwracający wybraną godzinę i minutę.
+ * @param onDismiss Callback zamykający dialog.
+ * @param modifier Modyfikator układu Compose.
+ */
 @Composable
 fun TimePicker(
     time: String,
@@ -35,16 +50,15 @@ fun TimePicker(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 0.dp,
-            modifier = Modifier.wrapContentSize()
+            modifier = modifier.wrapContentSize()
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Tytuł modala jak w MD3
                 Text(
                     text = "Wybierz godzinę",
                     style = MaterialTheme.typography.labelMedium,
@@ -57,16 +71,7 @@ fun TimePicker(
                 androidx.compose.material3.TimePicker(
                     state = timeState,
                     colors = TimePickerDefaults.colors(
-                        clockDialColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        clockDialSelectedContentColor = MaterialTheme.colorScheme.onPrimary,
-                        clockDialUnselectedContentColor = MaterialTheme.colorScheme.onSurface,
-                        selectorColor = MaterialTheme.colorScheme.primary,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        // Kolory prostokątów z cyframi (góra)
-                        timeSelectorSelectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        timeSelectorUnselectedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        timeSelectorSelectedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        timeSelectorUnselectedContentColor = MaterialTheme.colorScheme.onSurface
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     )
                 )
 
@@ -78,17 +83,15 @@ fun TimePicker(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Anuluj", color = MaterialTheme.colorScheme.outline)
+                        Text("Anuluj")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     TextButton(
-                        onClick = {
-                            onTimeSelected(timeState.hour, timeState.minute)
-                        }
+                        onClick = { onTimeSelected(timeState.hour, timeState.minute) }
                     ) {
                         Text(
                             text = "OK",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
                 }

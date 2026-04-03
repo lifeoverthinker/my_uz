@@ -2,79 +2,65 @@ package com.example.my_uz_android.ui.screens.home.details
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.EventEntity
-import com.example.my_uz_android.data.repositories.EventRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
+/**
+ * Stan UI ekranu szczegółów wydarzenia.
+ *
+ * Zawiera:
+ * - dane wydarzenia (jeśli istnieje),
+ * - flagę ładowania,
+ * - komunikat błędu do bezpiecznego renderowania stanu pustego.
+ */
 data class EventDetailsUiState(
     val eventEntity: EventEntity? = null,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val error: String? = null
 )
 
+/**
+ * ViewModel szczegółów wydarzenia.
+ *
+ * Odpowiada za:
+ * - przygotowanie mockowanego wydarzenia po ID z nawigacji,
+ * - utrzymanie stanu loading/success/error,
+ * - brak operacji usuwania (brak persystencji wydarzen).
+ */
 class EventDetailsViewModel(
-    savedStateHandle: SavedStateHandle,
-    private val eventRepository: EventRepository
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val eventId: Int = checkNotNull(savedStateHandle["eventId"])
+    private val eventId: Int = savedStateHandle.get<Int>("eventId")
+        ?: savedStateHandle.get<String>("eventId")?.toIntOrNull()
+        ?: 0
 
     private val _uiState = MutableStateFlow(EventDetailsUiState(isLoading = true))
     val uiState: StateFlow<EventDetailsUiState> = _uiState.asStateFlow()
 
     init {
-        loadEvent()
+        loadMockEvent()
     }
 
-    private fun loadEvent() {
-        viewModelScope.launch {
-            try {
-                val event = eventRepository.getEventById(eventId)
+    /**
+     * Ładuje sztuczne wydarzenie do podglądu.
+     */
+    private fun loadMockEvent() {
+        val fakeEvent = EventEntity(
+            id = eventId,
+            title = "Wydarzenie pokazowe #$eventId",
+            description = "To jest statyczny podglad wydarzenia. Szczegoly nie sa pobierane z bazy danych.",
+            date = "Sobota, 10 maja 2026",
+            location = "Kampus B, Budynek A",
+            timeRange = "10:00 - 12:00"
+        )
 
-                if (event != null) {
-                    _uiState.value = EventDetailsUiState(
-                        eventEntity = event,
-                        isLoading = false
-                    )
-                } else {
-                    // Jeśli nie ma w bazie, utwórz mock event
-                    _uiState.value = EventDetailsUiState(
-                        eventEntity = EventEntity(
-                            id = eventId,
-                            title = "Juwenalia 2025",
-                            description = "Największa impreza roku! Muzyka na żywo, food trucki i mnóstwo atrakcji.",
-                            date = "Piątek, 20 maja 2025",
-                            location = "Kampus A, Uniwersytet Zielonogórski",
-                            timeRange = "18:00 - 02:00"
-                        ),
-                        isLoading = false
-                    )
-                }
-            } catch (e: Exception) {
-                // W przypadku błędu też pokaż mock
-                _uiState.value = EventDetailsUiState(
-                    eventEntity = EventEntity(
-                        id = eventId,
-                        title = "Przykładowe wydarzenie",
-                        description = "Opis wydarzenia",
-                        date = "Wkrótce",
-                        location = "Do ustalenia",
-                        timeRange = "TBA"
-                    ),
-                    isLoading = false
-                )
-            }
-        }
-    }
-
-    fun deleteEvent() {
-        viewModelScope.launch {
-            _uiState.value.eventEntity?.let {
-                eventRepository.deleteEvent(it)
-            }
-        }
+        _uiState.value = EventDetailsUiState(
+            eventEntity = fakeEvent,
+            isLoading = false,
+            error = null
+        )
     }
 }

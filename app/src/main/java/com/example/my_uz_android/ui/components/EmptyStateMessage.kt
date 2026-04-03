@@ -1,196 +1,374 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Zestaw komponentów Empty State używanych w dashboardzie i ekranach list.
+ * Plik zawiera zarówno pełnoekranowe warianty informacyjne, jak i kompaktowe
+ * karty dashboardowe dla sekcji bez danych.
+ */
+
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.theme.MyUZTheme
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.sp
+import com.example.my_uz_android.ui.theme.InterFontFamily
 
+/**
+ * Bazowy full-screen Empty State zgodny z układem z Figmy:
+ * - kontener szerokości 328.dp
+ * - ilustracja ~221.8dp
+ * - stack tekstów 312.dp
+ * - spacing 10.dp między ilustracją i tekstem, 8.dp między liniami tekstu
+ */
 @Composable
 fun EmptyStateMessage(
+    title: String,
     message: String,
+    iconRes: Int,
     modifier: Modifier = Modifier,
-    title: String? = null,
-    iconRes: Int? = null,
-    imageVector: ImageVector? = null,
-    imageSize: Dp = 240.dp, // <--- Steruje tym, czy układ jest duży czy mały (np. na Home)
-    hint: String? = null,
+    subtitle: String? = null,
     actionText: String? = null,
     onActionClick: (() -> Unit)? = null
 ) {
-    val isCompact = imageSize <= 120.dp
-    val padding = if (isCompact) 16.dp else 32.dp
-    val hasIcon = iconRes != null || imageVector != null // Sprawdzamy, czy w ogóle jest ikona
+    EmptyStateFigma(
+        title = title,
+        subtitle = subtitle,
+        message = message,
+        iconRes = iconRes,
+        modifier = modifier,
+        actionText = actionText,
+        onActionClick = onActionClick
+    )
+}
 
-    // Dodajemy zaokrąglenie i delikatne tło dla kompaktowych widoków
-    val bgColor = if (isCompact) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.background
-    val shape = if (isCompact) RoundedCornerShape(16.dp) else RoundedCornerShape(0.dp)
-
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = bgColor,
-        shape = shape
+/**
+ * Wariant "figmowy" do precyzyjnego odwzorowania:
+ * - title: headlineMedium (28/36)
+ * - subtitle: titleMedium (16/24), kolor primary-like (68548E)
+ * - message: bodySmall (12/16), onSurfaceVariant
+ */
+@Composable
+fun EmptyStateFigma(
+    title: String,
+    subtitle: String?,
+    message: String,
+    iconRes: Int,
+    modifier: Modifier = Modifier,
+    actionText: String? = null,
+    onActionClick: (() -> Unit)? = null,
+    illustrationSize: Dp = 221.7868.dp,
+    containerHeight: Dp = 519.dp
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (isCompact) {
-            // UKŁAD KOMPAKTOWY (BEZ OBRAZKA LUB Z MAŁYM)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(padding)
+        Column(
+            modifier = Modifier
+                .width(328.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier.size(illustrationSize),
+                contentAlignment = Alignment.Center
             ) {
-                if (hasIcon) {
-                    when {
-                        iconRes != null -> Image(
-                            painter = painterResource(id = iconRes),
-                            contentDescription = null,
-                            modifier = Modifier.size(imageSize)
-                        )
-                        imageVector != null -> Icon(
-                            imageVector = imageVector,
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                        )
-                    }
-                }
+                Image(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(illustrationSize),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
-                // Teksty po prawej (wyrównane do lewej)
+            Box(modifier = Modifier.width(312.dp)) {
                 Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    if (title != null) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 28.sp,
+                            lineHeight = 36.sp
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (!subtitle.isNullOrBlank()) {
                         Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.primary, // Tytuł w kolorze fioletowym
-                            textAlign = TextAlign.Start
+                            text = subtitle,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp,
+                                lineHeight = 24.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
+
                     Text(
                         text = message,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = InterFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Start
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
-        } else {
-            // ==========================================
-            // UKŁAD PIONOWY (PEŁNY EKRAN) - np. Oceny, Nieobecności
-            // ==========================================
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.padding(padding)
-            ) {
-                when {
-                    iconRes != null -> Image(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(imageSize)
-                            .padding(bottom = 8.dp)
-                    )
-                    imageVector != null -> Icon(
-                        imageVector = imageVector,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                    )
-                    else -> Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                    )
-                }
 
-                if (title != null) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-
-                hint?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                if (actionText != null && onActionClick != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = onActionClick,
-                        modifier = Modifier.height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Text(
-                            text = actionText,
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
-                        )
-                    }
+            if (actionText != null && onActionClick != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Button(
+                    onClick = onActionClick,
+                    shape = RoundedCornerShape(100.dp),
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Text(text = actionText)
                 }
             }
         }
     }
 }
 
-@Preview(showBackground = true)
+/**
+ * Gotowe preset-y pod ekrany, które opisałeś.
+ */
 @Composable
-fun EmptyStateMessagePreview() {
-    MyUZTheme {
-        Column {
-            // Podgląd dla dużego ekranu
-            EmptyStateMessage(
-                title = "Duży ekran",
-                message = "Wygląda na to, że nie ma tu jeszcze żadnych wpisów. Odpocznij chwilę!",
-                iconRes = R.drawable.ic_launcher_foreground,
-                actionText = "Odśwież",
-                onActionClick = {}
+fun CalendarEmptyState(
+    iconRes: Int,
+    modifier: Modifier = Modifier
+) {
+    EmptyStateFigma(
+        title = "Brak zajęć",
+        subtitle = "Zasłużony odpoczynek",
+        message = "W tym dniu nie masz żadnych zaplanowanych zajęć. Ciesz się wolnym czasem!",
+        iconRes = iconRes,
+        modifier = modifier,
+        illustrationSize = 221.7868.dp
+    )
+}
+
+/**
+ * Wyświetla preset Empty State dla sekcji zadań.
+ *
+ * @param iconRes Id zasobu ilustracji.
+ * @param modifier Modyfikator układu Compose.
+ */
+@Composable
+fun TasksEmptyState(
+    iconRes: Int,
+    modifier: Modifier = Modifier
+) {
+    EmptyStateFigma(
+        title = "Brak zadań ✅",
+        subtitle = "Wszystko gotowe",
+        message = "Lista Twoich zadań do zrobienia jest obecnie pusta",
+        iconRes = iconRes,
+        modifier = modifier,
+        illustrationSize = 221.7868.dp,
+        containerHeight = 519.dp
+    )
+}
+
+/**
+ * Wyświetla preset Empty State dla sekcji nieobecności.
+ *
+ * @param iconRes Id zasobu ilustracji.
+ * @param modifier Modyfikator układu Compose.
+ */
+@Composable
+fun AbsencesEmptyState(
+    iconRes: Int,
+    modifier: Modifier = Modifier
+) {
+    EmptyStateFigma(
+        title = "100% frekwencji! ✅",
+        subtitle = "Bez ani jednej nieobecności!",
+        message = "Brawo! Nie opuściłeś żadnych zajęć w tym semestrze. Tak trzymaj!",
+        iconRes = iconRes,
+        modifier = modifier,
+        illustrationSize = 221.7868.dp,
+        containerHeight = 519.dp
+    )
+}
+
+/**
+ * DASHBOARD EMPTY CARD — zostaje, ale porządkujemy typografię pod M3 + Inter.
+ */
+@Composable
+fun DashboardEmptyCard(
+    title: String,
+    message: String,
+    iconRes: Int,
+    containerColor: Color,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = containerColor,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = containerColor,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 16.sp,
+                    lineHeight = 24.sp
+                ),
+                color = accentColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-            // Podgląd dla HomeScreen (Kompaktowy)
-            EmptyStateMessage(
-                title = "Karta na pulpicie",
-                message = "Brak zadań na dzisiaj. Możesz iść na kawę i się zrelaksować.",
-                iconRes = R.drawable.ic_launcher_foreground,
-                imageSize = 80.dp // Teraz używa układu poziomego!
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+/**
+ * Renderuje kartę dashboardową Empty State z dodatkowym przyciskiem akcji.
+ *
+ * @param title Tytuł karty.
+ * @param message Treść informacyjna.
+ * @param iconRes Id zasobu ikony.
+ * @param actionText Tekst przycisku akcji.
+ * @param onActionClick Callback kliknięcia przycisku akcji.
+ * @param containerColor Kolor tła karty.
+ * @param accentColor Kolor akcentu dla ikony i nagłówka.
+ * @param modifier Modyfikator układu Compose.
+ */
+@Composable
+fun DashboardActionEmptyCard(
+    title: String,
+    message: String,
+    iconRes: Int,
+    actionText: String,
+    onActionClick: () -> Unit,
+    containerColor: Color,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = containerColor,
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = containerColor,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp,
+                    lineHeight = 26.sp
+                ),
+                color = accentColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Button(
+                onClick = onActionClick,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
+                Text(text = actionText, color = MaterialTheme.colorScheme.surfaceContainerLowest)
+            }
         }
     }
 }

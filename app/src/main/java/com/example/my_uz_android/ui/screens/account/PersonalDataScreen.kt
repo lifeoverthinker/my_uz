@@ -18,6 +18,8 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.theme.MyUZTheme
 
 @Composable
@@ -31,8 +33,6 @@ fun PersonalDataScreen(
     val selectedGender by viewModel.selectedGender.collectAsState()
     val selectedGroup by viewModel.selectedGroup.collectAsState()
     val selectedSubgroups by viewModel.mainSelectedSubgroups.collectAsState()
-
-    // NAPRAWA: Zbieramy całe obiekty kursów zamiast tylko tekstów (kodów)
     val additionalCourses by viewModel.additionalUserCourses.collectAsState()
 
     PersonalDataScreenContent(
@@ -59,35 +59,27 @@ fun PersonalDataScreenContent(
     onNavigateBack: () -> Unit,
     onNavigateToEdit: () -> Unit
 ) {
-    val sortedSubgroups = selectedSubgroups.toList().sorted()
+    val hasMainGroup = !selectedGroup.isNullOrBlank()
+    val sortedSubgroups = if (hasMainGroup) selectedSubgroups.toList().sorted() else emptyList()
+    val hasAdditionalCourses = additionalCourses.isNotEmpty()
+    val hasAnyStudyData = hasMainGroup || sortedSubgroups.isNotEmpty() || hasAdditionalCourses
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Dane osobowe") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            painterResource(R.drawable.ic_chevron_left),
-                            "Wróć",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                },
+                title = "Dane osobowe",
+                navigationIcon = R.drawable.ic_chevron_left,
+                onNavigationClick = onNavigateBack,
+                isNavigationIconFilled = true,
                 actions = {
-                    IconButton(onClick = onNavigateToEdit) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_edit),
-                            contentDescription = "Edytuj",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                    TopBarActionIcon(
+                        icon = R.drawable.ic_edit,
+                        onClick = onNavigateToEdit,
+                        isFilled = true,
+                        iconTint = MaterialTheme.colorScheme.primary
+                    )
+                }
             )
         }
     ) { innerPadding ->
@@ -113,86 +105,107 @@ fun PersonalDataScreenContent(
             }
 
             PersonalDataGroup(title = "Zapisane grupy") {
-                DataItem(label = "Grupa główna", value = selectedGroup ?: "Brak przypisanej grupy")
-
-                if (sortedSubgroups.isNotEmpty()) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Wybrane podgrupy",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                if (!hasAnyStudyData) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_info_circle),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            sortedSubgroups.forEach { subgroup ->
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primaryContainer, // Poprawione na kolor z motywu
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text(
-                                        text = subgroup,
-                                        modifier = Modifier.padding(
-                                            horizontal = 12.dp,
-                                            vertical = 6.dp
-                                        ),
-                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer // Poprawiony kontrast
-                                    )
+                        Text(
+                            text = "Brak przypisanych kierunkow i podgrup.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    if (hasMainGroup) {
+                        DataItem(label = "Grupa glowna", value = selectedGroup.orEmpty())
+                    }
+
+                    if (sortedSubgroups.isNotEmpty()) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Wybrane podgrupy",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                sortedSubgroups.forEach { subgroup ->
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(
+                                            text = subgroup,
+                                            modifier = Modifier.padding(
+                                                horizontal = 12.dp,
+                                                vertical = 6.dp
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                // NAPRAWA: Rozbudowane wyświetlanie dla grup dodatkowych
-                if (additionalCourses.isNotEmpty()) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Grupy dodatkowe",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                    if (hasAdditionalCourses) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
 
-                        additionalCourses.forEachIndexed { index, course ->
-                            Column(modifier = Modifier.padding(bottom = if (index < additionalCourses.size - 1) 16.dp else 0.dp)) {
-                                Text(
-                                    text = course.groupCode,
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = course.fieldOfStudy ?: "Brak danych",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 2.dp)
-                                )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Grupy dodatkowe",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
 
-                                // NAPRAWA: Zapewnienie rozdzielenia spacji i sortowania alfabetycznego (jak w koncie gł.)
-                                val subgroups =
-                                    course.selectedSubgroup?.split(",")?.map { it.trim() }
-                                        ?.filter { it.isNotBlank() }?.sorted()
-                                if (!subgroups.isNullOrEmpty()) {
+                            additionalCourses.forEachIndexed { index, course ->
+                                Column(modifier = Modifier.padding(bottom = if (index < additionalCourses.size - 1) 16.dp else 0.dp)) {
                                     Text(
-                                        text = "Podgrupy: ${subgroups.joinToString(", ")}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(top = 4.dp)
+                                        text = course.groupCode,
+                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
+                                    Text(
+                                        text = course.fieldOfStudy ?: "Brak danych",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+
+                                    val subgroups = course.selectedSubgroup
+                                        ?.split(",")
+                                        ?.map { it.trim() }
+                                        ?.filter { it.isNotBlank() }
+                                        ?.sorted()
+
+                                    if (!subgroups.isNullOrEmpty()) {
+                                        Text(
+                                            text = "Podgrupy: ${subgroups.joinToString(", ")}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -1,24 +1,37 @@
 package com.example.my_uz_android.ui.screens.calendar
 
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.data.models.UserCourseEntity
-import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.CalendarTopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.screens.calendar.components.ScheduleView
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -33,22 +46,54 @@ import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.abs
 
+private fun Modifier.calendarDaySwipeGestureCalendarScreen(
+    selectedDate: LocalDate,
+    isMonthView: Boolean,
+    density: androidx.compose.ui.unit.Density,
+    onSwipeNext: () -> Unit,
+    onSwipePrevious: () -> Unit
+): Modifier {
+    return pointerInput(selectedDate, isMonthView) {
+        val swipeThresholdPx = with(density) { 72.dp.toPx() }
+        var accumulatedDx by mutableFloatStateOf(0f)
+        var accumulatedDy by mutableFloatStateOf(0f)
+
+        detectHorizontalDragGestures(
+            onDragStart = {
+                accumulatedDx = 0f
+                accumulatedDy = 0f
+            },
+            onHorizontalDrag = { change, dragAmount ->
+                accumulatedDx += dragAmount
+                accumulatedDy += abs(change.position.y - change.previousPosition.y)
+            },
+            onDragEnd = {
+                val isHorizontalIntent = abs(accumulatedDx) > accumulatedDy
+                val passedThreshold = abs(accumulatedDx) >= swipeThresholdPx
+                if (isHorizontalIntent && passedThreshold) {
+                    if (accumulatedDx < 0) onSwipeNext() else onSwipePrevious()
+                }
+            }
+        )
+    }
+}
+
 @Composable
 fun CalendarScreen(
-    onNavigateBack: () -> Unit = {},
     onOpenDrawer: () -> Unit,
     onSearchClick: () -> Unit,
     onTasksClick: () -> Unit,
     onAccountClick: () -> Unit,
-    onClassClick: (ClassEntity) -> Unit = {},
+    onClassClick: (ClassEntity) -> Unit,
     onShowPreview: () -> Unit,
-    viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: CalendarViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // NAPRAWA: Automatycznie resetuje kalendarz z wyszukiwanego podglądu do "Mój Plan" po powrocie do tego widoku
     LaunchedEffect(Unit) {
+        // Ekran kalendarza zawsze startuje od domyslnego planu użytkownika.
         viewModel.selectMyPlan()
+        viewModel.refreshMyPlan()
     }
 
     CalendarScreenContent(
@@ -56,13 +101,10 @@ fun CalendarScreen(
         onOpenDrawer = onOpenDrawer,
         onSearchClick = onSearchClick,
         onAccountClick = onAccountClick,
-        onClassClick = {
-            viewModel.setTemporaryClassForDetails(it)
-            onClassClick(it)
-        },
-        onDateSelected = { viewModel.setSelectedDate(it) },
-        onToggleMonthView = { viewModel.setMonthView(it) },
-        onToggleGroupVisibility = { viewModel.toggleGroupVisibility(it) }
+        onClassClick = onClassClick,
+        onDateSelected = viewModel::setSelectedDate,
+        onToggleMonthView = viewModel::setMonthView,
+        onToggleGroupVisibility = viewModel::toggleGroupVisibility
     )
 }
 
@@ -113,11 +155,8 @@ fun CalendarScreenContent(
         onDateSelected(newDate)
 
         scope.launch {
-            if (isMonthView) {
-                monthState.scrollToMonth(YearMonth.from(newDate))
-            } else {
-                weekState.scrollToWeek(newDate)
-            }
+            if (isMonthView) monthState.scrollToMonth(YearMonth.from(newDate))
+            else weekState.scrollToWeek(newDate)
         }
     }
 
@@ -128,31 +167,67 @@ fun CalendarScreenContent(
         if (weekDays.isNotEmpty()) YearMonth.from(weekDays.first().date) else YearMonth.from(selectedDate)
     }
 
-    val monthName = visibleMonth.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
+    val monthName = visibleMonth.month
+        .getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
         .replaceFirstChar { it.titlecase(Locale("pl")) }
 
     val currentRealWorldYear = YearMonth.now(ZoneId.of("Europe/Warsaw")).year
     val calendarTitle = if (visibleMonth.year == currentRealWorldYear) monthName else "$monthName ${visibleMonth.year}"
+
+    val isDark = when (uiState.themeMode) {
+        "DARK" -> true
+        "LIGHT" -> false
+        else -> isSystemInDarkTheme()
+    }
 
     Scaffold(
         topBar = {
             CalendarTopAppBar(
                 title = calendarTitle,
                 isExpanded = isMonthView,
-                onNavigationClick = onOpenDrawer, // Poprawne podpięcie pod hamburger menu
-                onSearchClick = onSearchClick,
+                onNavigationClick = onOpenDrawer,
                 onTitleClick = { onToggleMonthView(!isMonthView) },
-                onAddClick = {
-                    val today = LocalDate.now(ZoneId.of("Europe/Warsaw"))
-                    swipeDirection = null
-                    onDateSelected(today)
-                    scope.launch {
-                        if (isMonthView) {
-                            monthState.animateScrollToMonth(YearMonth.from(today))
-                        } else {
-                            weekState.animateScrollToWeek(today)
+                actions = {
+                    if (uiState.userCourses.size > 1) {
+                        Box {
+                            TopBarActionIcon(
+                                icon = R.drawable.ic_filter,
+                                onClick = { isFilterExpanded = true },
+                                isFilled = true
+                            )
+
+                            DropdownMenu(
+                                expanded = isFilterExpanded,
+                                onDismissRequest = { isFilterExpanded = false }
+                            ) {
+                                uiState.userCourses.forEach { course ->
+                                    val normalizedCode = course.groupCode.trim().lowercase()
+                                    val isSelected = uiState.selectedGroupCodes.contains(normalizedCode)
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = course.fieldOfStudy ?: course.groupCode,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Checkbox(
+                                                checked = isSelected,
+                                                onCheckedChange = null
+                                            )
+                                        },
+                                        onClick = { onToggleGroupVisibility(course.groupCode) }
+                                    )
+                                }
+                            }
                         }
                     }
+
+                    TopBarActionIcon(
+                        icon = R.drawable.ic_search,
+                        onClick = onSearchClick,
+                        isFilled = true
+                    )
                 }
             )
         }
@@ -161,78 +236,15 @@ fun CalendarScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .pointerInput(selectedDate, isMonthView) {
-                    val swipeThresholdPx = with(density) { 72.dp.toPx() }
-                    var accumulatedDx = 0f
-                    var accumulatedDy = 0f
-
-                    detectHorizontalDragGestures(
-                        onDragStart = {
-                            accumulatedDx = 0f
-                            accumulatedDy = 0f
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            accumulatedDx += dragAmount
-                            accumulatedDy += abs(change.position.y - change.previousPosition.y)
-                        },
-                        onDragEnd = {
-                            val isHorizontalIntent = abs(accumulatedDx) > accumulatedDy
-                            val passedThreshold = abs(accumulatedDx) >= swipeThresholdPx
-
-                            if (isHorizontalIntent && passedThreshold) {
-                                if (accumulatedDx < 0) {
-                                    navigateDay(offsetDays = 1, direction = DaySwipeDirection.NEXT)
-                                } else {
-                                    navigateDay(offsetDays = -1, direction = DaySwipeDirection.PREVIOUS)
-                                }
-                            }
-                        }
-                    )
-                }
+                .calendarDaySwipeGestureCalendarScreen(
+                    selectedDate = selectedDate,
+                    isMonthView = isMonthView,
+                    density = density,
+                    onSwipeNext = { navigateDay(1, DaySwipeDirection.NEXT) },
+                    onSwipePrevious = { navigateDay(-1, DaySwipeDirection.PREVIOUS) }
+                )
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (uiState.userCourses.size > 1) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box {
-                            IconButton(onClick = { isFilterExpanded = true }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_filter_funnel),
-                                    contentDescription = "Filtruj kierunki",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = isFilterExpanded,
-                                onDismissRequest = { isFilterExpanded = false }
-                            ) {
-                                uiState.userCourses.forEach { course ->
-                                    val isSelected = uiState.selectedGroupCodes.contains(course.groupCode)
-                                    DropdownMenuItem(
-                                        text = { Text(course.fieldOfStudy ?: course.groupCode) },
-                                        trailingIcon = {
-                                            if (isSelected) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = "Wybrane",
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        },
-                                        onClick = { onToggleGroupVisibility(course.groupCode) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
                 ScheduleView(
                     calendarState = monthState,
                     weekState = weekState,
@@ -248,6 +260,7 @@ fun CalendarScreenContent(
                     tasks = uiState.tasks,
                     classColorMap = uiState.classColorMap,
                     onClassClick = onClassClick,
+                    isDarkMode = isDark,
                     modifier = Modifier.weight(1f),
                     showHeader = false
                 )
@@ -265,8 +278,18 @@ fun CalendarScreenPreview() {
                 selectedDate = LocalDate.now(),
                 isMonthView = false,
                 userCourses = listOf(
-                    UserCourseEntity(id = 1, groupCode = "12IN", fieldOfStudy = "Informatyka", semester = 1),
-                    UserCourseEntity(id = 2, groupCode = "34MA", fieldOfStudy = "Matematyka", semester = 3)
+                    UserCourseEntity(
+                        id = 1,
+                        groupCode = "12IN",
+                        fieldOfStudy = "Informatyka",
+                        semester = 1
+                    ),
+                    UserCourseEntity(
+                        id = 2,
+                        groupCode = "34MA",
+                        fieldOfStudy = "Matematyka",
+                        semester = 3
+                    )
                 ),
                 selectedGroupCodes = setOf("12IN"),
                 visibleClasses = emptyList(),

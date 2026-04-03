@@ -1,289 +1,567 @@
 package com.example.my_uz_android.ui.screens.calendar.tasks
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.DatePicker
 import com.example.my_uz_android.ui.components.TimePicker
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
+import java.text.SimpleDateFormat
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskAddEditScreen(
-    taskId: Int?,
-    prefilledTitle: String? = null,
-    prefilledDesc: String? = null,
-    prefilledSubject: String? = null,
-    prefilledType: String? = null,
-    prefilledDate: Long? = null,
-    prefilledIsAllDay: Boolean = false,
-    onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: TaskAddEditViewModel = viewModel(factory = AppViewModelProvider.Factory)
+fun TaskAddEditScreenRoute(
+    viewModel: TaskAddEditViewModel,
+    onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isSaved by viewModel.isSaved.collectAsState()
 
     LaunchedEffect(isSaved) {
-        if (isSaved) {
-            onNavigateBack()
-        }
+        if (isSaved) onNavigateBack()
     }
 
-    LaunchedEffect(taskId, prefilledTitle) {
-        if (taskId != null) {
-            viewModel.loadTask(taskId)
-        } else {
-            if (prefilledTitle != null) viewModel.updateTitle(prefilledTitle)
-            if (prefilledDesc != null) viewModel.updateDescription(prefilledDesc)
-            if (prefilledSubject != null) viewModel.updateClassSubject(prefilledSubject)
-            if (prefilledType != null) viewModel.updateClassType(prefilledType)
-            if (prefilledDate != null) {
-                val date = Instant.ofEpochMilli(prefilledDate).atZone(ZoneId.systemDefault()).toLocalDate()
-                viewModel.updateStartDate(date)
-                viewModel.updateEndDate(date)
-                viewModel.updateIsAllDay(prefilledIsAllDay)
-            }
-        }
-    }
+    val dateMillis = uiState.startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    val reminderDateMillis = uiState.reminderDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-    Dialog(
-        onDismissRequest = onNavigateBack,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    var selectedQuickType by remember { mutableStateOf("") }
+
+    val subjectsList = uiState.availableSubjects.map { it.first }
+    val classTypesList = uiState.availableSubjects.find { it.first == uiState.classSubject }?.second ?: emptyList()
+
+    TaskAddEditScreen(
+        isEditMode = uiState.taskId > 0,
+        selectedQuickType = selectedQuickType,
+        onQuickTypeSelect = { type ->
+            selectedQuickType = type
+            viewModel.updateTitle(type)
+        },
+        title = uiState.title,
+        onTitleChange = { viewModel.updateTitle(it) },
+
+        isAllDay = uiState.isAllDay,
+        onAllDayChange = { viewModel.updateIsAllDay(it) },
+
+        selectedDateMillis = dateMillis,
+        onDateChange = { millis ->
+            val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+            viewModel.updateStartDate(date)
+            viewModel.updateEndDate(date)
+        },
+
+        selectedHour = uiState.startTime.hour,
+        selectedMinute = uiState.startTime.minute,
+        onTimeChange = { h, m ->
+            viewModel.updateStartTime(LocalTime.of(h, m))
+        },
+
+        hasReminder = uiState.hasReminder,
+        onHasReminderChange = { viewModel.updateHasReminder(it) },
+        reminderDateMillis = reminderDateMillis,
+        onReminderDateChange = { millis ->
+            val date = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+            viewModel.updateReminderDate(date)
+        },
+        reminderHour = uiState.reminderTime.hour,
+        reminderMinute = uiState.reminderTime.minute,
+        onReminderTimeChange = { h, m ->
+            viewModel.updateReminderTime(LocalTime.of(h, m))
+        },
+
+        selectedSubject = uiState.classSubject ?: "",
+        onSubjectChange = { newSubject ->
+            viewModel.updateSubjectName(newSubject)
+            viewModel.updateClassType("")
+        },
+        subjectsList = subjectsList,
+
+        selectedClassType = uiState.classType ?: "",
+        onClassTypeChange = { viewModel.updateClassType(it) },
+        classTypesList = classTypesList,
+
+        priority = uiState.priority,
+        onPriorityChange = { viewModel.updatePriority(it) },
+        description = uiState.description,
+        onDescriptionChange = { viewModel.updateDescription(it) },
+
+        onSaveClick = { viewModel.saveTask() },
+        onBackClick = onNavigateBack
+    )
+}
+
+@Composable
+private fun appOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    cursorColor = MaterialTheme.colorScheme.primary
+)
+
+private val AppFieldShape = RoundedCornerShape(16.dp)
+
+@Composable
+private fun ClickableFieldRow(
+    label: String,
+    value: String,
+    iconRes: Int?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(AppFieldShape)
+            .clickable(onClick = onClick),
+        shape = AppFieldShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.surface,
-            topBar = {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (iconRes != null) {
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Column {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun TaskAddEditScreen(
+    isEditMode: Boolean,
+    selectedQuickType: String,
+    onQuickTypeSelect: (String) -> Unit,
+    title: String,
+    onTitleChange: (String) -> Unit,
+    isAllDay: Boolean,
+    onAllDayChange: (Boolean) -> Unit,
+    selectedDateMillis: Long,
+    onDateChange: (Long) -> Unit,
+    selectedHour: Int,
+    selectedMinute: Int,
+    onTimeChange: (Int, Int) -> Unit,
+    hasReminder: Boolean,
+    onHasReminderChange: (Boolean) -> Unit,
+    reminderDateMillis: Long,
+    onReminderDateChange: (Long) -> Unit,
+    reminderHour: Int,
+    reminderMinute: Int,
+    onReminderTimeChange: (Int, Int) -> Unit,
+    selectedSubject: String,
+    onSubjectChange: (String) -> Unit,
+    subjectsList: List<String>,
+    selectedClassType: String,
+    onClassTypeChange: (String) -> Unit,
+    classTypesList: List<String>,
+    priority: Int,
+    onPriorityChange: (Int) -> Unit,
+    description: String,
+    onDescriptionChange: (String) -> Unit,
+    onSaveClick: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var showReminderDatePicker by remember { mutableStateOf(false) }
+    var showReminderTimePicker by remember { mutableStateOf(false) }
+
+    val scrollState = rememberScrollState()
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        topBar = {
+            TopAppBar(
+                title = if (isEditMode) "Edytuj zadanie" else "Dodaj zadanie",
+                navigationIcon = R.drawable.ic_close,
+                isNavigationIconFilled = true,
+                onNavigationClick = onBackClick,
+                actions = {
+                    Button(
+                        onClick = onSaveClick,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .heightIn(min = 48.dp),
+                        enabled = title.isNotBlank()
+                    ) {
+                        Text("Zapisz", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "SZYBKI WYBÓR",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                val quickTypes = listOf(
+                    "Kolokwium",
+                    "Egzamin",
+                    "Wejściówka",
+                    "Projekt",
+                    "Prezentacja",
+                    "Zadanie domowe",
+                    "Odpowiedź ustna"
+                )
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(quickTypes) { type ->
+                        FilterChip(
+                            selected = selectedQuickType == type,
+                            onClick = { onQuickTypeSelect(type) },
+                            label = { Text(type) }
+                        )
+                    }
+                }
+            }
+
+            OutlinedTextField(
+                value = title,
+                onValueChange = onTitleChange,
+                label = { Text("Tytuł zadania") },
+                placeholder = { Text("np. Przeczytać rozdział 4") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                colors = appOutlinedTextFieldColors(),
+                shape = AppFieldShape
+            )
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = RoundedCornerShape(16.dp)
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
-                        .height(64.dp)
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .clickable { onAllDayChange(!isAllDay) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(painterResource(R.drawable.ic_x_close), "Anuluj", tint = MaterialTheme.colorScheme.onSurface)
-                    }
-                    Button(
-                        onClick = { viewModel.saveTask() },
-                        enabled = uiState.title.isNotBlank(),
-                        modifier = Modifier.padding(end = 8.dp)
+                    Text("Zadanie całodniowe", style = MaterialTheme.typography.bodyLarge)
+                    Switch(checked = isAllDay, onCheckedChange = { onAllDayChange(it) })
+                }
+            }
+
+            ClickableFieldRow(
+                label = "Data wykonania",
+                value = formatDate(selectedDateMillis),
+                iconRes = R.drawable.ic_calendar,
+                onClick = { showDatePicker = true }
+            )
+
+            AnimatedVisibility(visible = !isAllDay, enter = expandVertically(), exit = shrinkVertically()) {
+                ClickableFieldRow(
+                    label = "Godzina wykonania",
+                    value = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
+                    iconRes = R.drawable.ic_clock,
+                    onClick = { showTimePicker = true }
+                )
+            }
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onHasReminderChange(!hasReminder) }
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Zapisz")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_bell),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text("Ustaw przypomnienie", style = MaterialTheme.typography.bodyLarge)
+                        }
+                        Switch(checked = hasReminder, onCheckedChange = { onHasReminderChange(it) })
+                    }
+
+                    AnimatedVisibility(visible = hasReminder, enter = expandVertically(), exit = shrinkVertically()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ClickableFieldRow(
+                                label = "Data",
+                                value = formatDateShort(reminderDateMillis),
+                                iconRes = null,
+                                onClick = { showReminderDatePicker = true },
+                                modifier = Modifier.weight(1f)
+                            )
+                            ClickableFieldRow(
+                                label = "Godzina",
+                                value = String.format(Locale.getDefault(), "%02d:%02d", reminderHour, reminderMinute),
+                                iconRes = null,
+                                onClick = { showReminderTimePicker = true },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
-        ) { paddingValues ->
-            TaskAddEditContent(
-                uiState = uiState,
-                onTitleChange = viewModel::updateTitle,
-                onDescriptionChange = viewModel::updateDescription,
-                onIsAllDayChange = viewModel::updateIsAllDay,
-                onStartDateChange = viewModel::updateStartDate,
-                onEndDateChange = viewModel::updateEndDate,
-                onStartTimeChange = viewModel::updateStartTime,
-                onEndTimeChange = viewModel::updateEndTime,
-                modifier = Modifier.padding(paddingValues)
+
+            AppDropdownMenu(
+                label = "Przedmiot (opcjonalnie)",
+                selectedOption = selectedSubject,
+                options = subjectsList,
+                onOptionSelected = onSubjectChange
             )
+
+            AnimatedVisibility(
+                visible = selectedSubject.isNotEmpty() && classTypesList.isNotEmpty(),
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "RODZAJ ZAJĘĆ",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        classTypesList.forEach { type ->
+                            FilterChip(
+                                selected = selectedClassType == type,
+                                onClick = { onClassTypeChange(type) },
+                                label = { Text(ClassTypeUtils.getFullName(type)) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "PRIORYTET",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = priority == 0,
+                        onClick = { onPriorityChange(0) },
+                        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                    ) { Text("Niski") }
+
+                    SegmentedButton(
+                        selected = priority == 1,
+                        onClick = { onPriorityChange(1) },
+                        shape = RoundedCornerShape(0.dp)
+                    ) { Text("Średni") }
+
+                    SegmentedButton(
+                        selected = priority == 2,
+                        onClick = { onPriorityChange(2) },
+                        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                    ) { Text("Wysoki") }
+                }
+            }
+
+            OutlinedTextField(
+                value = description,
+                onValueChange = onDescriptionChange,
+                label = { Text("Opis (opcjonalnie)") },
+                placeholder = { Text("Dodatkowe szczegóły, materiały...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp),
+                maxLines = 5,
+                colors = appOutlinedTextFieldColors(),
+                shape = AppFieldShape
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+
+    if (showDatePicker) DatePicker(
+        date = selectedDateMillis,
+        onDateSelected = { onDateChange(it); showDatePicker = false },
+        onDismiss = { showDatePicker = false }
+    )
+    if (showReminderDatePicker) DatePicker(
+        date = reminderDateMillis,
+        onDateSelected = { onReminderDateChange(it); showReminderDatePicker = false },
+        onDismiss = { showReminderDatePicker = false }
+    )
+
+    if (showTimePicker) {
+        TimePicker(
+            time = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
+            onTimeSelected = { h, m -> onTimeChange(h, m); showTimePicker = false },
+            onDismiss = { showTimePicker = false }
+        )
+    }
+    if (showReminderTimePicker) {
+        TimePicker(
+            time = String.format(Locale.getDefault(), "%02d:%02d", reminderHour, reminderMinute),
+            onTimeSelected = { h, m -> onReminderTimeChange(h, m); showReminderTimePicker = false },
+            onDismiss = { showReminderTimePicker = false }
+        )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskAddEditContent(
-    uiState: TaskAddEditUiState,
-    onTitleChange: (String) -> Unit,
-    onDescriptionChange: (String) -> Unit,
-    onIsAllDayChange: (Boolean) -> Unit,
-    onStartDateChange: (LocalDate) -> Unit,
-    onEndDateChange: (LocalDate) -> Unit,
-    onStartTimeChange: (LocalTime) -> Unit,
-    onEndTimeChange: (LocalTime) -> Unit,
-    modifier: Modifier = Modifier
+fun AppDropdownMenu(
+    label: String,
+    selectedOption: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit
 ) {
-    var showDatePickerStart by remember { mutableStateOf(false) }
-    var showDatePickerEnd by remember { mutableStateOf(false) }
-    var showTimePickerStart by remember { mutableStateOf(false) }
-    var showTimePickerEnd by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
-        // Nagłówek/Tytuł z Google Grid
-        Row(
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 72.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(modifier = Modifier.width(40.dp))
-            Box(modifier = Modifier.weight(1f)) {
-                if (uiState.title.isEmpty()) {
-                    Text(
-                        stringResource(R.string.task_title_placeholder),
-                        style = TextStyle(fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    )
-                }
-                BasicTextField(
-                    value = uiState.title,
-                    onValueChange = onTitleChange,
-                    textStyle = TextStyle(fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.fillMaxWidth()
+                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
+            colors = appOutlinedTextFieldColors(),
+            shape = AppFieldShape
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = { onOptionSelected(option); expanded = false }
                 )
             }
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Czas i Data
-        FormRow(iconRes = R.drawable.ic_clock) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.task_all_day), style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = uiState.isAllDay, onCheckedChange = onIsAllDayChange)
-                }
-                SimpleDateTimeRow(
-                    date = uiState.startDate,
-                    time = if (uiState.isAllDay) null else uiState.startTime,
-                    onDateClick = { showDatePickerStart = true },
-                    onTimeClick = { showTimePickerStart = true }
-                )
-                SimpleDateTimeRow(
-                    date = uiState.endDate,
-                    time = if (uiState.isAllDay) null else uiState.endTime,
-                    onDateClick = { showDatePickerEnd = true },
-                    onTimeClick = { showTimePickerEnd = true }
-                )
-            }
-        }
-
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
-        // Opis
-        FormRow(iconRes = R.drawable.ic_menu_2) {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                if (uiState.description.isEmpty()) {
-                    Text(stringResource(R.string.task_description_placeholder), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                BasicTextField(
-                    value = uiState.description,
-                    onValueChange = onDescriptionChange,
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-    }
-
-    // Pickery dostosowane do Twoich parametrów
-    if (showDatePickerStart) {
-        DatePicker(
-            date = uiState.startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-            onDateSelected = { onStartDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()); showDatePickerStart = false },
-            onDismiss = { showDatePickerStart = false }
-        )
-    }
-    if (showDatePickerEnd) {
-        DatePicker(
-            date = uiState.endDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
-            onDateSelected = { onEndDateChange(Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()); showDatePickerEnd = false },
-            onDismiss = { showDatePickerEnd = false }
-        )
-    }
-    if (showTimePickerStart) {
-        TimePicker(
-            time = String.format("%02d:%02d", uiState.startTime.hour, uiState.startTime.minute),
-            onTimeSelected = { h, m -> onStartTimeChange(LocalTime.of(h, m)); showTimePickerStart = false },
-            onDismiss = { showTimePickerStart = false }
-        )
-    }
-    if (showTimePickerEnd) {
-        TimePicker(
-            time = String.format("%02d:%02d", uiState.endTime.hour, uiState.endTime.minute),
-            onTimeSelected = { h, m -> onEndTimeChange(LocalTime.of(h, m)); showTimePickerEnd = false },
-            onDismiss = { showTimePickerEnd = false }
-        )
-    }
-}
-
-@Composable
-private fun SimpleDateTimeRow(date: LocalDate, time: LocalTime?, onDateClick: () -> Unit, onTimeClick: () -> Unit) {
-    val formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale("pl"))
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = date.format(formatter),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f).clickable { onDateClick() }.padding(vertical = 8.dp)
-        )
-        if (time != null) {
-            Text(
-                text = String.format("%02d:%02d", time.hour, time.minute),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.clickable { onTimeClick() }.padding(vertical = 8.dp)
-            )
         }
     }
 }
 
+private fun formatDate(timestamp: Long): String =
+    SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+        .format(Date(timestamp))
+        .replaceFirstChar { it.uppercase() }
+
+private fun formatDateShort(timestamp: Long): String =
+    SimpleDateFormat("dd.MM.yyyy", Locale("pl", "PL")).format(Date(timestamp))
+
+@Preview(showBackground = true)
 @Composable
-fun FormRow(
-    iconRes: Int?,
-    onClick: (() -> Unit)? = null,
-    content: @Composable BoxScope.() -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 56.dp)
-            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(modifier = Modifier.width(40.dp), contentAlignment = Alignment.CenterStart) {
-            if (iconRes != null) Icon(painterResource(iconRes), null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-        }
-        Box(modifier = Modifier.weight(1f)) { content() }
+private fun TaskAddEditScreenPreview() {
+    MyUZTheme {
+        TaskAddEditScreen(
+            isEditMode = false,
+            selectedQuickType = "Projekt",
+            onQuickTypeSelect = {},
+            title = "Przeczytać rozdział 4",
+            onTitleChange = {},
+            isAllDay = false,
+            onAllDayChange = {},
+            selectedDateMillis = System.currentTimeMillis(),
+            onDateChange = {},
+            selectedHour = 14,
+            selectedMinute = 30,
+            onTimeChange = { _, _ -> },
+            hasReminder = true,
+            onHasReminderChange = {},
+            reminderDateMillis = System.currentTimeMillis(),
+            onReminderDateChange = {},
+            reminderHour = 12,
+            reminderMinute = 0,
+            onReminderTimeChange = { _, _ -> },
+            selectedSubject = "Programowanie",
+            onSubjectChange = {},
+            subjectsList = listOf("Programowanie", "Matematyka", "Fizyka"),
+            selectedClassType = "L",
+            onClassTypeChange = {},
+            classTypesList = listOf("W", "L", "C"),
+            priority = 1,
+            onPriorityChange = {},
+            description = "Powtórzyć materiał i przygotować notatki.",
+            onDescriptionChange = {},
+            onSaveClick = {},
+            onBackClick = {}
+        )
     }
 }

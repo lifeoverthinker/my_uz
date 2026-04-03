@@ -1,21 +1,29 @@
 package com.example.my_uz_android.ui.screens.home
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.models.TaskEntity
+import com.example.my_uz_android.data.models.UserCourseEntity
 import com.example.my_uz_android.data.repositories.ClassRepository
+import com.example.my_uz_android.data.repositories.NotificationsRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.TasksRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
+import com.example.my_uz_android.data.repositories.UserCourseRepository
+import com.example.my_uz_android.util.SubgroupMatcher
+import com.example.my_uz_android.widget.triggerWidgetUpdate
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -35,31 +43,51 @@ data class HomeUiState(
     val classesDayLabel: String? = null,
     val isPlanSelected: Boolean = false,
     val classColorMap: Map<String, Int> = emptyMap(),
-    val isDarkMode: Boolean = false
+    val themeMode: String = "SYSTEM",
+    val hasUnreadNotifications: Boolean = false
 )
 
 class HomeViewModel(
+    application: Application,
     private val settingsRepository: SettingsRepository,
     private val classRepository: ClassRepository,
     private val tasksRepository: TasksRepository,
-    private val universityRepository: UniversityRepository
-) : ViewModel() {
+    private val universityRepository: UniversityRepository,
+    private val notificationsRepository: NotificationsRepository,
+    private val userCourseRepository: UserCourseRepository
+) : AndroidViewModel(application) {
 
     private val dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale("pl"))
     private val gson = Gson()
 
+    init {
+        viewModelScope.launch {
+            combine(
+                classRepository.getUpcomingClasses(),
+                settingsRepository.getSettingsStream()
+            ) { classes, settings ->
+                Pair(classes, settings)
+            }.collectLatest {
+                triggerWidgetUpdate(getApplication())
+            }
+        }
+    }
+
     val uiState: StateFlow<HomeUiState> = combine(
         settingsRepository.getSettingsStream(),
-        classRepository.getAllClassesStream(),
-        tasksRepository.getAllTasks()
-    ) { settings: SettingsEntity?, classes: List<ClassEntity>, tasks: List<TaskEntity> ->
+        classRepository.getUpcomingClasses(),
+        userCourseRepository.getAllUserCoursesStream(),
+        tasksRepository.getAllTasks(),
+        notificationsRepository.getUnreadCount()
+    ) { settings: SettingsEntity?, upcomingClasses: List<ClassEntity>, courses: List<UserCourseEntity>, tasks: List<TaskEntity>, unreadCount: Int ->
 
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
+        val nowTime = now.toLocalTime()
 
         val isAnonymous = settings?.isAnonymous == true
         val hasGroup = !settings?.selectedGroupCode.isNullOrBlank()
-        val gender = settings?.gender // STUDENTKA / STUDENT
+        val gender = settings?.gender
 
         val (greeting, initials) = when {
             isAnonymous && !hasGroup -> "Witaj w MyUZ!" to ""
@@ -80,39 +108,38 @@ class HomeViewModel(
             }
         }
 
-        // Naprawa departmentInfo - używamy faculty z SettingsEntity
         val departmentInfo = when {
             !settings?.faculty.isNullOrBlank() -> settings?.faculty!!
             else -> "Uniwersytet Zielonogórski"
         }
 
         val isPlanSelected = hasGroup
-        val todayString = today.toString()
-        val tomorrowString = today.plusDays(1).toString()
 
-        val (displayedClasses, dayLabel, emptyMessage) = if (isPlanSelected) {
-            val todaysClasses = classes
-                .filter { it.date == todayString }
-                .filter { classItem ->
-                    try {
-                        val endTime = LocalTime.parse(classItem.endTime)
-                        val endDateTime = LocalDateTime.of(today, endTime)
-                        endDateTime.isAfter(now)
-                    } catch (e: Exception) { true }
-                }
-                .sortedBy { it.startTime }
+        // Zunifikowana regula intersection dla podgrup (wspolna z Calendar/Grades)
+        val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, courses)
+        val visibleClasses = upcomingClasses.filter { classItem ->
+            SubgroupMatcher.isClassVisible(
+                classItem.groupCode,
+                classItem.classType,
+                classItem.subgroup,
+                userEnrollments
+            )
+        }
 
-            val tomorrowsClasses = classes
-                .filter { it.date == tomorrowString }
-                .sortedBy { it.startTime }
+        val classesForToday = visibleClasses.filter {
+            it.date == today.toString() && runCatching { LocalTime.parse(it.endTime).isAfter(nowTime) }.getOrDefault(true)
+        }
 
-            when {
-                todaysClasses.isNotEmpty() -> Triple(todaysClasses, "Dzisiaj", null)
-                tomorrowsClasses.isNotEmpty() -> Triple(tomorrowsClasses, "Jutro", null)
-                else -> Triple(emptyList(), null, "Brak zajęć w najbliższych dniach")
-            }
-        } else {
-            Triple(emptyList(), null, "Wybierz plan zajęć w profilu")
+        val tomorrow = today.plusDays(1)
+        val classesForTomorrow = visibleClasses.filter {
+            it.date == tomorrow.toString()
+        }
+
+        val (displayedClasses, dayLabel, emptyMessage) = when {
+            !isPlanSelected -> Triple(emptyList(), null, "Wybierz plan zajęć w profilu")
+            classesForToday.isNotEmpty() -> Triple(classesForToday, "Dzisiaj", null)
+            classesForTomorrow.isNotEmpty() -> Triple(classesForTomorrow, "Jutro", null)
+            else -> Triple(emptyList(), "Dzisiaj", "Brak zajęć na dziś i jutro")
         }
 
         val finalTasks = tasks
@@ -121,20 +148,17 @@ class HomeViewModel(
             .take(5)
 
         val mockEvents = listOf(
-            EventEntity(
-                id = 1,
-                title = "Juwenalia 2025",
-                description = "Największa impreza roku!",
-                date = "Piątek, 20 maja 2025",
-                location = "Kampus A",
-                timeRange = "18:00 - 02:00"
-            )
+            EventEntity(id = 1, title = "Juwenalia 2026", description = "Największa impreza...", date = "Piątek, 20 maja 2026", location = "Kampus B", timeRange = "18:00 - 02:00"),
+            EventEntity(id = 2, title = "Dzień Otwarty UZ", description = "Poznaj ofertę edukacyjną...", date = "Środa, 15 kwietnia 2026", location = "Budynek Główny", timeRange = "10:00 - 15:00"),
+            EventEntity(id = 3, title = "Hackathon MyUZ", description = "24 godziny programowania...", date = "Sobota, 10 maja 2026", location = "Centrum Komputerowe", timeRange = "09:00 - 09:00 (+1 dzień)")
         )
 
         val colorMapType = object : TypeToken<Map<String, Int>>() {}.type
         val classColorMap: Map<String, Int> = try {
             gson.fromJson(settings?.classColorsJson ?: "{}", colorMapType) ?: emptyMap()
-        } catch (e: Exception) { emptyMap() }
+        } catch (e: Exception) {
+            emptyMap()
+        }
 
         HomeUiState(
             greeting = greeting,
@@ -147,14 +171,15 @@ class HomeViewModel(
             classesMessage = emptyMessage,
             classesDayLabel = dayLabel,
             tasksMessage = if (finalTasks.isEmpty()) "Brak zadań" else "Najbliższe zadania",
-            isLoading = false, // Wyłączamy loading dopiero tutaj
+            isLoading = false,
             isPlanSelected = isPlanSelected,
             classColorMap = classColorMap,
-            isDarkMode = settings?.isDarkMode ?: false
+            hasUnreadNotifications = unreadCount > 0,
+            themeMode = settings?.themeMode ?: "SYSTEM"
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = HomeUiState(isLoading = true) // Startujemy z true
+        initialValue = HomeUiState(isLoading = true)
     )
 }

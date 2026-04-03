@@ -16,16 +16,22 @@ import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.components.ClassCard
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import kotlin.math.abs
+import com.example.my_uz_android.ui.components.DashboardEmptyCard
+import com.example.my_uz_android.ui.components.DashboardActionEmptyCard
+import com.example.my_uz_android.ui.theme.getAppBackgroundColor
+import com.example.my_uz_android.ui.theme.getAppAccentColor
 
 @Composable
 fun UpcomingClasses(
     classes: List<ClassEntity>,
+    isPlanSelected: Boolean,
     emptyMessage: String?,
     dayLabel: String?,
     classColorMap: Map<String, Int>,
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    onClassClick: (Int) -> Unit
+    onClassClick: (Int) -> Unit,
+    onSetupPlanClick: () -> Unit
 ) {
     Column(
         modifier = modifier
@@ -56,7 +62,7 @@ fun UpcomingClasses(
                 )
             }
 
-            if (dayLabel != null) {
+            if (dayLabel != null && isPlanSelected) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer
@@ -72,11 +78,24 @@ fun UpcomingClasses(
             }
         }
 
-        if (classes.isEmpty()) {
-            com.example.my_uz_android.ui.components.EmptyStateMessage(
-                title = "Czas na odpoczynek",
-                message = emptyMessage ?: "Dzisiaj nie masz żadnych zajęć.",
-                imageSize = 0.dp,
+        if (!isPlanSelected) {
+            DashboardActionEmptyCard(
+                title = "Wybierz plan zajęć",
+                message = "Przejdź do danych osobowych, aby przypisać się do grupy i zobaczyć nadchodzące zajęcia.",
+                iconRes = R.drawable.ic_calendar_check,
+                actionText = "Wybierz grupę",
+                onActionClick = onSetupPlanClick,
+                containerColor = getAppBackgroundColor(0, isDarkMode),
+                accentColor = getAppAccentColor(0, isDarkMode),
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
+        } else if (classes.isEmpty()) {
+            DashboardEmptyCard(
+                title = "Wszystko gotowe!",
+                message = emptyMessage ?: "Brak zajęć na dziś i jutro",
+                iconRes = R.drawable.ic_calendar_check,
+                containerColor = getAppBackgroundColor(0, isDarkMode),
+                accentColor = getAppAccentColor(0, isDarkMode),
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         } else {
@@ -84,43 +103,21 @@ fun UpcomingClasses(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(classes) { classItem ->
-                    // 1. Pobieramy indeks koloru po classType (dokładnie jak w kalendarzu!)
                     val colorIndex = classColorMap[classItem.classType]
                         ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
 
-                    // 2. Wyciągamy zestaw kolorów z palety
-                    val colorSet = ClassColorPalette.getOrElse(colorIndex) { ClassColorPalette[0] }
-
-                    // 3. Dopasowujemy do trybu jasnego / ciemnego
-                    val bgColor = if (isDarkMode) colorSet.darkBg else colorSet.lightBg
-                    val accentColor = if (isDarkMode) colorSet.darkAccent else colorSet.lightAccent
+                    val bgColor = getAppBackgroundColor(colorIndex, isDarkMode)
+                    val accentColor = getAppAccentColor(colorIndex, isDarkMode)
 
                     ClassCard(
                         classItem = classItem,
-                        backgroundColor = bgColor,     // Teraz karta na Home używa dedykowanego tła pastelowego/ciemnego!
-                        accentColor = accentColor,     // Akcent kółka również bierze się z palety
+                        backgroundColor = bgColor,
+                        accentColor = accentColor,
                         onClick = { onClassClick(classItem.id) },
                         modifier = Modifier.width(264.dp)
                     )
                 }
             }
-        }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true)
-@Composable
-fun UpcomingClassesEmptyPreview() {
-    com.example.my_uz_android.ui.theme.MyUZTheme {
-        Surface {
-            UpcomingClasses(
-                classes = emptyList(),
-                emptyMessage = "Dzisiaj masz wolne! Brak zajęć do wyświetlenia.",
-                dayLabel = "Dzisiaj",
-                classColorMap = emptyMap(),
-                isDarkMode = false,
-                onClassClick = {}
-            )
         }
     }
 }

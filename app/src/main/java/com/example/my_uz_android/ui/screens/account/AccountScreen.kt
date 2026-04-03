@@ -2,44 +2,15 @@ package com.example.my_uz_android.ui.screens.account
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +19,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.UserGender
@@ -123,7 +95,7 @@ fun AccountScreenContent(
     onDirectionSelected: (String) -> Unit
 ) {
     if (isLoading && userName.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
         return
@@ -135,7 +107,8 @@ fun AccountScreenContent(
             TopAppBar(
                 title = "Konto",
                 navigationIcon = null,
-                isCenterAligned = false
+                isCenterAligned = false,
+                isNavigationIconFilled = true
             )
         }
     ) { paddingValues ->
@@ -149,8 +122,7 @@ fun AccountScreenContent(
         ) {
             ProfileSection(
                 userName = "$userName $userSurname".trim(),
-                userTitle = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
-                    ?: "Student",
+                userTitle = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student",
                 isAnonymous = isAnonymous
             )
 
@@ -167,50 +139,41 @@ fun AccountScreenContent(
                 onDirectionSelected = onDirectionSelected
             )
 
-            // ZARZĄDZANIE KONTEM - Spójne wypełnione karty (Filled Cards)
             Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 SectionTitle(text = "Zarządzanie kontem")
 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        AccountOptionItem(
-                            iconRes = R.drawable.ic_user,
-                            label = "Dane osobowe",
-                            onClick = onPersonalDataClick
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
-
-                        AccountOptionItem(
-                            iconRes = R.drawable.ic_settings,
-                            label = "Ustawienia",
-                            onClick = onSettingsClick
-                        )
-
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
-
-                        AccountOptionItem(
-                            iconRes = R.drawable.ic_info_circle,
-                            label = "O aplikacji",
-                            onClick = onAboutClick
-                        )
-                    }
+                    AccountOptionItem(
+                        iconRes = R.drawable.ic_user,
+                        label = "Dane osobowe",
+                        onClick = onPersonalDataClick
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    AccountOptionItem(
+                        iconRes = R.drawable.ic_settings,
+                        label = "Ustawienia",
+                        onClick = onSettingsClick
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    AccountOptionItem(
+                        iconRes = R.drawable.ic_info_circle,
+                        label = "O aplikacji",
+                        onClick = onAboutClick
+                    )
                 }
             }
 
@@ -242,10 +205,11 @@ private fun StudyDirectionsSection(
         ?.takeIf { fallbackDirections.contains(it) }
         ?: fallbackDirections.firstOrNull()
         ?: "-"
+    val hasNoStudyDirections = fallbackDirections.isEmpty() && fallbackGroup.isNullOrBlank()
 
     var isDropdownExpanded by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -258,15 +222,13 @@ private fun StudyDirectionsSection(
                     AssistChip(
                         onClick = { isDropdownExpanded = true },
                         label = { Text(selectedDirection) },
-                        trailingIcon = {
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = "Zmień kierunek")
-                        },
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
                         colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            labelColor = MaterialTheme.colorScheme.primary
                         ),
                         border = null,
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(12.dp)
                     )
 
                     DropdownMenu(
@@ -288,79 +250,80 @@ private fun StudyDirectionsSection(
             }
         }
 
-        // Oddychająca, wypelniona karta w stylu Classroom
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             if (isAnonymous) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_info_circle),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Uzupełnij profil, aby zobaczyć dane studiów.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            } else if (hasNoStudyDirections) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_info_circle),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Brak przypisanych kierunków. Przejdz do ustawien, aby dodac swoj plan zajec.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             } else {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "KIERUNEK",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = fieldOfStudy,
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        StudyTwoColumnItem(
-                            label = "Tryb",
-                            value = mode,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        StudyTwoColumnItem(
-                            label = "Grupa",
-                            value = selectedDirection,
-                            modifier = Modifier.weight(1f)
-                        )
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        StudyItem(label = "TRYB", value = mode, modifier = Modifier.weight(1f))
+                        StudyItem(label = "GRUPA", value = selectedDirection, modifier = Modifier.weight(1f))
                     }
 
-                    StudySingleColumnItem(
-                        label = "Wydział",
-                        value = faculty
-                    )
+                    StudyItem(label = "WYDZIAŁ", value = faculty)
 
-                    StudySingleColumnItem(
-                        label = "Podgrupy",
-                        value = if (subgroups.isNotEmpty()) subgroups.toList().sorted()
-                            .joinToString(", ") else "-"
+                    StudyItem(
+                        label = "PODGRUPY",
+                        value = if (subgroups.isNotEmpty()) subgroups.toList().sorted().joinToString(", ") else "-"
                     )
                 }
             }
@@ -369,16 +332,12 @@ private fun StudyDirectionsSection(
 }
 
 @Composable
-private fun StudyTwoColumnItem(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
+private fun StudyItem(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
         Text(
             text = value,
@@ -389,35 +348,12 @@ private fun StudyTwoColumnItem(
 }
 
 @Composable
-private fun StudySingleColumnItem(
-    label: String,
-    value: String
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-@Composable
-fun AccountOptionItem(
-    iconRes: Int,
-    label: String,
-    onClick: () -> Unit
-) {
+fun AccountOptionItem(iconRes: Int, label: String, onClick: () -> Unit) {
     ListItem(
         headlineContent = {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Normal)
             )
         },
         leadingContent = {
@@ -425,15 +361,15 @@ fun AccountOptionItem(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         trailingContent = {
             Icon(
                 painter = painterResource(id = R.drawable.ic_chevron_right),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
             )
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -445,8 +381,8 @@ fun AccountOptionItem(
 fun ProfileSection(userName: String, userTitle: String, isAnonymous: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
     ) {
         Box(
             modifier = Modifier
@@ -458,28 +394,28 @@ fun ProfileSection(userName: String, userTitle: String, isAnonymous: Boolean) {
             if (isAnonymous || userName.isBlank()) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_user),
-                    contentDescription = "Gość",
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(32.dp)
                 )
             } else {
                 Text(
                     text = getInitials(userName),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium),
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = if (isAnonymous) "Użytkownik Gość" else userName,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 text = if (isAnonymous) "Konto gościa" else userTitle,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Normal),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -490,7 +426,7 @@ fun ProfileSection(userName: String, userTitle: String, isAnonymous: Boolean) {
 fun SectionTitle(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp),
         color = MaterialTheme.colorScheme.primary
     )
 }
@@ -505,37 +441,5 @@ fun getInitials(name: String): String {
             val last = parts.last().take(1).uppercase()
             "$first$last"
         }
-    }
-}
-
-// ==========================================
-// PREVIEW
-// ==========================================
-@Preview(showBackground = true)
-@Composable
-fun AccountScreenPreview() {
-    MyUZTheme {
-        AccountScreenContent(
-            userName = "Jan",
-            userSurname = "Kowalski",
-            isAnonymous = false,
-            selectedGender = UserGender.STUDENT,
-            selectedGroup = "11-INF-ZI-S",
-            selectedSubgroups = setOf("L1", "C2"),
-            faculty = "Wydział Informatyki, Elektrotechniki i Automatyki",
-            fieldOfStudy = "Informatyka",
-            studyMode = "Stacjonarne",
-            availableDirections = listOf("11-INF-ZI-S", "12-MAT-S"),
-            activeDirection = "11-INF-ZI-S",
-            directionToFieldMap = mapOf(
-                "11-INF-ZI-S" to "Informatyka",
-                "12-MAT-S" to "Matematyka"
-            ),
-            isLoading = false,
-            onSettingsClick = {},
-            onPersonalDataClick = {},
-            onAboutClick = {},
-            onDirectionSelected = {}
-        )
     }
 }

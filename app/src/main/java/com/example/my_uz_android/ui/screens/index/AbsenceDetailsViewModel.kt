@@ -23,7 +23,8 @@ class AbsenceDetailsViewModel(
 
     private val absenceId: Int = checkNotNull(savedStateHandle["absenceId"])
 
-    val uiState: StateFlow<AbsenceDetailsUiState> = absenceRepository.getAbsence(absenceId)
+    val uiState: StateFlow<AbsenceDetailsUiState> = absenceRepository
+        .getAbsence(absenceId)
         .map { absence ->
             AbsenceDetailsUiState(absence = absence, isLoading = false)
         }
@@ -35,10 +36,9 @@ class AbsenceDetailsViewModel(
 
     fun deleteAbsence(onSuccess: () -> Unit) {
         viewModelScope.launch {
-            uiState.value.absence?.let {
-                absenceRepository.deleteAbsence(it)
-                onSuccess()
-            }
+            val absence = uiState.value.absence ?: return@launch
+            absenceRepository.deleteAbsence(absence)
+            onSuccess()
         }
     }
 }

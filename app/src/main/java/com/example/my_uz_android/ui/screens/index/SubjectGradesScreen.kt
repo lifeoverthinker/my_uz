@@ -1,117 +1,432 @@
 package com.example.my_uz_android.ui.screens.index
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.GradeEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.UniversalFab
-import com.example.my_uz_android.ui.screens.index.components.AverageCard
-import com.example.my_uz_android.ui.screens.index.components.GradeListItem
-import com.example.my_uz_android.ui.screens.index.components.SubjectTypeAppBar
+import com.example.my_uz_android.ui.components.EmptyStateFigma
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
+import com.example.my_uz_android.ui.theme.InterFontFamily
 import com.example.my_uz_android.util.ClassTypeUtils
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import androidx.compose.foundation.shape.RoundedCornerShape
 
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SubjectGradesScreen(
-    subjectName: String,
-    classType: String,
-    onNavigateBack: () -> Unit,
+    subjectKey: String,
+    preselectedClassType: String? = null,
+    onBackClick: () -> Unit,
     onGradeClick: (Int) -> Unit,
-    onAddGradeClick: () -> Unit,
+    onAddGradeClick: (String, String) -> Unit,
     viewModel: GradesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val subject = uiState.subjects.find { it.uniqueKey == subjectKey }
+    val normalizedTypeFilter = preselectedClassType?.trim()?.lowercase()
+    var showFinalGradeDialog by remember { mutableStateOf(false) }
+    var gradeToDelete by remember { mutableStateOf<GradeEntity?>(null) }
 
-    val filteredGrades = uiState.allGrades.filter {
-        it.subjectName == subjectName && it.classType == classType
+    if (showFinalGradeDialog) {
+        FinalGradeDialog(
+            onConfirm = { showFinalGradeDialog = false },
+            onDismiss = { showFinalGradeDialog = false }
+        )
     }
 
-    // Średnia tylko ze standardowych ocen (gdzie isPoints = false i waga > 0 i grade != -1.0)
-    val gradesForAvg = filteredGrades.filter { !it.isPoints && it.grade != -1.0 && it.weight > 0 }
+    if (gradeToDelete != null) {
+        DeleteConfirmationDialog(
+            onConfirm = {
+                viewModel.deleteGrade(gradeToDelete!!)
+                gradeToDelete = null
+            },
+            onDismiss = { gradeToDelete = null },
+            itemType = "ocenę"
+        )
+    }
 
-    // Suma punktów
-    val pointsSum = filteredGrades.filter { it.isPoints }.sumOf { it.grade }
+    val visibleTypes = subject?.types
+        ?.filter { normalizedTypeFilter.isNullOrBlank() || it.name.trim().lowercase() == normalizedTypeFilter }
+        .orEmpty()
 
-    val average = if (gradesForAvg.isNotEmpty()) {
-        val sum = gradesForAvg.sumOf { it.grade * it.weight }
-        val weightSum = gradesForAvg.sumOf { it.weight }
-        if (weightSum > 0) sum / weightSum else 0.0
-    } else null
+    val classTypeSubtitle = when {
+        visibleTypes.isEmpty() -> ""
+        visibleTypes.size == 1 -> ClassTypeUtils.getFullName(visibleTypes.first().name)
+        else -> visibleTypes.joinToString(", ") { ClassTypeUtils.getFullName(it.name) }
+    }
+
+    val allGrades = visibleTypes
+        ?.flatMap { type -> type.grades.map { it to type.name } }
+        ?.sortedByDescending { it.first.date }
+        .orEmpty()
+
+    val hasAnyGrades = allGrades.isNotEmpty()
 
     Scaffold(
         topBar = {
-            SubjectTypeAppBar(
-                subjectName = subjectName,
-                className = ClassTypeUtils.getFullName(classType),
-                onBackClick = onNavigateBack
+            TopAppBar(
+                title = subject?.name ?: "Przedmiot",
+                subtitle = classTypeSubtitle,
+                navigationIcon = R.drawable.ic_chevron_left,
+                onNavigationClick = onBackClick,
+                isNavigationIconFilled = true,
+                actions = {
+                    TopBarActionIcon(
+                        icon = R.drawable.ic_plus,
+                        isFilled = true,
+                        onClick = {
+                            val preferredType = visibleTypes.firstOrNull()?.name
+                                ?: subject?.types?.firstOrNull()?.name
+                                .orEmpty()
+                            onAddGradeClick(subject?.name.orEmpty(), preferredType)
+                        }
+                    )
+                }
             )
         },
-        floatingActionButton = {
-            UniversalFab(
-                onMainFabClick = onAddGradeClick,
-                iconRes = R.drawable.ic_plus,
-                isExpandable = false,
-                isExpanded = false,
-                options = emptyList()
+        containerColor = MaterialTheme.colorScheme.surface
+    ) { paddingValues ->
+        if (subject == null) {
+            EmptyStateFigma(
+                title = "Czysta karta! 📖",
+                subtitle = "Startujesz od zera",
+                message = "W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!",
+                iconRes = R.drawable.grades_rafiki,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                illustrationSize = 221.7868.dp,
+                containerHeight = 582.dp
             )
+            return@Scaffold
         }
-    ) { padding ->
+
+        if (!hasAnyGrades) {
+            EmptyStateFigma(
+                title = "Czysta karta! 📖",
+                subtitle = "Startujesz od zera",
+                message = "W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!",
+                iconRes = R.drawable.grades_rafiki,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            )
+            return@Scaffold
+        }
+
+        val totalPoints = allGrades.map { it.first }.filter { it.isPoints }.sumOf { it.grade }
+        val activitiesCount = allGrades.size
+        val overallAverage = subject.average?.let { String.format("%.1f", it) } ?: "-"
+        val pointsText = if (totalPoints % 1.0 == 0.0) totalPoints.toInt().toString() else totalPoints.toString()
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp)
+                .padding(paddingValues),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item {
-                Spacer(modifier = Modifier.height(16.dp))
-                // Jedna karta, która wyświetla i średnią, i punkty (jeśli są)
-                AverageCard(
-                    label = "Średnia ocen",
-                    average = average,
-                    pointsSum = if (pointsSum > 0) pointsSum else null
-                )
-                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    DetailSummaryItem(
+                        value = overallAverage,
+                        label = "Średnia",
+                        modifier = Modifier.weight(1f),
+                        valueColor = MaterialTheme.colorScheme.primary
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(32.dp)
+                            .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f))
+                    )
+                    DetailSummaryItem(
+                        value = if (totalPoints > 0) pointsText else "-",
+                        label = "Punkty",
+                        modifier = Modifier.weight(1f),
+                        valueColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(32.dp)
+                            .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f))
+                    )
+                    DetailSummaryItem(
+                        value = activitiesCount.toString(),
+                        label = "Aktywności",
+                        modifier = Modifier.weight(1f),
+                        valueColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
             }
 
             item {
-                Text(
-                    text = "Oceny",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Oceny",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp,
+                                lineHeight = 24.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "+ Dodaj ocenę końcową",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable { showFinalGradeDialog = true }
+                        )
+                    }
 
-            if (filteredGrades.isEmpty()) {
-                item {
-                    Text(
-                        text = "Brak ocen",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                items(filteredGrades, key = { it.id }) { grade ->
-                    GradeListItem(
-                        grade = grade,
-                        onClick = { onGradeClick(grade.id) },
-                        onDelete = { viewModel.deleteGrade(it) },
-                        onDuplicate = { viewModel.duplicateGrade(it) }
-                    )
-                }
-            }
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        allGrades.forEachIndexed { index, (grade, _) ->
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = {
+                                    if (it == SwipeToDismissBoxValue.EndToStart) {
+                                        gradeToDelete = grade
+                                        false
+                                    } else false
+                                }
+                            )
 
-            item {
-                Spacer(modifier = Modifier.height(80.dp))
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                enableDismissFromStartToEnd = false,
+                                backgroundContent = {
+                                    Box(
+                                        Modifier
+                                            .fillMaxSize()
+                                            .padding(vertical = 4.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.error),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Usuń",
+                                            tint = Color.White,
+                                            modifier = Modifier.padding(horizontal = 24.dp)
+                                        )
+                                    }
+                                },
+                                content = {
+                                    GradeCardRow(grade = grade, onClick = { onGradeClick(grade.id) })
+                                }
+                            )
+
+                            if (index < allGrades.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    thickness = 1.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun FinalGradeDialog(
+    onConfirm: (Double) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val grades = listOf(2.0, 3.0, 3.5, 4.0, 4.5, 5.0)
+    var selectedGrade by remember { mutableStateOf(grades.last()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Dodaj ocenę końcową", style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("Wybierz ocenę końcową z przedmiotu:", style = TextStyle(fontFamily = InterFontFamily))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    grades.forEach { grade ->
+                        FilterChip(
+                            selected = selectedGrade == grade,
+                            onClick = { selectedGrade = grade },
+                            label = { Text(grade.toString()) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedGrade) }) { Text("Zatwierdź") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Anuluj") }
+        }
+    )
+}
+
+@Composable
+private fun DetailSummaryItem(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 24.sp),
+            color = valueColor
+        )
+        Text(
+            text = label,
+            style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Normal, fontSize = 14.sp),
+            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
+    val dateStr = Instant.ofEpochMilli(grade.date)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .format(DateTimeFormatter.ofPattern("dd MMM yyyy", Locale("pl")))
+
+    val displayValue = when {
+        grade.grade == -1.0 -> "+"
+        grade.grade % 1.0 == 0.0 -> grade.grade.toInt().toString()
+        else -> grade.grade.toString()
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .clickable { onClick() }
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(100.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = displayValue,
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                ),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.Start,
+        ) {
+            Text(
+                text = grade.description.takeIf { !it.isNullOrBlank() } ?: (if (grade.isPoints) "Punkty" else "Aktywność"),
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = dateStr,
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (!grade.isPoints && grade.weight > 0 && grade.grade != -1.0) {
+            Text(
+                text = "Waga: ${if (grade.weight % 1.0 == 0.0) grade.weight.toInt() else grade.weight}",
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

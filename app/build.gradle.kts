@@ -7,7 +7,6 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
     id("com.google.devtools.ksp") version "2.0.21-1.0.27"
-    id("com.google.gms.google-services")
 }
 
 // --- 1. Odczytujemy local.properties ---
@@ -68,6 +67,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
     }
 
     buildFeatures {
@@ -87,6 +87,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
     implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("com.google.android.material:material:1.12.0")
@@ -97,6 +98,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
 
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
@@ -129,5 +131,8 @@ dependencies {
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     debugImplementation("androidx.glance:glance-preview:1.1.0")
-    implementation("com.google.firebase:firebase-messaging-ktx:23.4.0")
+    // --- Narzędzia do testów jednostkowych (ViewModel, Flow, Coroutines) ---
+    testImplementation("io.mockk:mockk:1.13.9") // Do tworzenia "atrap" (mocków) bazy danych
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0") // Do testowania kodu asynchronicznego
+    testImplementation("app.cash.turbine:turbine:1.0.0") // Opcjonalnie, super przydatne do testowania Flow
 }

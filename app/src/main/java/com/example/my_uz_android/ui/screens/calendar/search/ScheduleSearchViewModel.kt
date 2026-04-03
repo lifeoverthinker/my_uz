@@ -4,11 +4,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.FavoriteEntity
 import com.example.my_uz_android.data.repositories.FavoritesRepository
-import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.data.repositories.TeacherDetailsDto
+import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.util.NetworkResult
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.Normalizer
 
@@ -20,12 +27,18 @@ data class SearchUiState(
 
 data class SearchResultItem(
     val name: String,
-    val type: String,
+    val type: String, // "group" | "teacher"
     val isFavorite: Boolean = false,
     val email: String? = null,
     val institute: String? = null
 )
 
+private data class GroupSearchIndexItemScheduleSearchVM(
+    val code: String,
+    val searchableTexts: List<String>
+)
+
+@OptIn(FlowPreview::class)
 class ScheduleSearchViewModel(
     private val universityRepository: UniversityRepository,
     private val favoritesRepository: FavoritesRepository
@@ -34,22 +47,40 @@ class ScheduleSearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    private var allGroups: List<String> = emptyList()
+    private var allGroupsIndex: List<GroupSearchIndexItemScheduleSearchVM> = emptyList()
     private var allTeachers: List<TeacherDetailsDto> = emptyList()
 
+    private val queryFlow = MutableStateFlow("")
+
+    private val remoteGroupsCache = mutableMapOf<String, List<String>>()
+
     init {
+        observeFavoritesScheduleSearchVM()
+        preloadSearchDataScheduleSearchVM()
+        observeQueryChangesScheduleSearchVM()
+    }
+
+    fun onQueryChange(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        queryFlow.value = query
+    }
+
+    private fun observeFavoritesScheduleSearchVM() {
         viewModelScope.launch {
             favoritesRepository.favoritesStream.collect { favorites ->
+                val favoriteIds = favorites.map { it.resourceId }.toSet()
                 _uiState.update { state ->
                     state.copy(
-                        searchResults = state.searchResults.map { res ->
-                            res.copy(isFavorite = favorites.any { it.resourceId == res.name })
+                        searchResults = state.searchResults.map { result ->
+                            result.copy(isFavorite = favoriteIds.contains(result.name))
                         }
                     )
                 }
             }
         }
+    }
 
+    private fun preloadSearchDataScheduleSearchVM() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
@@ -59,24 +90,140 @@ class ScheduleSearchViewModel(
             val groupsRes = groupsDeferred.await()
             val teachersRes = teachersDeferred.await()
 
-            if (groupsRes is NetworkResult.Success) allGroups = groupsRes.data ?: emptyList()
-            if (teachersRes is NetworkResult.Success) allTeachers = teachersRes.data ?: emptyList()
+            if (groupsRes is NetworkResult.Success) {
+                val groups = (groupsRes.data ?: emptyList())
+                    .filter { it.isNotBlank() }
+                    .distinct()
+
+                allGroupsIndex = groups.map { groupCode ->
+                    GroupSearchIndexItemScheduleSearchVM(
+                        code = groupCode,
+                        searchableTexts = buildGroupSearchableTextsScheduleSearchVM(groupCode)
+                    )
+                }
+            }
+
+            if (teachersRes is NetworkResult.Success) {
+                allTeachers = (teachersRes.data ?: emptyList())
+                    .filter { !it.name.isNullOrBlank() }
+            }
 
             _uiState.update { it.copy(isLoading = false) }
 
-            if (_uiState.value.searchQuery.isNotEmpty()) {
-                performSearch(_uiState.value.searchQuery)
+            val existingQuery = _uiState.value.searchQuery
+            if (existingQuery.isNotBlank()) {
+                performSearchScheduleSearchVM(existingQuery)
             }
         }
     }
 
-    fun onQueryChange(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
-        performSearch(query) // Zmiana: Szukamy zawsze, nawet dla pustego stringa (choć w performSearch to obsłużymy)
+    private fun observeQueryChangesScheduleSearchVM() {
+        viewModelScope.launch {
+            queryFlow
+                .debounce(220)
+                .distinctUntilChanged()
+                .collect { query ->
+                    performSearchScheduleSearchVM(query)
+                }
+        }
     }
 
-    private fun String.normalizeForSearch(): String {
-        // Ręczna zamiana polskich znaków dla pewności, szczególnie dla ł/Ł
+    private suspend fun performSearchScheduleSearchVM(query: String) {
+        val trimmedQuery = query.trim()
+        val words = trimmedQuery
+            .normalizeForSearchScheduleSearchVM()
+            .split("\\s+".toRegex())
+            .filter { it.isNotBlank() }
+
+        if (words.isEmpty()) {
+            _uiState.update { it.copy(searchResults = emptyList()) }
+            return
+        }
+
+        val favorites = favoritesRepository.favoritesStream.first()
+        val favoriteIds = favorites.map { it.resourceId }.toSet()
+
+        val localMatchedGroups = allGroupsIndex
+            .asSequence()
+            .filter { groupItem ->
+                groupItem.searchableTexts.any { searchable ->
+                    matchesQueryScheduleSearchVM(searchable, words)
+                }
+            }
+            .map { it.code }
+            .toMutableSet()
+
+        val remoteMatchedGroups = fetchRemoteGroupsScheduleSearchVM(trimmedQuery)
+
+        val mergedGroupCodes = linkedSetOf<String>().apply {
+            addAll(localMatchedGroups)
+            addAll(remoteMatchedGroups.filter { it.isNotBlank() })
+        }
+
+        val matchedGroups = mergedGroupCodes
+            .asSequence()
+            .take(30)
+            .map { groupCode ->
+                SearchResultItem(
+                    name = groupCode,
+                    type = "group",
+                    isFavorite = favoriteIds.contains(groupCode)
+                )
+            }
+
+        val matchedTeachers = allTeachers
+            .asSequence()
+            .filter { teacher ->
+                val safeName = teacher.name ?: return@filter false
+                matchesQueryScheduleSearchVM(safeName, words)
+            }
+            .take(30)
+            .mapNotNull { teacher ->
+                val safeName = teacher.name ?: return@mapNotNull null
+                SearchResultItem(
+                    name = safeName,
+                    type = "teacher",
+                    isFavorite = favoriteIds.contains(safeName),
+                    email = teacher.email,
+                    institute = teacher.institute
+                )
+            }
+
+        _uiState.update {
+            it.copy(searchResults = (matchedGroups + matchedTeachers).toList())
+        }
+    }
+
+    private suspend fun fetchRemoteGroupsScheduleSearchVM(query: String): List<String> {
+        val cacheKey = query.lowercase()
+        remoteGroupsCache[cacheKey]?.let { return it }
+
+        val result = when (val remote = universityRepository.searchGroups(query)) {
+            is NetworkResult.Success -> (remote.data ?: emptyList())
+            is NetworkResult.Error -> emptyList()
+        }
+
+        remoteGroupsCache[cacheKey] = result
+        return result
+    }
+
+    private fun buildGroupSearchableTextsScheduleSearchVM(groupCode: String): List<String> {
+        val normalizedCode = groupCode.trim()
+        val compact = normalizedCode.replace(Regex("[^\\p{L}\\p{N}]"), " ")
+        return listOf(normalizedCode, compact)
+    }
+
+    private fun matchesQueryScheduleSearchVM(candidate: String, words: List<String>): Boolean {
+        val normalizedCandidate = candidate.normalizeForSearchScheduleSearchVM()
+        val compactCandidate = normalizedCandidate.compactForCodeSearchScheduleSearchVM()
+
+        return words.all { word ->
+            val compactWord = word.compactForCodeSearchScheduleSearchVM()
+            normalizedCandidate.contains(word) || compactCandidate.contains(compactWord)
+        }
+    }
+
+    private fun String.normalizeForSearchScheduleSearchVM(): String {
         val manual = this.lowercase()
             .replace("ł", "l")
             .replace("ą", "a")
@@ -89,52 +236,11 @@ class ScheduleSearchViewModel(
             .replace("ż", "z")
 
         val normalized = Normalizer.normalize(manual, Normalizer.Form.NFD)
-        return "\\p{InCombiningDiacriticalMarks}+".toRegex()
-            .replace(normalized, "")
+        return "\\p{InCombiningDiacriticalMarks}+".toRegex().replace(normalized, "")
     }
 
-    private fun performSearch(query: String) {
-        viewModelScope.launch {
-            val searchWords = query.normalizeForSearch().split("\\s+".toRegex()).filter { it.isNotBlank() }
-            if (searchWords.isEmpty()) {
-                _uiState.update { it.copy(searchResults = emptyList()) }
-                return@launch
-            }
-
-            val favorites = favoritesRepository.favoritesStream.first()
-            val results = mutableListOf<SearchResultItem>()
-
-            // Szukanie w grupach
-            val matchedGroups = allGroups.filter { group ->
-                val normalizedGroup = group.normalizeForSearch()
-                searchWords.all { word -> normalizedGroup.contains(word) }
-            }.take(30)
-
-            // POPRAWKA: Szukanie w nauczycielach (bezpieczna obsługa nulli)
-            val matchedTeachers = allTeachers.filter { teacher ->
-                val safeName = teacher.name ?: return@filter false // Pomijamy, jeśli nie ma imienia
-                val normalizedTeacher = safeName.normalizeForSearch()
-                searchWords.all { word -> normalizedTeacher.contains(word) }
-            }.take(30)
-
-            results.addAll(matchedGroups.map { name ->
-                SearchResultItem(name, "group", favorites.any { it.resourceId == name })
-            })
-
-            // POPRAWKA: Bezpieczne mapowanie nauczycieli na wyniki wyszukiwania
-            results.addAll(matchedTeachers.mapNotNull { t ->
-                val safeName = t.name ?: return@mapNotNull null // Pomijamy, jeśli null
-                SearchResultItem(
-                    name = safeName,
-                    type = "teacher",
-                    isFavorite = favorites.any { it.resourceId == safeName },
-                    email = t.email,
-                    institute = t.institute
-                )
-            })
-
-            _uiState.update { it.copy(searchResults = results) }
-        }
+    private fun String.compactForCodeSearchScheduleSearchVM(): String {
+        return this.filter { it.isLetterOrDigit() }
     }
 
     fun toggleFavorite(result: SearchResultItem) {

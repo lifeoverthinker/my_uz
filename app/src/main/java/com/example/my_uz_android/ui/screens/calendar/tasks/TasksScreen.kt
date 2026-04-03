@@ -1,101 +1,161 @@
 package com.example.my_uz_android.ui.screens.calendar.tasks
 
-import android.content.Intent
 import android.widget.Toast
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.EmptyStateMessage
 import com.example.my_uz_android.ui.components.TaskCard
-import com.example.my_uz_android.ui.components.UniversalFab
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.screens.calendar.components.CalendarDrawerContent
-import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.format.TextStyle
+import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
+
+private fun taskDateTasksScreen(dueDateMillis: Long): LocalDate {
+    return Instant.ofEpochMilli(dueDateMillis).atZone(ZoneId.systemDefault()).toLocalDate()
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TasksScreen(
+    onNavigateBack: () -> Unit,
     onAddTaskClick: () -> Unit,
     onTaskClick: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    onNavigateBack: () -> Unit = {},
-    onHomeClick: () -> Unit = {},
-    onCalendarClick: () -> Unit = {},
-    onAccountClick: () -> Unit = {},
-    onIndexClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {},
+    onCalendarClick: () -> Unit,
+    onAccountClick: () -> Unit,
     viewModel: TasksViewModel = viewModel(factory = AppViewModelProvider.Factory),
     calendarViewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
-    val tasks by viewModel.tasksStream.collectAsState(initial = emptyList())
-    val calendarUiState by calendarViewModel.uiState.collectAsState()
-
-    val sharedCode by viewModel.sharedCode.collectAsState()
-    val isSharing by viewModel.isSharing.collectAsState()
-    val shareError by viewModel.shareError.collectAsState()
-    val importStatus by viewModel.importStatus.collectAsState()
-    val isImporting by viewModel.isImporting.collectAsState()
+    val tasks by viewModel.tasksStream.collectAsStateWithLifecycle(initialValue = emptyList())
+    val calendarUiState by calendarViewModel.uiState.collectAsStateWithLifecycle()
+    val sharedCode by viewModel.sharedCode.collectAsStateWithLifecycle()
+    val isSharing by viewModel.isSharing.collectAsStateWithLifecycle()
+    val shareError by viewModel.shareError.collectAsStateWithLifecycle()
+    val importStatus by viewModel.importStatus.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
+    var showShareOptionsDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
+    var showConfirmShareDialog by remember { mutableStateOf(false) }
+    var showGeneratedCodeDialog by remember { mutableStateOf(false) }
+    var taskToDelete by remember { mutableStateOf<TaskEntity?>(null) }
+    var showImportSuccessDialog by remember { mutableStateOf(false) }
+    var lastImportMessage by remember { mutableStateOf("") }
 
-    LaunchedEffect(shareError, importStatus) {
-        val msg = shareError ?: importStatus
-        if (msg != null) {
-            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-            viewModel.clearError()
-        }
+    var selectedTab by remember { mutableStateOf(0) }
+    var isSelectionMode by remember { mutableStateOf(false) }
+    var selectedTasks by remember { mutableStateOf(setOf<Int>()) }
+
+    LaunchedEffect(shareError) {
+        val message = shareError ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        viewModel.clearShareError()
     }
 
-    val groupedByMonth = remember(tasks) {
-        tasks.sortedBy { it.dueDate }.groupBy {
-            Instant.ofEpochMilli(it.dueDate)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate()
-                .let { date -> YearMonth.from(date) }
+    LaunchedEffect(importStatus) {
+        val status = importStatus ?: return@LaunchedEffect
+        if (status.contains("zaimportowano", ignoreCase = true)) {
+            lastImportMessage = status
+            showImportSuccessDialog = true
+        } else {
+            Toast.makeText(context, status, Toast.LENGTH_SHORT).show()
         }
+        viewModel.clearImportStatus()
     }
 
-    val backgroundColor = MaterialTheme.colorScheme.surface
+    LaunchedEffect(sharedCode) {
+        if (sharedCode != null) showGeneratedCodeDialog = true
+    }
+
+    val groupedTasks = remember(tasks, selectedTab) {
+        tasks
+            .filter { task -> if (selectedTab == 0) !task.isCompleted else task.isCompleted }
+            .sortedBy { it.dueDate }
+            .groupBy { YearMonth.from(taskDateTasksScreen(it.dueDate)) }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -120,337 +180,678 @@ fun TasksScreen(
         }
     ) {
         Scaffold(
-            containerColor = backgroundColor,
             topBar = {
-                TopAppBar(
-                    title = "Terminarz",
-                    navigationIcon = R.drawable.ic_menu,
-                    isNavigationIconFilled = true,
-                    onNavigationClick = { scope.launch { drawerState.open() } },
-                    actions = {
-                        if (isSharing || isImporting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.extendedColors.iconText,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Box {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.extendedColors.buttonBackground)
-                                    .clickable { showMenu = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "Opcje",
-                                    tint = MaterialTheme.extendedColors.iconText,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false },
-                                modifier = Modifier.background(MaterialTheme.colorScheme.surface)
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Udostępnij zadania") },
-                                    onClick = {
-                                        showMenu = false
-                                        viewModel.shareMyTasks()
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_share),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Importuj zadania") },
-                                    onClick = {
-                                        showMenu = false
-                                        showImportDialog = true
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_import),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                    }
-                )
-            },
-            floatingActionButton = {
-                UniversalFab(
-                    isExpandable = false,
-                    isExpanded = false,
-                    onMainFabClick = onAddTaskClick,
-                    iconRes = R.drawable.ic_plus,
-                    options = emptyList()
+                TasksTopBar(
+                    isSelectionMode = isSelectionMode,
+                    selectedTab = selectedTab,
+                    onSelectionClose = {
+                        isSelectionMode = false
+                        selectedTasks = emptySet()
+                    },
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                    onAddClick = onAddTaskClick,
+                    onShareClick = { showShareOptionsDialog = true },
+                    onTabChange = { selectedTab = it }
                 )
             }
-        ) { innerPadding ->
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                if (tasks.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Image(
-                                painter = painterResource(id = R.drawable.time_flies_rafiki),
-                                contentDescription = null,
-                                modifier = Modifier.size(220.dp)
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Text(
-                                text = stringResource(R.string.tasks_empty_title),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                        }
-                    }
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            ) {
+                if (groupedTasks.isEmpty()) {
+                    EmptyStateMessage(
+                        title = if (selectedTab == 0) "Brak aktywnych zadań" else "Brak zaliczonych zadań",
+                        subtitle = "Twoja lista jest pusta",
+                        message = "Dodaj nowe zadanie przyciskiem +",
+                        iconRes = R.drawable.to_do_list_rafiki
+                    )
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        groupedByMonth.forEach { (yearMonth, tasksInMonth) ->
-                            stickyHeader { MonthHeaderSticky(yearMonth = yearMonth, backgroundColor = backgroundColor) }
-                            val tasksByDay = tasksInMonth.groupBy {
-                                Instant.ofEpochMilli(it.dueDate).atZone(ZoneId.systemDefault()).toLocalDate()
+                    TasksList(
+                        groupedTasks = groupedTasks,
+                        isSelectionMode = isSelectionMode,
+                        selectedTasks = selectedTasks,
+                        onTaskClick = { id ->
+                            if (isSelectionMode) {
+                                selectedTasks = if (selectedTasks.contains(id)) selectedTasks - id else selectedTasks + id
+                            } else {
+                                onTaskClick(id)
                             }
-                            items(items = tasksByDay.toList(), key = { (date, _) -> date.toEpochDay() }) { (date, dailyTasks) ->
-                                DayScheduleRow(
-                                    date = date,
-                                    tasks = dailyTasks,
-                                    onTaskClick = onTaskClick,
-                                    onToggleTask = { viewModel.toggleTaskCompletion(it) },
-                                    onDeleteTask = { viewModel.deleteTask(it) }
+                        },
+                        onToggleTask = { viewModel.toggleTaskCompletion(it) },
+                        onDeleteRequest = { taskToDelete = it }
+                    )
+                }
+
+                if (isSelectionMode && selectedTasks.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 32.dp)
+                    ) {
+                        Button(
+                            onClick = { showConfirmShareDialog = true },
+                            shape = RoundedCornerShape(100.dp),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
+                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                        ) {
+                            Text(
+                                text = "Zatwierdź wybrane: ${selectedTasks.size}",
+                                style = TextStyle(
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 14.sp
                                 )
-                            }
+                            )
                         }
-                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
                 }
             }
         }
     }
 
-    if (sharedCode != null) {
-        ShareCodeDialog(
-            code = sharedCode!!,
-            onDismiss = { viewModel.clearSharedCode() },
-            onShareSystem = { code ->
-                val sendIntent = Intent().apply {
-                    action = Intent.ACTION_SEND
-                    putExtra(Intent.EXTRA_TEXT, "Hej! Pobrałem listę zadań w aplikacji MyUZ. Mój kod to: $code")
-                    type = "text/plain"
+    if (showShareOptionsDialog) {
+        ShareOptionsModal(
+            onSelectAll = {
+                viewModel.shareMyTasks()
+                showShareOptionsDialog = false
+            },
+            onSelectTasks = {
+                isSelectionMode = true
+                showShareOptionsDialog = false
+            },
+            onImportClick = {
+                showShareOptionsDialog = false
+                showImportDialog = true
+            },
+            onDismiss = { showShareOptionsDialog = false }
+        )
+    }
+
+    if (showConfirmShareDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmShareDialog = false },
+            title = {
+                Text(
+                    "Udostępnić zadania?",
+                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold)
+                )
+            },
+            text = { Text("Zaznaczono ${selectedTasks.size} zadań do udostępnienia.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.shareMyTasks(selectedTasks)
+                        showConfirmShareDialog = false
+                        isSelectionMode = false
+                        selectedTasks = emptySet()
+                    }
+                ) { Text("Udostępnij") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmShareDialog = false }) { Text("Anuluj") }
+            }
+        )
+    }
+
+    if (showGeneratedCodeDialog) {
+        GeneratedCodeModal(
+            code = sharedCode,
+            isLoading = isSharing,
+            onCopy = {
+                sharedCode?.let {
+                    clipboardManager.setText(AnnotatedString(it))
+                    Toast.makeText(context, "Skopiowano kod", Toast.LENGTH_SHORT).show()
+                    showGeneratedCodeDialog = false
+                    viewModel.clearSharedCode()
                 }
-                val shareIntent = Intent.createChooser(sendIntent, "Udostępnij kod zadań")
-                context.startActivity(shareIntent)
+            },
+            onDismiss = {
+                showGeneratedCodeDialog = false
+                viewModel.clearSharedCode()
             }
         )
     }
 
     if (showImportDialog) {
-        var codeInput by remember { mutableStateOf("") }
+        ImportDialog(
+            onImport = {
+                viewModel.importTasks(it)
+                showImportDialog = false
+            },
+            onDismiss = { showImportDialog = false }
+        )
+    }
+
+    if (showImportSuccessDialog) {
         AlertDialog(
-            onDismissRequest = { showImportDialog = false },
-            containerColor = MaterialTheme.colorScheme.surface, // BIAŁE TŁO
-            title = { Text("Importuj zadania") },
-            text = {
-                Column {
-                    Text("Wpisz 6-znakowy kod udostępnienia:")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = codeInput,
-                        onValueChange = { if(it.length <= 6) codeInput = it.uppercase() },
-                        singleLine = true,
-                        label = { Text("KOD") },
-                        modifier = Modifier.fillMaxWidth()
+            onDismissRequest = { showImportSuccessDialog = false },
+            icon = {
+                Icon(
+                    Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(48.dp)
+                )
+            },
+            title = {
+                Text(
+                    "Zadania zaimportowane!",
+                    style = TextStyle(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
                     )
-                }
+                )
+            },
+            text = {
+                Text(
+                    lastImportMessage,
+                    style = TextStyle(fontFamily = InterFontFamily, fontSize = 16.sp),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.importTasks(codeInput)
-                        showImportDialog = false
-                    },
-                    enabled = codeInput.length == 6
-                ) { Text("Pobierz") }
+                TextButton(
+                    onClick = { showImportSuccessDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Super!") }
+            }
+        )
+    }
+
+    if (taskToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            title = {
+                Text(
+                    "Usuń zadanie",
+                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
+                )
             },
-            dismissButton = { TextButton(onClick = { showImportDialog = false }) { Text("Anuluj") } }
+            text = { Text("Czy na pewno chcesz trwale usunąć zadanie \"${taskToDelete?.title}\"?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // Zielony komentarz: usuwamy wyłącznie po explicit confirm.
+                        taskToDelete?.let { viewModel.deleteTask(it) }
+                        taskToDelete = null
+                    }
+                ) { Text("Usuń", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { taskToDelete = null }) { Text("Anuluj") }
+            }
         )
     }
 }
 
 @Composable
-fun MonthHeaderSticky(yearMonth: YearMonth, backgroundColor: Color) {
-    val monthName = yearMonth.month.getDisplayName(TextStyle.FULL, Locale("pl"))
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
-    val year = yearMonth.year
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(backgroundColor)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+fun TasksTopBar(
+    isSelectionMode: Boolean,
+    selectedTab: Int,
+    onSelectionClose: () -> Unit,
+    onOpenDrawer: () -> Unit,
+    onAddClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onTabChange: (Int) -> Unit
+) {
+    TopAppBar(
+        title = "Terminarz",
+        navigationIcon = if (isSelectionMode) R.drawable.ic_close else R.drawable.ic_menu,
+        onNavigationClick = if (isSelectionMode) onSelectionClose else onOpenDrawer,
+        isNavigationIconFilled = true,
+        actions = {
+            TopBarActionIcon(icon = R.drawable.ic_plus, onClick = onAddClick, isFilled = true)
+            if (!isSelectionMode) {
+                TopBarActionIcon(icon = R.drawable.ic_share, onClick = onShareClick, isFilled = true)
+            }
+        },
+        bottomContent = {
+            Column {
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    TabRow(
+                        selectedTabIndex = selectedTab,
+                        containerColor = Color.Transparent,
+                        divider = {},
+                        indicator = { tabPositions ->
+                            if (selectedTab < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    ) {
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { onTabChange(0) },
+                            text = {
+                                Text(
+                                    "Aktywne",
+                                    color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = TextStyle(
+                                        fontFamily = InterFontFamily,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp
+                                    )
+                                )
+                            }
+                        )
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { onTabChange(1) },
+                            text = {
+                                Text(
+                                    "Zaliczone",
+                                    color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = TextStyle(
+                                        fontFamily = InterFontFamily,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp
+                                    )
+                                )
+                            }
+                        )
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+            }
+        }
+    )
+}
+
+@Composable
+fun TasksList(
+    groupedTasks: Map<YearMonth, List<TaskEntity>>,
+    isSelectionMode: Boolean,
+    selectedTasks: Set<Int>,
+    onTaskClick: (Int) -> Unit,
+    onToggleTask: (TaskEntity) -> Unit,
+    onDeleteRequest: (TaskEntity) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 100.dp)
     ) {
-        Text(
-            text = "$monthName $year",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        groupedTasks.forEach { (month, tasks) ->
+            item {
+                Text(
+                    text = month.month.getDisplayName(JavaTextStyle.FULL, Locale("pl"))
+                        .replaceFirstChar { it.titlecase() } + " ${month.year}",
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                    style = TextStyle(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 12.sp
+                    ),
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+
+            itemsIndexed(tasks, key = { _, task -> task.id }) { index, task ->
+                val isSelected = isSelectionMode && selectedTasks.contains(task.id)
+                val date = taskDateTasksScreen(task.dueDate)
+                val prevDate = tasks.getOrNull(index - 1)?.let { taskDateTasksScreen(it.dueDate) }
+                val isFirstInDay = prevDate != date
+
+                SwipeToDismissItem(
+                    task = task,
+                    isSelectionMode = isSelectionMode,
+                    isSelected = isSelected,
+                    onTaskClick = { onTaskClick(task.id) },
+                    onToggleTask = { onToggleTask(task) },
+                    onDeleteRequest = { onDeleteRequest(task) },
+                    date = date,
+                    showDate = isFirstInDay
+                )
+            }
+        }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DayScheduleRow(
+fun SwipeToDismissItem(
+    task: TaskEntity,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onTaskClick: () -> Unit,
+    onToggleTask: () -> Unit,
+    onDeleteRequest: () -> Unit,
     date: LocalDate,
-    tasks: List<TaskEntity>,
-    onTaskClick: (Int) -> Unit,
-    onToggleTask: (TaskEntity) -> Unit,
-    onDeleteTask: (TaskEntity) -> Unit
+    showDate: Boolean
 ) {
-    val dayOfWeek = date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("pl"))
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
-    val dayOfMonth = date.dayOfMonth.toString()
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Column(modifier = Modifier.width(48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = dayOfWeek,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(text = dayOfMonth, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (isSelectionMode) return@rememberSwipeToDismissBoxState false
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onToggleTask()
+                    false
+                }
+
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onDeleteRequest()
+                    false
+                }
+
+                else -> false
+            }
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            tasks.forEach { task ->
-                key(task.id, task.isCompleted) {
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = {
-                            when (it) {
-                                SwipeToDismissBoxValue.StartToEnd -> {
-                                    onToggleTask(task)
-                                    false
-                                }
-                                SwipeToDismissBoxValue.EndToStart -> {
-                                    onDeleteTask(task)
-                                    true
-                                }
-                                else -> false
-                            }
-                        }
-                    )
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        backgroundContent = {
-                            val direction = dismissState.dismissDirection
-                            val color by animateColorAsState(
-                                when (dismissState.targetValue) {
-                                    SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50) // Zawsze zielony
-                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                    else -> Color.Transparent
-                                }, label = "SwipeColor"
-                            )
-                            val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
-                            Box(
-                                Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(color)
-                                    .padding(horizontal = 20.dp),
-                                contentAlignment = alignment
-                            ) {
-                                val scale by animateFloatAsState(
-                                    if (dismissState.targetValue == SwipeToDismissBoxValue.Settled) 0.75f else 1f,
-                                    label = "IconScale"
-                                )
-                                if (direction == SwipeToDismissBoxValue.StartToEnd) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_check_square_broken),
-                                        contentDescription = null,
-                                        modifier = Modifier.scale(scale).size(24.dp),
-                                        tint = Color.White
-                                    )
-                                } else {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_trash),
-                                        contentDescription = null,
-                                        modifier = Modifier.scale(scale).size(24.dp),
-                                        tint = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                            }
-                        },
-                        content = {
-                            TaskCard(
-                                task = task,
-                                modifier = Modifier.fillMaxWidth(),
-                                onTaskClick = { onTaskClick(task.id) }
-                            )
-                        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = !isSelectionMode,
+        enableDismissFromEndToStart = !isSelectionMode,
+        backgroundContent = {
+            val bgColor = when (dismissState.dismissDirection) {
+                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50)
+                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error
+                else -> Color.Transparent
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(bgColor),
+                contentAlignment = when (dismissState.dismissDirection) {
+                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                    else -> Alignment.Center
+                }
+            ) {
+                val icon = when (dismissState.dismissDirection) {
+                    SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Done
+                    SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
+                    else -> null
+                }
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.padding(horizontal = 24.dp)
                     )
                 }
             }
+        }
+    ) {
+        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+        val cardColor = if (isSelected && isSelectionMode) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+        } else {
+            getAppBackgroundColor(1, isDark)
+        }
+        val borderColor = if (isSelected && isSelectionMode) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.Transparent
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(if (isSelectionMode) Color.Transparent else MaterialTheme.colorScheme.surface)
+                .clickable(enabled = isSelectionMode) { onTaskClick() }
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(modifier = Modifier.width(36.dp)) {
+                if (showDate) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = date.dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale("pl")),
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight(500),
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = date.dayOfMonth.toString(),
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight(500),
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onTaskClick() },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.primary,
+                        uncheckedColor = MaterialTheme.colorScheme.outline
+                    )
+                )
+            }
+
+            TaskCard(
+                task = task,
+                modifier = Modifier
+                    .weight(1f)
+                    .border(
+                        width = 2.dp,
+                        color = borderColor,
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                onTaskClick = onTaskClick,
+                backgroundColor = cardColor,
+                isDarkMode = isDark
+            )
         }
     }
 }
 
 @Composable
-fun ShareCodeDialog(code: String, onDismiss: () -> Unit, onShareSystem: (String) -> Unit) {
+fun ShareOptionsModal(
+    onSelectAll: () -> Unit,
+    onSelectTasks: () -> Unit,
+    onImportClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface, // BIAŁE TŁO
-        title = { Text("Zadania udostępnione!") },
+        confirmButton = {},
+        title = null,
         text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                Text("Twój kod dostępu:", style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(16.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                ) {
-                    Text(
-                        text = code,
-                        style = MaterialTheme.typography.displayMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 4.sp
-                        ),
-                        modifier = Modifier.padding(24.dp),
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 Text(
-                    "Podaj ten kod innej osobie, aby mogła pobrać Twoją listę zadań.",
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center
+                    text = "Udostępnij zadania",
+                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 18.sp),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Button(
+                    onClick = onSelectAll,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Text("Udostępnij wszystko")
+                }
+
+                OutlinedButton(
+                    onClick = onSelectTasks,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Text("Wybierz zadania")
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                TextButton(
+                    onClick = onImportClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_import),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            "Importuj zadania",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 16.sp
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun GeneratedCodeModal(
+    code: String?,
+    isLoading: Boolean,
+    onCopy: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {},
+        title = null,
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Kod udostępniania",
+                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    } else {
+                        Text(
+                            text = code ?: "------",
+                            style = TextStyle(
+                                fontFamily = InterFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 42.sp,
+                                letterSpacing = 2.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = onCopy,
+                    enabled = code != null,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Skopiuj kod")
+                }
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Zamknij", style = TextStyle(fontWeight = FontWeight.SemiBold))
+                }
+            }
+        }
+    )
+}
+
+@Composable
+fun ImportDialog(onImport: (String) -> Unit, onDismiss: () -> Unit) {
+    var code by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Importuj zadania",
+                style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Wpisz 6-znakowy kod, aby pobrać zadania.",
+                    style = TextStyle(fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                )
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { if (it.length <= 6) code = it.uppercase() },
+                    label = { Text("Kod") },
+                    placeholder = { Text("ABC123") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
             }
         },
         confirmButton = {
-            Button(onClick = { onShareSystem(code) }) {
-                Icon(painter = painterResource(R.drawable.ic_share), contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Wyślij kod")
-            }
+            TextButton(
+                onClick = { onImport(code) },
+                enabled = code.length == 6
+            ) { Text("Importuj") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Zamknij") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Anuluj") }
+        }
     )
 }

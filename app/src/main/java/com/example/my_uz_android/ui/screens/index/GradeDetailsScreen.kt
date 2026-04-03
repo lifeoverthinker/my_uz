@@ -1,222 +1,390 @@
 package com.example.my_uz_android.ui.screens.index
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
-import com.example.my_uz_android.data.models.GradeEntity
-import com.example.my_uz_android.ui.AppViewModelProvider
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.components.TopBarActionIcon
+import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.ui.theme.getAppAccentColor
+import com.example.my_uz_android.ui.theme.getClassColorIndex
 import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 @Composable
-fun GradeDetailsScreen(
-    gradeId: Int,
+fun GradeDetailsScreenRoute(
+    viewModel: GradeDetailsViewModel,
     onNavigateBack: () -> Unit,
     onEditGrade: (Int) -> Unit,
-    onDuplicateClick: () -> Unit,
-    viewModel: GradeDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    onDuplicateGrade: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val grade = uiState.grade
 
-    GradeDetailsContent(
-        grade = uiState.grade,
-        isLoading = uiState.isLoading,
+    if (uiState.isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    if (grade == null) {
+        EmptyDetailsState(
+            title = "Brak danych oceny",
+            description = "Nie udało się pobrać szczegółów tej oceny."
+        )
+        return
+    }
+
+    val gradeText = when {
+        grade.isPoints -> "${if (grade.grade % 1.0 == 0.0) grade.grade.toInt() else grade.grade} pkt"
+        grade.grade == -1.0 -> "Aktywność (+)"
+        else -> grade.grade.toString()
+    }
+
+    GradeDetailsScreen(
+        title = grade.description ?: if (grade.isPoints) "Punkty" else "Ocena",
+        dateMillis = grade.date,
+        subjectName = grade.subjectName,
+        classType = ClassTypeUtils.getFullName(grade.classType),
+        gradeText = gradeText,
+        isPointsOrActivity = grade.isPoints || grade.grade == -1.0,
+        weightText = grade.weight.toString(),
+        comment = grade.comment,
         onNavigateBack = onNavigateBack,
-        onEditGrade = onEditGrade,
+        onEditGrade = { onEditGrade(grade.id) },
         onDeleteGrade = { viewModel.deleteGrade(onSuccess = onNavigateBack) },
-        onDuplicateClick = onDuplicateClick
+        onDuplicateClick = onDuplicateGrade
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GradeDetailsContent(
-    grade: GradeEntity?,
-    isLoading: Boolean,
+fun GradeDetailsScreen(
+    title: String,
+    dateMillis: Long,
+    subjectName: String,
+    classType: String,
+    gradeText: String,
+    isPointsOrActivity: Boolean,
+    weightText: String?,
+    comment: String?,
     onNavigateBack: () -> Unit,
-    onEditGrade: (Int) -> Unit,
+    onEditGrade: () -> Unit,
     onDeleteGrade: () -> Unit,
     onDuplicateClick: () -> Unit
 ) {
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-    val surfaceColor = MaterialTheme.colorScheme.surface
-
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    val isDark = isSystemInDarkTheme()
+    val colorIndex = getClassColorIndex(subjectName)
+    val accentColor = getAppAccentColor(colorIndex, isDark)
+
     Surface(
-        color = surfaceColor,
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // --- HEADER ---
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DetailIconBox(onClick = onNavigateBack) {
-                    Icon(painterResource(id = R.drawable.ic_x_close), "Zamknij", tint = textColor, modifier = Modifier.size(24.dp))
-                }
-
-                if (grade != null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DetailIconBox(onClick = { onEditGrade(grade.id) }) {
-                            Icon(painterResource(id = R.drawable.ic_edit), "Edytuj", tint = textColor, modifier = Modifier.size(24.dp))
-                        }
-
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = "",
+                    navigationIcon = R.drawable.ic_close,
+                    isNavigationIconFilled = true,
+                    onNavigationClick = onNavigateBack,
+                    containerColor = Color.Transparent,
+                    actions = {
+                        TopBarActionIcon(
+                            icon = R.drawable.ic_edit,
+                            isFilled = true,
+                            onClick = onEditGrade
+                        )
                         Box {
-                            DetailIconBox(onClick = { showMenu = true }) {
-                                Icon(painterResource(id = R.drawable.ic_dots_vertical), "Opcje", tint = textColor, modifier = Modifier.size(24.dp))
-                            }
-
+                            TopBarActionIcon(
+                                icon = R.drawable.ic_dots_vertical,
+                                isFilled = true,
+                                onClick = { showMenu = true }
+                            )
                             DropdownMenu(
                                 expanded = showMenu,
-                                onDismissRequest = { showMenu = false },
-                                modifier = Modifier.background(surfaceColor).width(180.dp)
+                                onDismissRequest = { showMenu = false }
                             ) {
-                                DropdownMenuItem(text = { Text("Duplikuj", style = MaterialTheme.typography.bodyMedium) }, leadingIcon = { Icon(painterResource(R.drawable.ic_copy), null, Modifier.size(20.dp)) }, onClick = { showMenu = false; onDuplicateClick() })
-                                DropdownMenuItem(text = { Text("Usuń", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }, leadingIcon = { Icon(painterResource(R.drawable.ic_trash), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.error) }, onClick = { showMenu = false; showDeleteDialog = true })
+                                DropdownMenuItem(
+                                    text = { Text("Duplikuj") },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_copy),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onDuplicateClick()
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_trash),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        showDeleteDialog = true
+                                    }
+                                )
                             }
                         }
                     }
-                }
-            }
+                )
+            },
+            containerColor = Color.Transparent
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 6.dp)
+                                .size(22.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .background(
+                                        color = accentColor,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                            )
+                        }
 
-            // --- STREFA SCROLLOWANIA ---
-            if (grade != null) {
-                Column(modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 8.dp), verticalAlignment = Alignment.Top) {
-                        DetailIconBox { Box(modifier = Modifier.size(18.dp).clip(RoundedCornerShape(6.dp)).background(MaterialTheme.colorScheme.primaryContainer)) }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = grade.description ?: "Ocena", style = MaterialTheme.typography.titleLarge, color = textColor)
-                            Text(text = formatDate(grade.date), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = subTextColor)
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = formatGradeDetailsDate(dateMillis),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    DetailSectionGrade("PRZEDMIOT", grade.subjectName, R.drawable.ic_book_open, iconTint, textColor, subTextColor)
-
-                    if (grade.classType.isNotEmpty()) {
-                        DetailSectionGrade("RODZAJ ZAJĘĆ", ClassTypeUtils.getFullName(grade.classType), R.drawable.ic_graduation_hat, iconTint, textColor, subTextColor)
-                    }
-
-                    val gradeText = when {
-                        grade.isPoints -> if (grade.grade % 1.0 == 0.0) "${grade.grade.toInt()} pkt" else "${grade.grade} pkt"
-                        grade.grade == -1.0 -> "Aktywność +"
-                        grade.grade % 1.0 == 0.0 -> grade.grade.toInt().toString()
-                        else -> grade.grade.toString()
-                    }
-
-                    DetailSectionGrade(if (grade.isPoints) "PUNKTY" else "OCENA", gradeText, R.drawable.ic_trophy, iconTint, textColor, subTextColor)
-
-                    if (!grade.isPoints) {
-                        DetailSectionGrade("WAGA", grade.weight.toString(), R.drawable.ic_scales, iconTint, textColor, subTextColor)
-                    }
-
-                    if (!grade.comment.isNullOrEmpty()) {
-                        DetailSectionGrade("OPIS", grade.comment, R.drawable.ic_menu_2, iconTint, textColor, subTextColor)
-                    }
-                    Spacer(modifier = Modifier.height(100.dp))
                 }
-            } else if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            }
-        }
 
-        if (showDeleteDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                title = { Text("Usuń ocenę", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold)) },
-                text = { Text("Czy na pewno chcesz usunąć tę ocenę?", style = MaterialTheme.typography.bodyMedium) },
-                confirmButton = { TextButton(onClick = { onDeleteGrade(); showDeleteDialog = false }) { Text("Usuń", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelLarge) } },
-                dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Anuluj", style = MaterialTheme.typography.labelLarge) } },
-                shape = RoundedCornerShape(28.dp),
-                containerColor = surfaceColor
-            )
+                val gradeLabel = if (isPointsOrActivity) {
+                    "Punkty / Aktywność"
+                } else {
+                    if (!weightText.isNullOrEmpty()) "Ocena • Waga: $weightText" else "Ocena"
+                }
+
+                DetailRowCard(
+                    iconRes = R.drawable.ic_trophy,
+                    label = gradeLabel,
+                    value = gradeText,
+                    isValueHighlight = true
+                )
+
+                DetailRowCard(
+                    iconRes = R.drawable.ic_graduation_hat,
+                    label = "Przedmiot",
+                    value = subjectName
+                )
+
+                DetailRowCard(
+                    iconRes = R.drawable.ic_stand,
+                    label = "Rodzaj zajęć",
+                    value = classType
+                )
+
+                if (!comment.isNullOrEmpty()) {
+                    DetailRowCard(
+                        iconRes = R.drawable.ic_menu_2,
+                        label = "Komentarz",
+                        value = comment,
+                        isMultiline = true
+                    )
+                }
+            }
+
+            if (showDeleteDialog) {
+                DeleteConfirmationDialog(
+                    onConfirm = {
+                        onDeleteGrade()
+                        showDeleteDialog = false
+                    },
+                    onDismiss = { showDeleteDialog = false },
+                    itemType = "ocenę"
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .clickable(enabled = onClick != null) { onClick?.invoke() },
-        contentAlignment = Alignment.Center,
-        content = content
-    )
-}
-
-@Composable
-private fun DetailSectionGrade(
-    label: String,
-    text: String,
+private fun DetailRowCard(
     iconRes: Int,
-    iconTint: Color,
-    textColor: Color,
-    labelColor: Color
+    label: String?,
+    value: String,
+    isValueHighlight: Boolean = false,
+    isMultiline: Boolean = false
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 24.dp),
-        verticalAlignment = Alignment.Top
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        DetailIconBox {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+        ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(24.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(top = if (isMultiline) 3.dp else 0.dp)
+                    .size(22.dp)
             )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column {
+                if (label != null) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+
+                Text(
+                    text = value.ifEmpty { "-" },
+                    style = if (isValueHighlight) MaterialTheme.typography.titleLarge
+                    else MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = if (isValueHighlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.padding(top = 4.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = labelColor,
-                modifier = Modifier.padding(bottom = 2.dp)
+    }
+}
+
+@Composable
+private fun EmptyDetailsState(
+    title: String,
+    description: String
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(40.dp)
             )
             Text(
-                text = text.ifEmpty { "-" },
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = textColor
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl"))
-    return sdf.format(Date(timestamp)).replaceFirstChar { it.uppercase() }
+private fun formatGradeDetailsDate(timestamp: Long): String {
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+        .format(Date(timestamp))
+        .replaceFirstChar { it.uppercase() }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GradeDetailsScreenPreview() {
+    MyUZTheme {
+        GradeDetailsScreen(
+            title = "Kolokwium 1",
+            dateMillis = System.currentTimeMillis(),
+            subjectName = "Matematyka Dyskretna",
+            classType = "Wykład",
+            gradeText = "4.5",
+            isPointsOrActivity = false,
+            weightText = "3",
+            comment = "Zadania otwarte poszły świetnie, ale brakło czasu na ostatnie zadanie.",
+            onNavigateBack = {},
+            onEditGrade = {},
+            onDeleteGrade = {},
+            onDuplicateClick = {}
+        )
+    }
 }

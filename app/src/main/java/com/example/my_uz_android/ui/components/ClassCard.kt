@@ -1,13 +1,22 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Komponenty kart zajęć wykorzystywane w sekcjach Home i Kalendarz.
+ * Plik definiuje wspólny model prezentacji dla pojedynczych zajęć wraz z wariantami
+ * wizualnymi zależnymi od kontekstu ekranu.
+ */
+
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -39,14 +49,28 @@ import com.example.my_uz_android.ui.theme.InterFontFamily
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import android.content.res.Configuration
-import androidx.compose.foundation.layout.height
 
+/**
+ * Określa wariant wizualny karty zajęć zależny od ekranu.
+ */
 enum class ClassCardType {
     HOME,
     CALENDAR
 }
 
+/**
+ * Renderuje kartę pojedynczych zajęć z informacjami o czasie, sali i typie.
+ *
+ * @param classItem Dane zajęć wyświetlane na karcie.
+ * @param type Wariant karty zależny od kontekstu ekranu.
+ * @param backgroundColor Kolor tła karty.
+ * @param accentColor Kolor akcentu dla badge lub markera.
+ * @param showBadge Flaga określająca widoczność badge typu zajęć.
+ * @param hasDeadlines Flaga określająca widoczność wskaźnika deadline'u.
+ * @param isTeacherPlan Parametr kompatybilności dla kart planu prowadzącego.
+ * @param onClick Akcja wykonywana po kliknięciu karty.
+ * @param modifier Modyfikator układu Compose.
+ */
 @Composable
 fun ClassCard(
     classItem: ClassEntity,
@@ -54,15 +78,16 @@ fun ClassCard(
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainer,
     accentColor: Color = MaterialTheme.colorScheme.primary,
     showBadge: Boolean = true,
-    hasDeadlines: Boolean = false, // <-- DODANO (przekaż true, jeśli w czasie zajęć wypada deadline zadania)
+    hasDeadlines: Boolean = false,
     isTeacherPlan: Boolean = false,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // POPRAWKA: Automatyczne kolory dostosowujące się do motywu z MaterialTheme zamiast sztywnych HEXów
     val titleColor = MaterialTheme.colorScheme.onSurface
     val detailsColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val avatarTextColor = Color.White // Wymuszenie bieli dla najlepszego kontrastu z kolorem kółka
+    
+    // Dynamiczny kolor tekstu w kółku na podstawie jasności akcentu
+    val avatarTextColor = if (accentColor.luminance() > 0.5f) Color(0xFF1D192B) else Color.White
 
     val isPast = remember(classItem) {
         try {
@@ -77,19 +102,6 @@ fun ClassCard(
     }
 
     val contentAlpha = if (isPast && type == ClassCardType.CALENDAR) 0.6f else 1f
-    val secondaryInfo = if (isTeacherPlan) {
-        buildString {
-            if (classItem.groupCode.isNotBlank()) {
-                append(classItem.groupCode)
-            }
-            if (!classItem.subgroup.isNullOrBlank()) {
-                if (isNotEmpty()) append(" · ")
-                append(classItem.subgroup)
-            }
-        }
-    } else {
-        classItem.teacherName.orEmpty()
-    }
 
     Card(
         shape = RoundedCornerShape(8.dp),
@@ -151,50 +163,24 @@ fun ClassCard(
                         )
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = classItem.room ?: "",
-                            style = TextStyle(
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp,
-                                color = detailsColor
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                if (type == ClassCardType.CALENDAR && secondaryInfo.isNotBlank()) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(
-                                id = if (isTeacherPlan) R.drawable.ic_users else R.drawable.ic_user
-                            ),
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = detailsColor
-                        )
-                        Text(
-                            text = secondaryInfo,
-                            style = TextStyle(
-                                fontFamily = InterFontFamily,
-                                fontWeight = FontWeight.Normal,
-                                fontSize = 12.sp,
-                                lineHeight = 16.sp,
-                                color = detailsColor
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    if (!classItem.room.isNullOrBlank()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = classItem.room ?: "",
+                                style = TextStyle(
+                                    fontFamily = InterFontFamily,
+                                    fontWeight = FontWeight.Normal,
+                                    fontSize = 12.sp,
+                                    lineHeight = 16.sp,
+                                    color = detailsColor
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -235,14 +221,13 @@ fun ClassCard(
                         }
                     }
 
-                    // UX: Wyświetlanie kropki zadania/deadline'u pod znaczkiem
                     if (hasDeadlines) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.error) // Czerwona kropka dla deadline'u
+                                .background(MaterialTheme.colorScheme.error)
                         )
                     }
                 }
@@ -251,7 +236,6 @@ fun ClassCard(
     }
 }
 
-// ... Previews zostawione tak jak było (zmienione kolory odzwierciedlą się same w środowisku) ...
 @Preview(showBackground = true, name = "ClassCard • HOME")
 @Composable
 private fun ClassCardHomePreview() {
@@ -266,44 +250,6 @@ private fun ClassCardHomePreview() {
                 room = "A-101"
             ),
             type = ClassCardType.HOME,
-            showBadge = true
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "ClassCard • CALENDAR (przyszłość)")
-@Composable
-private fun ClassCardCalendarUpcomingPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Fizyka",
-                classType = "L",
-                date = LocalDate.now().plusDays(1).toString(),
-                startTime = "12:00",
-                endTime = "13:30",
-                room = "B-203"
-            ),
-            type = ClassCardType.CALENDAR,
-            showBadge = true
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "ClassCard • CALENDAR (przeszłość)")
-@Composable
-private fun ClassCardCalendarPastPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Chemia",
-                classType = "C",
-                date = LocalDate.now().minusDays(1).toString(),
-                startTime = "10:00",
-                endTime = "11:30",
-                room = "C-105"
-            ),
-            type = ClassCardType.CALENDAR,
             showBadge = true
         )
     }
@@ -327,72 +273,3 @@ private fun sampleClassEntity(
     groupCode = "",
     subgroup = null
 )
-
-@Preview(
-    showBackground = true,
-    name = "ClassCard • HOME (Dark)",
-    uiMode = Configuration.UI_MODE_NIGHT_YES
-)
-@Composable
-private fun ClassCardHomeDarkPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Matematyka",
-                classType = "W",
-                date = LocalDate.now().toString(),
-                startTime = "08:00",
-                endTime = "09:30",
-                room = "A-101"
-            ),
-            type = ClassCardType.HOME,
-            showBadge = true
-        )
-    }
-}
-
-@Preview(
-    showBackground = true,
-    name = "ClassCard • CALENDAR (przyszłość) (Dark)",
-    uiMode = Configuration.UI_MODE_NIGHT_YES
-)
-@Composable
-private fun ClassCardCalendarUpcomingDarkPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Fizyka",
-                classType = "L",
-                date = LocalDate.now().plusDays(1).toString(),
-                startTime = "12:00",
-                endTime = "13:30",
-                room = "B-203"
-            ),
-            type = ClassCardType.CALENDAR,
-            showBadge = true
-        )
-    }
-}
-
-@Preview(
-    showBackground = true,
-    name = "ClassCard • CALENDAR (przeszłość) (Dark)",
-    uiMode = Configuration.UI_MODE_NIGHT_YES
-)
-@Composable
-private fun ClassCardCalendarPastDarkPreview() {
-    MaterialTheme {
-        ClassCard(
-            classItem = sampleClassEntity(
-                subjectName = "Chemia",
-                classType = "C",
-                date = LocalDate.now().minusDays(1).toString(),
-                startTime = "10:00",
-                endTime = "11:30",
-                room = "C-105"
-            ),
-            type = ClassCardType.CALENDAR,
-            showBadge = true
-        )
-    }
-}

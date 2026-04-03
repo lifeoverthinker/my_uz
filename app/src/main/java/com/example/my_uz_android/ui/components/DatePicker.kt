@@ -1,73 +1,103 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Dialogowe komponenty wyboru daty i czasu oparte o Material 3.
+ * Są wykorzystywane w formularzach dodawania i edycji danych wymagających
+ * precyzyjnego wyboru terminu.
+ */
+
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZoneOffset
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.window.DialogProperties
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Wyświetla dialog wyboru daty i zwraca wybraną wartość w milisekundach.
+ *
+ * @param date Aktualnie wybrana data w milisekundach lub null.
+ * @param onDateSelected Callback wywoływany po potwierdzeniu wyboru daty.
+ * @param onDismiss Callback zamykający dialog.
+ */
 @Composable
 fun DatePicker(
-    date: Long,
+    date: Long?,
     onDateSelected: (Long) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit
 ) {
-    val initialUtcTime = remember(date) {
-        val localDate = Instant.ofEpochMilli(date)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate()
-        localDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
-    }
-
-    val dateState = rememberDatePickerState(initialSelectedDateMillis = initialUtcTime)
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = date ?: System.currentTimeMillis()
+    )
 
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(
-                onClick = {
-                    dateState.selectedDateMillis?.let { onDateSelected(it) }
-                }
-            ) {
-                // Używamy pogrubionego labelLarge dla czytelności akcji
-                Text("OK", style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.primary))
+            TextButton(onClick = {
+                datePickerState.selectedDateMillis?.let { onDateSelected(it) }
+            }) {
+                Text("OK")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj", style = MaterialTheme.typography.labelLarge.copy(color = MaterialTheme.colorScheme.outline))
+                Text("Anuluj")
             }
         },
-        // Korzystamy z systemowych kształtów MD3
-        shape = MaterialTheme.shapes.extraLarge,
         colors = DatePickerDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        tonalElevation = 0.dp
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
     ) {
         androidx.compose.material3.DatePicker(
-            state = dateState,
-            showModeToggle = false, // Ukrywamy ikonę edycji ręcznej dla czystszego wyglądu "Calendar"
+            state = datePickerState,
             colors = DatePickerDefaults.colors(
-                containerColor = MaterialTheme.colorScheme.surface,
-                titleContentColor = MaterialTheme.colorScheme.secondary, // Mniejszy nacisk na tytuł
-                headlineContentColor = MaterialTheme.colorScheme.onSurface, // Mocny nagłówek z datą
-                weekdayContentColor = MaterialTheme.colorScheme.outline, // Dni tygodnia bardziej subtelne
-                subheadContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                yearContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                currentYearContentColor = MaterialTheme.colorScheme.primary,
-                selectedYearContentColor = MaterialTheme.colorScheme.onPrimary,
-                selectedYearContainerColor = MaterialTheme.colorScheme.primary,
-                dayContentColor = MaterialTheme.colorScheme.onSurface,
-                selectedDayContentColor = MaterialTheme.colorScheme.onPrimary,
-                selectedDayContainerColor = MaterialTheme.colorScheme.primary,
-                todayContentColor = MaterialTheme.colorScheme.primary,
-                todayDateBorderColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             )
         )
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Wyświetla dialog wyboru godziny oparty o komponent TimePicker.
+ *
+ * @param initialHour Godzina początkowa.
+ * @param initialMinute Minuta początkowa.
+ * @param onTimeSelected Callback zwracający wybraną godzinę i minutę.
+ * @param onDismiss Callback zamykający dialog.
+ */
+@Composable
+fun TimePicker(
+    initialHour: Int = 12,
+    initialMinute: Int = 0,
+    onTimeSelected: (Int, Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val timePickerState = rememberTimePickerState(
+        initialHour = initialHour,
+        initialMinute = initialMinute,
+        is24Hour = true
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        confirmButton = {
+            TextButton(onClick = { onTimeSelected(timePickerState.hour, timePickerState.minute) }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Anuluj")
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        text = {
+            androidx.compose.material3.TimePicker(
+                state = timePickerState,
+                colors = TimePickerDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
+            )
+        }
+    )
 }

@@ -4,11 +4,11 @@ import com.example.my_uz_android.data.daos.TasksDao
 import com.example.my_uz_android.data.models.SharedTaskRequest
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.util.NetworkResult
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
 class TasksRepository(
@@ -21,9 +21,9 @@ class TasksRepository(
 
     suspend fun insertTask(task: TaskEntity) = tasksDao.insert(task)
 
-    // ✅ DODANE: Metoda do zapisu listy zadań (wykorzystywana przy imporcie)
+    // Mostek dla masowego wstawiania używanego w SettingsViewModel i imporcie
     suspend fun insertTasks(tasks: List<TaskEntity>) {
-        tasks.forEach { tasksDao.insert(it) }
+        tasksDao.insertAll(tasks)
     }
 
     suspend fun updateTask(task: TaskEntity) = tasksDao.update(task)
@@ -32,59 +32,39 @@ class TasksRepository(
 
     suspend fun deleteAllTasks() = tasksDao.deleteAll()
 
-    // --- Udostępnianie (Eksport) ---
-    suspend fun shareTasks(tasks: List<TaskEntity>): String {
-        val gson = Gson()
-        // Konwersja listy zadań na JSON String
-        val payloadJson = gson.toJson(tasks)
+    // --- Udostępnianie ---
+    suspend fun shareTasks(tasks: List<TaskEntity>): NetworkResult<String> {
+        return try {
+            val payloadJson = Json.encodeToString(tasks)
+            val code = (1..6)
+                .map { "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".random() }
+                .joinToString("")
 
-        // Generowanie krótkiego kodu (6 znaków: A-Z, 0-9)
-        val charPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        val code = (1..6)
-            .map { Random.nextInt(0, charPool.length) }
-            .map(charPool::get)
-            .joinToString("")
-
-        // Tworzymy obiekt żądania
-        val request = SharedTaskRequest(
-            shareId = code,
-            payload = payloadJson
-        )
-
-        // Wstawiamy do tabeli 'shared_tasks' w Supabase
-        supabase.postgrest["shared_tasks"].insert(request)
-
-        return code
+            val request = SharedTaskRequest(shareId = code, payload = payloadJson)
+            supabase.postgrest["shared_tasks"].insert(request)
+            NetworkResult.Success(code)
+        } catch (e: Exception) {
+            NetworkResult.Error("Błąd udostępniania: ${e.localizedMessage}")
+        }
     }
 
     // --- Importowanie ---
     suspend fun importTasks(code: String): NetworkResult<List<TaskEntity>> {
         return try {
-            // Pobieramy rekord o danym kodzie
             val result = supabase.postgrest["shared_tasks"]
-                .select {
-                    filter {
-                        eq("share_id", code)
-                    }
-                }.decodeSingleOrNull<SharedTaskRequest>()
+                .select { filter { eq("share_id", code) } }
+                .decodeSingleOrNull<SharedTaskRequest>()
 
             if (result != null) {
-                val gson = Gson()
-                val type = object : TypeToken<List<TaskEntity>>() {}.type
-                // Deserializujemy JSON String z pola payload na listę zadań
-                val tasks: List<TaskEntity> = gson.fromJson(result.payload, type)
-
-                // Zapisujemy pobrane zadania w lokalnej bazie
-                // Resetujemy ID, aby Room nadał nowe
+                val tasks: List<TaskEntity> = Json.decodeFromString(result.payload)
                 val tasksToInsert = tasks.map { it.copy(id = 0) }
-                tasksToInsert.forEach { tasksDao.insert(it) }
-
+                tasksDao.insertAll(tasksToInsert)
                 NetworkResult.Success(tasksToInsert)
             } else {
-                NetworkResult.Error("Nie znaleziono zadań dla kodu: $code")
+                NetworkResult.Error("Nie znaleziono kodu: $code")
             }
         } catch (e: Exception) {
-            NetworkResult.Error("Błąd importu: ${e.message}")
+            NetworkResult.Error("Błąd importu: ${e.localizedMessage}")
         }
     }
 }

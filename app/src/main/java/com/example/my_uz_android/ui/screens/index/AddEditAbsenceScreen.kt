@@ -1,230 +1,398 @@
 package com.example.my_uz_android.ui.screens.index
 
-import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.my_uz_android.R
-import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.DatePicker
-import com.example.my_uz_android.ui.screens.calendar.tasks.FormRow
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.util.ClassTypeUtils
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddEditAbsenceScreen(
-    absenceId: Int?,
+fun AbsenceAddEditScreenRoute(
+    viewModel: AddEditAbsenceViewModel,
     prefilledSubject: String? = null,
     prefilledClassType: String? = null,
-    prefilledDate: Long? = null,
-    onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: AddEditAbsenceViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    onNavigateBack: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val isSaved by viewModel.isSaved.collectAsState()
-    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
 
     LaunchedEffect(isSaved) {
-        if (isSaved) {
-            Toast.makeText(context, "Operacja zakończona pomyślnie", Toast.LENGTH_SHORT).show()
-            onNavigateBack()
+        if (isSaved) onNavigateBack()
+    }
+
+    LaunchedEffect(prefilledSubject, prefilledClassType, uiState.id, uiState.subjectName) {
+        if (uiState.id == 0 && uiState.subjectName == null) {
+            viewModel.initNewAbsence(prefilledSubject, prefilledClassType)
         }
     }
 
-    LaunchedEffect(absenceId, prefilledSubject, prefilledClassType, prefilledDate) {
-        if (absenceId != null && absenceId != 0) {
-            viewModel.loadAbsence(absenceId)
-        } else {
-            if (uiState.id == 0 && uiState.subjectName == null) {
-                viewModel.initNewAbsence(prefilledSubject, prefilledClassType)
-                if (prefilledDate != null) viewModel.updateDate(prefilledDate)
-            }
-        }
-    }
+    var localSubject by remember(uiState.subjectName) { mutableStateOf(uiState.subjectName ?: "") }
+    var localClassType by remember(uiState.classType) { mutableStateOf(uiState.classType ?: "") }
 
-    Dialog(
-        onDismissRequest = onNavigateBack,
-        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    // UX 1:1: przełącznik "Usprawiedliwiona" pozostaje lokalnym stanem UI.
+    var isExcused by remember { mutableStateOf(true) }
+
+    val subjectsList = uiState.availableSubjects.map { it.first }
+    val classTypesList = uiState.availableSubjects
+        .find { it.first == localSubject }
+        ?.second
+        .orEmpty()
+
+    AbsenceAddEditScreen(
+        isEditMode = uiState.id != 0,
+        selectedSubject = localSubject,
+        onSubjectChange = {
+            localSubject = it
+            viewModel.updateSubjectName(it)
+            viewModel.updateClassType("")
+            localClassType = ""
+        },
+        subjectsList = subjectsList,
+        selectedClassType = localClassType,
+        onClassTypeChange = {
+            localClassType = it
+            viewModel.updateClassType(it)
+        },
+        classTypesList = classTypesList,
+        dateMillis = uiState.date,
+        onDateChange = viewModel::updateDate,
+        isExcused = isExcused,
+        onExcusedChange = { isExcused = it },
+        reason = uiState.description,
+        onReasonChange = viewModel::updateDescription,
+        onSaveClick = { viewModel.saveAbsence() },
+        onNavigateBack = onNavigateBack
+    )
+}
+
+@Composable
+private fun absenceOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    cursorColor = MaterialTheme.colorScheme.primary
+)
+
+private val AbsenceAppShape = RoundedCornerShape(16.dp)
+
+@Composable
+private fun AbsenceClickableFieldRow(
+    label: String,
+    value: String,
+    iconRes: Int?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(AbsenceAppShape)
+            .clickable(onClick = onClick),
+        shape = AbsenceAppShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.surface,
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .height(64.dp)
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(painterResource(R.drawable.ic_x_close), "Zamknij")
-                    }
-                    Button(
-                        onClick = { viewModel.saveAbsence() },
-                        enabled = !uiState.subjectName.isNullOrBlank(),
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text(stringResource(R.string.btn_save))
-                    }
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (iconRes != null) {
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Column {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
-        ) { paddingValues ->
-            AddEditAbsenceContent(
-                uiState = uiState,
-                onSubjectChange = viewModel::updateSubjectName,
-                onClassTypeChange = viewModel::updateClassType,
-                onDescriptionChange = viewModel::updateDescription,
-                onDateChange = viewModel::updateDate,
-                modifier = Modifier.padding(paddingValues)
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun AddEditAbsenceContent(
-    uiState: AddEditAbsenceUiState,
-    onSubjectChange: (String?) -> Unit,
-    onClassTypeChange: (String?) -> Unit,
-    onDescriptionChange: (String) -> Unit,
+fun AbsenceAddEditScreen(
+    isEditMode: Boolean,
+    selectedSubject: String,
+    onSubjectChange: (String) -> Unit,
+    subjectsList: List<String>,
+    selectedClassType: String,
+    onClassTypeChange: (String) -> Unit,
+    classTypesList: List<String>,
+    dateMillis: Long,
     onDateChange: (Long) -> Unit,
-    modifier: Modifier = Modifier
+    isExcused: Boolean,
+    onExcusedChange: (Boolean) -> Unit,
+    reason: String,
+    onReasonChange: (String) -> Unit,
+    onSaveClick: () -> Unit,
+    onNavigateBack: () -> Unit
 ) {
-    var showSubjectModal by remember { mutableStateOf(false) }
-    var showTypeModal by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    val isDark = isSystemInDarkTheme()
 
-    val isTypeSelectionEnabled = !uiState.subjectName.isNullOrBlank()
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .defaultMinSize(minHeight = 72.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(modifier = Modifier.width(40.dp))
-            Text(
-                text = if(uiState.id != 0) "Edytuj nieobecność" else "Nowa nieobecność",
-                style = TextStyle(fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurface)
-            )
-        }
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = if (isEditMode) "Edytuj nieobecność" else "Dodaj nieobecność",
+                    navigationIcon = R.drawable.ic_close,
+                    isNavigationIconFilled = true,
+                    onNavigationClick = onNavigateBack,
+                    actions = {
+                        Button(
+                            onClick = onSaveClick,
+                            modifier = Modifier
+                                .padding(end = 8.dp)
+                                .heightIn(min = 48.dp),
+                            enabled = selectedSubject.isNotBlank() && selectedClassType.isNotBlank()
+                        ) {
+                            Text("Zapisz", style = MaterialTheme.typography.labelLarge)
+                        }
+                    },
+                    containerColor = Color.Transparent
+                )
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                AbsenceClickableFieldRow(
+                    label = "Data nieobecności",
+                    value = formatAbsenceAddEditDate(dateMillis),
+                    iconRes = R.drawable.ic_calendar,
+                    onClick = { showDatePicker = true }
+                )
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-        Spacer(modifier = Modifier.height(8.dp))
+                AbsenceAppDropdownMenu(
+                    label = "Przedmiot",
+                    selectedOption = selectedSubject,
+                    options = subjectsList,
+                    onOptionSelected = onSubjectChange,
+                    iconRes = R.drawable.ic_book_open
+                )
 
-        FormRow(iconRes = R.drawable.ic_calendar, onClick = { showDatePicker = true }) {
-            val date = Instant.ofEpochMilli(uiState.date).atZone(ZoneId.systemDefault()).toLocalDate()
-            val formatter = DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale("pl"))
-            Text(text = date.format(formatter), style = MaterialTheme.typography.bodyLarge)
-        }
+                AnimatedVisibility(
+                    visible = selectedSubject.isNotEmpty() && classTypesList.isNotEmpty(),
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "RODZAJ ZAJĘĆ",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            classTypesList.forEach { type ->
+                                FilterChip(
+                                    selected = selectedClassType == type,
+                                    onClick = { onClassTypeChange(type) },
+                                    label = { Text(ClassTypeUtils.getFullName(type)) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
 
-        FormRow(iconRes = R.drawable.ic_book_open, onClick = { showSubjectModal = true }) {
-            Text(
-                text = uiState.subjectName ?: "Wybierz przedmiot",
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (uiState.subjectName == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-            )
-        }
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onExcusedChange(!isExcused) }
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_check_circle_broken),
+                                contentDescription = null,
+                                tint = if (isExcused) Color(0xFF388E3C) else Color(0xFFE57373),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = "Usprawiedliwiona",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Switch(checked = isExcused, onCheckedChange = onExcusedChange)
+                    }
+                }
 
-        FormRow(
-            iconRes = R.drawable.ic_graduation_hat,
-            onClick = if (isTypeSelectionEnabled) { { showTypeModal = true } } else null
-        ) {
-            val typeText = uiState.classType?.let { ClassTypeUtils.getFullName(it) } ?: "Rodzaj zajęć (opcjonalne)"
-            Text(
-                text = typeText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (!isTypeSelectionEnabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f) else MaterialTheme.colorScheme.onSurface
-            )
-        }
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = onReasonChange,
+                    label = { Text("Powód / Opis (opcjonalnie)") },
+                    placeholder = { Text("np. Wizyta u lekarza, zwolnienie lekarskie L4...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 120.dp),
+                    maxLines = 5,
+                    colors = absenceOutlinedTextFieldColors(),
+                    shape = AbsenceAppShape
+                )
 
-        FormRow(iconRes = R.drawable.ic_menu_2) {
-            BasicTextField(
-                value = uiState.description,
-                onValueChange = onDescriptionChange,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                decorationBox = { inner ->
-                    if (uiState.description.isEmpty()) Text("Dodaj opis (opcjonalnie)", style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurfaceVariant))
-                    inner()
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
     }
 
     if (showDatePicker) {
         DatePicker(
-            date = uiState.date,
-            onDateSelected = { onDateChange(it); showDatePicker = false },
+            date = dateMillis,
+            onDateSelected = {
+                onDateChange(it)
+                showDatePicker = false
+            },
             onDismiss = { showDatePicker = false }
         )
     }
+}
 
-    if (showSubjectModal) {
-        Dialog(onDismissRequest = { showSubjectModal = false }) {
-            Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                    item { Text("Wybierz przedmiot", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(24.dp)) }
-                    items(uiState.availableSubjects) { (subject, _) ->
-                        Row(modifier = Modifier.fillMaxWidth().clickable { onSubjectChange(subject); onClassTypeChange(null); showSubjectModal = false }.padding(horizontal = 24.dp, vertical = 12.dp)) {
-                            RadioButton(selected = uiState.subjectName == subject, onClick = null)
-                            Spacer(Modifier.width(12.dp))
-                            Text(subject)
-                        }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AbsenceAppDropdownMenu(
+    label: String,
+    selectedOption: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit,
+    iconRes: Int
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        OutlinedTextField(
+            value = selectedOption,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+            },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
+            colors = absenceOutlinedTextFieldColors(),
+            shape = AbsenceAppShape
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
                     }
-                }
+                )
             }
         }
     }
+}
 
-    if (showTypeModal) {
-        val availableTypes = uiState.availableSubjects.find { it.first == uiState.subjectName }?.second ?: emptyList()
-        Dialog(onDismissRequest = { showTypeModal = false }) {
-            Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                LazyColumn(modifier = Modifier.padding(vertical = 16.dp)) {
-                    item { Text("Wybierz rodzaj", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(24.dp)) }
-                    items(availableTypes) { type ->
-                        Row(modifier = Modifier.fillMaxWidth().clickable { onClassTypeChange(type); showTypeModal = false }.padding(horizontal = 24.dp, vertical = 12.dp)) {
-                            RadioButton(selected = uiState.classType == type, onClick = null)
-                            Spacer(Modifier.width(12.dp))
-                            Text(ClassTypeUtils.getFullName(type))
-                        }
-                    }
-                }
-            }
-        }
+private fun formatAbsenceAddEditDate(timestamp: Long): String {
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+        .format(Date(timestamp))
+        .replaceFirstChar { it.uppercase() }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun AbsenceAddEditScreenPreview() {
+    MyUZTheme {
+        AbsenceAddEditScreen(
+            isEditMode = false,
+            selectedSubject = "Matematyka",
+            onSubjectChange = {},
+            subjectsList = listOf("Matematyka", "Fizyka", "Programowanie"),
+            selectedClassType = "L",
+            onClassTypeChange = {},
+            classTypesList = listOf("W", "L", "C"),
+            dateMillis = System.currentTimeMillis(),
+            onDateChange = {},
+            isExcused = true,
+            onExcusedChange = {},
+            reason = "Wizyta u lekarza",
+            onReasonChange = {},
+            onSaveClick = {},
+            onNavigateBack = {}
+        )
     }
 }

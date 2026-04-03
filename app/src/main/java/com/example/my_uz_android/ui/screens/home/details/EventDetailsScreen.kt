@@ -1,215 +1,260 @@
 package com.example.my_uz_android.ui.screens.home.details
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
+import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.ui.AppViewModelProvider
-import com.example.my_uz_android.ui.theme.extendedColors
-import androidx.compose.ui.graphics.Color
+import com.example.my_uz_android.ui.components.TopAppBar
+import com.example.my_uz_android.ui.theme.MyUZTheme
 
-// Podmień całą główną funkcję EventDetailsScreen
 @Composable
 fun EventDetailsScreen(
     onBackClick: () -> Unit,
     viewModel: EventDetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val event = uiState.eventEntity
 
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val textColor = MaterialTheme.colorScheme.onSurface
-    val subTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
-    val accentColor = MaterialTheme.extendedColors.eventCardBackground
-
-    Surface(
-        color = surfaceColor,
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-    ) {
-        Column(
+    if (uiState.isLoading) {
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest),
+            contentAlignment = Alignment.Center
         ) {
-            // --- HEADER ---
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                DetailIconBox(onClick = onBackClick) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_x_close),
-                        contentDescription = "Zamknij",
-                        tint = textColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
+            CircularProgressIndicator()
+        }
+        return
+    }
 
-            // --- ZAWARTOŚĆ ---
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (event != null) {
-                Column(
+    val event = uiState.eventEntity
+    if (event == null) {
+        EmptyDetailsState(
+            title = "Brak danych wydarzenia",
+            description = "Nie udało się pobrać szczegółów tego wydarzenia."
+        )
+        return
+    }
+
+    EventDetailsContent(
+        event = event,
+        onBackClick = onBackClick
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EventDetailsContent(
+    event: EventEntity,
+    onBackClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = "",
+                    navigationIcon = R.drawable.ic_close,
+                    isNavigationIconFilled = true,
+                    onNavigationClick = onBackClick,
+                    actions = {},
+                    containerColor = Color.Transparent
+                )
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow
                 ) {
-                    // Tytuł
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 8.dp),
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
                         verticalAlignment = Alignment.Top
                     ) {
-                        DetailIconBox {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 6.dp)
+                                .size(22.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-                                    .background(accentColor)
+                                    .size(14.dp)
+                                    .background(Color(0xFF4CAF50), RoundedCornerShape(4.dp))
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
 
                         Column {
                             Text(
                                 text = event.title,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = textColor,
-                                modifier = Modifier.padding(bottom = 4.dp)
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-
-                            val dateTimeText = if (event.timeRange.isNotEmpty()) {
-                                "${event.date}, ${event.timeRange}"
-                            } else {
-                                event.date
-                            }
-
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = dateTimeText,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                                color = subTextColor
+                                text = "${event.date} • ${event.timeRange}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    if (event.location.isNotEmpty()) {
-                        DetailSection(
-                            label = "LOKALIZACJA",
-                            text = event.location,
-                            iconRes = R.drawable.ic_marker_pin,
-                            iconColor = iconTint,
-                            textColor = textColor,
-                            labelColor = subTextColor
-                        )
-                    }
-
-                    if (event.description.isNotEmpty()) {
-                        DetailSection(
-                            label = "OPIS",
-                            text = event.description,
-                            iconRes = R.drawable.ic_menu_2,
-                            iconColor = iconTint,
-                            textColor = textColor,
-                            labelColor = subTextColor
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(100.dp))
                 }
-            } else {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "Nie znaleziono wydarzenia",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = subTextColor
+
+                if (event.location.isNotBlank()) {
+                    DetailRowCard(
+                        iconRes = R.drawable.ic_marker_pin,
+                        label = "Miejsce",
+                        value = event.location
+                    )
+                }
+
+                if (event.description.isNotBlank()) {
+                    DetailRowCard(
+                        iconRes = R.drawable.ic_menu_2,
+                        label = "Opis",
+                        value = event.description,
+                        isMultiline = true
                     )
                 }
             }
         }
     }
 }
-@Composable
-private fun DetailIconBox(onClick: (() -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .clickable(enabled = onClick != null) { onClick?.invoke() },
-        contentAlignment = Alignment.Center,
-        content = content
-    )
-}
 
 @Composable
-private fun DetailSection(
-    label: String,
-    text: String,
+private fun DetailRowCard(
     iconRes: Int,
-    iconColor: androidx.compose.ui.graphics.Color,
-    textColor: androidx.compose.ui.graphics.Color,
-    labelColor: androidx.compose.ui.graphics.Color
+    label: String?,
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+    isMultiline: Boolean = false
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 24.dp),
-        verticalAlignment = Alignment.Top
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        DetailIconBox {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
+        ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(24.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(top = if (isMultiline) 3.dp else 0.dp)
+                    .size(22.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                if (label != null) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+                Text(
+                    text = value.ifEmpty { "-" },
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = valueColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDetailsState(
+    title: String,
+    description: String
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(40.dp)
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
 
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.padding(top = 4.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = labelColor,
-                modifier = Modifier.padding(bottom = 2.dp)
-            )
-
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = textColor
-            )
-        }
+@Preview(showBackground = true)
+@Composable
+private fun EventDetailsContentPreview() {
+    MyUZTheme {
+        EventDetailsContent(
+            event = EventEntity(
+                id = 1,
+                title = "Dzień Otwarty Wydziału",
+                date = "Czwartek, 2 kwietnia 2026",
+                timeRange = "10:00 - 14:00",
+                location = "Budynek C, Aula Główna",
+                description = "Spotkania z prowadzącymi i prezentacja kierunków."
+            ),
+            onBackClick = {}
+        )
     }
 }
