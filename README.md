@@ -1,114 +1,58 @@
-# MyUZ Android
+<div align="center">
 
-Nowoczesna aplikacja mobilna dla studentów Uniwersytetu Zielonogórskiego.
-Projekt jest rozwijany w Kotlinie z UI w Jetpack Compose.
+<img src="https://via.placeholder.com/1200x400/1E1E1E/FFFFFF?text=My+UZ+-+Zaprojektowane+z+my%C5%9Bl%C4%85+o+Studentach" alt="My UZ Banner" width="100%">
 
-## Funkcjonalności
+# 🎓 My UZ - Twój Studencki Asystent
 
-### Home
-- podsumowanie dnia,
-- najbliższe zajęcia,
-- zadania,
-- wydarzenia.
+**Nowoczesna, przejrzysta i intuicyjna aplikacja dla studentów, zaprojektowana z naciskiem na najlepsze doświadczenie użytkownika (UX) i nowoczesny interfejs (UI).**
 
-### Kalendarz
-- własny plan zajęć,
-- wyszukiwanie planów (`Grupy` / `Wykładowcy`),
-- podgląd planu,
-- dodawanie planów do ulubionych,
-- filtrowanie podgrup.
+[![Kotlin](https://img.shields.io/badge/Kotlin-100%25-B125EA?style=for-the-badge&logo=kotlin)](https://kotlinlang.org/)
+[![Jetpack Compose](https://img.shields.io/badge/Compose-UI-4285F4?style=for-the-badge&logo=android)](https://developer.android.com/jetpack/compose)
+[![UI/UX](https://img.shields.io/badge/UI%2FUX-Designed-FF61F6?style=for-the-badge&logo=figma)](#)
 
-### Indeks
-- oceny,
-- nieobecności,
-- szczegóły i formularze dodawania/edycji.
+</div>
 
-### Dodatkowe moduły
-- onboarding przy pierwszym uruchomieniu,
-- ekran powiadomień,
-- ustawienia motywu i danych,
-- widget z najbliższymi zajęciami (Glance + WorkManager).
+---
 
-## Stack technologiczny
+## 🎨 Wizja Projektowa (Design & UX)
 
-- Kotlin
-- Jetpack Compose + Material 3
-- Navigation Compose
-- Room
-- Coroutines + Flow
-- WorkManager
-- Glance App Widget
-- Supabase (API / dane planu)
-- Manual DI (kontener aplikacji)
+Jako początkująca projektantka UI/UX, moim głównym celem przy tworzeniu **My UZ** było rozwiązanie problemu skomplikowanych i przestarzałych systemów uczelnianych. Zależało mi na stworzeniu narzędzia, które nie przytłacza, a pomaga zorganizować studenckie życie.
 
-## Architektura
+### 💡 Główne założenia:
+- **Clean & Minimal UI:** Pozbycie się zbędnego szumu informacyjnego. Interfejs opiera się na kartach i wyraźnej hierarchii wizualnej.
+- **Typografia:** Zastosowanie rodziny fontów **Inter** we wszystkich wariantach (od Thin do Black). Zapewnia to maksymalną czytelność na małych ekranach smartfonów, a jednocześnie nadaje aplikacji nowoczesny, technologiczny sznyt.
+- **Wydajność wizualna:** Zamiast ciężkich obrazków (PNG/JPG), aplikacja wykorzystuje lekkie ilustracje wektorowe (SVG/XML). Dzięki temu grafiki (np. w stanach pustych / "empty states") są ostre jak brzytwa na każdym wyświetlaczu, a aplikacja zajmuje mniej miejsca w pamięci telefonu.
+- **User-Centric:** Najważniejsze funkcje studenckie – plan zajęć, oceny i limity nieobecności – zostały zaprojektowane tak, aby były dostępne za pomocą maksymalnie 1-2 kliknięć.
 
-- MVVM
-- Repozytoria + lokalna baza danych
-- Warstwa UI przygotowana pod Light/Dark mode przez `MaterialTheme`
+---
 
-## Wymagania
+## ✨ Funkcjonalności
 
-- Android Studio (Flamingo/Hedgehog/Koala lub nowsze)
-- JDK 17
-- Android SDK (minSdk 26, targetSdk 34)
+Aplikacja zbiera wszystkie niezbędne dla studenta narzędzia w jednym, spójnym wizualnie ekosystemie:
 
-## Konfiguracja lokalna
+- **📅 Plan zajęć:** Interaktywny kalendarz z intuicyjnym podglądem na nadchodzące ćwiczenia i wykłady.
+- **📊 Oceny i statystyki:** Przejrzysty moduł śledzenia postępów z automatycznym kalkulatorem średniej.
+- **🛑 Nieobecności:** Łatwe monitorowanie limitów nieobecności (żeby zawsze wiedzieć, czy można jeszcze pospać!).
+- **✅ Zadania (To-Do):** Wbudowany menedżer zadań powiązany z konkretnymi zajęciami.
+- **📱 Widgety na ekran domowy:** Błyskawiczny dostęp do dzisiejszego planu prosto z pulpitu telefonu.
+- **☁️ Kopia zapasowa:** Synchronizacja z chmurą (Supabase), aby nigdy nie stracić swoich danych.
 
-Uzupełnij `local.properties`:
+---
 
-```properties
-SUPABASE_URL=https://twoj-projekt.supabase.co
-SUPABASE_KEY=twoj_klucz
-```
+## 🛠️ Stos Technologiczny
 
-## Uruchomienie
+Aplikacja to nie tylko design, ale też solidna inżynieria napisana zgodnie z najnowszymi standardami Androida:
 
-```powershell
-Set-Location "C:\Users\Martyna\Documents\GitHub\my_uz_android"
-.\gradlew.bat :app:assembleDebug
-```
+* **Język:** Kotlin
+* **UI Framework:** Jetpack Compose (Material Design 3)
+* **Architektura:** MVVM (Model-View-ViewModel) + Coroutines & Flow
+* **Bazy danych:** Room Database (Lokalnie) + Supabase (Backend/Chmura)
+* **Nawigacja:** Compose Navigation
 
-APK debug:
+---
 
-- `app/build/outputs/apk/debug/`
+## 🚀 Jak uruchomić projekt lokalnie?
 
-## Testy
-
-Wszystkie testy jednostkowe:
-
-```powershell
-Set-Location "C:\Users\Martyna\Documents\GitHub\my_uz_android"
-.\gradlew.bat :app:testDebugUnitTest --no-daemon
-```
-
-Wybrane testy:
-
-```powershell
-Set-Location "C:\Users\Martyna\Documents\GitHub\my_uz_android"
-.\gradlew.bat :app:testDebugUnitTest --tests "com.example.my_uz_android.CalendarViewModelTest" --no-daemon
-```
-
-## Widget
-
-Pliki modułu widgetu:
-
-- `app/src/main/java/com/example/my_uz_android/widget/Widget.kt`
-- `app/src/main/java/com/example/my_uz_android/widget/WidgetWorker.kt`
-- `app/src/main/java/com/example/my_uz_android/widget/WidgetReceiver.kt`
-
-Aktualizacja widgetu:
-- ręczna (przycisk odświeżania),
-- cykliczna (WorkManager),
-- wymuszana przy wejściu do aplikacji.
-
-## Dokumentacja kodu (KDoc)
-
-Aktualny postęp folderami:
-
-- zaliczone: `ui/components`, `ui/theme`, `ui/screens/onboarding`
-- w toku: kolejne foldery `ui/screens`
-
-## Status projektu
-
-Projekt nieoficjalny (nie jest oficjalną aplikacją UZ).
+1. Sklonuj repozytorium:
+   ```bash
+   git clone [https://github.com/lifeoverthinker/my_uz.git](https://github.com/lifeoverthinker/my_uz.git)
