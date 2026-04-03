@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Zestaw dialogów pomocniczych używanych w module kalendarza.
+ * Obejmuje filtrowanie podgrup oraz prezentację danych prowadzącego,
+ * wraz ze współdzielonym stylem bazowego okna dialogowego.
+ */
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -21,6 +27,14 @@ import com.example.my_uz_android.R
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
+/**
+ * Wyświetla dialog filtrowania podgrup planu zajęć.
+ *
+ * @param subgroups Lista wszystkich dostępnych podgrup.
+ * @param selectedSubgroups Zbiór aktualnie zaznaczonych podgrup.
+ * @param onDismiss Callback zamykający dialog.
+ * @param onSelectionChange Callback zwracający nowy zestaw zaznaczeń.
+ */
 fun SubgroupFilterDialog(
     subgroups: List<String>,
     selectedSubgroups: Set<String>,
@@ -105,6 +119,14 @@ fun SubgroupFilterDialog(
 }
 
 @Composable
+/**
+ * Wyświetla dialog ze szczegółowymi informacjami o wykładowcy.
+ *
+ * @param onDismiss Callback zamykający dialog.
+ * @param fullName Imię i nazwisko prowadzącego.
+ * @param department Nazwa instytutu lub katedry.
+ * @param email Adres e-mail prowadzącego.
+ */
 fun TeacherInfoDialog(
     onDismiss: () -> Unit,
     fullName: String,

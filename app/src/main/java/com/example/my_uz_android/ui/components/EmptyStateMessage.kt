@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Zestaw komponentów Empty State używanych w dashboardzie i ekranach list.
+ * Plik zawiera zarówno pełnoekranowe warianty informacyjne, jak i kompaktowe
+ * karty dashboardowe dla sekcji bez danych.
+ */
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -169,6 +175,12 @@ fun CalendarEmptyState(
     )
 }
 
+/**
+ * Wyświetla preset Empty State dla sekcji zadań.
+ *
+ * @param iconRes Id zasobu ilustracji.
+ * @param modifier Modyfikator układu Compose.
+ */
 @Composable
 fun TasksEmptyState(
     iconRes: Int,
@@ -185,6 +197,12 @@ fun TasksEmptyState(
     )
 }
 
+/**
+ * Wyświetla preset Empty State dla sekcji nieobecności.
+ *
+ * @param iconRes Id zasobu ilustracji.
+ * @param modifier Modyfikator układu Compose.
+ */
 @Composable
 fun AbsencesEmptyState(
     iconRes: Int,
@@ -225,7 +243,7 @@ fun DashboardEmptyCard(
         ) {
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                color = containerColor,
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -267,6 +285,18 @@ fun DashboardEmptyCard(
     }
 }
 
+/**
+ * Renderuje kartę dashboardową Empty State z dodatkowym przyciskiem akcji.
+ *
+ * @param title Tytuł karty.
+ * @param message Treść informacyjna.
+ * @param iconRes Id zasobu ikony.
+ * @param actionText Tekst przycisku akcji.
+ * @param onActionClick Callback kliknięcia przycisku akcji.
+ * @param containerColor Kolor tła karty.
+ * @param accentColor Kolor akcentu dla ikony i nagłówka.
+ * @param modifier Modyfikator układu Compose.
+ */
 @Composable
 fun DashboardActionEmptyCard(
     title: String,
@@ -290,7 +320,7 @@ fun DashboardActionEmptyCard(
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                color = containerColor,
                 modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {

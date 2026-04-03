@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.theme
 
+/**
+ * Konfiguracja motywu aplikacji opartego o Material 3.
+ * Plik łączy bazowe schematy kolorów z dodatkowymi kolorami rozszerzonymi,
+ * które są wykorzystywane przez dedykowane komponenty interfejsu.
+ */
+
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +22,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 @Immutable
+/**
+ * Zestaw dodatkowych kolorów wykorzystywanych poza standardowym ColorScheme.
+ */
 data class ExtendedColors(
     val classCardBackground: Color,
     val eventCardBackground: Color,
@@ -95,6 +104,12 @@ private fun darkScheme() = darkColorScheme(
 )
 
 @Composable
+/**
+ * Główna funkcja motywu aplikacji udostępniająca ColorScheme i ExtendedColors.
+ *
+ * @param darkTheme Flaga trybu ciemnego.
+ * @param content Zawartość renderowana w kontekście motywu.
+ */
 fun MyUZTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
@@ -147,6 +162,9 @@ fun MyUZTheme(
     }
 }
 
+/**
+ * Skrót dostępu do rozszerzonych kolorów motywu w bieżącej kompozycji.
+ */
 val extendedColors: ExtendedColors
     @Composable
     get() = LocalExtendedColors.current

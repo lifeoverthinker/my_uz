@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Komponenty pływającego przycisku akcji (FAB) dla ekranu głównego.
+ * Plik zawiera rozwijane menu skrótów do najczęściej wykonywanych akcji
+ * użytkownika wraz z konfiguracją pojedynczych pozycji.
+ */
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -31,12 +37,27 @@ import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.theme.InterFontFamily
 
+/**
+ * Model pojedynczej akcji wyświetlanej w rozwijanym menu FAB.
+ *
+ * @param label Etykieta akcji widoczna w menu.
+ * @param iconRes Id zasobu ikony akcji.
+ * @param onClick Callback wykonywany po wyborze akcji.
+ */
 data class FabAction(
     val label: String,
     val iconRes: Int,
     val onClick: () -> Unit
 )
 
+/**
+ * Renderuje rozwijany FAB z akcjami dodawania ocen, nieobecności i zadań.
+ *
+ * @param onAddGrade Akcja uruchamiana dla dodawania oceny.
+ * @param onAddAbsence Akcja uruchamiana dla dodawania nieobecności.
+ * @param onAddTask Akcja uruchamiana dla dodawania zadania.
+ * @param homeViewModel ViewModel ekranu głównego przekazywany przez fabrykę.
+ */
 @Composable
 fun Fab(
     onAddGrade: () -> Unit,

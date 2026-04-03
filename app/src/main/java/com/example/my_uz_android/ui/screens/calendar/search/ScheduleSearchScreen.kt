@@ -6,26 +6,23 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -67,7 +64,7 @@ fun ScheduleSearchScreen(
             )
             navController.navigate("schedule_preview")
         },
-        onFavoriteClick = { searchViewModel.toggleFavorite(it) }
+        onFavoriteClick = { calendarViewModel.toggleFavorite(it.name, it.type) }
     )
 }
 
@@ -101,7 +98,17 @@ fun ScheduleSearchContent(
             val groups = uiState.searchResults.filter { it.type == "group" }
             val teachers = uiState.searchResults.filter { it.type == "teacher" }
 
-            if (!uiState.isLoading && uiState.searchQuery.isNotEmpty() && uiState.searchResults.isEmpty()) {
+            if (!uiState.isLoading && uiState.searchQuery.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    EmptyStateMessage(
+                        title = "Wyszukaj plan",
+                        subtitle = "Grupa lub wykładowca",
+                        message = "Wpisz kod grupy albo nazwisko wykładowcy, aby przejść do podglądu planu.",
+                        iconRes = R.drawable.paper_map_rafiki,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            } else if (!uiState.isLoading && uiState.searchQuery.isNotEmpty() && uiState.searchResults.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyStateMessage(
                         title = "Brak wyników",
@@ -112,7 +119,10 @@ fun ScheduleSearchContent(
                     )
                 }
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
+                ) {
                     if (groups.isNotEmpty()) {
                         item { SearchSectionHeader(title = "Grupy") }
                         items(
@@ -132,7 +142,7 @@ fun ScheduleSearchContent(
                     }
 
                     if (teachers.isNotEmpty()) {
-                        item { SearchSectionHeader(title = "Nauczyciele") }
+                        item { SearchSectionHeader(title = "Wykładowcy") }
                         items(
                             items = teachers,
                             key = { "teacher_${it.name}" }
@@ -156,20 +166,14 @@ fun ScheduleSearchContent(
 
 @Composable
 private fun SearchSectionHeader(title: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                .padding(horizontal = 24.dp, vertical = 10.dp)
-        )
-    }
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    )
 }
 
 @Composable
@@ -178,25 +182,19 @@ fun SearchListItem(
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp, horizontal = 24.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = painterResource(
-                id = if (item.type == "group") R.drawable.ic_users else R.drawable.ic_user
-            ),
-            contentDescription = null,
-            modifier = Modifier.size(22.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.width(20.dp))
-
-        Column(modifier = Modifier.fillMaxWidth()) {
+    ListItem(
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+        leadingContent = {
+            Icon(
+                painter = painterResource(
+                    id = if (item.type == "group") R.drawable.ic_users else R.drawable.ic_user
+                ),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        headlineContent = {
             Text(
                 text = item.name,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
@@ -204,36 +202,44 @@ fun SearchListItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        },
+        supportingContent = {
+            val secondaryText = if (item.type == "group") "Grupa" else "Wykładowca"
 
             Text(
-                text = if (item.type == "group") "Grupa studencka" else "Nauczyciel",
+                text = secondaryText,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-        }
-
-        IconButton(onClick = onFavoriteClick) {
-            AnimatedContent(
-                targetState = item.isFavorite,
-                transitionSpec = {
-                    (fadeIn(tween(220)) + scaleIn(initialScale = 0.8f))
-                        .togetherWith(fadeOut(tween(110)))
-                },
-                label = "FavoriteAnimation"
-            ) { isFavorite ->
-                Icon(
-                    painter = painterResource(
-                        id = if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart
-                    ),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                )
+        },
+        trailingContent = {
+            IconButton(onClick = onFavoriteClick) {
+                AnimatedContent(
+                    targetState = item.isFavorite,
+                    transitionSpec = {
+                        (fadeIn(tween(220)) + scaleIn(initialScale = 0.85f))
+                            .togetherWith(fadeOut(tween(110)))
+                    },
+                    label = "FavoriteAnimation"
+                ) { isFavorite ->
+                    Icon(
+                        painter = painterResource(
+                            id = if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    )
+                }
             }
-        }
-    }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clickable(onClick = onClick)
+    )
 }
 
 @Preview(showBackground = true)

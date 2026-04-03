@@ -183,6 +183,7 @@ object AppViewModelProvider {
         initializer {
             NotificationsViewModel(myUZApplication().container.notificationsRepository)
         }
+
     }
 }
 

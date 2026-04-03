@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.screens.onboarding
 
+/**
+ * ViewModel procesu onboardingu odpowiedzialny za stan kroków i zapis konfiguracji.
+ * Integruje dane użytkownika z ustawieniami aplikacji oraz źródłami uczelnianymi,
+ * aby po pierwszym uruchomieniu przygotować kompletny profil pracy.
+ */
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.SettingsEntity
@@ -11,6 +17,13 @@ import com.example.my_uz_android.util.NetworkResult
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/**
+ * Zarządza stanem i logiką procesu onboardingu.
+ *
+ * @param settingsRepository Repozytorium ustawień aplikacji.
+ * @param universityRepository Repozytorium danych uczelnianych.
+ * @param classRepository Repozytorium zajęć.
+ */
 class OnboardingViewModel(
     private val settingsRepository: SettingsRepository,
     private val universityRepository: UniversityRepository,
@@ -81,30 +94,36 @@ class OnboardingViewModel(
         }
     }
 
+    /** Przechodzi do następnego kroku onboardingu. */
     fun onNextClick() {
         if (_currentPage.value < totalPages - 1) {
             _currentPage.value += 1
         }
     }
 
+    /** Wraca do poprzedniego kroku onboardingu. */
     fun onBackClick() {
         if (_currentPage.value > 0) {
             _currentPage.value -= 1
         }
     }
 
+    /** Ustawia imię użytkownika w stanie formularza. */
     fun setUserName(name: String) {
         _userName.value = name
     }
 
+    /** Ustawia nazwisko użytkownika w stanie formularza. */
     fun setUserSurname(surname: String) {
         _userSurname.value = surname
     }
 
+    /** Ustawia formę zwrotu użytkownika. */
     fun setGender(gender: UserGender) {
         _selectedGender.value = gender
     }
 
+    /** Aktualizuje zapytanie wyszukiwania grupy i resetuje wybór przy pustej frazie. */
     fun setGroupSearchQuery(query: String) {
         _groupSearchQuery.value = query
         if (query.isBlank()) {
@@ -114,6 +133,7 @@ class OnboardingViewModel(
         }
     }
 
+    /** Wybiera grupę i inicjuje pobranie dostępnych podgrup. */
     fun selectGroup(group: String) {
         _selectedGroup.value = group
         _groupSearchQuery.value = group
@@ -139,6 +159,7 @@ class OnboardingViewModel(
         }
     }
 
+    /** Przełącza zaznaczenie podgrupy w formularzu onboardingu. */
     fun toggleSubgroup(subgroup: String) {
         val current = _selectedSubgroups.value.toMutableSet()
         if (current.contains(subgroup)) {
@@ -149,6 +170,11 @@ class OnboardingViewModel(
         _selectedSubgroups.value = current
     }
 
+    /**
+     * Pomija onboarding i zapisuje profil gościa.
+     *
+     * @param onSuccess Callback wywoływany po poprawnym zapisie ustawień.
+     */
     fun skipOnboarding(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -174,6 +200,11 @@ class OnboardingViewModel(
         }
     }
 
+    /**
+     * Zapisuje dane podane w onboardingu i kończy konfigurację pierwszego uruchomienia.
+     *
+     * @param onSuccess Callback wywoływany po poprawnym zapisie ustawień.
+     */
     fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true

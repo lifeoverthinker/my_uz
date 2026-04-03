@@ -217,7 +217,7 @@ fun SchedulePreviewScreenContent(
     Scaffold(
         topBar = {
             PreviewTopAppBar(
-                title = if (isTeacher) "Plan nauczyciela" else "Plan grupy",
+                title = if (isTeacher) "Plan wykładowcy" else "Plan grupy",
                 subtitle = if (isTeacher) (teacherData?.teacherName ?: planName) else planName,
                 isFavorite = isFavorite,
                 onBackClick = onBackClick,

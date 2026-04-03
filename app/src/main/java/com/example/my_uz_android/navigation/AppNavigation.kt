@@ -59,7 +59,7 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val iconR
 
 @Composable
 fun AppNavigation(
-    startDestination: String = "landing",
+    startDestination: String,
     navController: NavHostController = rememberNavController(),
     deepLinkIntent: android.content.Intent? = null
 ) {

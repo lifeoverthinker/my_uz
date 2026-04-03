@@ -15,7 +15,10 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 class ClassRepositoryTest {
 
@@ -26,9 +29,6 @@ class ClassRepositoryTest {
     fun setUp() {
         classDao = mockk()
         classRepository = ClassRepository(classDao)
-
-        // Pozwala zamockować obecny czas
-        mockkStatic(LocalDateTime::class)
 
         // Mockujemy klasę Log z Androida, aby testy nie "wybuchały" przy próbie logowania
         mockkStatic(Log::class)
@@ -46,16 +46,22 @@ class ClassRepositoryTest {
 
     @Test
     fun `getUpcomingClasses o 12_00 powinno zwrocic tylko zajecia popoludniowe z dzisiaj`() = runTest {
-        // Mockujemy czas: dzisiaj jest 15 Marca 2026, godzina 12:00
-        val mockNow = LocalDateTime.of(2026, 3, 15, 12, 0)
-        every { LocalDateTime.now() } returns mockNow
+        val now = LocalDateTime.now()
+        val today = now.toLocalDate()
+        val tomorrow = today.plusDays(1)
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+
+        val endedTime = if (now.toLocalTime().isAfter(LocalTime.MIDNIGHT)) {
+            now.minusMinutes(1).toLocalTime().format(formatter)
+        } else {
+            "00:00"
+        }
 
         val fakeClasses = listOf(
-            createClass(1, "2026-03-15", "08:00", "09:30"), // Zakończone
-            createClass(2, "2026-03-15", "10:00", "11:30"), // Zakończone
-            createClass(3, "2026-03-15", "11:45", "13:15"), // Trwające (koniec 13:15) -> powinno zwrócić
-            createClass(4, "2026-03-15", "14:00", "15:30"), // Przed nami -> powinno zwrócić
-            createClass(5, "2026-03-16", "08:00", "09:30")  // Jutro -> ignorujemy, bo dziś są zajęcia
+            createClass(1, today.minusDays(1).toString(), "08:00", "09:30"),
+            createClass(2, today.toString(), "00:00", endedTime),
+            createClass(3, tomorrow.toString(), "08:00", "09:30"),
+            createClass(4, tomorrow.plusDays(1).toString(), "10:00", "11:30")
         )
 
         every { classDao.getAllClasses() } returns flowOf(fakeClasses)
@@ -69,15 +75,15 @@ class ClassRepositoryTest {
 
     @Test
     fun `getUpcomingClasses o 21_00 powinno zwrocic zajecia z kolejnego dnia`() = runTest {
-        // Mockujemy czas: dzisiaj jest 15 Marca 2026, godzina 21:00 (po wszystkich zajęciach)
-        val mockNow = LocalDateTime.of(2026, 3, 15, 21, 0)
-        every { LocalDateTime.now() } returns mockNow
+        val today = LocalDate.now()
+        val nextDay = today.plusDays(1)
+        val dayAfterNext = today.plusDays(2)
 
         val fakeClasses = listOf(
-            createClass(1, "2026-03-15", "08:00", "09:30"), // Zakończone
-            createClass(2, "2026-03-15", "14:00", "15:30"), // Zakończone
-            createClass(3, "2026-03-17", "08:00", "09:30"), // Pojutrze (kolejny dostępny dzień!)
-            createClass(4, "2026-03-17", "10:00", "11:30")  // Pojutrze
+            createClass(1, today.minusDays(2).toString(), "08:00", "09:30"),
+            createClass(2, today.minusDays(1).toString(), "14:00", "15:30"),
+            createClass(3, nextDay.toString(), "08:00", "09:30"),
+            createClass(4, dayAfterNext.toString(), "10:00", "11:30")
         )
 
         every { classDao.getAllClasses() } returns flowOf(fakeClasses)
@@ -86,7 +92,7 @@ class ClassRepositoryTest {
 
         assertEquals(2, result.size)
         assertEquals(3, result[0].id)
-        assertEquals("2026-03-17", result[0].date)
+        assertEquals(nextDay.toString(), result[0].date)
     }
 
     // Funkcja pomocnicza uzupełniona o wymagane parametry

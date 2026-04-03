@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Zestaw współdzielonych komponentów górnych pasków aplikacji opartych o Material 3.
+ * Plik agreguje warianty TopAppBar używane w różnych modułach, tak aby utrzymać
+ * spójny styl nagłówków i akcji nawigacyjnych.
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +27,17 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
 
 @Composable
+/**
+ * Renderuje ikonę akcji paska górnego z opcjonalnym stanem ładowania.
+ *
+ * @param icon Id zasobu ikony.
+ * @param onClick Akcja wykonywana po kliknięciu.
+ * @param modifier Modyfikator układu Compose.
+ * @param backgroundColor Kolor tła ikony.
+ * @param iconTint Kolor ikony lub wskaźnika ładowania.
+ * @param isLoading Flaga stanu ładowania.
+ * @param isFilled Flaga określająca, czy tło ma być wypełnione.
+ */
 fun TopBarActionIcon(
     icon: Int,
     onClick: () -> Unit,
@@ -86,6 +103,24 @@ private fun BaseTopBarContainer(
 }
 
 @Composable
+/**
+ * Uniwersalny komponent paska górnego z tytułem, podtytułem i zestawem akcji.
+ *
+ * @param title Tekst głównego tytułu.
+ * @param subtitle Opcjonalny podtytuł.
+ * @param navigationIcon Opcjonalna ikona nawigacyjna.
+ * @param onNavigationClick Akcja ikony nawigacyjnej.
+ * @param isNavigationIconFilled Flaga wypełnienia tła ikony nawigacji.
+ * @param isCenterAligned Flaga centralnego wyrównania treści.
+ * @param isFilled Parametr kompatybilności wariantów paska.
+ * @param containerColor Kolor tła paska.
+ * @param bottomContent Opcjonalna treść pod nagłówkiem.
+ * @param titleClickable Flaga klikalności sekcji tytułu.
+ * @param onTitleClick Akcja kliknięcia tytułu.
+ * @param titleIcon Opcjonalna ikona przy tytule.
+ * @param titleColor Opcjonalny kolor wskaźnika przy tytule.
+ * @param actions Slot akcji po prawej stronie paska.
+ */
 fun TopAppBar(
     title: String,
     subtitle: String? = null,
@@ -187,6 +222,15 @@ fun TopAppBar(
 }
 
 @Composable
+/**
+ * Wariant TopAppBar dla ekranów dodawania i edycji z przyciskiem zapisu.
+ *
+ * @param title Tytuł ekranu.
+ * @param onBackClick Akcja powrotu.
+ * @param onSaveClick Akcja zapisu formularza.
+ * @param saveButtonEnabled Flaga dostępności przycisku zapisu.
+ * @param titleColor Opcjonalny kolor wskaźnika przy tytule.
+ */
 fun AddEditTopAppBar(
     title: String,
     onBackClick: () -> Unit,
@@ -219,6 +263,15 @@ fun AddEditTopAppBar(
 }
 
 @Composable
+/**
+ * Wariant TopAppBar dla modułu kalendarza z rozwijanym tytułem planu.
+ *
+ * @param title Nazwa aktualnie wybranego planu.
+ * @param isExpanded Flaga stanu rozwinięcia listy planów.
+ * @param onNavigationClick Akcja otwarcia menu.
+ * @param onTitleClick Akcja kliknięcia tytułu.
+ * @param actions Slot dodatkowych akcji.
+ */
 fun CalendarTopAppBar(
     title: String,
     isExpanded: Boolean,
@@ -239,6 +292,17 @@ fun CalendarTopAppBar(
 }
 
 @Composable
+/**
+ * Wariant TopAppBar dla podglądu planu z obsługą ulubionych.
+ *
+ * @param title Tytuł podglądu.
+ * @param subtitle Opcjonalny podtytuł.
+ * @param isFavorite Flaga stanu ulubionego planu.
+ * @param onBackClick Akcja powrotu.
+ * @param onFavoriteClick Akcja zmiany statusu ulubionego.
+ * @param actionIcon Opcjonalna dodatkowa ikona akcji.
+ * @param onActionClick Akcja dla dodatkowej ikony.
+ */
 fun PreviewTopAppBar(
     title: String,
     subtitle: String? = null,
@@ -269,6 +333,13 @@ fun PreviewTopAppBar(
 }
 
 @Composable
+/**
+ * Wariant TopAppBar z polem wyszukiwania dla ekranów wyszukiwania planów.
+ *
+ * @param query Aktualna wartość zapytania.
+ * @param onQueryChange Callback zmiany zapytania.
+ * @param onBackClick Akcja powrotu.
+ */
 fun SearchTopAppBar(
     query: String,
     onQueryChange: (String) -> Unit,
@@ -279,33 +350,39 @@ fun SearchTopAppBar(
         shadowElevation = 0.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .statusBarsPadding()
-                .heightIn(min = 72.dp)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            TopBarActionIcon(
-                icon = R.drawable.ic_chevron_left,
-                onClick = onBackClick,
-                isFilled = true,
-                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            TextField(
-                value = query,
-                onValueChange = onQueryChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Szukaj...") },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    disabledContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                singleLine = true
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .heightIn(min = 72.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                TopBarActionIcon(
+                    icon = R.drawable.ic_chevron_left,
+                    onClick = onBackClick,
+                    isFilled = true,
+                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                TextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Szukaj...") },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    ),
+                    singleLine = true
+                )
+            }
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                thickness = 1.dp
             )
         }
     }

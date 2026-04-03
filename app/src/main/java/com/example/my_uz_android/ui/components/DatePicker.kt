@@ -1,10 +1,23 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Dialogowe komponenty wyboru daty i czasu oparte o Material 3.
+ * Są wykorzystywane w formularzach dodawania i edycji danych wymagających
+ * precyzyjnego wyboru terminu.
+ */
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.window.DialogProperties
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Wyświetla dialog wyboru daty i zwraca wybraną wartość w milisekundach.
+ *
+ * @param date Aktualnie wybrana data w milisekundach lub null.
+ * @param onDateSelected Callback wywoływany po potwierdzeniu wyboru daty.
+ * @param onDismiss Callback zamykający dialog.
+ */
 @Composable
 fun DatePicker(
     date: Long?,
@@ -43,6 +56,14 @@ fun DatePicker(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Wyświetla dialog wyboru godziny oparty o komponent TimePicker.
+ *
+ * @param initialHour Godzina początkowa.
+ * @param initialMinute Minuta początkowa.
+ * @param onTimeSelected Callback zwracający wybraną godzinę i minutę.
+ * @param onDismiss Callback zamykający dialog.
+ */
 @Composable
 fun TimePicker(
     initialHour: Int = 12,

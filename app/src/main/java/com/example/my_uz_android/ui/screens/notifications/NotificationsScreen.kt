@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.screens.notifications
 
+/**
+ * Ekran powiadomień aplikacji z listą wpisów oraz stanem pustym.
+ * Plik zawiera także komponenty prezentacji pojedynczego powiadomienia
+ * i obsługę gestu usuwania przez przesunięcie.
+ */
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,6 +44,12 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Renderuje ekran powiadomień z akcją czyszczenia listy.
+ *
+ * @param viewModel ViewModel odpowiedzialny za dane powiadomień.
+ * @param onNavigateBack Callback powrotu do poprzedniego ekranu.
+ */
 fun NotificationsScreen(
     viewModel: NotificationsViewModel,
     onNavigateBack: () -> Unit
@@ -96,6 +108,12 @@ fun NotificationsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+/**
+ * Renderuje element listy powiadomień z obsługą usuwania gestem swipe.
+ *
+ * @param notification Powiadomienie prezentowane na liście.
+ * @param onDelete Callback usuwający wskazane powiadomienie.
+ */
 fun SwipeToDeleteNotification(
     notification: NotificationEntity,
     onDelete: () -> Unit
@@ -145,6 +163,13 @@ fun SwipeToDeleteNotification(
 }
 
 @Composable
+/**
+ * Renderuje kartę pojedynczego powiadomienia.
+ *
+ * @param notification Dane powiadomienia do wyświetlenia.
+ * @param backgroundColor Opcjonalny kolor tła karty.
+ * @param isDarkMode Flaga trybu ciemnego używana przy doborze palety.
+ */
 fun NotificationCardItem(
     notification: NotificationEntity,
     backgroundColor: Color? = null,
@@ -233,6 +258,9 @@ fun NotificationCardItem(
 }
 
 @Composable
+/**
+ * Renderuje stan pusty ekranu powiadomień.
+ */
 fun EmptyNotificationsState() {
     Column(
         modifier = Modifier
@@ -254,6 +282,13 @@ fun EmptyNotificationsState() {
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Wszystko gotowe",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(

@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Dedykowany komponent dialogu wyboru czasu dla formularzy aplikacji.
+ * Zapewnia spójny wygląd Material 3 oraz obsługę wejścia/wyjścia czasu
+ * w formacie używanym przez warstwę UI.
+ */
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +19,14 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Renderuje dialog wyboru godziny na podstawie wartości tekstowej HH:mm.
+ *
+ * @param time Aktualna wartość czasu w formacie HH:mm.
+ * @param onTimeSelected Callback zwracający wybraną godzinę i minutę.
+ * @param onDismiss Callback zamykający dialog.
+ * @param modifier Modyfikator układu Compose.
+ */
 @Composable
 fun TimePicker(
     time: String,

@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Komponent prezentujący skrócone informacje o wydarzeniu w postaci karty.
+ * Używany jest w sekcjach dashboardu i listach wydarzeń jako lekki element
+ * nawigujący do szczegółów.
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

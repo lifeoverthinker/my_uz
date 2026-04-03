@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Komponenty kart zajęć wykorzystywane w sekcjach Home i Kalendarz.
+ * Plik definiuje wspólny model prezentacji dla pojedynczych zajęć wraz z wariantami
+ * wizualnymi zależnymi od kontekstu ekranu.
+ */
+
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,11 +50,27 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
+/**
+ * Określa wariant wizualny karty zajęć zależny od ekranu.
+ */
 enum class ClassCardType {
     HOME,
     CALENDAR
 }
 
+/**
+ * Renderuje kartę pojedynczych zajęć z informacjami o czasie, sali i typie.
+ *
+ * @param classItem Dane zajęć wyświetlane na karcie.
+ * @param type Wariant karty zależny od kontekstu ekranu.
+ * @param backgroundColor Kolor tła karty.
+ * @param accentColor Kolor akcentu dla badge lub markera.
+ * @param showBadge Flaga określająca widoczność badge typu zajęć.
+ * @param hasDeadlines Flaga określająca widoczność wskaźnika deadline'u.
+ * @param isTeacherPlan Parametr kompatybilności dla kart planu prowadzącego.
+ * @param onClick Akcja wykonywana po kliknięciu karty.
+ * @param modifier Modyfikator układu Compose.
+ */
 @Composable
 fun ClassCard(
     classItem: ClassEntity,

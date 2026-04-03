@@ -9,50 +9,79 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.my_uz_android.data.models.SettingsEntity
 import com.example.my_uz_android.data.models.ThemeMode
 import com.example.my_uz_android.navigation.AppNavigation
 import com.example.my_uz_android.navigation.Screen
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import com.example.my_uz_android.widget.triggerWidgetUpdate
+import kotlinx.coroutines.flow.firstOrNull
 
 class MainActivity : ComponentActivity() {
+    @Volatile
+    private var keepSplashVisible = true
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
 
         val settingsRepo = (application as MyUZApplication).container.settingsRepository
 
+        splashScreen.setKeepOnScreenCondition { keepSplashVisible }
+
         setContent {
-            RequestNotificationPermission()
+            val startupSettings by produceState<SettingsEntity?>(initialValue = null) {
+                value = try {
+                    settingsRepo.getSettingsStream().firstOrNull() ?: SettingsEntity()
+                } catch (_: Exception) {
+                    SettingsEntity()
+                }
+            }
 
-            // FIX: null to poprawny stan (np. świeża instalacja), więc dajemy domyślne ustawienia.
-            val settingsState by settingsRepo
-                .getSettingsStream()
-                .collectAsState(initial = null)
+            keepSplashVisible = startupSettings == null
 
-            val currentSettings = settingsState ?: SettingsEntity()
             val isSystemDark = isSystemInDarkTheme()
+            val themeMode = startupSettings?.themeMode ?: ThemeMode.SYSTEM.name
 
-            val useDarkTheme = when (currentSettings.themeMode) {
+            val useDarkTheme = when (themeMode) {
                 ThemeMode.DARK.name -> true
                 ThemeMode.LIGHT.name -> false
                 else -> isSystemDark
             }
 
-            val startDest = if (currentSettings.isFirstRun) "landing" else Screen.Main.route
-
             MyUZTheme(darkTheme = useDarkTheme) {
-                AppNavigation(
-                    startDestination = startDest,
-                    deepLinkIntent = intent
-                )
+                if (startupSettings != null) {
+                    val startDestination = if (startupSettings?.isFirstRun == true) {
+                        "landing"
+                    } else {
+                        Screen.Main.route
+                    }
+
+                    RequestNotificationPermission()
+                    AppNavigation(
+                        startDestination = startDestination,
+                        deepLinkIntent = intent
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize())
+                }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        triggerWidgetUpdate(this)
     }
 }
 

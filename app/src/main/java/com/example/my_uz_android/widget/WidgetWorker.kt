@@ -6,20 +6,20 @@ import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.appwidget.updateAll
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import androidx.work.ExistingPeriodicWorkPolicy
 import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.util.SubgroupMatcher
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.firstOrNull
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 
 /**
  * Worker odpowiedzialny za pobranie danych z repozytoriów,
@@ -34,10 +34,12 @@ class WidgetWorker(
         val appContainer = (context.applicationContext as MyUZApplication).container
         val classRepository = appContainer.classRepository
         val settingsRepository = appContainer.settingsRepository
+        val userCourseRepository = appContainer.userCourseRepository
 
         // Pobieramy snapshot ustawień i wszystkich przyszłych zajęć
         val settings = settingsRepository.getSettingsStream().firstOrNull()
         val upcomingClasses = classRepository.getUpcomingClasses().firstOrNull() ?: emptyList()
+        val userCourses = userCourseRepository.getAllUserCoursesStream().firstOrNull() ?: emptyList()
 
         val now = LocalDateTime.now()
         val today = now.toLocalDate()
@@ -46,19 +48,29 @@ class WidgetWorker(
 
         val isPlanSelected = !settings?.selectedGroupCode.isNullOrBlank()
 
+        val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, userCourses)
+        val visibleClasses = upcomingClasses.filter { classItem ->
+            SubgroupMatcher.isClassVisible(
+                classGroupCode = classItem.groupCode,
+                classType = classItem.classType,
+                classSubgroup = classItem.subgroup,
+                userEnrollments = userEnrollments
+            )
+        }
+
         // Odwzorowanie logiki z HomeViewModel
-        val classesForToday = upcomingClasses.filter {
+        val classesForToday = visibleClasses.filter {
             it.date == today.toString() && runCatching { LocalTime.parse(it.endTime).isAfter(nowTime) }.getOrDefault(true)
         }
-        val classesForTomorrow = upcomingClasses.filter {
+        val classesForTomorrow = visibleClasses.filter {
             it.date == tomorrow.toString()
         }
 
         val (displayedClasses, dayLabel, emptyMessage) = when {
-            !isPlanSelected -> Triple(emptyList(), "", "Skonfiguruj grupę w aplikacji")
-            classesForToday.isNotEmpty() -> Triple(classesForToday, "Dzisiaj", "")
-            classesForTomorrow.isNotEmpty() -> Triple(classesForTomorrow, "Jutro", "")
-            else -> Triple(emptyList(), "", "Brak zajęć w najbliższym czasie")
+            !isPlanSelected -> Triple(emptyList(), null, "Wybierz plan zajęć w profilu")
+            classesForToday.isNotEmpty() -> Triple(classesForToday, "Dzisiaj", null)
+            classesForTomorrow.isNotEmpty() -> Triple(classesForTomorrow, "Jutro", null)
+            else -> Triple(emptyList(), "Dzisiaj", "Brak zajęć na dziś i jutro")
         }
 
         val gson = Gson()
@@ -73,8 +85,8 @@ class WidgetWorker(
 
         glanceIds.forEach { glanceId ->
             updateAppWidgetState(context, glanceId) { prefs ->
-                prefs[Widget.dayLabelKey] = dayLabel
-                prefs[Widget.messageKey] = emptyMessage
+                prefs[Widget.dayLabelKey] = dayLabel ?: ""
+                prefs[Widget.messageKey] = emptyMessage ?: ""
                 prefs[Widget.classesJsonKey] = gson.toJson(displayedClasses)
                 prefs[Widget.colorMapJsonKey] = gson.toJson(classColorMap)
             }
@@ -86,13 +98,30 @@ class WidgetWorker(
     }
 }
 
+private const val WIDGET_UPDATE_WORK = "widget_update_work"
+private const val WIDGET_PERIODIC_WORK = "widget_periodic_update_work"
+
+fun scheduleWidgetPeriodicUpdates(context: Context) {
+    val periodicRequest = PeriodicWorkRequestBuilder<WidgetWorker>(
+        3, TimeUnit.HOURS,
+        30, TimeUnit.MINUTES
+    ).build()
+
+    WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+        WIDGET_PERIODIC_WORK,
+        ExistingPeriodicWorkPolicy.UPDATE,
+        periodicRequest
+    )
+}
+
 /**
  * Narzędzie do ręcznego wymuszenia aktualizacji widżetu z poziomu UI (np. ViewModelu).
  */
 fun triggerWidgetUpdate(context: Context) {
+    scheduleWidgetPeriodicUpdates(context)
     val request = OneTimeWorkRequestBuilder<WidgetWorker>().build()
     WorkManager.getInstance(context).enqueueUniqueWork(
-        "widget_update_work",
+        WIDGET_UPDATE_WORK,
         ExistingWorkPolicy.REPLACE, // Jeśli update już leci, zacznij od nowa
         request
     )

@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.components
 
+/**
+ * Komponent karty zadania wykorzystywany na ekranach dashboardu i list zadań.
+ * Udostępnia spójny sposób prezentacji tytułu, przedmiotu i stanu realizacji
+ * z zachowaniem zgodności wizualnej z pozostałymi kartami aplikacji.
+ */
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -23,6 +29,12 @@ import com.example.my_uz_android.ui.theme.InterFontFamily
 /**
  * Komponent wyświetlający zadanie (Task) ze statusem ukończenia i terminem.
  * Budowa i paddingi identyczne jak w EventCard.
+ *
+ * @param task Dane zadania do wyświetlenia.
+ * @param onTaskClick Akcja wykonywana po kliknięciu karty.
+ * @param modifier Modyfikator układu Compose.
+ * @param backgroundColor Opcjonalny kolor tła karty.
+ * @param isDarkMode Flaga określająca użycie kolorów trybu ciemnego.
  */
 @Composable
 fun TaskCard(

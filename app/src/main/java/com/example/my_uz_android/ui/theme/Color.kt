@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.theme
 
+/**
+ * Definicje kolorów aplikacji dla motywów jasnego i ciemnego oraz palet komponentów.
+ * Plik stanowi centralne źródło kolorystyki Material 3 i niestandardowych zestawów
+ * używanych przez karty, nawigację oraz sekcje dashboardu.
+ */
+
 import androidx.compose.ui.graphics.Color
 import kotlin.math.abs
 
@@ -163,11 +169,23 @@ val AppColorPalette = listOf(
     ColorSetPink
 )
 
+/**
+ * Zwraca kolor tła komponentu na podstawie indeksu palety i trybu motywu.
+ *
+ * @param index Indeks koloru w palecie.
+ * @param isDark Flaga określająca użycie wariantu ciemnego.
+ */
 fun getAppBackgroundColor(index: Int, isDark: Boolean): Color {
     val set = AppColorPalette.getOrElse(abs(index) % AppColorPalette.size) { ColorSetPurple }
     return if (isDark) set.darkBg else set.lightBg
 }
 
+/**
+ * Zwraca kolor akcentu komponentu na podstawie indeksu palety i trybu motywu.
+ *
+ * @param index Indeks koloru w palecie.
+ * @param isDark Flaga określająca użycie wariantu ciemnego.
+ */
 fun getAppAccentColor(index: Int, isDark: Boolean): Color {
     val set = AppColorPalette.getOrElse(abs(index) % AppColorPalette.size) { ColorSetPurple }
     return if (isDark) set.darkAccent else set.lightAccent
@@ -175,6 +193,12 @@ fun getAppAccentColor(index: Int, isDark: Boolean): Color {
 
 val ClassColorPalette = AppColorPalette
 
+/**
+ * Wyznacza indeks koloru dla typu zajęć z uwzględnieniem mapowania użytkownika.
+ *
+ * @param subjectName Nazwa typu zajęć lub przedmiotu.
+ * @param userColorMap Mapa indeksów kolorów zapisanych w ustawieniach.
+ */
 fun getClassColorIndex(subjectName: String?, userColorMap: Map<String, Int> = emptyMap()): Int {
     if (subjectName == null) return 0
     return userColorMap[subjectName] ?: (abs(subjectName.hashCode()) % AppColorPalette.size)

@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.screens.onboarding
 
+/**
+ * Ekran onboardingu prowadzący użytkownika przez konfigurację profilu i planu.
+ * Zawiera kroki formularzowe oraz kroki informacyjne, a po zakończeniu zapisuje
+ * ustawienia startowe używane w dalszym działaniu aplikacji.
+ */
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -42,6 +48,14 @@ private fun getIllustrationResId(currentPage: Int): Int = when (currentPage) {
 }
 
 @OptIn(ExperimentalAnimationApi::class)
+/**
+ * Główny kontener procesu onboardingu z nawigacją między krokami.
+ *
+ * @param viewModel ViewModel zarządzający stanem i zapisem konfiguracji.
+ * @param onNavigateToOnboarding Callback zgodnościowy dla nawigacji do onboardingu.
+ * @param onNavigateToHome Callback nawigacji do ekranu głównego.
+ * @param onFinishOnboarding Callback wywoływany po zakończeniu onboardingu.
+ */
 @Composable
 fun LandingScreen(
     viewModel: OnboardingViewModel = viewModel(factory = AppViewModelProvider.Factory),
@@ -234,6 +248,9 @@ fun LandingScreen(
 // --- EKRANY ZAWARTOŚCI ---
 
 @Composable
+/**
+ * Renderuje krok powitalny z opisem możliwości aplikacji.
+ */
 fun WelcomeStepContent() {
     ResponsiveOnboardingStep(illustrationResId = R.drawable.college_students_rafiki) {
         OnboardingTexts(
@@ -245,6 +262,11 @@ fun WelcomeStepContent() {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Renderuje krok personalizacji użytkownika (forma zwrotu oraz dane osobowe).
+ *
+ * @param viewModel ViewModel onboardingu.
+ */
 @Composable
 fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
     val selectedGender by viewModel.selectedGender.collectAsState()
@@ -353,6 +375,11 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * Renderuje krok wyboru grupy oraz podgrup planu zajęć.
+ *
+ * @param viewModel ViewModel onboardingu.
+ */
 @Composable
 fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
     val searchQuery by viewModel.groupSearchQuery.collectAsState()
@@ -466,6 +493,9 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
 }
 
 @Composable
+/**
+ * Renderuje krok informacyjny dotyczący modułu kalendarza.
+ */
 fun CalendarFeatureStepContent() {
     InfoStepContent(
         pageIndex = 3,
@@ -476,6 +506,9 @@ fun CalendarFeatureStepContent() {
 }
 
 @Composable
+/**
+ * Renderuje krok informacyjny dotyczący modułu ocen.
+ */
 fun GradesFeatureStepContent() {
     InfoStepContent(
         pageIndex = 4,
@@ -486,6 +519,9 @@ fun GradesFeatureStepContent() {
 }
 
 @Composable
+/**
+ * Renderuje końcowy krok onboardingowy.
+ */
 fun FinalStepContent() {
     InfoStepContent(
         pageIndex = 5,
@@ -496,6 +532,14 @@ fun FinalStepContent() {
 }
 
 @Composable
+/**
+ * Renderuje generyczny krok informacyjny onboardingowy.
+ *
+ * @param pageIndex Indeks kroku używany do doboru ilustracji.
+ * @param title Tytuł kroku.
+ * @param subtitle Podtytuł kroku.
+ * @param description Opis kroku.
+ */
 fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description: String) {
     val resId = when(pageIndex) {
         3 -> R.drawable.calendar_rafiki
@@ -511,6 +555,12 @@ fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description
 // --- WSPÓLNE HELPERY ---
 
 @Composable
+/**
+ * Wspólny kontener kroku onboardingowego z ilustracją i treścią.
+ *
+ * @param illustrationResId Id zasobu ilustracji kroku.
+ * @param content Slot zawartości kroku.
+ */
 fun ResponsiveOnboardingStep(
     illustrationResId: Int,
     content: @Composable ColumnScope.() -> Unit
@@ -550,6 +600,13 @@ fun ResponsiveOnboardingStep(
 }
 
 @Composable
+/**
+ * Renderuje zestaw tekstów opisujących dany krok onboardingu.
+ *
+ * @param title Tytuł kroku.
+ * @param subtitle Podtytuł kroku.
+ * @param description Opis kroku.
+ */
 fun OnboardingTexts(title: String, subtitle: String, description: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -579,6 +636,12 @@ fun OnboardingTexts(title: String, subtitle: String, description: String) {
 }
 
 @Composable
+/**
+ * Renderuje wskaźniki aktualnej pozycji w procesie onboardingu.
+ *
+ * @param totalPages Liczba wszystkich kroków.
+ * @param currentPage Aktualny krok.
+ */
 fun PageIndicators(totalPages: Int, currentPage: Int) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(totalPages) { index ->
@@ -598,6 +661,9 @@ fun PageIndicators(totalPages: Int, currentPage: Int) {
 }
 
 @Composable
+/**
+ * Renderuje stopkę informacyjną ekranu onboardingu.
+ */
 fun FooterText() {
     Text(
         text = "MyUZ 2026 Wersja 1.00",

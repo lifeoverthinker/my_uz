@@ -121,13 +121,18 @@ class CalendarViewModel(
 
             val classesToShow = when (source) {
                 is ScheduleSource.MyPlan -> {
-                    myClasses.filter { classItem ->
+                    val filtered = myClasses.filter { classItem ->
                         SubgroupMatcher.isClassVisible(
                             classItem.groupCode,
                             classItem.classType,
                             classItem.subgroup,
                             userEnrollments
                         )
+                    }
+                    if (filtered.isEmpty() && myClasses.isNotEmpty() && userEnrollments.isEmpty()) {
+                        myClasses
+                    } else {
+                        filtered
                     }
                 }
                 is ScheduleSource.Favorite,
