@@ -64,6 +64,8 @@ fun Fab(
     onAddGrade: () -> Unit,
     onAddAbsence: () -> Unit,
     onAddTask: () -> Unit,
+    endOffset: androidx.compose.ui.unit.Dp = 20.dp,
+    bottomOffset: androidx.compose.ui.unit.Dp = 24.dp,
     homeViewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -112,7 +114,7 @@ fun Fab(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 8.dp, bottom = 8.dp)
+                .padding(end = endOffset, bottom = bottomOffset)
         ) {
             AnimatedVisibility(
                 visible = isExpanded,

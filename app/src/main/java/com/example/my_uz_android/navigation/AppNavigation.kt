@@ -92,6 +92,8 @@ fun AppNavigation(
     val navBorderColor = extendedColors.navBorder
     val navActiveColor = extendedColors.navActive
     val navInactiveColor = extendedColors.navInactive
+    val bottomNavBarHeight = 84.dp
+    val fabBottomOffset = if (showBottomBar) bottomNavBarHeight + 24.dp else 24.dp
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -129,114 +131,105 @@ fun AppNavigation(
             }
         }
     ) {
-        Scaffold(
-            floatingActionButtonPosition = FabPosition.End,
-            floatingActionButton = {
-                if (currentRoute == Screen.Main.route) {
-                    Fab(
-                        onAddGrade = { navController.navigate("add_grade") },
-                        onAddAbsence = { navController.navigate("add_absence") },
-                        onAddTask = { navController.navigate("add_task") }
-                    )
-                }
-            },
-            bottomBar = {
-                if (showBottomBar) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(navBackgroundColor)
-                            .drawBehind {
-                                drawLine(
-                                    color = navBorderColor,
-                                    start = Offset(0f, 0f),
-                                    end = Offset(size.width, 0f),
-                                    strokeWidth = 1.dp.toPx()
-                                )
-                            }
-                            .windowInsetsPadding(WindowInsets.navigationBars)
-                    ) {
-                        Row(
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                bottomBar = {
+                    if (showBottomBar) {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(84.dp)
-                                .padding(bottom = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            val currentDestination = navBackStackEntry?.destination
-                            items.forEach { screen ->
-                                val isCalendarSection = screen.route == "calendar" &&
-                                        (currentRoute == "tasks" || currentRoute == "schedule_search" || currentRoute == "schedule_preview")
-
-                                val selected = currentDestination?.hierarchy?.any {
-                                    it.route?.startsWith(screen.route) == true
-                                } == true || isCalendarSection
-
-                                NavigationBarItem(
-                                    icon = {
-                                        Icon(
-                                            painter = painterResource(id = screen.iconResId),
-                                            contentDescription = screen.title,
-                                            modifier = Modifier.size(24.dp),
-                                            tint = if (selected) navActiveColor else navInactiveColor
-                                        )
-                                    },
-                                    label = {
-                                        Text(
-                                            text = screen.title,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = if (selected) navActiveColor else navInactiveColor
-                                        )
-                                    },
-                                    selected = selected,
-                                    onClick = {
-                                        val isAlreadyOnScreen = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-                                        if (isAlreadyOnScreen) {
-                                            if (screen.route == Screen.Calendar.route) {
-                                                sharedCalendarViewModel.setSelectedDate(java.time.LocalDate.now(java.time.ZoneId.of("Europe/Warsaw")))
-                                            }
-                                        } else {
-                                            navController.navigate(screen.route) {
-                                                popUpTo(navController.graph.findStartDestination().id) {
-                                                    saveState = true
-                                                }
-                                                launchSingleTop = true
-                                                restoreState = screen.route != Screen.Main.route && screen.route != Screen.Calendar.route
-                                            }
-                                        }
-                                    },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                                        selectedIconColor = navActiveColor,
-                                        selectedTextColor = navActiveColor,
-                                        unselectedIconColor = navInactiveColor,
-                                        unselectedTextColor = navInactiveColor
+                                .background(navBackgroundColor)
+                                .drawBehind {
+                                    drawLine(
+                                        color = navBorderColor,
+                                        start = Offset(0f, 0f),
+                                        end = Offset(size.width, 0f),
+                                        strokeWidth = 1.dp.toPx()
                                     )
-                                )
+                                }
+                                .windowInsetsPadding(WindowInsets.navigationBars)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(84.dp)
+                                    .padding(bottom = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                val currentDestination = navBackStackEntry?.destination
+                                items.forEach { screen ->
+                                    val isCalendarSection = screen.route == "calendar" &&
+                                            (currentRoute == "tasks" || currentRoute == "schedule_search" || currentRoute == "schedule_preview")
+
+                                    val selected = currentDestination?.hierarchy?.any {
+                                        it.route?.startsWith(screen.route) == true
+                                    } == true || isCalendarSection
+
+                                    NavigationBarItem(
+                                        icon = {
+                                            Icon(
+                                                painter = painterResource(id = screen.iconResId),
+                                                contentDescription = screen.title,
+                                                modifier = Modifier.size(24.dp),
+                                                tint = if (selected) navActiveColor else navInactiveColor
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                text = screen.title,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (selected) navActiveColor else navInactiveColor
+                                            )
+                                        },
+                                        selected = selected,
+                                        onClick = {
+                                            val isAlreadyOnScreen = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+                                            if (isAlreadyOnScreen) {
+                                                if (screen.route == Screen.Calendar.route) {
+                                                    sharedCalendarViewModel.setSelectedDate(java.time.LocalDate.now(java.time.ZoneId.of("Europe/Warsaw")))
+                                                }
+                                            } else {
+                                                navController.navigate(screen.route) {
+                                                    popUpTo(navController.graph.findStartDestination().id) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = screen.route != Screen.Main.route && screen.route != Screen.Calendar.route
+                                                }
+                                            }
+                                        },
+                                        colors = NavigationBarItemDefaults.colors(
+                                            indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                            selectedIconColor = navActiveColor,
+                                            selectedTextColor = navActiveColor,
+                                            unselectedIconColor = navInactiveColor,
+                                            unselectedTextColor = navInactiveColor
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
-        ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = startDestination,
-                modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
-                enterTransition = {
-                    slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(300)) + fadeIn(tween(300))
-                },
-                exitTransition = {
-                    slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(300)) + fadeOut(tween(300))
-                },
-                popEnterTransition = {
-                    slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300)) + fadeIn(tween(300))
-                },
-                popExitTransition = {
-                    slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300)) + fadeOut(tween(300))
-                }
-            ) {
+            ) { innerPadding ->
+                NavHost(
+                    navController = navController,
+                    startDestination = startDestination,
+                    modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
+                    enterTransition = {
+                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(300)) + fadeIn(tween(300))
+                    },
+                    exitTransition = {
+                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(300)) + fadeOut(tween(300))
+                    },
+                    popEnterTransition = {
+                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300)) + fadeIn(tween(300))
+                    },
+                    popExitTransition = {
+                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300)) + fadeOut(tween(300))
+                    }
+                ) {
                 composable("landing") {
                     LandingScreen(onNavigateToHome = {
                         navController.navigate(Screen.Main.route) {
@@ -557,6 +550,17 @@ fun AppNavigation(
                 composable("about_app") {
                     AboutAppScreen(onBackClick = { navController.popBackStack() })
                 }
+                }
+            }
+
+            if (currentRoute == Screen.Main.route) {
+                Fab(
+                    onAddGrade = { navController.navigate("add_grade") },
+                    onAddAbsence = { navController.navigate("add_absence") },
+                    onAddTask = { navController.navigate("add_task") },
+                    endOffset = 20.dp,
+                    bottomOffset = fabBottomOffset
+                )
             }
         }
     }

@@ -6,6 +6,7 @@ import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.data.repositories.ClassRepository
 import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
+import com.example.my_uz_android.data.repositories.UserCourseRepository
 import com.example.my_uz_android.util.NetworkResult
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ class OnboardingViewModelTest {
     private val settingsRepository: SettingsRepository = mockk()
     private val universityRepository: UniversityRepository = mockk()
     private val classRepository: ClassRepository = mockk()
+    private val userCourseRepository: UserCourseRepository = mockk()
 
     @Before
     fun setUp() {
@@ -38,7 +40,8 @@ class OnboardingViewModelTest {
         viewModel = OnboardingViewModel(
             settingsRepository,
             universityRepository,
-            classRepository
+            classRepository,
+            userCourseRepository
         )
     }
 
