@@ -17,6 +17,9 @@ import kotlin.math.abs
 
 private const val SAVE_FEEDBACK_DURATION_MS = 1200L
 
+/**
+ * Stan UI ekranu ustawień.
+ */
 data class SettingsUiState(
     val settings: SettingsEntity? = null,
     val uniqueClassTypes: List<String> = emptyList(),
@@ -28,6 +31,12 @@ data class SettingsUiState(
     val isSaved: Boolean = false
 )
 
+/**
+ * ViewModel ekranu ustawień.
+ *
+ * Zarządza zapisem preferencji aplikacji (motyw, język, powiadomienia, kolory zajęć)
+ * oraz operacjami backup/import.
+ */
 class SettingsViewModel(
     private val backupManager: BackupManager,
     private val settingsRepository: SettingsRepository,
@@ -39,7 +48,6 @@ class SettingsViewModel(
     private val eventRepository: EventRepository
 ) : ViewModel() {
 
-    /*** Zielony komentarz: Jedno źródło prawdy dla ekranu ustawień. */
     private val _uiState = MutableStateFlow(SettingsUiState(isLoading = true))
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
@@ -49,7 +57,6 @@ class SettingsViewModel(
         observeSettingsAndClassTypes()
     }
 
-    /*** Zielony komentarz: Stała, stabilna obserwacja settings + typów zajęć bez dublowania źródeł stanu w UI. */
     private fun observeSettingsAndClassTypes() {
         viewModelScope.launch {
             combine(
@@ -96,7 +103,6 @@ class SettingsViewModel(
         }
     }
 
-    /*** Zielony komentarz: Gwarantuje, że każdy typ zajęć ma kolor — brak "dziur" po synchronizacji planu. */
     private suspend fun ensureColorMapForTypes(
         settings: SettingsEntity?,
         uniqueTypes: List<String>,
@@ -141,6 +147,17 @@ class SettingsViewModel(
         updateSettings { it.copy(themeMode = mode.name) }
     }
 
+    /**
+     * Ustawia język aplikacji, zapisując wyłącznie wspierane wartości `pl` lub `en`.
+     */
+    fun setAppLanguage(languageCode: String) {
+        val normalizedCode = when (languageCode) {
+            "en" -> "en"
+            else -> "pl"
+        }
+        updateSettings { it.copy(appLanguage = normalizedCode) }
+    }
+
     fun updateClassColor(classType: String, colorIndex: Int) {
         val current = _uiState.value.settings ?: return
         val currentMap = _uiState.value.classColorMap.toMutableMap()
@@ -150,10 +167,6 @@ class SettingsViewModel(
             settingsRepository.insertSettings(current.copy(classColorsJson = gson.toJson(currentMap)))
             triggerSaveFeedback()
         }
-    }
-
-    fun toggleOfflineMode(enabled: Boolean) {
-        updateSettings { it.copy(offlineModeEnabled = enabled) }
     }
 
     fun toggleNotifications(enabled: Boolean) {

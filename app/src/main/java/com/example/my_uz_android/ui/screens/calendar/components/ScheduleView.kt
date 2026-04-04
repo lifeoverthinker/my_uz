@@ -89,6 +89,7 @@ import java.time.ZoneId
 import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
 import kotlin.math.abs
+import androidx.compose.ui.res.stringResource
 
 private val PolandZone = ZoneId.of("Europe/Warsaw")
 private val HourHeight = 60.dp
@@ -176,8 +177,8 @@ fun ScheduleView(
             }
 
             val monthName = visibleMonth.month
-                .getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale("pl"))
-                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pl")) else it.toString() }
+                .getDisplayName(JavaTextStyle.FULL_STANDALONE, Locale.getDefault())
+                .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
             Box(
                 modifier = Modifier
@@ -191,7 +192,7 @@ fun ScheduleView(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "$monthName ${visibleMonth.year}",
+                        text = stringResource(R.string.calendar_title_month_year, monthName, visibleMonth.year),
                         style = TextStyle(
                             fontFamily = InterFontFamily,
                             fontWeight = FontWeight.SemiBold,
@@ -365,9 +366,9 @@ private fun DayTimelineContent(
             contentAlignment = Alignment.Center
         ) {
             com.example.my_uz_android.ui.components.EmptyStateMessage(
-                title = "Brak zajęć",
-                subtitle = "Zasłużony odpoczynek",
-                message = "W tym dniu nie masz żadnych zaplanowanych zajęć. Ciesz się wolnym czasem!",
+                title = stringResource(R.string.empty_calendar_title),
+                subtitle = stringResource(R.string.empty_calendar_subtitle),
+                message = stringResource(R.string.empty_calendar_message),
                 iconRes = R.drawable.calendar_rafiki
             )
         }
@@ -426,7 +427,7 @@ fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
                 modifier = Modifier
                     .weight(1f)
                     .height(24.dp),
-                text = dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale("pl"))
+                text = dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale.getDefault())
                     .replaceFirstChar { it.titlecase() }
                     .take(1),
                 textAlign = TextAlign.Center,

@@ -38,18 +38,20 @@ import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import com.example.my_uz_android.ui.theme.getAppAccentColor
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
+import com.example.my_uz_android.ui.components.EmptyStateFigma
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-/**
- * Renderuje ekran powiadomień z akcją czyszczenia listy.
- *
- * @param viewModel ViewModel odpowiedzialny za dane powiadomień.
- * @param onNavigateBack Callback powrotu do poprzedniego ekranu.
- */
+        /**
+         * Renderuje ekran powiadomień z akcją czyszczenia listy.
+         *
+         * @param viewModel ViewModel odpowiedzialny za dane powiadomień.
+         * @param onNavigateBack Callback powrotu do poprzedniego ekranu.
+         */
 fun NotificationsScreen(
     viewModel: NotificationsViewModel,
     onNavigateBack: () -> Unit
@@ -63,7 +65,7 @@ fun NotificationsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "Powiadomienia",
+                title = stringResource(R.string.notifications_title),
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onNavigateBack,
                 isNavigationIconFilled = true,
@@ -108,12 +110,12 @@ fun NotificationsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-/**
- * Renderuje element listy powiadomień z obsługą usuwania gestem swipe.
- *
- * @param notification Powiadomienie prezentowane na liście.
- * @param onDelete Callback usuwający wskazane powiadomienie.
- */
+        /**
+         * Renderuje element listy powiadomień z obsługą usuwania gestem swipe.
+         *
+         * @param notification Powiadomienie prezentowane na liście.
+         * @param onDelete Callback usuwający wskazane powiadomienie.
+         */
 fun SwipeToDeleteNotification(
     notification: NotificationEntity,
     onDelete: () -> Unit
@@ -150,7 +152,7 @@ fun SwipeToDeleteNotification(
                 if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Usuń",
+                        contentDescription = stringResource(R.string.btn_delete),
                         tint = MaterialTheme.colorScheme.onError
                     )
                 }
@@ -163,13 +165,13 @@ fun SwipeToDeleteNotification(
 }
 
 @Composable
-/**
- * Renderuje kartę pojedynczego powiadomienia.
- *
- * @param notification Dane powiadomienia do wyświetlenia.
- * @param backgroundColor Opcjonalny kolor tła karty.
- * @param isDarkMode Flaga trybu ciemnego używana przy doborze palety.
- */
+        /**
+         * Renderuje kartę pojedynczego powiadomienia.
+         *
+         * @param notification Dane powiadomienia do wyświetlenia.
+         * @param backgroundColor Opcjonalny kolor tła karty.
+         * @param isDarkMode Flaga trybu ciemnego używana przy doborze palety.
+         */
 fun NotificationCardItem(
     notification: NotificationEntity,
     backgroundColor: Color? = null,
@@ -177,7 +179,7 @@ fun NotificationCardItem(
 ) {
     val dateFormatter = SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.getDefault())
     val formattedDate = dateFormatter.format(Date(notification.timestamp))
-    
+
     // Indeks 0 dla powiadomień (fioletowy zestaw spójny z resztą apki)
     val bgColor = backgroundColor ?: getAppBackgroundColor(0, isDarkMode)
     val accentColor = getAppAccentColor(0, isDarkMode)
@@ -216,7 +218,7 @@ fun NotificationCardItem(
                         modifier = Modifier.size(16.dp)
                     )
                 }
-                
+
                 Text(
                     text = notification.title,
                     style = TextStyle(
@@ -230,7 +232,7 @@ fun NotificationCardItem(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            
+
             Text(
                 text = formattedDate,
                 style = TextStyle(
@@ -241,7 +243,7 @@ fun NotificationCardItem(
                 )
             )
         }
-        
+
         Text(
             text = notification.message,
             style = TextStyle(
@@ -258,44 +260,14 @@ fun NotificationCardItem(
 }
 
 @Composable
-/**
- * Renderuje stan pusty ekranu powiadomień.
- */
 fun EmptyNotificationsState() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.push_notifications_rafiki),
-            contentDescription = "Brak powiadomień",
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .aspectRatio(1f)
-                .padding(bottom = 24.dp)
-        )
-        Text(
-            text = "Cisza i spokój",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Wszystko gotowe",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "Nie masz jeszcze żadnych powiadomień. Gdy pojawi się jakaś zmiana w planie lub nowa informacja, zobaczysz ją tutaj.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-    }
+    EmptyStateFigma(
+        title = stringResource(R.string.notifications_empty_title),
+        subtitle = stringResource(R.string.notifications_empty_accent),
+        message = stringResource(R.string.notifications_empty_desc),
+        iconRes = R.drawable.push_notifications_rafiki,
+        modifier = Modifier.fillMaxSize(),
+        illustrationSize = 221.dp,
+        containerHeight = 580.dp
+    )
 }

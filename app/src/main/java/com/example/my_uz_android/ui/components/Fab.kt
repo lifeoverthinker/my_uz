@@ -36,6 +36,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import androidx.compose.ui.res.stringResource
 
 /**
  * Model pojedynczej akcji wyświetlanej w rozwijanym menu FAB.
@@ -68,11 +69,15 @@ fun Fab(
     var isExpanded by remember { mutableStateOf(false) }
     val isDark = isSystemInDarkTheme()
 
-    val actions = remember(onAddGrade, onAddAbsence, onAddTask) {
+    val addGradeLabel = stringResource(R.string.fab_add_grade)
+    val addAbsenceLabel = stringResource(R.string.fab_add_absence)
+    val addTaskLabel = stringResource(R.string.fab_add_task)
+
+    val actions = remember(onAddGrade, onAddAbsence, onAddTask, addGradeLabel, addAbsenceLabel, addTaskLabel) {
         listOf(
-            FabAction("Dodaj ocenę", R.drawable.ic_trophy, onAddGrade),
-            FabAction("Dodaj nieobecność", R.drawable.ic_clock, onAddAbsence),
-            FabAction("Dodaj zadanie", R.drawable.ic_book_open, onAddTask)
+            FabAction(addGradeLabel, R.drawable.ic_trophy, onAddGrade),
+            FabAction(addAbsenceLabel, R.drawable.ic_clock, onAddAbsence),
+            FabAction(addTaskLabel, R.drawable.ic_book_open, onAddTask)
         )
     }
 
@@ -107,8 +112,7 @@ fun Fab(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 24.dp)
-                .navigationBarsPadding()
+                .padding(end = 8.dp, bottom = 8.dp)
         ) {
             AnimatedVisibility(
                 visible = isExpanded,

@@ -17,6 +17,8 @@ import androidx.compose.ui.window.Dialog
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.stringResource
+import com.example.my_uz_android.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 /**
@@ -60,7 +62,7 @@ fun TimePicker(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Wybierz godzinę",
+                    text = stringResource(R.string.time_picker_title),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -83,14 +85,14 @@ fun TimePicker(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Anuluj")
+                        Text(stringResource(R.string.btn_cancel))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     TextButton(
                         onClick = { onTimeSelected(timeState.hour, timeState.minute) }
                     ) {
                         Text(
-                            text = "OK",
+                            text = stringResource(R.string.btn_ok),
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }

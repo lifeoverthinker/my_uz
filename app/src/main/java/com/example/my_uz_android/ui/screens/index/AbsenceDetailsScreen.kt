@@ -25,6 +25,7 @@ import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun AbsenceDetailsScreenRoute(
@@ -50,14 +51,14 @@ fun AbsenceDetailsScreenRoute(
 
     if (absence == null) {
         EmptyDetailsState(
-            title = "Brak danych nieobecności",
-            description = "Nie udało się pobrać szczegółów tej nieobecności."
+            title = stringResource(R.string.absence_details_empty_title),
+            description = stringResource(R.string.absence_details_empty_message)
         )
         return
     }
 
     AbsenceDetailsScreen(
-        subjectName = absence.subjectName ?: "",
+        subjectName = absence.subjectName ?: stringResource(R.string.unknown_subject),
         classType = ClassTypeUtils.getFullName(absence.classType),
         dateMillis = absence.date,
         isExcused = absence.isExcused,
@@ -87,7 +88,7 @@ fun AbsenceDetailsScreen(
 
     val squareColor = MaterialTheme.colorScheme.errorContainer
 
-    val statusText = if (isExcused) "Usprawiedliwiona" else "Nieusprawiedliwiona"
+    val statusText = if (isExcused) stringResource(R.string.status_excused) else stringResource(R.string.status_unexcused)
     val statusColor = if (isExcused) Color(0xFF388E3C) else MaterialTheme.colorScheme.error
     val statusIcon = if (isExcused) R.drawable.ic_check_circle_broken else R.drawable.ic_close
 
@@ -121,7 +122,7 @@ fun AbsenceDetailsScreen(
                                 onDismissRequest = { showMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Duplikuj") },
+                                    text = { Text(stringResource(R.string.btn_duplicate)) },
                                     leadingIcon = {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_copy),
@@ -135,7 +136,7 @@ fun AbsenceDetailsScreen(
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error) },
                                     leadingIcon = {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_trash),
@@ -161,8 +162,8 @@ fun AbsenceDetailsScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Surface(
                     modifier = Modifier
@@ -196,7 +197,7 @@ fun AbsenceDetailsScreen(
 
                         Column {
                             Text(
-                                text = subjectName.ifBlank { "Nieznany przedmiot" },
+                                text = subjectName,
                                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -213,7 +214,7 @@ fun AbsenceDetailsScreen(
                 DetailRowCard(
                     iconRes = statusIcon,
                     iconTint = statusColor,
-                    label = "Status",
+                    label = stringResource(R.string.label_status_absence),
                     value = statusText,
                     valueColor = statusColor,
                     isValueHighlight = true
@@ -221,14 +222,14 @@ fun AbsenceDetailsScreen(
 
                 DetailRowCard(
                     iconRes = R.drawable.ic_stand,
-                    label = "Rodzaj zajęć",
+                    label = stringResource(R.string.label_type),
                     value = classType
                 )
 
                 if (reason.isNotBlank()) {
                     DetailRowCard(
                         iconRes = R.drawable.ic_menu_2,
-                        label = "Powód / opis",
+                        label = stringResource(R.string.label_reason),
                         value = reason,
                         isMultiline = true
                     )
@@ -242,7 +243,7 @@ fun AbsenceDetailsScreen(
                         showDeleteDialog = false
                     },
                     onDismiss = { showDeleteDialog = false },
-                    itemType = "nieobecność"
+                    itemType = stringResource(R.string.item_type_absence)
                 )
             }
         }
@@ -257,16 +258,16 @@ private fun AbsenceDeleteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Potwierdź usunięcie") },
-        text = { Text("Czy na pewno chcesz usunąć to $itemType? Te zmiany są nieodwracalne.") },
+        title = { Text(stringResource(R.string.delete_confirmation_title)) },
+        text = { Text(stringResource(R.string.delete_confirmation_message_alt, itemType)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Usuń", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj")
+                Text(stringResource(R.string.btn_cancel))
             }
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -286,13 +287,13 @@ private fun DetailRowCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         color = Color.Transparent
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
         ) {
             Icon(
@@ -364,7 +365,7 @@ private fun EmptyDetailsState(
 }
 
 private fun formatAbsenceDetailsDate(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault())
         .format(Date(timestamp))
         .replaceFirstChar { it.uppercase() }
 }

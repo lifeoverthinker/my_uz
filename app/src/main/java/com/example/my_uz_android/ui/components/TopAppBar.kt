@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import androidx.compose.ui.res.stringResource
 
 @Composable
 /**
@@ -254,7 +255,7 @@ fun AddEditTopAppBar(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(
-                    "Zapisz",
+                    stringResource(R.string.btn_save),
                     style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp)
                 )
             }
@@ -369,7 +370,7 @@ fun SearchTopAppBar(
                     value = query,
                     onValueChange = onQueryChange,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Szukaj...") },
+                    placeholder = { Text(stringResource(R.string.search_hint)) },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color.Transparent,
                         unfocusedContainerColor = Color.Transparent,

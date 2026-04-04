@@ -1,5 +1,10 @@
 package com.example.my_uz_android.ui.screens.home
 
+/**
+ * Ekran Główny aplikacji. (Pulpit/Dashboard).
+ * Zawiera skrót najważniejszych nadchodzących zajęć, zadań i wydarzeń dla zalogowanego studenta.
+ */
+
 import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -25,6 +30,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -42,6 +48,10 @@ import com.example.my_uz_android.ui.components.DashboardEmptyCard
 import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import com.example.my_uz_android.ui.theme.getAppAccentColor
 import com.example.my_uz_android.ui.components.TopBarActionIcon
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,16 +69,8 @@ fun HomeScreen(
     onAddAbsenceClick: () -> Unit = {},
     onAddTaskClick: () -> Unit = {}
 ) {
-    // --- STATE ---
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    // --- THEME & SYSTEM BARS ---
-    val isSystemDark = isSystemInDarkTheme()
-    val isDark = when (uiState.themeMode) {
-        "DARK" -> true
-        "LIGHT" -> false
-        else -> isSystemDark
-    }
+    val isDark = isSystemInDarkTheme()
 
     val topSectionBackground = extendedColors.homeTopBackground
     val headerContentColor = MaterialTheme.colorScheme.onSurface
@@ -103,7 +105,9 @@ fun HomeScreen(
         }
     }
 
-    // --- MAIN CONTENT ---
+    val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault())
+    val headerDateString = uiState.currentDateReference.format(formatter).replaceFirstChar { it.uppercase() }
+
     if (uiState.isLoading) {
         Box(
             modifier = Modifier
@@ -119,7 +123,6 @@ fun HomeScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface)
         ) {
-            // Tło górnej sekcji
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -128,8 +131,6 @@ fun HomeScreen(
             )
 
             Column(modifier = Modifier.fillMaxSize()) {
-
-                // --- HEADER ---
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier
@@ -141,18 +142,16 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = uiState.currentDate,
+                            text = headerDateString,
                             style = MaterialTheme.typography.titleSmall,
                             color = headerContentColor
                         )
 
                         val unreadCount by notificationsViewModel.unreadCount.collectAsState(initial = 0)
 
-                        // Ujednolicony przycisk powiadomień (jak TopBarActionIcon)
                         BadgedBox(
                             badge = {
-                                // Badge ma być tylko kropką (bez cyfry) jeśli są nieodczytane
-                                if (uiState.hasUnreadNotifications) {
+                                if (unreadCount > 0) {
                                     Badge(
                                         containerColor = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.offset(x = (-8).dp, y = 8.dp)
@@ -174,20 +173,34 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
+                        val firstName = uiState.userName.split(" ").firstOrNull() ?: "Student"
                         Text(
-                            text = uiState.greeting,
+                            text = "Cześć, $firstName! 👋",
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = headerContentColor
+                            color = headerContentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // ZMIANA: Używamy logiki zbudowanej z 'faculties' - UZ, Wydział...
+                        val greetingText = if (uiState.faculties.isNotEmpty()) {
+                            "UZ, " + uiState.faculties.joinToString(", ")
+                        } else {
+                            "Uniwersytet Zielonogórski"
+                        }
+
                         Text(
-                            text = uiState.departmentInfo,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = subHeaderContentColor
+                            text = greetingText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = subHeaderContentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                // --- DASHBOARD CONTENT ---
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -196,12 +209,16 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.surface
                 ) {
                     LazyColumn(contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
+
                         item {
+                            val displayClasses = if (uiState.todaysClasses.isNotEmpty()) uiState.todaysClasses else uiState.tomorrowClasses
+                            val dayLabel = if (uiState.todaysClasses.isNotEmpty()) "Dzisiaj" else if (uiState.tomorrowClasses.isNotEmpty()) "Jutro" else "Brak zajęć"
+
                             UpcomingClasses(
-                                classes = uiState.upcomingClasses,
-                                isPlanSelected = uiState.isPlanSelected,
-                                emptyMessage = uiState.classesMessage,
-                                dayLabel = uiState.classesDayLabel,
+                                classes = displayClasses,
+                                isPlanSelected = uiState.studyFields.isNotEmpty(),
+                                emptyMessage = "Brak zajęć na horyzoncie",
+                                dayLabel = dayLabel,
                                 classColorMap = uiState.classColorMap,
                                 isDarkMode = isDark,
                                 onClassClick = onClassClick,
@@ -209,6 +226,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
+
                         item {
                             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -228,8 +246,8 @@ fun HomeScreen(
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                         itemsIndexed(uiState.upcomingTasks) { _, task ->
                                             TaskCard(
-                                                task = task, 
-                                                onTaskClick = { onTaskClick(task.id) }, 
+                                                task = task,
+                                                onTaskClick = { onTaskClick(task.id) },
                                                 modifier = Modifier.width(264.dp),
                                                 backgroundColor = getAppBackgroundColor(1, isDark),
                                                 isDarkMode = isDark
@@ -247,7 +265,7 @@ fun HomeScreen(
                                     Icon(painter = painterResource(id = R.drawable.ic_marker_pin), contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
                                     Text(text = "Wydarzenia", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
                                 }
-                                if (uiState.upcomingEvents.isEmpty()) {
+                                if (uiState.todaysEvents.isEmpty()) {
                                     DashboardEmptyCard(
                                         title = "Spokojny czas",
                                         message = "Brak nadchodzących wydarzeń",
@@ -258,7 +276,7 @@ fun HomeScreen(
                                     )
                                 } else {
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        items(uiState.upcomingEvents) { event ->
+                                        items(uiState.todaysEvents) { event ->
                                             EventCard(event = event, onClick = { onEventClick(event.id) }, modifier = Modifier.width(264.dp))
                                         }
                                     }

@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Moje Zajęcia"
+        android:text="@string/moje_zajecia"
         android:textColor="#1D192B"
         android:textSize="16sp"
         android:textStyle="bold" />
@@ -18,7 +18,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="12dp"
-        android:text="Dzisiaj"
+        android:text="@string/dzisiaj"
         android:textColor="#6750A4"
         android:textStyle="bold"
         android:textSize="12sp" />

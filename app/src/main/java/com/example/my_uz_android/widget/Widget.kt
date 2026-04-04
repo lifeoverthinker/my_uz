@@ -36,6 +36,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.my_uz_android.MainActivity
+import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.theme.ClassColorPalette
 import com.google.gson.Gson
@@ -61,9 +62,10 @@ class Widget : GlanceAppWidget() {
 
     @Composable
     internal fun WidgetContent() {
+        val context = LocalContext.current
         val prefs = currentState<Preferences>()
         val dayLabel = prefs[dayLabelKey] ?: ""
-        val message = prefs[messageKey] ?: "Ładowanie danych..."
+        val message = prefs[messageKey] ?: context.getString(R.string.widget_loading)
         val classesJson = prefs[classesJsonKey]
         val colorMapJson = prefs[colorMapJsonKey]
 
@@ -110,7 +112,7 @@ class Widget : GlanceAppWidget() {
                 // Używamy mainIntent w actionStartActivity
                 Column(modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity(mainIntent))) {
                     Text(
-                        text = "Najbliższe zajęcia",
+                        text = context.getString(R.string.upcoming_classes_title),
                         style = TextStyle(
                             color = GlanceTheme.colors.onSurface,
                             fontSize = 14.sp,
@@ -131,7 +133,7 @@ class Widget : GlanceAppWidget() {
 
                 Image(
                     provider = ImageProvider(android.R.drawable.ic_popup_sync),
-                    contentDescription = "Odśwież",
+                    contentDescription = context.getString(R.string.widget_refresh),
                     modifier = GlanceModifier
                         .size(24.dp)
                         .clickable(actionRunCallback<RefreshAction>())
@@ -228,7 +230,7 @@ class Widget : GlanceAppWidget() {
                     if (!classItem.room.isNullOrBlank()) {
                         Spacer(modifier = GlanceModifier.width(8.dp))
                         Text(
-                            text = "• Sala ${classItem.room}",
+                            text = context.getString(R.string.label_room_format, classItem.room),
                             style = TextStyle(
                                 color = subtitleColorProvider,
                                 fontSize = 12.sp

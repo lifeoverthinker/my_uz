@@ -20,6 +20,7 @@ import com.example.my_uz_android.ui.components.DashboardEmptyCard
 import com.example.my_uz_android.ui.components.DashboardActionEmptyCard
 import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import com.example.my_uz_android.ui.theme.getAppAccentColor
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun UpcomingClasses(
@@ -56,7 +57,7 @@ fun UpcomingClasses(
                 )
 
                 Text(
-                    text = "Najbliższe zajęcia",
+                    text = stringResource(R.string.upcoming_classes_title),
                     style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -80,10 +81,10 @@ fun UpcomingClasses(
 
         if (!isPlanSelected) {
             DashboardActionEmptyCard(
-                title = "Wybierz plan zajęć",
-                message = "Przejdź do danych osobowych, aby przypisać się do grupy i zobaczyć nadchodzące zajęcia.",
+                title = stringResource(R.string.setup_plan_title),
+                message = stringResource(R.string.setup_plan_message),
                 iconRes = R.drawable.ic_calendar_check,
-                actionText = "Wybierz grupę",
+                actionText = stringResource(R.string.setup_plan_button),
                 onActionClick = onSetupPlanClick,
                 containerColor = getAppBackgroundColor(0, isDarkMode),
                 accentColor = getAppAccentColor(0, isDarkMode),
@@ -91,8 +92,8 @@ fun UpcomingClasses(
             )
         } else if (classes.isEmpty()) {
             DashboardEmptyCard(
-                title = "Wszystko gotowe!",
-                message = emptyMessage ?: "Brak zajęć na dziś i jutro",
+                title = stringResource(R.string.all_set_title),
+                message = emptyMessage ?: stringResource(R.string.no_classes_today_tomorrow),
                 iconRes = R.drawable.ic_calendar_check,
                 containerColor = getAppBackgroundColor(0, isDarkMode),
                 accentColor = getAppAccentColor(0, isDarkMode),

@@ -20,6 +20,7 @@ data class AddEditAbsenceUiState(
     val classType: String? = null,
     val description: String = "",
     val date: Long = System.currentTimeMillis(),
+    val isExcused: Boolean = false,
     val availableSubjects: List<Pair<String, List<String>>> = emptyList()
 )
 
@@ -64,7 +65,8 @@ class AddEditAbsenceViewModel(
                 subjectName = subject,
                 classType = type,
                 description = "",
-                date = System.currentTimeMillis()
+                date = System.currentTimeMillis(),
+                isExcused = false
             )
         }
     }
@@ -84,7 +86,8 @@ class AddEditAbsenceViewModel(
                         subjectName = absence.subjectName,
                         classType = absence.classType,
                         description = absence.description ?: "",
-                        date = absence.date
+                        date = absence.date,
+                        isExcused = absence.isExcused
                     )
                 }
             }
@@ -178,6 +181,10 @@ class AddEditAbsenceViewModel(
         _uiState.update { it.copy(date = date) }
     }
 
+    fun updateIsExcused(isExcused: Boolean) {
+        _uiState.update { it.copy(isExcused = isExcused) }
+    }
+
     fun saveAbsence() {
         viewModelScope.launch {
             val state = _uiState.value
@@ -188,7 +195,8 @@ class AddEditAbsenceViewModel(
                 subjectName = state.subjectName,
                 classType = state.classType ?: "",
                 date = state.date,
-                description = state.description.ifBlank { null }
+                description = state.description.ifBlank { null },
+                isExcused = state.isExcused
             )
 
             absenceRepository.insertAbsence(entity)
@@ -204,7 +212,8 @@ class AddEditAbsenceViewModel(
                     id = loadedAbsenceId!!,
                     subjectName = state.subjectName ?: "",
                     date = state.date,
-                    classType = state.classType ?: ""
+                    classType = state.classType ?: "",
+                    isExcused = state.isExcused
                 )
                 absenceRepository.deleteAbsence(entity)
                 _isSaved.value = true

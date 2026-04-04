@@ -2,13 +2,22 @@ package com.example.my_uz_android.util
 
 import com.example.my_uz_android.data.models.GradeEntity
 
-// =========================================================================
-// KALKULATOR OCEN
-// Odpowiada za bezpieczne wyliczanie średniej ważonej oraz
-// priorytetyzację oceny końcowej, co daje idealne zachowanie widoku Indeksu.
-// =========================================================================
+/**
+ * =========================================================================
+ * KALKULATOR OCEN
+ * Odpowiada za bezpieczne wyliczanie średniej ważonej oraz
+ * priorytetyzację oceny końcowej, co daje idealne zachowanie widoku Indeksu.
+ * =========================================================================
+ */
 object GradeCalculator {
 
+    /**
+     * Oblicza średnią ocen dla przekazanej listy wpisów.
+     * Logika uwzględnia nadpisywanie średniej oceną końcową oraz ignoruje plusy/punkty.
+     *
+     * @param grades Lista ocen do przeliczenia.
+     * @return Obliczona średnia (lub ocena końcowa, jeśli istnieje).
+     */
     fun calculateGPA(grades: List<GradeEntity>): Double {
         // 1. Priorytet Oceny Końcowej
         // Szukamy, czy ocena ma w opisie lub komentarzu słowo "końcow" (np. "Ocena końcowa").
@@ -23,6 +32,7 @@ object GradeCalculator {
 
         // 2. Standardowe wyliczanie średniej ważonej
         val validGrades = grades.filter {
+            // Ignorujemy punkty, aktywności (grade == -1.0) oraz oceny bez wagi
             !it.isPoints && it.grade != -1.0 && it.weight > 0
         }
 

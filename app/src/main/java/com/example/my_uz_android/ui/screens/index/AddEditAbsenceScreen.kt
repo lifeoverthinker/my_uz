@@ -1,11 +1,16 @@
 package com.example.my_uz_android.ui.screens.index
 
+/**
+ * Ekran formularza służący do dodawania nowej lub edycji istniejącej nieobecności.
+ * Integruje się z ViewModelem, aby zarządzać polami tekstowymi, datą, rodzajem zajęć
+ * oraz statusem "Usprawiedliwiona".
+ */
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,7 +33,17 @@ import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
 
+/**
+ * Główny punkt wejścia do formularza dodawania/edycji nieobecności.
+ * Mapuje dane z ViewModelu na parametry interfejsu użytkownika.
+ *
+ * @param viewModel ViewModel obsługujący stan formularza.
+ * @param prefilledSubject Wstępnie uzupełniona nazwa przedmiotu (jeśli użytkownik dodał nieobecność z kalendarza).
+ * @param prefilledClassType Wstępnie uzupełniony rodzaj zajęć.
+ * @param onNavigateBack Funkcja wywoływana po udanym zapisie lub anulowaniu.
+ */
 @Composable
 fun AbsenceAddEditScreenRoute(
     viewModel: AddEditAbsenceViewModel,
@@ -39,21 +54,21 @@ fun AbsenceAddEditScreenRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
 
+    // Po udanym zapisie wracamy do poprzedniego ekranu
     LaunchedEffect(isSaved) {
         if (isSaved) onNavigateBack()
     }
 
+    // Inicjalizacja nowych danych na podstawie przekazanych argumentów (np. z widoku kalendarza)
     LaunchedEffect(prefilledSubject, prefilledClassType, uiState.id, uiState.subjectName) {
         if (uiState.id == 0 && uiState.subjectName == null) {
             viewModel.initNewAbsence(prefilledSubject, prefilledClassType)
         }
     }
 
+    // Zmienne lokalne, aby uniknąć opóźnień (lagów) podczas wpisywania tekstu
     var localSubject by remember(uiState.subjectName) { mutableStateOf(uiState.subjectName ?: "") }
     var localClassType by remember(uiState.classType) { mutableStateOf(uiState.classType ?: "") }
-
-    // UX 1:1: przełącznik "Usprawiedliwiona" pozostaje lokalnym stanem UI.
-    var isExcused by remember { mutableStateOf(true) }
 
     val subjectsList = uiState.availableSubjects.map { it.first }
     val classTypesList = uiState.availableSubjects
@@ -67,7 +82,7 @@ fun AbsenceAddEditScreenRoute(
         onSubjectChange = {
             localSubject = it
             viewModel.updateSubjectName(it)
-            viewModel.updateClassType("")
+            viewModel.updateClassType("") // Resetujemy rodzaj zajęć przy zmianie przedmiotu
             localClassType = ""
         },
         subjectsList = subjectsList,
@@ -79,8 +94,9 @@ fun AbsenceAddEditScreenRoute(
         classTypesList = classTypesList,
         dateMillis = uiState.date,
         onDateChange = viewModel::updateDate,
-        isExcused = isExcused,
-        onExcusedChange = { isExcused = it },
+        // Pobieramy status usprawiedliwienia PROSTO z ViewModelu (naprawiony bug!)
+        isExcused = uiState.isExcused,
+        onExcusedChange = viewModel::updateIsExcused,
         reason = uiState.description,
         onReasonChange = viewModel::updateDescription,
         onSaveClick = { viewModel.saveAbsence() },
@@ -88,6 +104,9 @@ fun AbsenceAddEditScreenRoute(
     )
 }
 
+/**
+ * Zwraca ujednolicone kolory dla pól tekstowych używanych w formularzach.
+ */
 @Composable
 private fun absenceOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -101,6 +120,10 @@ private fun absenceOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
 
 private val AbsenceAppShape = RoundedCornerShape(16.dp)
 
+/**
+ * Pomocniczy komponent tworzący klikalny wiersz przypominający pole tekstowe.
+ * Idealne do wywoływania DatePickera.
+ */
 @Composable
 private fun AbsenceClickableFieldRow(
     label: String,
@@ -155,6 +178,9 @@ private fun AbsenceClickableFieldRow(
     }
 }
 
+/**
+ * Główny, bezstanowy (Stateless) widok formularza nieobecności.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AbsenceAddEditScreen(
@@ -176,7 +202,6 @@ fun AbsenceAddEditScreen(
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
-    val isDark = isSystemInDarkTheme()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -187,7 +212,7 @@ fun AbsenceAddEditScreen(
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
-                    title = if (isEditMode) "Edytuj nieobecność" else "Dodaj nieobecność",
+                    title = if (isEditMode) stringResource(R.string.edit_absence_title) else stringResource(R.string.add_absence_title),
                     navigationIcon = R.drawable.ic_close,
                     isNavigationIconFilled = true,
                     onNavigationClick = onNavigateBack,
@@ -199,7 +224,7 @@ fun AbsenceAddEditScreen(
                                 .heightIn(min = 48.dp),
                             enabled = selectedSubject.isNotBlank() && selectedClassType.isNotBlank()
                         ) {
-                            Text("Zapisz", style = MaterialTheme.typography.labelLarge)
+                            Text(stringResource(R.string.btn_save), style = MaterialTheme.typography.labelLarge)
                         }
                     },
                     containerColor = Color.Transparent
@@ -214,21 +239,24 @@ fun AbsenceAddEditScreen(
                     .padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Wybór daty
                 AbsenceClickableFieldRow(
-                    label = "Data nieobecności",
+                    label = stringResource(R.string.label_absence_date),
                     value = formatAbsenceAddEditDate(dateMillis),
                     iconRes = R.drawable.ic_calendar,
                     onClick = { showDatePicker = true }
                 )
 
+                // Wybór przedmiotu
                 AbsenceAppDropdownMenu(
-                    label = "Przedmiot",
+                    label = stringResource(R.string.label_subject_field),
                     selectedOption = selectedSubject,
                     options = subjectsList,
                     onOptionSelected = onSubjectChange,
                     iconRes = R.drawable.ic_book_open
                 )
 
+                // Wybór rodzaju zajęć (pokazywany tylko po wybraniu przedmiotu)
                 AnimatedVisibility(
                     visible = selectedSubject.isNotEmpty() && classTypesList.isNotEmpty(),
                     enter = expandVertically(),
@@ -236,7 +264,7 @@ fun AbsenceAddEditScreen(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "RODZAJ ZAJĘĆ",
+                            text = stringResource(R.string.label_class_type_field),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -260,6 +288,7 @@ fun AbsenceAddEditScreen(
                     }
                 }
 
+                // Przełącznik "Usprawiedliwiona"
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -270,37 +299,36 @@ fun AbsenceAddEditScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onExcusedChange(!isExcused) }
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                painter = painterResource(R.drawable.ic_check_circle_broken),
+                                painter = painterResource(id = R.drawable.ic_check),
                                 contentDescription = null,
-                                tint = if (isExcused) Color(0xFF388E3C) else Color(0xFFE57373),
-                                modifier = Modifier.size(24.dp)
+                                tint = if (isExcused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "Usprawiedliwiona",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
+                                text = stringResource(R.string.status_excused),
+                                style = MaterialTheme.typography.bodyLarge
                             )
                         }
-                        Switch(checked = isExcused, onCheckedChange = onExcusedChange)
+                        Switch(
+                            checked = isExcused,
+                            onCheckedChange = onExcusedChange
+                        )
                     }
                 }
 
+                // Pole opisu / powodu
                 OutlinedTextField(
                     value = reason,
                     onValueChange = onReasonChange,
-                    label = { Text("Powód / Opis (opcjonalnie)") },
-                    placeholder = { Text("np. Wizyta u lekarza, zwolnienie lekarskie L4...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 120.dp),
-                    maxLines = 5,
+                    label = { Text(stringResource(R.string.label_reason_optional)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
                     colors = absenceOutlinedTextFieldColors(),
                     shape = AbsenceAppShape
                 )
@@ -308,52 +336,64 @@ fun AbsenceAddEditScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
-    }
 
-    if (showDatePicker) {
-        DatePicker(
-            date = dateMillis,
-            onDateSelected = {
-                onDateChange(it)
-                showDatePicker = false
-            },
-            onDismiss = { showDatePicker = false }
-        )
+        if (showDatePicker) {
+            DatePicker(
+                date = dateMillis,
+                onDateSelected = {
+                    onDateChange(it)
+                    showDatePicker = false
+                },
+                onDismiss = { showDatePicker = false }
+            )
+        }
     }
 }
 
+/**
+ * Rozwijane menu wyboru przedmiotu (Dropdown).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AbsenceAppDropdownMenu(
+fun AbsenceAppDropdownMenu(
     label: String,
     selectedOption: String,
     options: List<String>,
     onOptionSelected: (String) -> Unit,
-    iconRes: Int
+    iconRes: Int? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
         OutlinedTextField(
             value = selectedOption,
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
-            leadingIcon = {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
+            leadingIcon = iconRes?.let {
+                {
+                    Icon(
+                        painter = painterResource(it),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(type = MenuAnchorType.PrimaryNotEditable, enabled = true),
-            colors = absenceOutlinedTextFieldColors(),
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+            colors = absenceOutlinedTextFieldColors(), // Używa spójnych kolorów
             shape = AbsenceAppShape
         )
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option) },
@@ -367,29 +407,27 @@ private fun AbsenceAppDropdownMenu(
     }
 }
 
-private fun formatAbsenceAddEditDate(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
-        .format(Date(timestamp))
-        .replaceFirstChar { it.uppercase() }
+private fun formatAbsenceAddEditDate(millis: Long): String {
+    return SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date(millis))
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun AbsenceAddEditScreenPreview() {
+fun AbsenceAddEditScreenPreview() {
     MyUZTheme {
         AbsenceAddEditScreen(
             isEditMode = false,
             selectedSubject = "Matematyka",
             onSubjectChange = {},
-            subjectsList = listOf("Matematyka", "Fizyka", "Programowanie"),
-            selectedClassType = "L",
+            subjectsList = listOf("Matematyka", "Fizyka"),
+            selectedClassType = "W",
             onClassTypeChange = {},
-            classTypesList = listOf("W", "L", "C"),
+            classTypesList = listOf("W", "L"),
             dateMillis = System.currentTimeMillis(),
             onDateChange = {},
-            isExcused = true,
+            isExcused = false,
             onExcusedChange = {},
-            reason = "Wizyta u lekarza",
+            reason = "",
             onReasonChange = {},
             onSaveClick = {},
             onNavigateBack = {}

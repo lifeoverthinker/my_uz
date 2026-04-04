@@ -33,6 +33,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun AbsencesScreen(
@@ -100,7 +101,7 @@ private fun ExpandableAbsenceCard(
                 absenceToDelete = null
             },
             onDismiss = { absenceToDelete = null },
-            itemType = "nieobecność"
+            itemType = stringResource(R.string.item_type_absence)
         )
     }
 
@@ -134,7 +135,7 @@ private fun ExpandableAbsenceCard(
                         lineHeight = 24.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.width(230.dp)
+                    modifier = Modifier.weight(1f)
                 )
                 Icon(
                     painter = painterResource(R.drawable.ic_chevron_down),
@@ -156,7 +157,8 @@ private fun ExpandableAbsenceCard(
                 )
 
                 subjectData.types.forEachIndexed { typeIndex, typeGroup ->
-                    val count = typeGroup.absences.size
+                    // NAPRAWA: Zliczamy do limitu tylko nieusprawiedliwione!
+                    val count = typeGroup.absences.count { !it.isExcused }
                     val limit = typeGroup.limit
                     val isLimitReached = count >= limit
 
@@ -229,7 +231,7 @@ private fun ExpandableAbsenceCard(
                                             )
                                             .border(
                                                 1.dp,
-                                                MaterialTheme.colorScheme.outlineVariant,
+                                                if (absence.isExcused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                                 RoundedCornerShape(8.dp)
                                             )
                                             .clickable { onEditAbsenceClick(absence.id) }
@@ -238,17 +240,17 @@ private fun ExpandableAbsenceCard(
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            text = dateStr,
+                                            text = dateStr + if (absence.isExcused) " (Usprawiedliwiona)" else "",
                                             style = TextStyle(
                                                 fontWeight = FontWeight(500),
                                                 fontSize = 12.sp,
                                                 lineHeight = 16.sp
                                             ),
-                                            color = MaterialTheme.colorScheme.onSurface,
+                                            color = if (absence.isExcused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                         )
                                         Icon(
                                             painter = painterResource(R.drawable.ic_close),
-                                            contentDescription = "Usuń",
+                                            contentDescription = stringResource(R.string.btn_delete),
                                             modifier = Modifier
                                                 .size(16.dp)
                                                 .clickable { absenceToDelete = absence },
@@ -259,7 +261,6 @@ private fun ExpandableAbsenceCard(
                             }
                         }
 
-                        // PRZYCISK "DODAJ NIEOBECNOŚĆ" (Kwadratowy border wg specyfikacji)
                         Row(
                             modifier = Modifier
                                 .border(
@@ -280,7 +281,7 @@ private fun ExpandableAbsenceCard(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Dodaj nieobecność",
+                                text = stringResource(R.string.add_absence),
                                 style = TextStyle(
                                     fontWeight = FontWeight(400),
                                     fontSize = 12.sp,
@@ -314,10 +315,10 @@ fun LimitEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Zmień limit") },
+        title = { Text(stringResource(R.string.edit_limit)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Podaj maksymalną liczbę nieobecności dla tych zajęć:")
+                Text(stringResource(R.string.edit_limit_message))
                 OutlinedTextField(
                     value = textValue,
                     onValueChange = {
@@ -332,12 +333,12 @@ fun LimitEditDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(textValue.toIntOrNull() ?: currentLimit) }) {
-                Text("Zatwierdź")
+                Text(stringResource(R.string.btn_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj")
+                Text(stringResource(R.string.btn_cancel))
             }
         }
     )
@@ -351,16 +352,16 @@ fun DeleteConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Potwierdź usunięcie") },
-        text = { Text("Czy na pewno chcesz usunąć tę $itemType? Te zmiany są nieodwracalne.") },
+        title = { Text(stringResource(R.string.delete_confirmation_title)) },
+        text = { Text(stringResource(R.string.delete_confirmation_message, itemType)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Usuń", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj")
+                Text(stringResource(R.string.btn_cancel))
             }
         }
     )

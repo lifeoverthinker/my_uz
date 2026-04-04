@@ -27,10 +27,7 @@ object AppViewModelProvider {
     val Factory = viewModelFactory {
 
         initializer {
-            // 1. Pobieramy instancję Application z Extras
             val application = checkNotNull(this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]) as Application
-
-            // 2. Pobieramy aplikację do wstrzyknięcia zależności
             val myUzApplication = application as MyUZApplication
 
             HomeViewModel(
@@ -39,8 +36,8 @@ object AppViewModelProvider {
                 classRepository = myUzApplication.container.classRepository,
                 tasksRepository = myUzApplication.container.tasksRepository,
                 universityRepository = myUzApplication.container.universityRepository,
-                notificationsRepository = myUzApplication.container.notificationsRepository,
-                userCourseRepository = myUzApplication.container.userCourseRepository // DODANE
+                userCourseRepository = myUzApplication.container.userCourseRepository,
+                eventRepository = myUzApplication.container.eventRepository
             )
         }
 
@@ -52,7 +49,6 @@ object AppViewModelProvider {
 
         initializer {
             TaskAddEditViewModel(
-                // DODANO PRZEKAZANIE APPLICATION:
                 application = myUZApplication(),
                 savedStateHandle = createSavedStateHandle(),
                 tasksRepository = myUZApplication().container.tasksRepository,
@@ -157,7 +153,8 @@ object AppViewModelProvider {
             OnboardingViewModel(
                 settingsRepository = myUZApplication().container.settingsRepository,
                 universityRepository = myUZApplication().container.universityRepository,
-                classRepository = myUZApplication().container.classRepository
+                classRepository = myUZApplication().container.classRepository,
+                userCourseRepository = myUZApplication().container.userCourseRepository
             )
         }
 

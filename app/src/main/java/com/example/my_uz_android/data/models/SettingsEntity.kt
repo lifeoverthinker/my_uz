@@ -38,8 +38,13 @@ data class SettingsEntity(
     val classColorsJson: String = "{}",
 
     val notificationsEnabled: Boolean = true,
-    val notificationsTasks: Boolean = true,
     val notificationsClasses: Boolean = true,
-    val notificationsScheduleChanges: Boolean = true,
-    val notificationsExams: Boolean = true
+    val notificationClassTimeBefore: Int = 15,
+
+    val autoSyncEnabled: Boolean = true,
+    val syncIntervalHours: Int = 24,
+
+    // Przechowywanie wybranego języka aplikacji (`pl` lub `en`).
+    // Domyślnie ustawiamy `pl`; starsze wartości legacy są normalizowane w warstwie UI.
+    val appLanguage: String = "pl"
 )

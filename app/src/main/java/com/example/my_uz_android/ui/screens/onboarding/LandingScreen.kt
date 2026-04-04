@@ -26,6 +26,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -41,9 +42,10 @@ private fun getIllustrationResId(currentPage: Int): Int = when (currentPage) {
     0 -> R.drawable.college_students_rafiki
     1 -> R.drawable.hello_rafiki
     2 -> R.drawable.settings_rafiki
-    3 -> R.drawable.calendar_rafiki
-    4 -> R.drawable.grades_rafiki
-    5 -> R.drawable.happy_student_rafiki
+    3 -> R.drawable.students_rafiki
+    4 -> R.drawable.calendar_rafiki
+    5 -> R.drawable.grades_rafiki
+    6 -> R.drawable.happy_student_rafiki
     else -> R.drawable.ic_user
 }
 
@@ -68,6 +70,12 @@ fun LandingScreen(
     val selectedGender by viewModel.selectedGender.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val totalPages = viewModel.totalPages
+    val extraGroupSearchQuery by viewModel.extraGroupSearchQuery.collectAsState()
+    val selectedExtraGroup by viewModel.selectedExtraGroup.collectAsState()
+    val availableExtraSubgroups by viewModel.availableExtraSubgroups.collectAsState()
+    val selectedExtraSubgroups by viewModel.selectedExtraSubgroups.collectAsState()
+    val additionalCourses by viewModel.additionalCourses.collectAsState()
+    val filteredExtraGroups by viewModel.filteredExtraGroups.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     val imeInsets = WindowInsets.ime
@@ -171,13 +179,37 @@ fun LandingScreen(
                                         }
                                     }
                                 }
+                                3 -> {
+                                    // Nawigacja dla ekranu dodatkowych kierunków
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        FilledTonalButton(
+                                            onClick = { viewModel.onBackClick() },
+                                            modifier = Modifier.weight(1f).height(48.dp)
+                                        ) {
+                                            Icon(painterResource(R.drawable.ic_chevron_left), null, Modifier.size(20.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Wstecz")
+                                        }
+                                        Button(
+                                            onClick = { viewModel.onAdditionalCoursesNextClick() },
+                                            modifier = Modifier.weight(1f).height(48.dp),
+                                            enabled = !isLoading
+                                        ) {
+                                            Text("Dalej")
+                                            Spacer(Modifier.width(8.dp))
+                                            Icon(painterResource(R.drawable.ic_chevron_right), null, Modifier.size(20.dp))
+                                        }
+                                    }
+                                }
                                 else -> {
                                     val isNextEnabled = when(currentPage) {
                                         1 -> selectedGender != null && userName.isNotBlank()
                                         2 -> !selectedGroup.isNullOrBlank()
                                         else -> true
                                     }
-
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -235,9 +267,157 @@ fun LandingScreen(
                         0 -> WelcomeStepContent()
                         1 -> PersonalizationStepContent(viewModel)
                         2 -> GroupSelectionStepContent(viewModel)
-                        3 -> CalendarFeatureStepContent()
-                        4 -> GradesFeatureStepContent()
-                        5 -> FinalStepContent()
+                        3 -> AdditionalCoursesStepContent(viewModel)
+                        4 -> CalendarFeatureStepContent()
+                        5 -> GradesFeatureStepContent()
+                        6 -> FinalStepContent()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// --- DODATKOWY KROK: DODATKOWE KIERUNKI ---
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun AdditionalCoursesStepContent(viewModel: OnboardingViewModel) {
+    val extraGroupSearchQuery by viewModel.extraGroupSearchQuery.collectAsState()
+    val selectedExtraGroup by viewModel.selectedExtraGroup.collectAsState()
+    val availableExtraSubgroups by viewModel.availableExtraSubgroups.collectAsState()
+    val selectedExtraSubgroups by viewModel.selectedExtraSubgroups.collectAsState()
+    val additionalCourses by viewModel.additionalCourses.collectAsState()
+    val filteredExtraGroups by viewModel.filteredExtraGroups.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val focusManager = LocalFocusManager.current
+    var expanded by remember { mutableStateOf(false) }
+
+    ResponsiveOnboardingStep(illustrationResId = R.drawable.students_rafiki) {
+        OnboardingTexts(
+            title = stringResource(R.string.onboarding_extra_title),
+            subtitle = stringResource(R.string.onboarding_extra_subtitle),
+            description = stringResource(R.string.onboarding_extra_desc)
+        )
+
+        Column(modifier = Modifier.fillMaxWidth()) {
+            ExposedDropdownMenuBox(
+                expanded = expanded && filteredExtraGroups.isNotEmpty(),
+                onExpandedChange = { expanded = !expanded }
+            ) {
+                OutlinedTextField(
+                    value = extraGroupSearchQuery,
+                    onValueChange = {
+                        viewModel.setExtraGroupSearchQuery(it)
+                        expanded = true
+                    },
+                    placeholder = { Text(stringResource(R.string.onboarding_group_hint)) },
+                    label = { Text(stringResource(R.string.onboarding_group_label)) },
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_search), null, Modifier.size(24.dp)) },
+                    trailingIcon = {
+                        if (extraGroupSearchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.setExtraGroupSearchQuery("") }) {
+                                Icon(painterResource(R.drawable.ic_close), stringResource(R.string.onboarding_clear), Modifier.size(24.dp))
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(MenuAnchorType.PrimaryEditable, enabled = true),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    shape = MaterialTheme.shapes.medium
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded && filteredExtraGroups.isNotEmpty(),
+                    onDismissRequest = { expanded = false }
+                ) {
+                    filteredExtraGroups.forEach { group ->
+                        DropdownMenuItem(
+                            text = { Text(group) },
+                            onClick = {
+                                viewModel.selectExtraGroup(group)
+                                expanded = false
+                                focusManager.clearFocus()
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (isLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+            }
+
+            if (!isLoading && extraGroupSearchQuery.isNotEmpty() && filteredExtraGroups.isEmpty() && selectedExtraGroup == null) {
+                Text(
+                    text = stringResource(R.string.onboarding_group_not_found),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = selectedExtraGroup != null && availableExtraSubgroups.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(R.string.onboarding_select_subgroups),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.Center) {
+                    availableExtraSubgroups.forEach { subgroup ->
+                        FilterChip(
+                            selected = selectedExtraSubgroups.contains(subgroup),
+                            onClick = { viewModel.toggleExtraSubgroup(subgroup) },
+                            label = { Text(subgroup) },
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        if (additionalCourses.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(R.string.onboarding_added_groups),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(8.dp))
+                additionalCourses.forEach { (group, subgroups) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = group + if (subgroups.isNotEmpty()) " (${subgroups.joinToString(", ")})" else "",
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { viewModel.removeExtraCourse(group) }) {
+                            Icon(painterResource(R.drawable.ic_close), stringResource(R.string.btn_delete), Modifier.size(20.dp))
+                        }
                     }
                 }
             }
@@ -248,9 +428,9 @@ fun LandingScreen(
 // --- EKRANY ZAWARTOŚCI ---
 
 @Composable
-/**
- * Renderuje krok powitalny z opisem możliwości aplikacji.
- */
+        /**
+         * Renderuje krok powitalny z opisem możliwości aplikacji.
+         */
 fun WelcomeStepContent() {
     ResponsiveOnboardingStep(illustrationResId = R.drawable.college_students_rafiki) {
         OnboardingTexts(
@@ -493,9 +673,9 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
 }
 
 @Composable
-/**
- * Renderuje krok informacyjny dotyczący modułu kalendarza.
- */
+        /**
+         * Renderuje krok informacyjny dotyczący modułu kalendarza.
+         */
 fun CalendarFeatureStepContent() {
     InfoStepContent(
         pageIndex = 3,
@@ -506,9 +686,9 @@ fun CalendarFeatureStepContent() {
 }
 
 @Composable
-/**
- * Renderuje krok informacyjny dotyczący modułu ocen.
- */
+        /**
+         * Renderuje krok informacyjny dotyczący modułu ocen.
+         */
 fun GradesFeatureStepContent() {
     InfoStepContent(
         pageIndex = 4,
@@ -519,9 +699,9 @@ fun GradesFeatureStepContent() {
 }
 
 @Composable
-/**
- * Renderuje końcowy krok onboardingowy.
- */
+        /**
+         * Renderuje końcowy krok onboardingowy.
+         */
 fun FinalStepContent() {
     InfoStepContent(
         pageIndex = 5,
@@ -532,14 +712,14 @@ fun FinalStepContent() {
 }
 
 @Composable
-/**
- * Renderuje generyczny krok informacyjny onboardingowy.
- *
- * @param pageIndex Indeks kroku używany do doboru ilustracji.
- * @param title Tytuł kroku.
- * @param subtitle Podtytuł kroku.
- * @param description Opis kroku.
- */
+        /**
+         * Renderuje generyczny krok informacyjny onboardingowy.
+         *
+         * @param pageIndex Indeks kroku używany do doboru ilustracji.
+         * @param title Tytuł kroku.
+         * @param subtitle Podtytuł kroku.
+         * @param description Opis kroku.
+         */
 fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description: String) {
     val resId = when(pageIndex) {
         3 -> R.drawable.calendar_rafiki
@@ -555,12 +735,12 @@ fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description
 // --- WSPÓLNE HELPERY ---
 
 @Composable
-/**
- * Wspólny kontener kroku onboardingowego z ilustracją i treścią.
- *
- * @param illustrationResId Id zasobu ilustracji kroku.
- * @param content Slot zawartości kroku.
- */
+        /**
+         * Wspólny kontener kroku onboardingowego z ilustracją i treścią.
+         *
+         * @param illustrationResId Id zasobu ilustracji kroku.
+         * @param content Slot zawartości kroku.
+         */
 fun ResponsiveOnboardingStep(
     illustrationResId: Int,
     content: @Composable ColumnScope.() -> Unit
@@ -600,13 +780,13 @@ fun ResponsiveOnboardingStep(
 }
 
 @Composable
-/**
- * Renderuje zestaw tekstów opisujących dany krok onboardingu.
- *
- * @param title Tytuł kroku.
- * @param subtitle Podtytuł kroku.
- * @param description Opis kroku.
- */
+        /**
+         * Renderuje zestaw tekstów opisujących dany krok onboardingu.
+         *
+         * @param title Tytuł kroku.
+         * @param subtitle Podtytuł kroku.
+         * @param description Opis kroku.
+         */
 fun OnboardingTexts(title: String, subtitle: String, description: String) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -636,12 +816,12 @@ fun OnboardingTexts(title: String, subtitle: String, description: String) {
 }
 
 @Composable
-/**
- * Renderuje wskaźniki aktualnej pozycji w procesie onboardingu.
- *
- * @param totalPages Liczba wszystkich kroków.
- * @param currentPage Aktualny krok.
- */
+        /**
+         * Renderuje wskaźniki aktualnej pozycji w procesie onboardingu.
+         *
+         * @param totalPages Liczba wszystkich kroków.
+         * @param currentPage Aktualny krok.
+         */
 fun PageIndicators(totalPages: Int, currentPage: Int) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(totalPages) { index ->
@@ -661,9 +841,9 @@ fun PageIndicators(totalPages: Int, currentPage: Int) {
 }
 
 @Composable
-/**
- * Renderuje stopkę informacyjną ekranu onboardingu.
- */
+        /**
+         * Renderuje stopkę informacyjną ekranu onboardingu.
+         */
 fun FooterText() {
     Text(
         text = "MyUZ 2026 Wersja 1.00",

@@ -91,9 +91,7 @@ fun CalendarScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(Unit) {
-        // Ekran kalendarza zawsze startuje od domyslnego planu użytkownika.
-        viewModel.selectMyPlan()
-        viewModel.refreshMyPlan()
+        viewModel.selectMyPlan(forceRefresh = false)
     }
 
     CalendarScreenContent(
@@ -126,15 +124,14 @@ fun CalendarScreenContent(
     val selectedDate = uiState.selectedDate
     val isMonthView = uiState.isMonthView
 
-    val currentDate = remember { LocalDate.now(ZoneId.of("Europe/Warsaw")) }
-    val currentMonth = remember { YearMonth.now(ZoneId.of("Europe/Warsaw")) }
+    val currentMonth = remember { YearMonth.from(selectedDate) }
     val startMonth = remember { currentMonth.minusMonths(24) }
     val endMonth = remember { currentMonth.plusMonths(24) }
 
     val weekState = rememberWeekCalendarState(
         startDate = startMonth.atStartOfMonth(),
         endDate = endMonth.atEndOfMonth(),
-        firstVisibleWeekDate = currentDate,
+        firstVisibleWeekDate = selectedDate,
         firstDayOfWeek = DayOfWeek.MONDAY
     )
     val monthState = rememberCalendarState(
@@ -146,6 +143,20 @@ fun CalendarScreenContent(
 
     var swipeDirection by remember { mutableStateOf<DaySwipeDirection?>(null) }
     var isFilterExpanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedDate, isMonthView) {
+        if (isMonthView) {
+            val currentVisibleMonth = monthState.firstVisibleMonth.yearMonth
+            if (YearMonth.from(selectedDate) != currentVisibleMonth) {
+                monthState.animateScrollToMonth(YearMonth.from(selectedDate))
+            }
+        } else {
+            val currentWeekDays = weekState.firstVisibleWeek.days
+            if (currentWeekDays.isNotEmpty() && currentWeekDays.none { it.date == selectedDate }) {
+                weekState.animateScrollToWeek(selectedDate)
+            }
+        }
+    }
 
     fun navigateDay(offsetDays: Long, direction: DaySwipeDirection) {
         val newDate = selectedDate.plusDays(offsetDays)
@@ -160,16 +171,13 @@ fun CalendarScreenContent(
         }
     }
 
-    val visibleMonth = if (isMonthView) {
-        monthState.firstVisibleMonth.yearMonth
-    } else {
-        val weekDays = weekState.firstVisibleWeek.days
-        if (weekDays.isNotEmpty()) YearMonth.from(weekDays.first().date) else YearMonth.from(selectedDate)
-    }
+    // NAPRAWA: Niezawodny miesiąc. Po prostu wskazuje na to, co jest w wybranej dacie. Zawsze!
+    val visibleMonth = remember(selectedDate) { YearMonth.from(selectedDate) }
 
+    val currentLocale = Locale.getDefault()
     val monthName = visibleMonth.month
-        .getDisplayName(TextStyle.FULL_STANDALONE, Locale("pl"))
-        .replaceFirstChar { it.titlecase(Locale("pl")) }
+        .getDisplayName(TextStyle.FULL_STANDALONE, currentLocale)
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(currentLocale) else it.toString() }
 
     val currentRealWorldYear = YearMonth.now(ZoneId.of("Europe/Warsaw")).year
     val calendarTitle = if (visibleMonth.year == currentRealWorldYear) monthName else "$monthName ${visibleMonth.year}"
@@ -266,42 +274,5 @@ fun CalendarScreenContent(
                 )
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun CalendarScreenPreview() {
-    MyUZTheme {
-        CalendarScreenContent(
-            uiState = CalendarUiState(
-                selectedDate = LocalDate.now(),
-                isMonthView = false,
-                userCourses = listOf(
-                    UserCourseEntity(
-                        id = 1,
-                        groupCode = "12IN",
-                        fieldOfStudy = "Informatyka",
-                        semester = 1
-                    ),
-                    UserCourseEntity(
-                        id = 2,
-                        groupCode = "34MA",
-                        fieldOfStudy = "Matematyka",
-                        semester = 3
-                    )
-                ),
-                selectedGroupCodes = setOf("12IN"),
-                visibleClasses = emptyList(),
-                tasks = emptyList()
-            ),
-            onOpenDrawer = {},
-            onSearchClick = {},
-            onAccountClick = {},
-            onClassClick = {},
-            onDateSelected = {},
-            onToggleMonthView = {},
-            onToggleGroupVisibility = {}
-        )
     }
 }

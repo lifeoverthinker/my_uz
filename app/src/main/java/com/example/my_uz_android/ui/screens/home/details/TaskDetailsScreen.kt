@@ -25,6 +25,7 @@ import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun TaskDetailsScreenRoute(
@@ -50,8 +51,8 @@ fun TaskDetailsScreenRoute(
 
     if (task == null) {
         EmptyDetailsState(
-            title = "Brak danych zadania",
-            description = "Nie udało się pobrać szczegółów tego zadania."
+            title = stringResource(R.string.task_details_empty_title),
+            description = stringResource(R.string.task_details_empty_message)
         )
         return
     }
@@ -110,7 +111,7 @@ fun TaskDetailsScreen(
                                 onDismissRequest = { showMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Duplikuj") },
+                                    text = { Text(stringResource(R.string.btn_duplicate)) },
                                     leadingIcon = {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_copy),
@@ -124,7 +125,7 @@ fun TaskDetailsScreen(
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error) },
                                     leadingIcon = {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_trash),
@@ -150,19 +151,19 @@ fun TaskDetailsScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     color = Color.Transparent
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.Top
                     ) {
                         Box(
@@ -199,7 +200,7 @@ fun TaskDetailsScreen(
                 if (!task.subjectName.isNullOrBlank()) {
                     DetailRowCard(
                         iconRes = R.drawable.ic_graduation_hat,
-                        label = "Przedmiot",
+                        label = stringResource(R.string.label_subject_details),
                         value = task.subjectName ?: ""
                     )
                 }
@@ -207,7 +208,7 @@ fun TaskDetailsScreen(
                 if (task.hasReminder && task.reminderTime != null) {
                     DetailRowCard(
                         iconRes = R.drawable.ic_bell,
-                        label = "Przypomnienie",
+                        label = stringResource(R.string.label_set_reminder),
                         value = formatDateTime(task.reminderTime)
                     )
                 }
@@ -216,7 +217,7 @@ fun TaskDetailsScreen(
                     if (it.isNotBlank()) {
                         DetailRowCard(
                             iconRes = R.drawable.ic_menu_2,
-                            label = "Opis",
+                            label = stringResource(R.string.label_description),
                             value = it,
                             isMultiline = true
                         )
@@ -231,7 +232,7 @@ fun TaskDetailsScreen(
                         showDeleteDialog = false
                     },
                     onDismiss = { showDeleteDialog = false },
-                    itemType = "zadanie"
+                    itemType = stringResource(R.string.item_type_task)
                 )
             }
         }
@@ -246,16 +247,16 @@ fun DeleteConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Potwierdź usunięcie") },
-        text = { Text("Czy na pewno chcesz usunąć to $itemType? Te zmiany są nieodwracalne.") },
+        title = { Text(stringResource(R.string.delete_confirmation_title)) },
+        text = { Text(stringResource(R.string.delete_confirmation_message, itemType)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Usuń", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj")
+                Text(stringResource(R.string.btn_cancel))
             }
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -273,13 +274,13 @@ private fun DetailRowCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         color = Color.Transparent
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
         ) {
             Icon(
@@ -347,13 +348,13 @@ private fun EmptyDetailsState(
 }
 
 private fun formatDate(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault())
         .format(Date(timestamp))
         .replaceFirstChar { it.uppercase() }
 }
 
 private fun formatDateTime(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy, HH:mm", Locale("pl", "PL"))
+    return SimpleDateFormat("EEEE, d MMMM yyyy, HH:mm", Locale.getDefault())
         .format(Date(timestamp))
         .replaceFirstChar { it.uppercase() }
 }

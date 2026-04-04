@@ -89,6 +89,7 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.TextStyle as JavaTextStyle
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
 
 private fun taskDateTasksScreen(dueDateMillis: Long): LocalDate {
     return Instant.ofEpochMilli(dueDateMillis).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -202,9 +203,9 @@ fun TasksScreen(
             ) {
                 if (groupedTasks.isEmpty()) {
                     EmptyStateMessage(
-                        title = if (selectedTab == 0) "Brak aktywnych zadań" else "Brak zaliczonych zadań",
-                        subtitle = "Twoja lista jest pusta",
-                        message = "Dodaj nowe zadanie przyciskiem +",
+                        title = if (selectedTab == 0) stringResource(R.string.tasks_empty_active) else stringResource(R.string.tasks_empty_completed),
+                        subtitle = stringResource(R.string.tasks_empty_subtitle),
+                        message = stringResource(R.string.tasks_empty_msg),
                         iconRes = R.drawable.to_do_list_rafiki
                     )
                 } else {
@@ -237,7 +238,7 @@ fun TasksScreen(
                             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
                         ) {
                             Text(
-                                text = "Zatwierdź wybrane: ${selectedTasks.size}",
+                                text = stringResource(R.string.tasks_confirm_selected, selectedTasks.size),
                                 style = TextStyle(
                                     fontFamily = InterFontFamily,
                                     fontWeight = FontWeight.Medium,
@@ -274,11 +275,11 @@ fun TasksScreen(
             onDismissRequest = { showConfirmShareDialog = false },
             title = {
                 Text(
-                    "Udostępnić zadania?",
+                    stringResource(R.string.tasks_share_confirm_title),
                     style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold)
                 )
             },
-            text = { Text("Zaznaczono ${selectedTasks.size} zadań do udostępnienia.") },
+            text = { Text(stringResource(R.string.tasks_share_confirm_msg, selectedTasks.size)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -287,10 +288,10 @@ fun TasksScreen(
                         isSelectionMode = false
                         selectedTasks = emptySet()
                     }
-                ) { Text("Udostępnij") }
+                ) { Text(stringResource(R.string.tasks_share_btn)) }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirmShareDialog = false }) { Text("Anuluj") }
+                TextButton(onClick = { showConfirmShareDialog = false }) { Text(stringResource(R.string.btn_cancel)) }
             }
         )
     }
@@ -302,7 +303,7 @@ fun TasksScreen(
             onCopy = {
                 sharedCode?.let {
                     clipboardManager.setText(AnnotatedString(it))
-                    Toast.makeText(context, "Skopiowano kod", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.tasks_code_copied), Toast.LENGTH_SHORT).show()
                     showGeneratedCodeDialog = false
                     viewModel.clearSharedCode()
                 }
@@ -337,7 +338,7 @@ fun TasksScreen(
             },
             title = {
                 Text(
-                    "Zadania zaimportowane!",
+                    stringResource(R.string.tasks_imported_title),
                     style = TextStyle(
                         fontFamily = InterFontFamily,
                         fontWeight = FontWeight.Bold,
@@ -357,7 +358,7 @@ fun TasksScreen(
                 TextButton(
                     onClick = { showImportSuccessDialog = false },
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Super!") }
+                ) { Text(stringResource(R.string.tasks_imported_btn)) }
             }
         )
     }
@@ -367,11 +368,11 @@ fun TasksScreen(
             onDismissRequest = { taskToDelete = null },
             title = {
                 Text(
-                    "Usuń zadanie",
+                    stringResource(R.string.tasks_delete_title),
                     style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)
                 )
             },
-            text = { Text("Czy na pewno chcesz trwale usunąć zadanie \"${taskToDelete?.title}\"?") },
+            text = { Text(stringResource(R.string.tasks_delete_msg, taskToDelete?.title ?: "")) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -379,10 +380,10 @@ fun TasksScreen(
                         taskToDelete?.let { viewModel.deleteTask(it) }
                         taskToDelete = null
                     }
-                ) { Text("Usuń", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { taskToDelete = null }) { Text("Anuluj") }
+                TextButton(onClick = { taskToDelete = null }) { Text(stringResource(R.string.btn_cancel)) }
             }
         )
     }
@@ -399,7 +400,7 @@ fun TasksTopBar(
     onTabChange: (Int) -> Unit
 ) {
     TopAppBar(
-        title = "Terminarz",
+        title = stringResource(R.string.tasks_screen_title),
         navigationIcon = if (isSelectionMode) R.drawable.ic_close else R.drawable.ic_menu,
         onNavigationClick = if (isSelectionMode) onSelectionClose else onOpenDrawer,
         isNavigationIconFilled = true,
@@ -430,7 +431,7 @@ fun TasksTopBar(
                             onClick = { onTabChange(0) },
                             text = {
                                 Text(
-                                    "Aktywne",
+                                    stringResource(R.string.tasks_active),
                                     color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = TextStyle(
                                         fontFamily = InterFontFamily,
@@ -445,7 +446,7 @@ fun TasksTopBar(
                             onClick = { onTabChange(1) },
                             text = {
                                 Text(
-                                    "Zaliczone",
+                                    stringResource(R.string.tasks_completed),
                                     color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = TextStyle(
                                         fontFamily = InterFontFamily,
@@ -479,7 +480,7 @@ fun TasksList(
         groupedTasks.forEach { (month, tasks) ->
             item {
                 Text(
-                    text = month.month.getDisplayName(JavaTextStyle.FULL, Locale("pl"))
+                    text = month.month.getDisplayName(JavaTextStyle.FULL, Locale.getDefault())
                         .replaceFirstChar { it.titlecase() } + " ${month.year}",
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                     style = TextStyle(
@@ -611,7 +612,7 @@ fun SwipeToDismissItem(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = date.dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale("pl")),
+                            text = date.dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale.getDefault()),
                             style = TextStyle(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight(500),
@@ -684,7 +685,7 @@ fun ShareOptionsModal(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "Udostępnij zadania",
+                    text = stringResource(R.string.tasks_share_title),
                     style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 18.sp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -695,7 +696,7 @@ fun ShareOptionsModal(
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(16.dp)
                 ) {
-                    Text("Udostępnij wszystko")
+                    Text(stringResource(R.string.tasks_share_all))
                 }
 
                 OutlinedButton(
@@ -704,7 +705,7 @@ fun ShareOptionsModal(
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(16.dp)
                 ) {
-                    Text("Wybierz zadania")
+                    Text(stringResource(R.string.tasks_share_select))
                 }
 
                 HorizontalDivider(
@@ -727,7 +728,7 @@ fun ShareOptionsModal(
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
-                            "Importuj zadania",
+                            stringResource(R.string.tasks_import_title),
                             style = TextStyle(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.SemiBold,
@@ -759,7 +760,7 @@ fun GeneratedCodeModal(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "Kod udostępniania",
+                    text = stringResource(R.string.tasks_share_code_title),
                     style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -801,14 +802,14 @@ fun GeneratedCodeModal(
                 ) {
                     Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Skopiuj kod")
+                    Text(stringResource(R.string.tasks_copy_code))
                 }
 
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Zamknij", style = TextStyle(fontWeight = FontWeight.SemiBold))
+                    Text(stringResource(R.string.btn_close), style = TextStyle(fontWeight = FontWeight.SemiBold))
                 }
             }
         }
@@ -823,21 +824,21 @@ fun ImportDialog(onImport: (String) -> Unit, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Text(
-                "Importuj zadania",
+                stringResource(R.string.tasks_import_title),
                 style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 20.sp)
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Wpisz 6-znakowy kod, aby pobrać zadania.",
+                    stringResource(R.string.tasks_import_hint),
                     style = TextStyle(fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 )
                 OutlinedTextField(
                     value = code,
                     onValueChange = { if (it.length <= 6) code = it.uppercase() },
-                    label = { Text("Kod") },
-                    placeholder = { Text("ABC123") },
+                    label = { Text(stringResource(R.string.tasks_code_label)) },
+                    placeholder = { Text(stringResource(R.string.tasks_code_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -848,10 +849,10 @@ fun ImportDialog(onImport: (String) -> Unit, onDismiss: () -> Unit) {
             TextButton(
                 onClick = { onImport(code) },
                 enabled = code.length == 6
-            ) { Text("Importuj") }
+            ) { Text(stringResource(R.string.btn_import)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Anuluj") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
         }
     )
 }

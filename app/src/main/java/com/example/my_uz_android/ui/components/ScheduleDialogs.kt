@@ -1,15 +1,5 @@
 package com.example.my_uz_android.ui.components
 
-/**
- * Zestaw dialogów pomocniczych używanych w module kalendarza.
- * Obejmuje filtrowanie podgrup oraz prezentację danych prowadzącego,
- * wraz ze współdzielonym stylem bazowego okna dialogowego.
- */
-
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,259 +8,189 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.my_uz_android.util.ClassTypeUtils
+import androidx.compose.ui.res.stringResource
 import com.example.my_uz_android.R
-import androidx.compose.foundation.shape.RoundedCornerShape
 
-@Composable
 /**
- * Wyświetla dialog filtrowania podgrup planu zajęć.
- *
- * @param subgroups Lista wszystkich dostępnych podgrup.
- * @param selectedSubgroups Zbiór aktualnie zaznaczonych podgrup.
- * @param onDismiss Callback zamykający dialog.
- * @param onSelectionChange Callback zwracający nowy zestaw zaznaczeń.
+ * Okno dialogowe pokazujące informacje kontaktowe wykładowcy.
  */
-fun SubgroupFilterDialog(
-    subgroups: List<String>,
-    selectedSubgroups: Set<String>,
-    onDismiss: () -> Unit,
-    onSelectionChange: (Set<String>) -> Unit
-) {
-    BaseScheduleDialog(
-        onDismiss = onDismiss,
-        icon = R.drawable.ic_users,
-        title = "Widoczne podgrupy",
-        content = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "Wybierz podgrupy do wyświetlenia na planie.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                if (subgroups.isEmpty()) {
-                    Text(
-                        text = "Brak zdefiniowanych podgrup w pobranym planie.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
-                } else {
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow
-                    ) {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxHeight(0.4f)
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp, horizontal = 8.dp)
-                        ) {
-                            items(subgroups) { subgroup ->
-                                val isSelected = selectedSubgroups.contains(subgroup)
-                                val displayName = if (subgroup.isBlank()) "Cała grupa" else subgroup
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            val new = if (isSelected) selectedSubgroups - subgroup else selectedSubgroups + subgroup
-                                            onSelectionChange(new)
-                                        }
-                                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(
-                                        checked = isSelected,
-                                        onCheckedChange = null,
-                                        colors = CheckboxDefaults.colors(
-                                            checkedColor = MaterialTheme.colorScheme.primary
-                                        )
-                                    )
-                                    Spacer(Modifier.width(12.dp))
-                                    Text(
-                                        text = displayName,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = if (isSelected) {
-                                            MaterialTheme.colorScheme.onSurface
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButtonText = "Gotowe",
-        dismissButton = {
-            TextButton(onClick = { onSelectionChange(subgroups.toSet()) }) {
-                Text("Wszystkie", style = MaterialTheme.typography.labelLarge)
-            }
-        }
-    )
-}
-
 @Composable
-/**
- * Wyświetla dialog ze szczegółowymi informacjami o wykładowcy.
- *
- * @param onDismiss Callback zamykający dialog.
- * @param fullName Imię i nazwisko prowadzącego.
- * @param department Nazwa instytutu lub katedry.
- * @param email Adres e-mail prowadzącego.
- */
 fun TeacherInfoDialog(
     onDismiss: () -> Unit,
     fullName: String,
     department: String,
     email: String
 ) {
-    val context = LocalContext.current
-    BaseScheduleDialog(
-        onDismiss = onDismiss,
-        icon = R.drawable.ic_user,
-        title = "Szczegóły wykładowcy",
-        content = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                DialogInfoSection(label = "Dane wykładowcy", value = fullName)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(stringResource(R.string.dialog_teacher_title), style = MaterialTheme.typography.titleLarge)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = fullName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(text = department, style = MaterialTheme.typography.bodyMedium)
+                if (email.isNotBlank()) {
+                    Text(
+                        text = email,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_close)) }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    )
+}
 
-                val deptDisplay = if (department.isNotBlank()) department else "Brak informacji o jednostce"
-                DialogInfoSection(label = "Instytut / Katedra", value = deptDisplay)
-
-                val emailDisplay = if (email.isNotBlank()) email else "Brak adresu e-mail"
-
-                Column {
-                    DialogLabel(text = "Adres e-mail")
-                    Spacer(Modifier.height(4.dp))
-                    Surface(
-                        onClick = {
-                            if (email.isNotBlank() && email != "Brak adresu e-mail") {
-                                copyToClipboard(context, email)
+/**
+ * Okno dialogowe pozwalające na wybór/odznaczenie pojedynczych podgrup w planie "SchedulePreview".
+ */
+@Composable
+fun SubgroupFilterDialog(
+    subgroups: List<String>,
+    selectedSubgroups: Set<String>,
+    onDismiss: () -> Unit,
+    onSelectionChange: (Set<String>) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_filter_subgroups_title)) },
+        text = {
+            LazyColumn {
+                items(subgroups) { subgroup ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val newSelection = if (selectedSubgroups.contains(subgroup)) {
+                                    selectedSubgroups - subgroup
+                                } else {
+                                    selectedSubgroups + subgroup
+                                }
+                                onSelectionChange(newSelection)
                             }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.fillMaxWidth(),
-                        tonalElevation = 0.dp
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Checkbox(
+                            checked = selectedSubgroups.contains(subgroup),
+                            onCheckedChange = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = subgroup)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_done)) }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    )
+}
+
+/**
+ * Okno dialogowe filtrowania głównego planu zajęć.
+ * Zoptymalizowane - brak niepotrzebnych, podwójnych teł Surface.
+ */
+@Composable
+fun FilterDialog(
+    groups: List<String>,
+    selectedGroups: Set<String>,
+    classTypes: List<String>,
+    selectedClassTypes: Set<String>,
+    onGroupSelected: (String, Boolean) -> Unit,
+    onClassTypeSelected: (String, Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_filter_schedule_title)) },
+        text = {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (groups.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.label_subgroups),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 4.dp, top = 8.dp)
+                        )
+                    }
+                    items(groups) { group ->
                         Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { onGroupSelected(group, !selectedGroups.contains(group)) }
+                                .padding(vertical = 4.dp)
                         ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_mail),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                            Checkbox(
+                                checked = selectedGroups.contains(group),
+                                onCheckedChange = null
                             )
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = emailDisplay,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
+                                text = group,
+                                style = MaterialTheme.typography.bodyLarge
                             )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "Kopiuj",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_copy),
-                                    contentDescription = "Kopiuj",
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                        }
+                    }
+                }
+
+                if (classTypes.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.label_type),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 4.dp, top = 16.dp)
+                        )
+                    }
+                    items(classTypes) { type ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.small)
+                                .clickable { onClassTypeSelected(type, !selectedClassTypes.contains(type)) }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Checkbox(
+                                checked = selectedClassTypes.contains(type),
+                                onCheckedChange = null
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = ClassTypeUtils.getFullName(type),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
                         }
                     }
                 }
             }
         },
-        confirmButtonText = "Zamknij"
-    )
-}
-
-@Composable
-private fun BaseScheduleDialog(
-    onDismiss: () -> Unit,
-    icon: Int,
-    title: String,
-    content: @Composable () -> Unit,
-    confirmButtonText: String,
-    dismissButton: @Composable (() -> Unit)? = null
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                painter = painterResource(id = icon),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
-            )
-        },
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        text = content,
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text(
-                    text = confirmButtonText,
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
-                )
+                Text(stringResource(R.string.btn_done))
             }
         },
-        dismissButton = dismissButton,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 0.dp
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     )
-}
-
-@Composable
-private fun DialogLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Medium
-    )
-}
-
-@Composable
-private fun DialogInfoSection(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        DialogLabel(text = label)
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-private fun copyToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("Email", text))
-    Toast.makeText(context, "Skopiowano do schowka", Toast.LENGTH_SHORT).show()
 }

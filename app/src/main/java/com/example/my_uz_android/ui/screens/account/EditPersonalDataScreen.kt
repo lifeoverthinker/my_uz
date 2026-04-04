@@ -29,6 +29,7 @@ import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun EditPersonalDataScreen(
@@ -116,7 +117,7 @@ fun EditPersonalDataScreenContent(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = "Edytuj profil",
+                title = stringResource(R.string.edit_personal_data_title),
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onNavigateBack,
                 isNavigationIconFilled = true,
@@ -132,7 +133,7 @@ fun EditPersonalDataScreenContent(
                         AnimatedVisibility(visible = isSavedFeedback, enter = fadeIn(), exit = fadeOut()) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_check),
-                                contentDescription = "Zapisano",
+                                contentDescription = stringResource(R.string.edit_personal_data_saved),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier
                                     .padding(end = 16.dp)
@@ -154,18 +155,18 @@ fun EditPersonalDataScreenContent(
         ) {
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text("Forma zwrotu", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.edit_personal_data_return_form), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         FilterChip(
                             selected = selectedGender == UserGender.STUDENT,
                             onClick = { onGenderSelect(UserGender.STUDENT) },
-                            label = { Text("Student", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                            label = { Text(stringResource(R.string.edit_personal_data_student), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
                             modifier = Modifier.weight(1f)
                         )
                         FilterChip(
                             selected = selectedGender == UserGender.STUDENTKA,
                             onClick = { onGenderSelect(UserGender.STUDENTKA) },
-                            label = { Text("Studentka", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                            label = { Text(stringResource(R.string.edit_personal_data_studentka), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -177,7 +178,7 @@ fun EditPersonalDataScreenContent(
                     OutlinedTextField(
                         value = userName,
                         onValueChange = onUserNameChange,
-                        label = { Text("Imię") },
+                        label = { Text(stringResource(R.string.edit_personal_data_name)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
@@ -187,7 +188,7 @@ fun EditPersonalDataScreenContent(
                     OutlinedTextField(
                         value = userSurname,
                         onValueChange = onUserSurnameChange,
-                        label = { Text("Nazwisko") },
+                        label = { Text(stringResource(R.string.edit_personal_data_surname)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium
@@ -198,7 +199,7 @@ fun EditPersonalDataScreenContent(
             item {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 Text(
-                    "Twoje kierunki studiów",
+                    stringResource(R.string.edit_personal_data_your_courses),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 24.dp)
@@ -218,11 +219,11 @@ fun EditPersonalDataScreenContent(
                         Column(Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(fieldOfStudy.ifBlank { "Główny kierunek" }, style = MaterialTheme.typography.titleSmall)
+                                    Text(fieldOfStudy.ifBlank { stringResource(R.string.edit_personal_data_main_course) }, style = MaterialTheme.typography.titleSmall)
                                     Text(selectedGroup, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                                 }
                                 IconButton(onClick = onClearMainGroup) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Usuń kierunek główny", tint = MaterialTheme.colorScheme.error)
+                                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.edit_personal_data_delete_main_desc), tint = MaterialTheme.colorScheme.error)
                                 }
                             }
 
@@ -231,7 +232,7 @@ fun EditPersonalDataScreenContent(
                                     modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Text("Pobieranie podgrup...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(R.string.edit_personal_data_loading_subgroups), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(modifier = Modifier.height(8.dp))
                                     LinearProgressIndicator(
                                         modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
@@ -240,7 +241,7 @@ fun EditPersonalDataScreenContent(
                                     )
                                 }
                             } else if (availableSubgroups.isNotEmpty()) {
-                                Text("Podgrupy:", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.edit_personal_data_subgroups_label), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 FlowRow(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     availableSubgroups.forEach { sub ->
                                         FilterChip(
@@ -272,11 +273,11 @@ fun EditPersonalDataScreenContent(
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(course.fieldOfStudy ?: "Dodatkowy kierunek", style = MaterialTheme.typography.titleSmall)
+                                Text(course.fieldOfStudy ?: stringResource(R.string.edit_personal_data_additional_course_label), style = MaterialTheme.typography.titleSmall)
                                 Text(course.groupCode, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                             }
                             IconButton(onClick = { onRemoveAdditionalCourse(course) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Usuń", tint = MaterialTheme.colorScheme.error)
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.btn_delete), tint = MaterialTheme.colorScheme.error)
                             }
                         }
 
@@ -285,7 +286,7 @@ fun EditPersonalDataScreenContent(
                                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Text("Pobieranie podgrup...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.edit_personal_data_loading_subgroups), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 LinearProgressIndicator(
                                     modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
@@ -296,7 +297,7 @@ fun EditPersonalDataScreenContent(
                         } else {
                             val available = additionalSubgroupsMap[course.groupCode] ?: emptyList()
                             if (available.isNotEmpty()) {
-                                Text("Podgrupy:", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.edit_personal_data_subgroups_label), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 FlowRow(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     available.forEach { sub ->
                                         val current = course.selectedSubgroup?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
@@ -325,7 +326,7 @@ fun EditPersonalDataScreenContent(
                     OutlinedTextField(
                         value = groupSearchQuery,
                         onValueChange = { onGroupSearchQueryChange(it); expandedMenu = true },
-                        label = { Text(if (selectedGroup == null) "Znajdź główny kierunek..." else "Dodaj kolejny kierunek...") },
+                        label = { Text(if (selectedGroup == null) stringResource(R.string.edit_personal_data_find_main_hint) else stringResource(R.string.edit_personal_data_add_next_hint)) },
                         shape = MaterialTheme.shapes.medium,
                         leadingIcon = { Icon(painterResource(R.drawable.ic_search), contentDescription = null, Modifier.size(24.dp)) },
                         modifier = Modifier

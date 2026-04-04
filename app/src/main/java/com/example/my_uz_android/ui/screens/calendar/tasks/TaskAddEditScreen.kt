@@ -30,6 +30,7 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.*
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun TaskAddEditScreenRoute(
@@ -224,7 +225,7 @@ fun TaskAddEditScreen(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         topBar = {
             TopAppBar(
-                title = if (isEditMode) "Edytuj zadanie" else "Dodaj zadanie",
+                title = if (isEditMode) stringResource(R.string.task_edit_title) else stringResource(R.string.task_add_title),
                 navigationIcon = R.drawable.ic_close,
                 isNavigationIconFilled = true,
                 onNavigationClick = onBackClick,
@@ -236,7 +237,7 @@ fun TaskAddEditScreen(
                             .heightIn(min = 48.dp),
                         enabled = title.isNotBlank()
                     ) {
-                        Text("Zapisz", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.btn_save), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             )
@@ -252,27 +253,27 @@ fun TaskAddEditScreen(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "SZYBKI WYBÓR",
+                    text = stringResource(R.string.quick_choice),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 val quickTypes = listOf(
-                    "Kolokwium",
-                    "Egzamin",
-                    "Wejściówka",
-                    "Projekt",
-                    "Prezentacja",
-                    "Zadanie domowe",
-                    "Odpowiedź ustna"
+                    stringResource(R.string.chip_colloquium) to "Kolokwium",
+                    stringResource(R.string.chip_exam) to "Egzamin",
+                    stringResource(R.string.chip_entrance_test) to "Wejściówka",
+                    stringResource(R.string.chip_project) to "Projekt",
+                    stringResource(R.string.chip_presentation) to "Prezentacja",
+                    stringResource(R.string.chip_homework) to "Zadanie domowe",
+                    stringResource(R.string.chip_oral_answer) to "Odpowiedź ustna"
                 )
 
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(quickTypes) { type ->
+                    items(quickTypes) { (label, value) ->
                         FilterChip(
-                            selected = selectedQuickType == type,
-                            onClick = { onQuickTypeSelect(type) },
-                            label = { Text(type) }
+                            selected = selectedQuickType == value,
+                            onClick = { onQuickTypeSelect(value) },
+                            label = { Text(label) }
                         )
                     }
                 }
@@ -281,8 +282,8 @@ fun TaskAddEditScreen(
             OutlinedTextField(
                 value = title,
                 onValueChange = onTitleChange,
-                label = { Text("Tytuł zadania") },
-                placeholder = { Text("np. Przeczytać rozdział 4") },
+                label = { Text(stringResource(R.string.label_task_title)) },
+                placeholder = { Text(stringResource(R.string.placeholder_task_title)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 colors = appOutlinedTextFieldColors(),
@@ -301,13 +302,13 @@ fun TaskAddEditScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Zadanie całodniowe", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.label_all_day), style = MaterialTheme.typography.bodyLarge)
                     Switch(checked = isAllDay, onCheckedChange = { onAllDayChange(it) })
                 }
             }
 
             ClickableFieldRow(
-                label = "Data wykonania",
+                label = stringResource(R.string.label_due_date),
                 value = formatDate(selectedDateMillis),
                 iconRes = R.drawable.ic_calendar,
                 onClick = { showDatePicker = true }
@@ -315,7 +316,7 @@ fun TaskAddEditScreen(
 
             AnimatedVisibility(visible = !isAllDay, enter = expandVertically(), exit = shrinkVertically()) {
                 ClickableFieldRow(
-                    label = "Godzina wykonania",
+                    label = stringResource(R.string.label_due_time),
                     value = String.format(Locale.getDefault(), "%02d:%02d", selectedHour, selectedMinute),
                     iconRes = R.drawable.ic_clock,
                     onClick = { showTimePicker = true }
@@ -346,7 +347,7 @@ fun TaskAddEditScreen(
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text("Ustaw przypomnienie", style = MaterialTheme.typography.bodyLarge)
+                            Text(stringResource(R.string.label_set_reminder), style = MaterialTheme.typography.bodyLarge)
                         }
                         Switch(checked = hasReminder, onCheckedChange = { onHasReminderChange(it) })
                     }
@@ -357,14 +358,14 @@ fun TaskAddEditScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             ClickableFieldRow(
-                                label = "Data",
+                                label = stringResource(R.string.label_date),
                                 value = formatDateShort(reminderDateMillis),
                                 iconRes = null,
                                 onClick = { showReminderDatePicker = true },
                                 modifier = Modifier.weight(1f)
                             )
                             ClickableFieldRow(
-                                label = "Godzina",
+                                label = stringResource(R.string.label_hour),
                                 value = String.format(Locale.getDefault(), "%02d:%02d", reminderHour, reminderMinute),
                                 iconRes = null,
                                 onClick = { showReminderTimePicker = true },
@@ -376,7 +377,7 @@ fun TaskAddEditScreen(
             }
 
             AppDropdownMenu(
-                label = "Przedmiot (opcjonalnie)",
+                label = stringResource(R.string.task_subject_label),
                 selectedOption = selectedSubject,
                 options = subjectsList,
                 onOptionSelected = onSubjectChange
@@ -389,7 +390,7 @@ fun TaskAddEditScreen(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "RODZAJ ZAJĘĆ",
+                        stringResource(R.string.label_class_type_field),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -415,7 +416,7 @@ fun TaskAddEditScreen(
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "PRIORYTET",
+                    stringResource(R.string.label_priority),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -424,27 +425,27 @@ fun TaskAddEditScreen(
                         selected = priority == 0,
                         onClick = { onPriorityChange(0) },
                         shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
-                    ) { Text("Niski") }
+                    ) { Text(stringResource(R.string.priority_low)) }
 
                     SegmentedButton(
                         selected = priority == 1,
                         onClick = { onPriorityChange(1) },
                         shape = RoundedCornerShape(0.dp)
-                    ) { Text("Średni") }
+                    ) { Text(stringResource(R.string.priority_medium)) }
 
                     SegmentedButton(
                         selected = priority == 2,
                         onClick = { onPriorityChange(2) },
                         shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
-                    ) { Text("Wysoki") }
+                    ) { Text(stringResource(R.string.priority_high)) }
                 }
             }
 
             OutlinedTextField(
                 value = description,
                 onValueChange = onDescriptionChange,
-                label = { Text("Opis (opcjonalnie)") },
-                placeholder = { Text("Dodatkowe szczegóły, materiały...") },
+                label = { Text(stringResource(R.string.label_description_optional)) },
+                placeholder = { Text(stringResource(R.string.placeholder_description)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp),
@@ -519,12 +520,12 @@ fun AppDropdownMenu(
 }
 
 private fun formatDate(timestamp: Long): String =
-    SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+    SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault())
         .format(Date(timestamp))
         .replaceFirstChar { it.uppercase() }
 
 private fun formatDateShort(timestamp: Long): String =
-    SimpleDateFormat("dd.MM.yyyy", Locale("pl", "PL")).format(Date(timestamp))
+    SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(timestamp))
 
 @Preview(showBackground = true)
 @Composable

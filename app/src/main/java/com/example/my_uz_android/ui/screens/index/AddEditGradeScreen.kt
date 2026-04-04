@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.screens.index
 
+/**
+ * Ekran formularza umożliwiającego dodawanie nowych lub edytowanie istniejących ocen,
+ * wpisywanie punktów oraz wstawianie aktywności ("Plusów") z poszczególnych zajęć.
+ * Zawiera ładny layout w formie karty wyboru, zachowując czystość i wygodę MD3.
+ */
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -30,6 +36,7 @@ import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun AddEditGradeScreenRoute(
@@ -64,7 +71,8 @@ fun AddEditGradeScreenRoute(
         onQuickTypeSelect = { type ->
             selectedQuickType = type
             viewModel.updateDescription(type)
-            if (type.lowercase() == "aktywność") {
+            // Automatyczny skok do zakładki Plusów, jeśli kliknięto Szybki Wybór "Aktywność"
+            if (type.lowercase() == "aktywność" || type.lowercase() == "activity") {
                 viewModel.updateGradeType(GradeType.ACTIVITY)
             }
         },
@@ -215,7 +223,7 @@ fun AddEditGradeScreen(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         topBar = {
             TopAppBar(
-                title = if (isEditMode) "Edytuj wpis" else "Dodaj wpis",
+                title = if (isEditMode) stringResource(R.string.edit_entry) else stringResource(R.string.add_grade_points),
                 navigationIcon = R.drawable.ic_close,
                 isNavigationIconFilled = true,
                 onNavigationClick = onBackClick,
@@ -227,7 +235,7 @@ fun AddEditGradeScreen(
                             .heightIn(min = 48.dp),
                         enabled = selectedSubject.isNotBlank() && selectedClassType.isNotBlank()
                     ) {
-                        Text("Zapisz", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.btn_save), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             )
@@ -241,37 +249,37 @@ fun AddEditGradeScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+            // --- SZYBKI WYBÓR ---
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "SZYBKI WYBÓR",
+                    text = stringResource(R.string.quick_choice).uppercase(),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 val quickTypes = listOf(
-                    "Kolokwium",
-                    "Egzamin",
-                    "Aktywność",
-                    "Wejściówka",
-                    "Projekt",
-                    "Prezentacja",
-                    "Zadanie domowe",
-                    "Odpowiedź ustna"
+                    stringResource(R.string.chip_colloquium) to "Kolokwium",
+                    stringResource(R.string.chip_exam) to "Egzamin",
+                    stringResource(R.string.chip_activity) to "Aktywność",
+                    stringResource(R.string.chip_project) to "Projekt",
+                    stringResource(R.string.chip_other) to "Inne"
                 )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(quickTypes) { type ->
+                    items(quickTypes) { (label, value) ->
                         FilterChip(
-                            selected = selectedQuickType == type,
-                            onClick = { onQuickTypeSelect(type) },
-                            label = { Text(type) }
+                            selected = selectedQuickType == value,
+                            onClick = { onQuickTypeSelect(value) },
+                            label = { Text(label) }
                         )
                     }
                 }
             }
 
+            // --- TYTUŁ ---
             OutlinedTextField(
                 value = title,
                 onValueChange = onTitleChange,
-                label = { Text("Tytuł") },
+                label = { Text(stringResource(R.string.label_title_field)) },
                 placeholder = { Text("np. Kolokwium 1") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -279,15 +287,17 @@ fun AddEditGradeScreen(
                 shape = GradeAppShape
             )
 
+            // --- DATA ---
             GradeClickableFieldRow(
-                label = "Data",
-                value = formatGradeAddEditDate(selectedDateMillis) ?: "Wybierz datę",
+                label = stringResource(R.string.label_date_received),
+                value = formatGradeAddEditDate(selectedDateMillis) ?: stringResource(R.string.select_date),
                 iconRes = R.drawable.ic_calendar,
                 onClick = { showDatePicker = true }
             )
 
+            // --- PRZEDMIOT I RODZAJ ZAJĘĆ ---
             GradeAppDropdownMenu(
-                label = "Przedmiot",
+                label = stringResource(R.string.label_subject_field),
                 selectedOption = selectedSubject,
                 options = subjectsList,
                 onOptionSelected = onSubjectChange
@@ -300,7 +310,7 @@ fun AddEditGradeScreen(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "RODZAJ ZAJĘĆ",
+                        text = stringResource(R.string.label_class_type_field),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -324,6 +334,8 @@ fun AddEditGradeScreen(
                 }
             }
 
+            // --- KARTA WYBORU: SKALA / PUNKTY / PLUSY ---
+            // To jest Twoja pożądana, elegancka karta z tłem, w której zagnieżdżony jest SegmentedButton
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -341,26 +353,29 @@ fun AddEditGradeScreen(
                             selected = gradeType == AppGradeType.SCALE,
                             onClick = { onGradeTypeChange(AppGradeType.SCALE) },
                             shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
-                        ) { Text("Skala") }
+                        ) { Text(stringResource(R.string.grade_scale)) }
 
                         SegmentedButton(
                             selected = gradeType == AppGradeType.POINTS,
                             onClick = { onGradeTypeChange(AppGradeType.POINTS) },
                             shape = RoundedCornerShape(0.dp)
-                        ) { Text("Punkty") }
+                        ) { Text(stringResource(R.string.grade_points)) }
 
                         SegmentedButton(
                             selected = gradeType == AppGradeType.ACTIVITY,
-                            onClick = { onGradeTypeChange(AppGradeType.ACTIVITY) },
+                            onClick = {
+                                onGradeTypeChange(AppGradeType.ACTIVITY)
+                                onQuickTypeSelect("Aktywność") // Zaznacz także chipa u góry
+                            },
                             shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
-                        ) { Text("Plusy") }
+                        ) { Text(stringResource(R.string.grade_activity)) }
                     }
 
                     when (gradeType) {
                         AppGradeType.SCALE -> {
                             val gradeOptions = listOf("5.0", "4.5", "4.0", "3.5", "3.0", "2.5", "2.0")
                             GradeAppDropdownMenu(
-                                label = "Wybierz ocenę",
+                                label = stringResource(R.string.label_grade_value),
                                 selectedOption = gradeValue,
                                 options = gradeOptions,
                                 onOptionSelected = onGradeValueChange
@@ -371,7 +386,7 @@ fun AddEditGradeScreen(
                             OutlinedTextField(
                                 value = pointsScored,
                                 onValueChange = onPointsScoredChange,
-                                label = { Text("Liczba punktów") },
+                                label = { Text(stringResource(R.string.label_points_count)) },
                                 modifier = Modifier.fillMaxWidth(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 colors = gradeAppOutlinedTextFieldColors(),
@@ -401,7 +416,8 @@ fun AddEditGradeScreen(
                                 Text(
                                     text = activityCount.toString(),
                                     style = MaterialTheme.typography.headlineMedium,
-                                    modifier = Modifier.padding(horizontal = 32.dp)
+                                    modifier = Modifier.padding(horizontal = 32.dp),
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
 
                                 FilledIconButton(
@@ -428,7 +444,7 @@ fun AddEditGradeScreen(
                         OutlinedTextField(
                             value = weight,
                             onValueChange = onWeightChange,
-                            label = { Text("Waga (opcjonalnie)") },
+                            label = { Text(stringResource(R.string.label_weight_field)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = {
@@ -445,10 +461,11 @@ fun AddEditGradeScreen(
                 }
             }
 
+            // --- KOMENTARZ ---
             OutlinedTextField(
                 value = comment,
                 onValueChange = onCommentChange,
-                label = { Text("Opis (opcjonalnie)") },
+                label = { Text(stringResource(R.string.label_comment_field)) },
                 placeholder = { Text("Dodatkowe informacje, uwagi...") },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -474,13 +491,19 @@ fun AddEditGradeScreen(
     }
 }
 
+/**
+ * Ujednolicone rozwijane menu dla okna Ocen.
+ * NAPRAWA: Zrezygnowano z twardego `Modifier.background`, aby tło listy pięknie
+ * dopasowywało się do trybu Dark/Light.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GradeAppDropdownMenu(
     label: String,
     selectedOption: String,
     options: List<String>,
-    onOptionSelected: (String) -> Unit
+    onOptionSelected: (String) -> Unit,
+    iconRes: Int? = null
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -493,6 +516,7 @@ private fun GradeAppDropdownMenu(
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
+            leadingIcon = iconRes?.let { { Icon(painterResource(it), contentDescription = null, modifier = Modifier.size(20.dp)) } },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -519,9 +543,9 @@ private fun GradeAppDropdownMenu(
 
 private fun formatGradeAddEditDate(millis: Long?): String? {
     if (millis == null) return null
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault())
         .format(Date(millis))
-        .replaceFirstChar { it.uppercase() }
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 }
 
 @Preview(showBackground = true)

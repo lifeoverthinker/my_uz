@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.screens.account
 
+/**
+ * Ekran wyświetlający dane personalne i przypisane kierunki studiów.
+ * Zaprojektowany zgodnie ze standardem Material Design 3 (karty, listy, wyraźna hierarchia).
+ */
+
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -8,8 +14,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -65,10 +75,10 @@ fun PersonalDataScreenContent(
     val hasAnyStudyData = hasMainGroup || sortedSubgroups.isNotEmpty() || hasAdditionalCourses
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         topBar = {
             TopAppBar(
-                title = "Dane osobowe",
+                title = stringResource(R.string.personal_data_title),
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onNavigateBack,
                 isNavigationIconFilled = true,
@@ -88,75 +98,96 @@ fun PersonalDataScreenContent(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            PersonalDataGroup(title = "Profil studenta") {
-                DataItem(label = "Imię i nazwisko", value = "$userName $userSurname")
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-                DataItem(
-                    label = "Płeć / Forma zwrotu",
-                    value = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() }
-                        ?: "Student"
-                )
+
+            Text(
+                text = stringResource(R.string.personal_data_student_profile),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Column {
+                    ListItem(
+                        headlineContent = { Text("$userName $userSurname", style = MaterialTheme.typography.bodyLarge) },
+                        overlineContent = { Text(stringResource(R.string.personal_data_name_surname)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_user),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: stringResource(R.string.default_user_title),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        },
+                        overlineContent = { Text(stringResource(R.string.personal_data_gender_title)) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
             }
 
-            PersonalDataGroup(title = "Zapisane grupy") {
+            Text(
+                text = stringResource(R.string.personal_data_saved_groups),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = MaterialTheme.shapes.large
+            ) {
                 if (!hasAnyStudyData) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_info_circle),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = "Brak przypisanych kierunkow i podgrup.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.personal_data_no_data_msg), style = MaterialTheme.typography.bodyMedium) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_info_circle),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
                 } else {
                     if (hasMainGroup) {
-                        DataItem(label = "Grupa glowna", value = selectedGroup.orEmpty())
-                    }
-
-                    if (sortedSubgroups.isNotEmpty()) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        ListItem(
+                            headlineContent = { Text(selectedGroup.orEmpty(), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)) },
+                            overlineContent = { Text(stringResource(R.string.personal_data_main_group)) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
 
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Wybrane podgrupy",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            )
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                sortedSubgroups.forEach { subgroup ->
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        shape = RoundedCornerShape(12.dp)
-                                    ) {
-                                        Text(
-                                            text = subgroup,
-                                            modifier = Modifier.padding(
-                                                horizontal = 12.dp,
-                                                vertical = 6.dp
-                                            ),
-                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        if (sortedSubgroups.isNotEmpty()) {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Text(
+                                    text = stringResource(R.string.personal_data_selected_subgroups),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    sortedSubgroups.forEach { subgroup ->
+                                        SuggestionChip(
+                                            onClick = { },
+                                            label = { Text(subgroup) },
+                                            colors = SuggestionChipDefaults.suggestionChipColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                                            border = null,
+                                            shape = RoundedCornerShape(8.dp)
                                         )
                                     }
                                 }
@@ -165,90 +196,37 @@ fun PersonalDataScreenContent(
                     }
 
                     if (hasAdditionalCourses) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.personal_data_additional_groups), style = MaterialTheme.typography.labelLarge) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
 
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Grupy dodatkowe",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            )
+                        additionalCourses.forEachIndexed { index, course ->
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Text(course.groupCode, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                                Text(course.fieldOfStudy ?: stringResource(R.string.no_data), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-                            additionalCourses.forEachIndexed { index, course ->
-                                Column(modifier = Modifier.padding(bottom = if (index < additionalCourses.size - 1) 16.dp else 0.dp)) {
+                                val subgroups = course.selectedSubgroup?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() }?.sorted()
+                                if (!subgroups.isNullOrEmpty()) {
                                     Text(
-                                        text = course.groupCode,
-                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        text = stringResource(R.string.personal_data_subgroups_format, subgroups.joinToString(", ")),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(top = 4.dp)
                                     )
-                                    Text(
-                                        text = course.fieldOfStudy ?: "Brak danych",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(top = 2.dp)
-                                    )
-
-                                    val subgroups = course.selectedSubgroup
-                                        ?.split(",")
-                                        ?.map { it.trim() }
-                                        ?.filter { it.isNotBlank() }
-                                        ?.sorted()
-
-                                    if (!subgroups.isNullOrEmpty()) {
-                                        Text(
-                                            text = "Podgrupy: ${subgroups.joinToString(", ")}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(top = 4.dp)
-                                        )
-                                    }
                                 }
+                            }
+                            if (index < additionalCourses.size - 1) {
+                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
                             }
                         }
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
-    }
-}
-
-@Composable
-fun PersonalDataGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-        )
-        OutlinedCard(
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder(),
-            modifier = Modifier.fillMaxWidth(),
-            content = { Column(content = content) }
-        )
-    }
-}
-
-@Composable
-fun DataItem(label: String, value: String) {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }
 
@@ -263,18 +241,7 @@ fun PersonalDataScreenPreview() {
             selectedGroup = "11-INF-ZI-S",
             selectedSubgroups = setOf("L1", "C2"),
             additionalCourses = listOf(
-                UserCourseEntity(
-                    id = 1,
-                    groupCode = "12-MAT-S",
-                    fieldOfStudy = "Matematyka stosowana",
-                    selectedSubgroup = "L1,W"
-                ),
-                UserCourseEntity(
-                    id = 2,
-                    groupCode = "14-FIZ-N",
-                    fieldOfStudy = "Fizyka techniczna",
-                    selectedSubgroup = ""
-                )
+                UserCourseEntity(id = 1, groupCode = "12-MAT-S", fieldOfStudy = "Matematyka stosowana", selectedSubgroup = "L1,W")
             ),
             onNavigateBack = {},
             onNavigateToEdit = {}

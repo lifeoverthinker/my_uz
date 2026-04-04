@@ -3,10 +3,10 @@ import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android") version "2.0.21"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
+    id("org.jetbrains.kotlin.android") version "2.2.10"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
-    id("com.google.devtools.ksp") version "2.0.21-1.0.27"
+    id("com.google.devtools.ksp") version "2.3.2"
 }
 
 // --- 1. Odczytujemy local.properties ---
@@ -108,7 +108,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:gotrue-kt:$supabaseVersion")
     implementation("io.ktor:ktor-client-cio:2.3.11")
 
-    val roomVersion = "2.6.1"
+    val roomVersion = "2.7.0-alpha11"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")

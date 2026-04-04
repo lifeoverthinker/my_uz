@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 class EventRepository(private val eventDao: EventDao) {
 
+    // Alias używany w innych viewModelach
+    fun getAllEventsStream(): Flow<List<EventEntity>> = eventDao.getAllEvents()
     fun getAllEvents(): Flow<List<EventEntity>> = eventDao.getAllEvents()
 
     fun getEventByIdStream(id: Int): Flow<EventEntity?> = eventDao.getEventById(id)
@@ -14,7 +16,6 @@ class EventRepository(private val eventDao: EventDao) {
 
     suspend fun insertEvent(event: EventEntity) = eventDao.insert(event)
 
-    // ✅ DODANE: Metoda do zapisu listy wydarzeń (wykorzystywana przy imporcie)
     suspend fun insertEvents(events: List<EventEntity>) {
         events.forEach { eventDao.insert(it) }
     }

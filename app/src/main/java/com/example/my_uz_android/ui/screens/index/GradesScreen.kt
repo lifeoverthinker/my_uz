@@ -29,6 +29,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.util.ClassTypeUtils
 import com.example.my_uz_android.ui.components.EmptyStateFigma
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun GradesScreen(
@@ -48,9 +49,9 @@ fun GradesScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         if (uiState.subjects.isEmpty()) {
             EmptyStateFigma(
-                title = "Czysta karta! 📖",
-                subtitle = "Startujesz od zera",
-                message = "W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!",
+                title = stringResource(R.string.subject_grades_empty_title),
+                subtitle = stringResource(R.string.subject_grades_empty_subtitle),
+                message = stringResource(R.string.subject_grades_empty_message),
                 iconRes = R.drawable.grades_rafiki,
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 illustrationSize = 221.7868.dp,
@@ -90,7 +91,7 @@ fun GradesScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Średnia z bieżącego semestru",
+                                    text = stringResource(R.string.current_semester_average),
                                     style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp),
                                     color = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.weight(1f)
@@ -104,7 +105,7 @@ fun GradesScreen(
                         } else {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    text = "Średnie z bieżącego semestru",
+                                    text = stringResource(R.string.current_semester_averages),
                                     style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 14.sp),
                                     color = MaterialTheme.colorScheme.onPrimary
                                 )
@@ -116,7 +117,7 @@ fun GradesScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = courseName,
+                                            text = courseName.ifBlank { stringResource(R.string.other_courses) },
                                             style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 13.sp),
                                             color = MaterialTheme.colorScheme.onPrimary,
                                             modifier = Modifier.weight(1f)
@@ -144,7 +145,7 @@ fun GradesScreen(
                     if (isMultiCourse) {
                         item {
                             Text(
-                                text = courseName,
+                                text = if (courseName == "single") "" else courseName.ifBlank { stringResource(R.string.other_courses) },
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = FontWeight.SemiBold,
                                     letterSpacing = 0.3.sp
@@ -215,7 +216,7 @@ private fun ExpandableSubjectGradeCard(
                             textAlign = TextAlign.Center
                         )
                         Text(
-                            text = "średnia",
+                            text = stringResource(R.string.average_label_small),
                             style = TextStyle(fontWeight = FontWeight(400), fontSize = 12.sp, lineHeight = 16.sp),
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
@@ -223,7 +224,7 @@ private fun ExpandableSubjectGradeCard(
                     }
                     Icon(
                         painter = painterResource(R.drawable.ic_chevron_down),
-                        contentDescription = "Rozwiń/Zwiń",
+                        contentDescription = stringResource(R.string.expand_collapse_content_description),
                         modifier = Modifier.size(24.dp).rotate(rotation),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
@@ -267,7 +268,7 @@ private fun ExpandableSubjectGradeCard(
 
                                 if (classType.grades.isEmpty()) {
                                     Text(
-                                        text = "Brak ocen",
+                                        text = stringResource(R.string.no_grades),
                                         style = TextStyle(fontWeight = FontWeight(400), fontSize = 12.sp, lineHeight = 16.sp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -331,7 +332,7 @@ private fun ExpandableSubjectGradeCard(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "Dodaj ocenę",
+                                text = stringResource(R.string.add_grade),
                                 style = TextStyle(fontWeight = FontWeight(400), fontSize = 12.sp, lineHeight = 16.sp),
                                 color = MaterialTheme.colorScheme.primary
                             )

@@ -1,5 +1,14 @@
 package com.example.my_uz_android.ui.screens.calendar
 
+/**
+ * ViewModel obsługujący główne funkcje ekranu kalendarza (CalendarScreen).
+ *
+ * Zarządza stanem:
+ * - Filtrowania planu (widoczność danych kierunków/podgrup)
+ * - Pamięci wybranej daty i wybranego widoku (Miesiąc/Tydzień)
+ * - Przełączaniem źródeł (Mój plan vs. Ulubione vs. Wyszukiwarka)
+ */
+
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -31,12 +40,18 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 
+/**
+ * Definicje źródła, z którego aktualnie pobierane są dane do kalendarza.
+ */
 sealed interface ScheduleSource {
     data object MyPlan : ScheduleSource
     data class Favorite(val resourceId: String, val name: String, val type: String) : ScheduleSource
     data class Preview(val resourceId: String, val name: String, val type: String) : ScheduleSource
 }
 
+/**
+ * Struktura danych reprezentująca stan UI (widoku) Kalendarza.
+ */
 data class CalendarUiState(
     val userCourses: List<UserCourseEntity> = emptyList(),
     val selectedGroupCodes: Set<String> = emptySet(),
@@ -56,7 +71,7 @@ data class CalendarUiState(
 )
 
 class CalendarViewModel(
-    private val application: Application,
+    application: Application,
     private val favoritesRepository: FavoritesRepository,
     private val classRepository: ClassRepository,
     private val settingsRepository: SettingsRepository,
@@ -67,16 +82,25 @@ class CalendarViewModel(
 
     private val gson = Gson()
 
+    // 1. Zmienne stanowe przetrzymujące "pamięć" kalendarza wewnątrz pamięci RAM urządzenia
     private val _selectedGroups = MutableStateFlow<Set<String>>(emptySet())
     private val _previewState = MutableStateFlow<List<ClassEntity>>(emptyList())
     private val _currentSource = MutableStateFlow<ScheduleSource>(ScheduleSource.MyPlan)
+
+    // Kluczowa zmiana UX: Pamiętamy datę, dopóki użytkownik nie zamknie całkowicie aplikacji!
     private val _selectedDate = MutableStateFlow(LocalDate.now(ZoneId.of("Europe/Warsaw")))
     private val _isMonthView = MutableStateFlow(false)
+
     private val _isLoadingNetwork = MutableStateFlow(false)
     private val _temporaryClassForDetails = MutableStateFlow<ClassEntity?>(null)
 
+    // Flaga powstrzymująca resetowanie wybranych kierunków
     private var isGroupsInitialized = false
 
+    // Flaga powstrzymująca resetowanie planu po wejściu w Details
+    private var hasLoadedInitialPlan = false
+
+    // Reaktywny strumień główny aplikacji
     val uiState: StateFlow<CalendarUiState> = combine(
         userCourseRepository.getAllUserCoursesStream(),
         classRepository.getAllClassesStream(),
@@ -105,20 +129,22 @@ class CalendarViewModel(
             @Suppress("UNCHECKED_CAST") val tasks = args[10] as List<TaskEntity>
             val tempClass = args[11] as ClassEntity?
 
+            // Tworzenie kolorów i połączenie wszystkich kierunków (Główny + Dodatkowe)
             val colorMap = parseColorMapCalendarVM(settings?.classColorsJson)
             val allCoursesForUi = buildAllCoursesForUiCalendarVM(settings, courses)
             val allUserCodes = allCoursesForUi.map { it.groupCode.trim().lowercase() }.toSet()
 
+            // Pobranie aktywnych (zaznaczonych ptaszkiem) grup na podstawie pamięci
             val selectedCodes = initializeGroupsIfNeededCalendarVM(allUserCodes, selectedCodesRaw)
-
             val activeCodesLower = selectedCodes
                 .map { it.trim().lowercase() }
                 .filter { it in allUserCodes }
                 .toSet()
 
-            // Budujemy mapę uprawnień w oparciu o AKTYWNE (zaznaczone) kierunki
+            // Zaawansowane filtry - budowanie praw dostępu do konkretnych zajęć (z uwzględnieniem np. tylko Lab1, ale Wykład cały)
             val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, courses, activeCodesLower)
 
+            // Odfiltrowanie klas na podstawie zaznaczonych kierunków
             val classesToShow = when (source) {
                 is ScheduleSource.MyPlan -> {
                     val filtered = myClasses.filter { classItem ->
@@ -129,6 +155,7 @@ class CalendarViewModel(
                             userEnrollments
                         )
                     }
+                    // Zabezpieczenie: jeśli algorytm coś źle policzył, by nie wyczyścić komuś planu
                     if (filtered.isEmpty() && myClasses.isNotEmpty() && userEnrollments.isEmpty()) {
                         myClasses
                     } else {
@@ -177,19 +204,40 @@ class CalendarViewModel(
             CalendarUiState(isLoading = false)
         )
 
+    /**
+     * Włącza lub wyłącza (Checkbox) widoczność danego kierunku studiów na głównym planie.
+     */
     fun toggleGroupVisibility(groupCode: String) {
         val normalized = groupCode.trim().lowercase()
         val current = _selectedGroups.value.toMutableSet()
 
-        // Nie pozwalamy odznaczyc ostatniego aktywnego kierunku.
+        // Nie pozwalamy odznaczyc ostatniego aktywnego kierunku, bo zostanie pusty ekran
         if (current.contains(normalized) && current.size <= 1) return
 
         if (current.contains(normalized)) current.remove(normalized) else current.add(normalized)
         _selectedGroups.value = current
     }
 
-    fun selectMyPlan() { _currentSource.value = ScheduleSource.MyPlan }
+    /**
+     * Zmienia źródło danych na domyślny plan zalogowanego studenta.
+     * Dodano tu zabezpieczenie przed resetem przy nawigacji!
+     */
+    fun selectMyPlan(forceRefresh: Boolean = false) {
+        if (forceRefresh || !hasLoadedInitialPlan) {
+            _currentSource.value = ScheduleSource.MyPlan
+            refreshMyPlan()
+            hasLoadedInitialPlan = true
+        } else {
+            // Jeśli już kiedyś ładowaliśmy Mój Plan, tylko podmieniamy Source.
+            // Omijamy fetchowanie z serwera by zapobiec ładowaniu (isLoading = true)
+            // za każdym razem jak cofamy się ze szczegółów.
+            _currentSource.value = ScheduleSource.MyPlan
+        }
+    }
 
+    /**
+     * Dodaje lub usuwa plan z zakładki Ulubionych (ikona Serca).
+     */
     fun toggleFavorite(name: String, type: String) {
         viewModelScope.launch {
             runCatching {
@@ -212,6 +260,9 @@ class CalendarViewModel(
         loadNetworkScheduleCalendarVM(name, type)
     }
 
+    /**
+     * Wewnętrzna funkcja uderzająca do API uniwersytetu (Scraper) pobierająca plany "Ulubionych".
+     */
     private fun loadNetworkScheduleCalendarVM(name: String, type: String) {
         viewModelScope.launch {
             _isLoadingNetwork.value = true
@@ -229,6 +280,9 @@ class CalendarViewModel(
         }
     }
 
+    /**
+     * Główna funkcja synchronizacyjna uderzająca do bazy Room i API uniwersytetu.
+     */
     fun refreshMyPlan() {
         viewModelScope.launch {
             val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch
@@ -240,6 +294,7 @@ class CalendarViewModel(
 
             if (groupCodes.isEmpty()) return@launch
 
+            // Tu możemy dać UI feedback, że odświeża plan w tle, jeśli ma internet
             _isLoadingNetwork.value = true
             try {
                 groupCodes.forEach { (code, subgroup) ->
@@ -257,6 +312,9 @@ class CalendarViewModel(
     fun setMonthView(isMonth: Boolean) { _isMonthView.value = isMonth }
     fun setTemporaryClassForDetails(classEntity: ClassEntity?) { _temporaryClassForDetails.value = classEntity }
 
+    /**
+     * Mapuje losowe kolory zajęć z formatu tekstowego (JSON) na stałe numery int (0,1,2..).
+     */
     private fun parseColorMapCalendarVM(rawJson: String?): Map<String, Int> {
         return try {
             val type = object : TypeToken<Map<String, Int>>() {}.type
@@ -277,6 +335,10 @@ class CalendarViewModel(
         return result
     }
 
+    /**
+     * Pamięć zaznaczonych przez użytkownika filtrów i kierunków.
+     * Nie resetuje się w trakcie przeglądania!
+     */
     private fun initializeGroupsIfNeededCalendarVM(allUserCodes: Set<String>, selectedCodesRaw: Set<String>): Set<String> {
         val normalizedSelected = selectedCodesRaw
             .map { it.trim().lowercase() }
@@ -298,5 +360,4 @@ class CalendarViewModel(
 
         return if (current.isNotEmpty()) current else allUserCodes
     }
-
 }

@@ -26,6 +26,7 @@ import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,7 +106,7 @@ fun AccountScreenContent(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = "Konto",
+                title = stringResource(R.string.account_screen_title),
                 navigationIcon = null,
                 isCenterAligned = false,
                 isNavigationIconFilled = true
@@ -122,13 +123,13 @@ fun AccountScreenContent(
         ) {
             ProfileSection(
                 userName = "$userName $userSurname".trim(),
-                userTitle = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Student",
+                userTitle = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: stringResource(R.string.default_user_title),
                 isAnonymous = isAnonymous
             )
 
             StudyDirectionsSection(
-                fieldOfStudy = fieldOfStudy.ifBlank { "Brak danych" },
-                faculty = faculty.ifBlank { "Brak danych" },
+                fieldOfStudy = fieldOfStudy.ifBlank { stringResource(R.string.no_data) },
+                faculty = faculty.ifBlank { stringResource(R.string.no_data) },
                 mode = studyMode.ifBlank { "-" },
                 subgroups = selectedSubgroups,
                 fallbackGroup = selectedGroup,
@@ -143,7 +144,7 @@ fun AccountScreenContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                SectionTitle(text = "Zarządzanie kontem")
+                SectionTitle(text = stringResource(R.string.account_management_section))
 
                 Column(
                     modifier = Modifier
@@ -153,7 +154,7 @@ fun AccountScreenContent(
                 ) {
                     AccountOptionItem(
                         iconRes = R.drawable.ic_user,
-                        label = "Dane osobowe",
+                        label = stringResource(R.string.personal_data_option),
                         onClick = onPersonalDataClick
                     )
                     HorizontalDivider(
@@ -162,7 +163,7 @@ fun AccountScreenContent(
                     )
                     AccountOptionItem(
                         iconRes = R.drawable.ic_settings,
-                        label = "Ustawienia",
+                        label = stringResource(R.string.settings_option),
                         onClick = onSettingsClick
                     )
                     HorizontalDivider(
@@ -171,7 +172,7 @@ fun AccountScreenContent(
                     )
                     AccountOptionItem(
                         iconRes = R.drawable.ic_info_circle,
-                        label = "O aplikacji",
+                        label = stringResource(R.string.about_app_option),
                         onClick = onAboutClick
                     )
                 }
@@ -215,7 +216,7 @@ private fun StudyDirectionsSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SectionTitle(text = "Dane studiów")
+            SectionTitle(text = stringResource(R.string.study_data_section))
 
             if (!isAnonymous && fallbackDirections.size > 1) {
                 Box {
@@ -271,7 +272,7 @@ private fun StudyDirectionsSection(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Uzupełnij profil, aby zobaczyć dane studiów.",
+                        text = stringResource(R.string.anonymous_study_data_msg),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -289,7 +290,7 @@ private fun StudyDirectionsSection(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Brak przypisanych kierunków. Przejdz do ustawien, aby dodac swoj plan zajec.",
+                        text = stringResource(R.string.no_study_directions_msg),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -301,7 +302,7 @@ private fun StudyDirectionsSection(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "KIERUNEK",
+                            text = stringResource(R.string.label_field_of_study),
                             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -315,14 +316,14 @@ private fun StudyDirectionsSection(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        StudyItem(label = "TRYB", value = mode, modifier = Modifier.weight(1f))
-                        StudyItem(label = "GRUPA", value = selectedDirection, modifier = Modifier.weight(1f))
+                        StudyItem(label = stringResource(R.string.label_study_mode), value = mode, modifier = Modifier.weight(1f))
+                        StudyItem(label = stringResource(R.string.label_study_group), value = selectedDirection, modifier = Modifier.weight(1f))
                     }
 
-                    StudyItem(label = "WYDZIAŁ", value = faculty)
+                    StudyItem(label = stringResource(R.string.label_faculty), value = faculty)
 
                     StudyItem(
-                        label = "PODGRUPY",
+                        label = stringResource(R.string.label_subgroups_caps),
                         value = if (subgroups.isNotEmpty()) subgroups.toList().sorted().joinToString(", ") else "-"
                     )
                 }
@@ -409,12 +410,12 @@ fun ProfileSection(userName: String, userTitle: String, isAnonymous: Boolean) {
 
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                text = if (isAnonymous) "Użytkownik Gość" else userName,
+                text = if (isAnonymous) stringResource(R.string.anonymous_user_name) else userName,
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
-                text = if (isAnonymous) "Konto gościa" else userTitle,
+                text = if (isAnonymous) stringResource(R.string.anonymous_user_title) else userTitle,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Normal),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

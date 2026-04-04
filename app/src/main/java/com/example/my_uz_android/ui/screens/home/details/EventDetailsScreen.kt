@@ -26,6 +26,7 @@ import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import com.example.my_uz_android.ui.theme.getAppBackgroundColor
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun EventDetailsScreen(
@@ -49,8 +50,8 @@ fun EventDetailsScreen(
     val event = uiState.eventEntity
     if (event == null) {
         EmptyDetailsState(
-            title = "Brak danych wydarzenia",
-            description = "Nie udało się pobrać szczegółów tego wydarzenia."
+            title = stringResource(R.string.event_details_empty_title),
+            description = stringResource(R.string.event_details_empty_message)
         )
         return
     }
@@ -93,8 +94,8 @@ fun EventDetailsContent(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Surface(
                     modifier = Modifier
@@ -142,7 +143,7 @@ fun EventDetailsContent(
                 if (event.location.isNotBlank()) {
                     DetailRowCard(
                         iconRes = R.drawable.ic_marker_pin,
-                        label = "Miejsce",
+                        label = stringResource(R.string.label_place),
                         value = event.location
                     )
                 }
@@ -150,7 +151,7 @@ fun EventDetailsContent(
                 if (event.description.isNotBlank()) {
                     DetailRowCard(
                         iconRes = R.drawable.ic_menu_2,
-                        label = "Opis",
+                        label = stringResource(R.string.label_description),
                         value = event.description,
                         isMultiline = true
                     )
@@ -171,13 +172,13 @@ private fun DetailRowCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         color = Color.Transparent
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
         ) {
             Icon(

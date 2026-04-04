@@ -51,6 +51,7 @@ import java.time.YearMonth
 import java.time.ZoneId
 import kotlin.math.abs
 import androidx.compose.foundation.layout.height
+import androidx.compose.ui.res.stringResource
 
 private fun Modifier.calendarDaySwipeGestureSchedulePreviewScreen(
     selectedDate: LocalDate,
@@ -217,7 +218,7 @@ fun SchedulePreviewScreenContent(
     Scaffold(
         topBar = {
             PreviewTopAppBar(
-                title = if (isTeacher) "Plan wykładowcy" else "Plan grupy",
+                title = if (isTeacher) stringResource(R.string.preview_teacher_plan) else stringResource(R.string.preview_group_plan),
                 subtitle = if (isTeacher) (teacherData?.teacherName ?: planName) else planName,
                 isFavorite = isFavorite,
                 onBackClick = onBackClick,
@@ -270,12 +271,12 @@ fun SchedulePreviewScreenContent(
                             )
                             Spacer(Modifier.height(16.dp))
                             Text(
-                                text = "Brak zajęć",
+                                text = stringResource(R.string.calendar_empty_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "W wybranym planie nie znaleziono żadnych zaplanowanych zajęć.",
+                                text = stringResource(R.string.preview_no_classes_msg),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -324,8 +325,8 @@ fun SchedulePreviewScreenContent(
         TeacherInfoDialog(
             onDismiss = { showTeacherInfo = false },
             fullName = teacherData?.teacherName ?: planName,
-            department = teacherData?.teacherInstitute ?: "Brak informacji o jednostce",
-            email = teacherData?.teacherEmail ?: "Brak adresu e-mail"
+            department = teacherData?.teacherInstitute ?: stringResource(R.string.preview_no_department),
+            email = teacherData?.teacherEmail ?: stringResource(R.string.preview_no_email)
         )
     }
 

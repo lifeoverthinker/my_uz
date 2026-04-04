@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">MyUZ</string>
 
@@ -9,6 +10,9 @@
     <string name="btn_delete">Usuń</string>
     <string name="btn_duplicate">Duplikuj</string>
     <string name="btn_edit">Edytuj</string>
+    <string name="btn_confirm">Zatwierdź</string>
+    <string name="btn_done">Gotowe</string>
+    <string name="btn_ok">OK</string>
     <string name="options_menu">Opcje</string>
 
     <string name="task_title_placeholder">Dodaj tytuł</string>
@@ -42,4 +46,365 @@
     <string name="tasks_empty_title">Brak zadań</string>
     <string name="tasks_today">Dziś</string>
     <string name="tasks_tomorrow">Jutro</string>
+    <string name="moje_zajecia">Moje Zajęcia</string>
+    <string name="dzisiaj">Dzisiaj</string>
+    <string name="jutro">Jutro</string>
+
+    <!-- Index / Indeks -->
+    <string name="index_screen_title">Indeks</string>
+    <string name="tab_grades">Oceny</string>
+    <string name="tab_absences">Nieobecności</string>
+
+    <!-- Oceny -->
+    <string name="subject_grades_title">Oceny</string>
+    <string name="subject_grades_empty_title">Czysta karta! 📖</string>
+    <string name="subject_grades_empty_subtitle">Startujesz od zera</string>
+    <string name="subject_grades_empty_message">W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!</string>
+    <string name="label_average">Średnia</string>
+    <string name="label_points">Punkty</string>
+    <string name="label_activities">Aktywności</string>
+    <string name="add_final_grade">+ Dodaj ocenę końcową</string>
+    <string name="final_grade_dialog_title">Dodaj ocenę końcową</string>
+    <string name="final_grade_dialog_message">Wybierz ocenę końcową z przedmiotu:</string>
+    <string name="activity">Aktywność</string>
+    <string name="weight_label">Waga: %1$s</string>
+    <string name="default_subject_name">Przedmiot</string>
+    <string name="current_semester_average">Średnia z bieżącego semestru</string>
+    <string name="current_semester_averages">Średnie z bieżącego semestru</string>
+    <string name="other_courses">Inne / Dawne</string>
+    <string name="average_label_small">średnia</string>
+    <string name="expand_collapse_content_description">Rozwiń/Zwiń</string>
+    <string name="no_grades">Brak ocen</string>
+    <string name="add_grade">Dodaj ocenę</string>
+
+    <!-- Szczegóły Oceny -->
+    <string name="grade_details_empty_title">Brak danych oceny</string>
+    <string name="grade_details_empty_message">Nie udało się pobrać szczegółów tej oceny.</string>
+    <string name="activity_plus">Aktywność (+)</string>
+    <string name="label_grade_single">Ocena</string>
+    <string name="label_points_activity">Punkty / Aktywność</string>
+    <string name="grade_weight_format">Ocena • Waga: %1$s</string>
+    <string name="label_subject_details">Przedmiot</string>
+    <string name="label_class_type_details">Rodzaj zajęć</string>
+    <string name="label_comment">Komentarz</string>
+    <string name="delete_confirmation_message_alt">Czy na pewno chcesz usunąć to %1$s? Te zmiany są nieodwracalne.</string>
+
+    <!-- Add/Edit Grade -->
+    <string name="edit_entry">Edytuj wpis</string>
+    <string name="add_grade_points">Dodaj ocenę / punkty</string>
+    <string name="quick_choice">SZYBKI WYBÓR</string>
+    <string name="entry_type">TYP WPISU</string>
+    <string name="grade_scale">Skala</string>
+    <string name="grade_points">Punkty</string>
+    <string name="grade_activity">Plusy</string>
+    <string name="label_grade_value">OCENA</string>
+    <string name="label_points_count">Liczba punktów</string>
+    <string name="label_activity_count">Liczba plusów: %1$d</string>
+    <string name="label_weight_field">Waga (domyślnie 1.0)</string>
+    <string name="label_subject_field">Przedmiot</string>
+    <string name="label_class_type_field">RODZAJ ZAJĘĆ</string>
+    <string name="label_date_received">Data otrzymania</string>
+    <string name="select_date">Wybierz datę</string>
+    <string name="label_title_field">Tytuł / Nazwa (np. Kolokwium 1)</string>
+    <string name="label_comment_field">Dodatkowy opis / komentarz</string>
+    <string name="chip_colloquium">Kolokwium</string>
+    <string name="chip_exam">Egzamin</string>
+    <string name="chip_project">Projekt</string>
+    <string name="chip_activity">Aktywność</string>
+    <string name="chip_other">Inne</string>
+
+    <!-- Nieobecności -->
+    <string name="add_absence">Dodaj nieobecność</string>
+    <string name="edit_limit">Zmień limit</string>
+    <string name="edit_limit_message">Podaj maksymalną liczbę nieobecności dla tych zajęć:</string>
+    <string name="absence_details_empty_title">Brak danych nieobecności</string>
+    <string name="absence_details_empty_message">Nie udało się pobrać szczegółów tej nieobecności.</string>
+    <string name="unknown_subject">Nieznany przedmiot</string>
+    <string name="status_excused">Usprawiedliwiona</string>
+    <string name="status_unexcused">Nieusprawiedliwiona</string>
+    <string name="label_status_absence">Status</string>
+    <string name="label_reason">Powód / opis</string>
+    <string name="edit_absence_title">Edytuj nieobecność</string>
+    <string name="add_absence_title">Dodaj nieobecność</string>
+    <string name="label_absence_date">Data nieobecności</string>
+    <string name="label_reason_optional">Powód / Notatka (opcjonalnie)</string>
+
+    <!-- Dialogi -->
+    <string name="delete_confirmation_title">Potwierdź usunięcie</string>
+    <string name="delete_confirmation_message">Czy na pewno chcesz usunąć tę %1$s? Te zmiany są nieodwracalne.</string>
+    <string name="item_type_grade">ocenę</string>
+    <string name="item_type_absence">nieobecność</string>
+    <string name="dialog_teacher_title">Prowadzący</string>
+    <string name="dialog_filter_subgroups_title">Filtruj podgrupy</string>
+    <string name="dialog_filter_schedule_title">Filtruj plan</string>
+    <string name="label_subgroups">Podgrupy</string>
+
+    <!-- Home -->
+    <string name="greeting_morning">Cześć</string>
+    <string name="greeting_evening">Dobry wieczór</string>
+    <string name="no_study_field">Brak przypisanego kierunku</string>
+    <string name="no_classes_title">Brak zajęć</string>
+    <string name="no_classes_message">Brak zajęć na horyzoncie</string>
+    <string name="tasks_title">Zadania</string>
+    <string name="tasks_empty_card_title">Czysta lista!</string>
+    <string name="tasks_empty_card_message">Nie masz żadnych zadań</string>
+    <string name="events_title">Wydarzenia</string>
+    <string name="events_empty_card_title">Spokojny czas</string>
+    <string name="events_empty_card_message">Brak nadchodzących wydarzeń</string>
+
+    <!-- Home Components -->
+    <string name="upcoming_classes_title">Najbliższe zajęcia</string>
+    <string name="setup_plan_title">Wybierz plan zajęć</string>
+    <string name="setup_plan_message">Przejdź do danych osobowych, aby przypisać się do grupy i zobaczyć nadchodzące zajęcia.</string>
+    <string name="setup_plan_button">Wybierz grupę</string>
+    <string name="all_set_title">Wszystko gotowe!</string>
+    <string name="no_classes_today_tomorrow">Brak zajęć na dziś i jutro</string>
+
+    <!-- Calendar -->
+    <string name="calendar_title_month_year">%1$s %2$d</string>
+
+    <!-- Account -->
+    <string name="account_screen_title">Konto</string>
+    <string name="default_user_title">Student</string>
+    <string name="no_data">Brak danych</string>
+    <string name="account_management_section">Zarządzanie kontem</string>
+    <string name="personal_data_option">Dane osobowe</string>
+    <string name="settings_option">Ustawienia</string>
+    <string name="about_app_option">O aplikacji</string>
+    <string name="study_data_section">Dane studiów</string>
+    <string name="anonymous_study_data_msg">Uzupełnij profil, aby zobaczyć dane studiów.</string>
+    <string name="no_study_directions_msg">Brak przypisanych kierunków. Przejdz do ustawien, aby dodac swoj plan zajec.</string>
+    <string name="label_field_of_study">KIERUNEK</string>
+    <string name="label_study_mode">TRYB</string>
+    <string name="label_study_group">GRUPA</string>
+    <string name="label_faculty">WYDZIAŁ</string>
+    <string name="label_subgroups_caps">PODGRUPY</string>
+    <string name="anonymous_user_name">Użytkownik Gość</string>
+    <string name="anonymous_user_title">Konto gościa</string>
+
+    <!-- Settings -->
+    <string name="settings_screen_title">Ustawienia</string>
+    <string name="settings_appearance_section">Wygląd</string>
+    <string name="settings_theme_label">Motyw aplikacji</string>
+    <string name="settings_language_label">Język aplikacji</string>
+    <string name="settings_language_polish">Polski</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_notifications_section">Powiadomienia</string>
+    <string name="settings_notifications_push">Powiadomienia PUSH</string>
+    <string name="settings_notifications_push_desc">Przypomnienia o zajęciach i zadaniach</string>
+    <string name="settings_backup_section">Dane i synchronizacja</string>
+
+    <!-- Backup -->
+    <string name="backup_title">Kopia zapasowa</string>
+    <string name="backup_desc">Eksportuj lub importuj swoje oceny, zadania, plan zajęć i ustawienia.</string>
+    <string name="btn_export">Eksportuj</string>
+    <string name="btn_import">Importuj</string>
+    <string name="backup_saved">Kopia zapasowa zapisana!</string>
+    <string name="backup_error_save">Błąd zapisu pliku</string>
+    <string name="backup_import_success">Pomyślnie zaimportowano dane!</string>
+    <string name="backup_import_error">Błąd importu: %1$s</string>
+    <string name="backup_read_error">Błąd odczytu pliku. Upewnij się, że to poprawny plik kopii zapasowej.</string>
+
+    <!-- About App -->
+    <string name="about_app_title">O aplikacji</string>
+    <string name="about_app_subtitle">Twoje centrum studiowania</string>
+    <string name="about_app_description">Aplikacja MyUZ powstała, aby ułatwić życie studentom Uniwersytetu Zielonogórskiego. Naszą misją jest dostarczenie najszybszego i najbardziej intuicyjnego dostępu do planu zajęć, ocen oraz terminów zadań.</string>
+    <string name="about_app_icons_info">Ikony interfejsu pochodzą z bazy SVG Repo (licencja CC0).</string>
+    <string name="about_app_illustrations_prefix">Ilustracje w aplikacji pochodzą z serwisu </string>
+    <string name="about_app_storyset">Storyset</string>
+    <string name="student_project_label">Student Project 2026</string>
+    <string name="uz_label">Uniwersytet Zielonogórski</string>
+    <string name="logo_content_description">Logo MyUZ</string>
+
+    <!-- Personal Data -->
+    <string name="personal_data_title">Dane osobowe</string>
+    <string name="personal_data_student_profile">Profil studenta</string>
+    <string name="personal_data_name_surname">Imię i nazwisko</string>
+    <string name="personal_data_gender_title">Płeć / Forma zwrotu</string>
+    <string name="personal_data_saved_groups">Zapisane grupy</string>
+    <string name="personal_data_no_data_msg">Brak przypisanych kierunkow i podgrup.</string>
+    <string name="personal_data_main_group">Grupa glowna</string>
+    <string name="personal_data_selected_subgroups">Wybrane podgrupy</string>
+    <string name="personal_data_additional_groups">Grupy dodatkowe</string>
+    <string name="personal_data_subgroups_format">Podgrupy: %1$s</string>
+
+    <!-- Edit Personal Data -->
+    <string name="edit_personal_data_title">Edytuj profil</string>
+    <string name="edit_personal_data_saved">Zapisano</string>
+    <string name="edit_personal_data_return_form">Forma zwrotu</string>
+    <string name="edit_personal_data_student">Student</string>
+    <string name="edit_personal_data_studentka">Studentka</string>
+    <string name="edit_personal_data_name">Imię</string>
+    <string name="edit_personal_data_surname">Nazwisko</string>
+    <string name="edit_personal_data_your_courses">Twoje kierunki studiów</string>
+    <string name="edit_personal_data_main_course">Główny kierunek</string>
+    <string name="edit_personal_data_delete_main_desc">Usuń kierunek główny</string>
+    <string name="edit_personal_data_loading_subgroups">Pobieranie podgrup...</string>
+    <string name="edit_personal_data_subgroups_label">Podgrupy:</string>
+    <string name="edit_personal_data_additional_course_label">Dodatkowy kierunek</string>
+    <string name="edit_personal_data_find_main_hint">Znajdź główny kierunek...</string>
+    <string name="edit_personal_data_add_next_hint">Dodaj kolejny kierunek...</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_skip">Pomiń</string>
+    <string name="onboarding_start">Rozpocznij</string>
+    <string name="onboarding_back">Wstecz</string>
+    <string name="onboarding_finish">Zaczynamy!</string>
+    <string name="onboarding_next">Dalej</string>
+    <string name="onboarding_welcome_title">Witaj w MyUZ! 👋</string>
+    <string name="onboarding_welcome_subtitle">Twój cyfrowy asystent na\nUniwersytecie Zielonogórskim</string>
+    <string name="onboarding_welcome_desc">Zarządzaj zajęciami, zadaniami i ocenami w jednym miejscu. Wszystko co potrzebujesz do organizacji życia studenckiego.</string>
+    <string name="onboarding_personalization_title">Personalizacja</string>
+    <string name="onboarding_personalization_subtitle">Kim jesteś?</string>
+    <string name="onboarding_personalization_desc">Dzięki temu aplikacja będzie zwracać się do Ciebie tak, jak lubisz</string>
+    <string name="onboarding_return_form">Forma zwrotu</string>
+    <string name="onboarding_your_data">Twoje dane</string>
+    <string name="onboarding_name">Imię</string>
+    <string name="onboarding_surname_optional">Nazwisko (opcjonalnie)</string>
+    <string name="onboarding_group_title">Wybierz swoją grupę</string>
+    <string name="onboarding_group_subtitle">Znajdź swój plan zajęć</string>
+    <string name="onboarding_group_desc">Wybierz swoją grupę i podgrupy, aby dostosować aplikację do Twojego rozkładu zajęć</string>
+    <string name="onboarding_group_hint">np. 23INF-SP</string>
+    <string name="onboarding_group_label">Kod grupy</string>
+    <string name="onboarding_clear">Wyczyść</string>
+    <string name="onboarding_group_not_found">Nie znaleziono takiej grupy</string>
+    <string name="onboarding_select_subgroups">Wybierz podgrupy</string>
+    <string name="onboarding_extra_title">Dodatkowy kierunek? 🎓</string>
+    <string name="onboarding_extra_subtitle">Wiele planów w jednym miejscu</string>
+    <string name="onboarding_extra_desc">Jeśli studiujesz na dwóch kierunkach (lub jesteś wolnym słuchaczem), możesz dodać tu kolejne grupy.\nJeśli nie, po prostu kliknij Dalej.</string>
+    <string name="onboarding_added_groups">Dodane grupy do zintegrowania:</string>
+    <string name="onboarding_search_extra_hint">Wyszukaj dodatkową grupę</string>
+    <string name="onboarding_mark_subgroups_for">Zaznacz podgrupy dla %1$s</string>
+    <string name="onboarding_save_to_list">Zapisz do listy kierunków</string>
+    <string name="onboarding_calendar_title">Terminarz i kalendarz</string>
+    <string name="onboarding_calendar_subtitle">Wszystkie zajęcia w jednym miejscu</string>
+    <string name="onboarding_calendar_desc">Sprawdzaj plan zajęć, dodawaj zadania i nie przegap żadnego wydarzenia uniwersyteckiego</string>
+    <string name="onboarding_grades_title">Osobisty indeks</string>
+    <string name="onboarding_grades_subtitle">Śledź swoje postępy lokalnie</string>
+    <string name="onboarding_grades_desc">Twoje oceny w jednym miejscu. Zapisuj wyniki, sprawdzaj średnią i pilnuj limitów nieobecności</string>
+    <string name="onboarding_final_title">Wszystko gotowe! 🎉</string>
+    <string name="onboarding_final_subtitle">Witaj na pokładzie!</string>
+    <string name="onboarding_final_desc">Twój profil został skonfigurowany. Plan zajęć, indeks i terminarz czekają na Ciebie</string>
+    <string name="onboarding_footer">MyUZ 2026 Wersja 1.00</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Powiadomienia</string>
+    <string name="notifications_empty_title">Jesteś na bieżąco!</string>
+    <string name="notifications_empty_desc">Nie masz żadnych nowych powiadomień.\nTutaj pojawią się przypomnienia o Twoich nadchodzących zadaniach do wykonania.</string>
+    <string name="notifications_clear_all_desc">Wyczyść wszystko</string>
+    <string name="notifications_empty_accent">Brak powiadomień</string>
+
+    <!-- Tasks -->
+    <string name="tasks_active">Aktywne</string>
+    <string name="tasks_completed">Zaliczone</string>
+    <string name="tasks_empty_active">Brak aktywnych zadań</string>
+    <string name="tasks_empty_completed">Brak zaliczonych zadań</string>
+    <string name="tasks_empty_subtitle">Twoja lista jest pusta</string>
+    <string name="tasks_empty_msg">Dodaj nowe zadanie przyciskiem +</string>
+    <string name="tasks_confirm_selected">Zatwierdź wybrane: %1$d</string>
+    <string name="tasks_share_confirm_title">Udostępnić zadania?</string>
+    <string name="tasks_share_confirm_msg">Zaznaczono %1$d zadań do udostępnienia.</string>
+    <string name="tasks_share_btn">Udostępnij</string>
+    <string name="tasks_code_copied">Skopiowano kod</string>
+    <string name="tasks_imported_title">Zadania zaimportowane!</string>
+    <string name="tasks_imported_btn">Super!</string>
+    <string name="tasks_delete_title">Usuń zadanie</string>
+    <string name="tasks_delete_msg">Czy na pewno chcesz trwale usunąć zadanie \"%1$s\"?</string>
+    <string name="tasks_share_title">Udostępnij zadania</string>
+    <string name="tasks_share_all">Udostępnij wszystko</string>
+    <string name="tasks_share_select">Wybierz zadania</string>
+    <string name="tasks_import_title">Importuj zadania</string>
+    <string name="tasks_share_code_title">Kod udostępniania</string>
+    <string name="tasks_copy_code">Skopiuj kod</string>
+    <string name="tasks_import_hint">Wpisz 6-znakowy kod, aby pobrać zadania.</string>
+    <string name="tasks_code_label">Kod</string>
+    <string name="tasks_code_placeholder">ABC123</string>
+
+    <!-- Task Add/Edit -->
+    <string name="task_edit_title">Edytuj zadanie</string>
+    <string name="task_add_title">Dodaj zadanie</string>
+    <string name="chip_entrance_test">Wejściówka</string>
+    <string name="chip_presentation">Prezentacja</string>
+    <string name="chip_homework">Zadanie domowe</string>
+    <string name="chip_oral_answer">Odpowiedź ustna</string>
+    <string name="label_task_title">Tytuł zadania</string>
+    <string name="placeholder_task_title">np. Przeczytać rozdział 4</string>
+    <string name="label_all_day">Zadanie całodniowe</string>
+    <string name="label_due_date">Data wykonania</string>
+    <string name="label_due_time">Godzina wykonania</string>
+    <string name="label_set_reminder">Ustaw przypomnienie</string>
+    <string name="label_date">Data</string>
+    <string name="label_hour">Godzina</string>
+    <string name="label_priority">PRIORYTET</string>
+    <string name="priority_low">Niski</string>
+    <string name="priority_medium">Średni</string>
+    <string name="priority_high">Wysoki</string>
+    <string name="label_description_optional">Opis (opcjonalnie)</string>
+    <string name="placeholder_description">Dodatkowe szczegóły, materiały...</string>
+
+    <!-- Schedule Preview -->
+    <string name="preview_teacher_plan">Plan wykładowcy</string>
+    <string name="preview_group_plan">Plan grupy</string>
+    <string name="preview_no_classes_msg">W wybranym planie nie znaleziono żadnych zaplanowanych zajęć.</string>
+    <string name="preview_no_department">Brak informacji o jednostce</string>
+    <string name="preview_no_email">Brak adresu e-mail</string>
+
+    <!-- Empty States Presets -->
+    <string name="empty_calendar_title">Brak zajęć</string>
+    <string name="empty_calendar_subtitle">Zasłużony odpoczynek</string>
+    <string name="empty_calendar_message">W tym dniu nie masz żadnych zaplanowanych zajęć. Ciesz się wolnym czasem!</string>
+    <string name="empty_tasks_title">Brak zadań ✅</string>
+    <string name="empty_tasks_subtitle">Wszystko gotowe</string>
+    <string name="empty_tasks_message">Lista Twoich zadań do zrobienia jest obecnie pusta</string>
+    <string name="empty_absences_title">100% frekwencji! ✅</string>
+    <string name="empty_absences_subtitle">Bez ani jednej nieobecności!</string>
+    <string name="empty_absences_message">Brawo! Nie opuściłeś żadnych zajęć w tym semestrze. Tak trzymaj!</string>
+
+    <!-- Search -->
+    <string name="search_plan_title">Wyszukaj plan</string>
+    <string name="search_plan_subtitle">Grupa lub wykładowca</string>
+    <string name="search_plan_msg">Wpisz kod grupy albo nazwisko wykładowcy, aby przejść do podglądu planu.</string>
+    <string name="search_no_results_title">Brak wyników</string>
+    <string name="search_no_results_subtitle">Nie znaleziono pasujących pozycji</string>
+    <string name="search_no_results_msg">Spróbuj wpisać kod grupy, fragment nazwy kierunku lub nazwisko prowadzącego.</string>
+    <string name="search_section_groups">Grupy</string>
+    <string name="search_section_teachers">Wykładowcy</string>
+    <string name="search_type_group">Grupa</string>
+    <string name="search_type_teacher">Wykładowca</string>
+
+    <!-- Drawer -->
+    <string name="drawer_section_menu">Menu</string>
+    <string name="drawer_calendar">Kalendarz</string>
+    <string name="drawer_tasks">Terminarz</string>
+    <string name="drawer_groups">Grupy</string>
+    <string name="drawer_no_favorite_groups">Brak ulubionych grup</string>
+    <string name="drawer_teachers">Wykładowcy</string>
+    <string name="drawer_no_favorite_teachers">Brak ulubionych wykładowców</string>
+
+    <!-- Details -->
+    <string name="task_details_empty_title">Brak danych zadania</string>
+    <string name="task_details_empty_message">Nie udało się pobrać szczegółów tego zadania.</string>
+    <string name="class_details_empty_title">Brak danych zajęć</string>
+    <string name="class_details_empty_message">Nie udało się pobrać szczegółów tych zajęć.</string>
+    <string name="event_details_empty_title">Brak danych wydarzenia</string>
+    <string name="event_details_empty_message">Nie udało się pobrać szczegółów tego wydarzenia.</string>
+    <string name="label_place">Miejsce</string>
+    <string name="label_room_format">Sala %1$s</string>
+    <string name="label_teacher">Prowadzący</string>
+    <string name="label_group">Grupa</string>
+    <string name="label_subgroup_format">%1$s (Podgrupa: %2$s)</string>
+    <string name="item_type_task">zadanie</string>
+
+    <!-- Components -->
+    <string name="time_picker_title">Wybierz godzinę</string>
+    <string name="search_hint">Szukaj...</string>
+
+    <!-- FAB -->
+    <string name="fab_add_grade">Dodaj ocenę</string>
+    <string name="fab_add_absence">Dodaj nieobecność</string>
+    <string name="fab_add_task">Dodaj zadanie</string>
+
+    <!-- Widget -->
+    <string name="widget_loading">Ładowanie danych...</string>
+    <string name="widget_refresh">Odśwież</string>
 </resources>

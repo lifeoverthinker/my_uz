@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.screens.account
 
+/**
+ * Ekran ustawień aplikacji.
+ * Pozwala użytkownikowi na zmianę motywu, kolorów zajęć, języka aplikacji,
+ * zarządzanie powiadomieniami oraz dostęp do funkcji kopii zapasowej.
+ */
+
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
@@ -23,9 +29,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.BackupDataType
@@ -39,16 +46,34 @@ import com.example.my_uz_android.util.ClassTypeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
-// --- MAIN SCREEN ---
+/**
+ * Trasa ekranu ustawień spinająca nawigację z `SettingsViewModel`.
+ */
+@Composable
+fun SettingsScreenRoute(
+    onNavigateBack: () -> Unit,
+    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+) {
+    SettingsScreen(
+        onBackClick = onNavigateBack,
+        viewModel = viewModel
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Główny ekran ustawień aplikacji.
+ *
+ * Pokazuje sekcje wyglądu, języka, powiadomień oraz backupu danych.
+ */
 @Composable
 fun SettingsScreen(
     onBackClick: () -> Unit,
-    viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    viewModel: SettingsViewModel
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -71,10 +96,10 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
         topBar = {
             TopAppBar(
-                title = "Ustawienia",
+                title = stringResource(R.string.settings_screen_title),
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onBackClick,
                 isNavigationIconFilled = true,
@@ -105,90 +130,104 @@ fun SettingsScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(scrollState)
-                        .padding(vertical = 8.dp)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    SettingsHeader("Wygląd")
 
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text(
-                            text = "Motyw aplikacji",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        val currentTheme = try {
-                            ThemeMode.valueOf(activeSettings?.themeMode ?: ThemeMode.SYSTEM.name)
-                        } catch (e: Exception) {
-                            ThemeMode.SYSTEM
+                    // --- WYGLĄD I JĘZYK ---
+                    SettingsSection(title = stringResource(R.string.settings_appearance_section)) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            Text(
+                                text = stringResource(R.string.settings_theme_label),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            val currentTheme = try {
+                                ThemeMode.valueOf(activeSettings?.themeMode ?: ThemeMode.SYSTEM.name)
+                            } catch (e: Exception) {
+                                ThemeMode.SYSTEM
+                            }
+
+                            ThemeSelector(
+                                selectedTheme = currentTheme,
+                                onThemeSelected = { viewModel.setThemeMode(it) }
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = stringResource(R.string.settings_language_label),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            LanguageSelector(
+                                currentLanguage = normalizeAppLanguageForUi(activeSettings?.appLanguage),
+                                onLanguageSelected = { viewModel.setAppLanguage(it) }
+                            )
                         }
-
-                        ThemeSelector(
-                            selectedTheme = currentTheme,
-                            onThemeSelected = { viewModel.setThemeMode(it) }
-                        )
                     }
 
+                    // --- PRZYWRÓCONE: KOLORY ZAJĘĆ ---
                     if (uiState.uniqueClassTypes.isNotEmpty()) {
-                        SettingsHeader("Kolory zajęć")
-                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                            uiState.uniqueClassTypes.forEach { classType ->
-                                val safeClassType = classType.trim()
-                                ClassColorPickerRow(
-                                    classType = ClassTypeUtils.getFullName(safeClassType),
-                                    selectedColorIndex = uiState.classColorMap[safeClassType] ?: 0,
-                                    onColorSelected = { viewModel.updateClassColor(safeClassType, it) }
-                                )
+                        SettingsSection(title = "Kolory zajęć") {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                uiState.uniqueClassTypes.forEach { classType ->
+                                    val safeClassType = classType.trim()
+                                    ClassColorPickerRow(
+                                        classType = ClassTypeUtils.getFullName(safeClassType),
+                                        selectedColorIndex = uiState.classColorMap[safeClassType] ?: 0,
+                                        onColorSelected = { viewModel.updateClassColor(safeClassType, it) }
+                                    )
+                                }
                             }
                         }
                     }
 
-                    SettingsHeader("Powiadomienia")
-                    SettingsToggleItem(
-                        iconRes = R.drawable.ic_bell,
-                        title = "Włącz powiadomienia",
-                        description = "Główny przełącznik powiadomień",
-                        isChecked = activeSettings?.notificationsEnabled == true,
-                        onCheckedChange = { viewModel.toggleNotifications(it) }
-                    )
-
-                    if (activeSettings?.notificationsEnabled == true) {
+                    // --- POWIADOMIENIA ---
+                    SettingsSection(title = stringResource(R.string.settings_notifications_section)) {
                         SettingsToggleItem(
-                            iconRes = R.drawable.ic_clock,
-                            title = "Zajęcia",
-                            description = "15 minut przed rozpoczęciem",
-                            isChecked = activeSettings.notificationsClasses,
-                            onCheckedChange = { viewModel.toggleClassesNotifications(it) }
+                            iconRes = R.drawable.ic_bell,
+                            title = stringResource(R.string.settings_notifications_push),
+                            description = stringResource(R.string.settings_notifications_push_desc),
+                            isChecked = activeSettings?.notificationsEnabled == true,
+                            onCheckedChange = { viewModel.toggleNotifications(it) }
+                        )
+
+                        if (activeSettings?.notificationsEnabled == true) {
+                            SettingsToggleItem(
+                                iconRes = R.drawable.ic_clock,
+                                title = "Zajęcia",
+                                description = "15 minut przed rozpoczęciem",
+                                isChecked = activeSettings.notificationsClasses,
+                                onCheckedChange = { viewModel.toggleClassesNotifications(it) }
+                            )
+                        }
+                    }
+
+                    // --- KOPIA ZAPASOWA ---
+                    SettingsSection(title = stringResource(R.string.settings_backup_section)) {
+                        SettingsActionItem(
+                            iconRes = R.drawable.ic_export,
+                            title = stringResource(R.string.btn_export),
+                            description = "Zapisz kopię danych do pliku JSON",
+                            onClick = {
+                                exportSelection = BackupDataType.entries.toSet()
+                                showExportDialog = true
+                            }
+                        )
+
+                        SettingsActionItem(
+                            iconRes = R.drawable.ic_import,
+                            title = stringResource(R.string.btn_import),
+                            description = "Przywróć dane z pliku zewnętrznego",
+                            isDestructive = true,
+                            onClick = { importLauncher.launch("application/json") }
                         )
                     }
 
-                    SettingsHeader("Dane i synchronizacja")
-                    SettingsToggleItem(
-                        iconRes = R.drawable.ic_wifi_off,
-                        title = "Tryb offline",
-                        description = "Używaj tylko danych lokalnych",
-                        isChecked = activeSettings?.offlineModeEnabled == true,
-                        onCheckedChange = { viewModel.toggleOfflineMode(it) }
-                    )
-
-                    SettingsActionItem(
-                        iconRes = R.drawable.ic_export,
-                        title = "Eksportuj dane",
-                        description = "Zapisz kopię do pliku JSON",
-                        onClick = {
-                            exportSelection = BackupDataType.entries.toSet()
-                            showExportDialog = true
-                        }
-                    )
-
-                    SettingsActionItem(
-                        iconRes = R.drawable.ic_import,
-                        title = "Importuj dane",
-                        description = "Przywróć dane z pliku",
-                        isDestructive = true,
-                        onClick = { importLauncher.launch("application/json") }
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "MyUZ v1.0.0",
                         style = MaterialTheme.typography.labelSmall,
@@ -225,19 +264,61 @@ fun SettingsScreen(
     }
 }
 
-// --- COMPONENTS ---
+// --- KOMPONENTY UI ---
 
 @Composable
-fun SettingsHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp)
-    )
+/**
+ * Sekcja ustawień z nagłówkiem i wspólnym kontenerem wizualnym.
+ */
+fun SettingsSection(title: String, content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        )
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Column(modifier = Modifier.padding(vertical = 8.dp)) { content() }
+        }
+    }
 }
 
 @Composable
+/**
+ * Mały przełącznik języka aplikacji (tylko `pl` i `en`).
+ */
+fun LanguageSelector(currentLanguage: String, onLanguageSelected: (String) -> Unit) {
+    val languages = listOf(
+        "pl" to stringResource(R.string.settings_language_polish),
+        "en" to stringResource(R.string.settings_language_english)
+    )
+    Row(
+        modifier = Modifier.wrapContentWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        languages.forEach { (code, label) ->
+            val isSelected = currentLanguage == code
+            FilterChip(
+                selected = isSelected,
+                onClick = { onLanguageSelected(code) },
+                label = { Text(label, modifier = Modifier.padding(horizontal = 4.dp)) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        }
+    }
+}
+
+@Composable
+/**
+ * Element listy ustawień z przełącznikiem boolean.
+ */
 fun SettingsToggleItem(iconRes: Int, title: String, description: String, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
@@ -246,10 +327,10 @@ fun SettingsToggleItem(iconRes: Int, title: String, description: String, isCheck
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SettingsIconContainer(iconRes)
+        Icon(painterResource(iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked = isChecked, onCheckedChange = onCheckedChange)
@@ -257,6 +338,9 @@ fun SettingsToggleItem(iconRes: Int, title: String, description: String, isCheck
 }
 
 @Composable
+/**
+ * Element akcji w ustawieniach uruchamiający jednorazowe działanie.
+ */
 fun SettingsActionItem(iconRes: Int, title: String, description: String, isDestructive: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier = Modifier
@@ -265,28 +349,31 @@ fun SettingsActionItem(iconRes: Int, title: String, description: String, isDestr
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SettingsIconContainer(iconRes, isDestructive)
+        Icon(
+            painterResource(iconRes),
+            contentDescription = null,
+            tint = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(24.dp)
+        )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium), color = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+            )
             Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-fun SettingsIconContainer(iconRes: Int, isError: Boolean = false) {
-    val bgColor = if (isError) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-    val iconColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-    Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(bgColor), contentAlignment = Alignment.Center) {
-        Icon(painterResource(iconRes), contentDescription = null, tint = iconColor, modifier = Modifier.size(22.dp))
-    }
-}
-
-@Composable
+/**
+ * Wiersz wyboru koloru dla typu zajęć.
+ */
 fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelected: (Int) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        Text(text = classType, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 12.dp, start = 4.dp))
+        Text(text = classType, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 12.dp, start = 4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ClassColorPalette.forEachIndexed { index, colorSet ->
                 val isSelected = index == selectedColorIndex
@@ -307,11 +394,7 @@ fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelec
                         Icon(
                             painter = painterResource(R.drawable.ic_check),
                             contentDescription = null,
-                            tint = if (colorSet.lightBg.luminance() > 0.5f) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.surface
-                            },
+                            tint = if (colorSet.lightBg.luminance() > 0.5f) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -321,73 +404,43 @@ fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelec
     }
 }
 
-// --- DIALOGS ---
-
 @Composable
-fun DataTypeSelectionDialog(
-    title: String,
-    confirmText: String,
-    initialSelection: Set<BackupDataType>,
-    onDismiss: () -> Unit,
-    onConfirm: (Set<BackupDataType>) -> Unit
-) {
+/**
+ * Dialog wyboru typów danych do eksportu/importu.
+ */
+fun DataTypeSelectionDialog(title: String, confirmText: String, initialSelection: Set<BackupDataType>, onDismiss: () -> Unit, onConfirm: (Set<BackupDataType>) -> Unit) {
     var selection by remember { mutableStateOf(initialSelection) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh, // Zgodne z udostępnianiem
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(28.dp),
-        title = {
-            Text(
-                title,
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
+        title = { Text(text = title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.fillMaxWidth()) },
         text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 BackupDataType.entries.forEach { type ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                selection = if (selection.contains(type)) selection - type else selection + type
-                            }
-                            .padding(vertical = 8.dp)
+                            .heightIn(min = 48.dp)
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { selection = if (selection.contains(type)) selection - type else selection + type }
                     ) {
-                        Checkbox(
-                            checked = selection.contains(type),
-                            onCheckedChange = { isChecked ->
-                                selection = if (isChecked) selection + type else selection - type
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = type.displayName,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        Checkbox(checked = selection.contains(type), onCheckedChange = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = type.displayName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(selection) }) {
-                Text(confirmText, style = MaterialTheme.typography.labelLarge)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Anuluj", style = MaterialTheme.typography.labelLarge)
-            }
-        }
+        confirmButton = { TextButton(onClick = { onConfirm(selection) }) { Text(confirmText, style = MaterialTheme.typography.labelLarge) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj", style = MaterialTheme.typography.labelLarge) } }
     )
 }
 
-// --- UTILS ---
-
+/**
+ * Zapisuje wybrane dane backupu do wskazanego pliku JSON.
+ */
 private suspend fun saveBackupToFile(context: Context, uri: Uri, viewModel: SettingsViewModel, selection: Set<BackupDataType>) {
     withContext(Dispatchers.IO) {
         try {
@@ -395,18 +448,30 @@ private suspend fun saveBackupToFile(context: Context, uri: Uri, viewModel: Sett
             context.contentResolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
             withContext(Dispatchers.Main) { Toast.makeText(context, "Zapisano dane!", Toast.LENGTH_SHORT).show() }
         } catch (e: Exception) {
-            withContext(Dispatchers.Main) { Toast.makeText(context, "Błąd zapisu", Toast.LENGTH_LONG).show() }
+            withContext(Dispatchers.Main) { Toast.makeText(context, "Błąd zapisu: ${e.message}", Toast.LENGTH_LONG).show() }
         }
     }
 }
 
+/**
+ * Odczytuje plik backupu i przekazuje jego zawartość do podglądu importu.
+ */
 private suspend fun readBackupFileToPreview(context: Context, uri: Uri, viewModel: SettingsViewModel) {
     withContext(Dispatchers.IO) {
         try {
             val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
             content?.let { viewModel.previewBackupFile(it) }
         } catch (e: Exception) {
-            e.printStackTrace()
+            withContext(Dispatchers.Main) { Toast.makeText(context, "Nie można odczytać pliku.", Toast.LENGTH_LONG).show() }
         }
     }
+}
+
+/**
+ * Normalizuje język ustawień do dwóch wspieranych wartości `pl`/`en` na potrzeby UI.
+ */
+private fun normalizeAppLanguageForUi(rawCode: String?): String = when (rawCode) {
+    "pl" -> "pl"
+    "en" -> "en"
+    else -> if (Locale.getDefault().language == "en") "en" else "pl"
 }

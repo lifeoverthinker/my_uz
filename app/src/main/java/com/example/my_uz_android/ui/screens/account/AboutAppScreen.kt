@@ -1,5 +1,10 @@
 package com.example.my_uz_android.ui.screens.account
 
+/**
+ * Ekran z informacjami o aplikacji, jej autorze (Projekt Inżynierski)
+ * oraz podziękowaniami za użyte licencje (np. grafiki Storyset).
+ */
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.TopAppBar
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,10 +35,10 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = "O aplikacji",
+                title = stringResource(R.string.about_app_title),
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onBackClick,
-                isNavigationIconFilled = false
+                isNavigationIconFilled = true
             )
         }
     ) { paddingValues ->
@@ -40,17 +46,17 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp, vertical = 24.dp), // Zmniejszyłem trochę górny margines
+                .padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // ✅ PRZYWRÓCONE LOGO I NAZWA APKI
+                // --- LOGO APKI ---
                 Image(
-                    painter = painterResource(id = R.drawable.logo), // Podmień na swoje główne logo, np. R.drawable.ic_logo
-                    contentDescription = "Logo MyUZ",
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = stringResource(R.string.logo_content_description),
                     modifier = Modifier
                         .size(88.dp)
                         .background(
@@ -63,16 +69,17 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "MyUZ",
+                    text = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
                     color = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
+                // --- INFORMACJE O PROJEKCIE (INŻYNIERKA) ---
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
-                        text = "Twoje centrum studiowania",
+                        text = "Twój Cyfrowy Asystent", // Albo z zasobów: stringResource(R.string.about_app_subtitle)
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -83,8 +90,9 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
+                    // Tutaj zmieniamy tekst na jawnie mówiący o projekcie niezależnym!
                     Text(
-                        text = "Aplikacja MyUZ powstała, aby ułatwić życie studentom Uniwersytetu Zielonogórskiego. Naszą misją jest dostarczenie najszybszego i najbardziej intuicyjnego dostępu do planu zajęć, ocen oraz terminów zadań.",
+                        text = "MyUZ to niezależna aplikacja stworzona od podstaw w ramach projektu inżynierskiego przez jednego studenta. Jej celem jest ułatwienie życia akademickiego na Uniwersytecie Zielonogórskim poprzez zintegrowanie planu zajęć, ocen i powiadomień w jednym, nowoczesnym miejscu.\n\nAplikacja nie jest oficjalnym produktem uczelni, lecz studencką inicjatywą zrodzoną z pasji do programowania.",
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         lineHeight = 22.sp,
@@ -94,13 +102,12 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Atrybucja Storyset
+                // --- PODZIĘKOWANIA / LICENCJE ---
                 StorysetAttribution()
 
-                // Informacja o SVG Repo (CC0)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Ikony interfejsu pochodzą z bazy SVG Repo (licencja CC0).",
+                    text = "Ikony: SVG Repo (Licencja CC0)",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline,
                     textAlign = TextAlign.Center
@@ -109,17 +116,18 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // --- STOPKA AUTORSKA ---
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(bottom = 32.dp)
             ) {
                 Text(
-                    text = "Student Project 2026",
+                    text = "Projekt Inżynierski 2026",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
                 Text(
-                    text = "Uniwersytet Zielonogórski",
+                    text = "Autor: Martyna",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Medium
@@ -129,14 +137,19 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
     }
 }
 
-// Komponent Atrybucji
+/**
+ * Komponent odpowiedzialny za wyświetlenie klikalnego linku do autorów ilustracji.
+ */
 @Composable
 fun StorysetAttribution() {
     val uriHandler = LocalUriHandler.current
 
+    val prefix = "Ilustracje od "
+    val storysetLabel = "Storyset"
+
     val annotatedLinkString = buildAnnotatedString {
         withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant)) {
-            append("Ilustracje w aplikacji pochodzą z serwisu ")
+            append(prefix)
         }
         pushStringAnnotation(tag = "storyset", annotation = "https://storyset.com/online")
         withStyle(
@@ -146,7 +159,7 @@ fun StorysetAttribution() {
                 textDecoration = TextDecoration.Underline
             )
         ) {
-            append("Storyset")
+            append(storysetLabel)
         }
         pop()
     }

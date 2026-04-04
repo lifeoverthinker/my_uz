@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.FavoriteEntity
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun CalendarDrawerContent(
@@ -46,17 +47,17 @@ fun CalendarDrawerContent(
         horizontalAlignment = Alignment.Start,
     ) {
         // --- Sekcja: Menu ---
-        DrawerSectionHeader(text = "Menu")
+        DrawerSectionHeader(text = stringResource(R.string.drawer_section_menu))
 
         DrawerItem(
-            label = "Kalendarz",
+            label = stringResource(R.string.drawer_calendar),
             iconRes = R.drawable.ic_calendar,
             isSelected = currentScreen == "calendar" && selectedResourceId == null,
             onClick = onMyPlanClick
         )
 
         DrawerItem(
-            label = "Terminarz",
+            label = stringResource(R.string.drawer_tasks),
             iconRes = R.drawable.ic_book_open,
             isSelected = currentScreen == "tasks",
             onClick = onTasksClick
@@ -65,7 +66,7 @@ fun CalendarDrawerContent(
         DrawerDivider()
 
         // --- Sekcja: Grupy ---
-        DrawerSectionHeader(text = "Grupy")
+        DrawerSectionHeader(text = stringResource(R.string.drawer_groups))
         if (groupFavorites.isNotEmpty()) {
             groupFavorites.forEach { fav ->
                 DrawerItem(
@@ -76,13 +77,13 @@ fun CalendarDrawerContent(
                 )
             }
         } else {
-            EmptyFavoritesText("Brak ulubionych grup")
+            EmptyFavoritesText(stringResource(R.string.drawer_no_favorite_groups))
         }
 
         DrawerDivider()
 
         // --- Sekcja: Wykładowcy ---
-        DrawerSectionHeader(text = "Wykładowcy")
+        DrawerSectionHeader(text = stringResource(R.string.drawer_teachers))
         if (teacherFavorites.isNotEmpty()) {
             teacherFavorites.forEach { fav ->
                 DrawerItem(
@@ -93,7 +94,7 @@ fun CalendarDrawerContent(
                 )
             }
         } else {
-            EmptyFavoritesText("Brak ulubionych wykładowców")
+            EmptyFavoritesText(stringResource(R.string.drawer_no_favorite_teachers))
         }
     }
 }

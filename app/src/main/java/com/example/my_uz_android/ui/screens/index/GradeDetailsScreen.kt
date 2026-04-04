@@ -27,6 +27,7 @@ import com.example.my_uz_android.util.ClassTypeUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun GradeDetailsScreenRoute(
@@ -52,20 +53,20 @@ fun GradeDetailsScreenRoute(
 
     if (grade == null) {
         EmptyDetailsState(
-            title = "Brak danych oceny",
-            description = "Nie udało się pobrać szczegółów tej oceny."
+            title = stringResource(R.string.grade_details_empty_title),
+            description = stringResource(R.string.grade_details_empty_message)
         )
         return
     }
 
     val gradeText = when {
         grade.isPoints -> "${if (grade.grade % 1.0 == 0.0) grade.grade.toInt() else grade.grade} pkt"
-        grade.grade == -1.0 -> "Aktywność (+)"
+        grade.grade == -1.0 -> stringResource(R.string.activity_plus)
         else -> grade.grade.toString()
     }
 
     GradeDetailsScreen(
-        title = grade.description ?: if (grade.isPoints) "Punkty" else "Ocena",
+        title = grade.description ?: if (grade.isPoints) stringResource(R.string.label_points) else stringResource(R.string.label_grade_single),
         dateMillis = grade.date,
         subjectName = grade.subjectName,
         classType = ClassTypeUtils.getFullName(grade.classType),
@@ -132,7 +133,7 @@ fun GradeDetailsScreen(
                                 onDismissRequest = { showMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text("Duplikuj") },
+                                    text = { Text(stringResource(R.string.btn_duplicate)) },
                                     leadingIcon = {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_copy),
@@ -146,7 +147,7 @@ fun GradeDetailsScreen(
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Usuń", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error) },
                                     leadingIcon = {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_trash),
@@ -172,8 +173,8 @@ fun GradeDetailsScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Surface(
                     modifier = Modifier
@@ -222,9 +223,9 @@ fun GradeDetailsScreen(
                 }
 
                 val gradeLabel = if (isPointsOrActivity) {
-                    "Punkty / Aktywność"
+                    stringResource(R.string.label_points_activity)
                 } else {
-                    if (!weightText.isNullOrEmpty()) "Ocena • Waga: $weightText" else "Ocena"
+                    if (!weightText.isNullOrEmpty()) stringResource(R.string.grade_weight_format, weightText) else stringResource(R.string.label_grade_single)
                 }
 
                 DetailRowCard(
@@ -236,20 +237,20 @@ fun GradeDetailsScreen(
 
                 DetailRowCard(
                     iconRes = R.drawable.ic_graduation_hat,
-                    label = "Przedmiot",
+                    label = stringResource(R.string.label_subject_details),
                     value = subjectName
                 )
 
                 DetailRowCard(
                     iconRes = R.drawable.ic_stand,
-                    label = "Rodzaj zajęć",
+                    label = stringResource(R.string.label_class_type_details),
                     value = classType
                 )
 
                 if (!comment.isNullOrEmpty()) {
                     DetailRowCard(
                         iconRes = R.drawable.ic_menu_2,
-                        label = "Komentarz",
+                        label = stringResource(R.string.label_comment),
                         value = comment,
                         isMultiline = true
                     )
@@ -263,7 +264,7 @@ fun GradeDetailsScreen(
                         showDeleteDialog = false
                     },
                     onDismiss = { showDeleteDialog = false },
-                    itemType = "ocenę"
+                    itemType = stringResource(R.string.item_type_grade)
                 )
             }
         }
@@ -278,16 +279,16 @@ private fun GradeDeleteDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Potwierdź usunięcie") },
-        text = { Text("Czy na pewno chcesz usunąć to $itemType? Te zmiany są nieodwracalne.") },
+        title = { Text(stringResource(R.string.delete_confirmation_title)) },
+        text = { Text(stringResource(R.string.delete_confirmation_message_alt, itemType)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Usuń", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj")
+                Text(stringResource(R.string.btn_cancel))
             }
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -305,13 +306,13 @@ private fun DetailRowCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         color = Color.Transparent
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
         ) {
             Icon(
@@ -383,7 +384,7 @@ private fun EmptyDetailsState(
 }
 
 private fun formatGradeDetailsDate(timestamp: Long): String {
-    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+    return SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault())
         .format(Date(timestamp))
         .replaceFirstChar { it.uppercase() }
 }

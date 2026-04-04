@@ -15,6 +15,8 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.res.stringResource
+import com.example.my_uz_android.R
 
 @Composable
 fun BackupSettingsSection(
@@ -23,6 +25,11 @@ fun BackupSettingsSection(
 ) {
     val context = LocalContext.current
     var jsonContentToSave by remember { mutableStateOf<String?>(null) }
+
+    val backupSavedMsg = stringResource(R.string.backup_saved)
+    val backupErrorSaveMsg = stringResource(R.string.backup_error_save)
+    val backupImportSuccessMsg = stringResource(R.string.backup_import_success)
+    val backupReadErrorMsg = stringResource(R.string.backup_read_error)
 
     // ---------------------------------------------------------
     // LAUNCHER DO ZAPISU PLIKU (EKSPORT)
@@ -35,10 +42,10 @@ fun BackupSettingsSection(
                 try {
                     context.contentResolver.openOutputStream(destinationUri)?.use { outputStream ->
                         outputStream.write(content.toByteArray())
-                        Toast.makeText(context, "Kopia zapasowa zapisana!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, backupSavedMsg, Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Błąd zapisu pliku", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, backupErrorSaveMsg, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -63,14 +70,14 @@ fun BackupSettingsSection(
                 viewModel.importDatabase(
                     json = jsonString,
                     onSuccess = {
-                        Toast.makeText(context, "Pomyślnie zaimportowano dane!", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, backupImportSuccessMsg, Toast.LENGTH_LONG).show()
                     },
                     onError = { errorMsg ->
-                        Toast.makeText(context, "Błąd importu: $errorMsg", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.backup_import_error, errorMsg), Toast.LENGTH_LONG).show()
                     }
                 )
             } catch (e: Exception) {
-                Toast.makeText(context, "Błąd odczytu pliku. Upewnij się, że to poprawny plik kopii zapasowej.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, backupReadErrorMsg, Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -84,7 +91,7 @@ fun BackupSettingsSection(
             .padding(16.dp)
     ) {
         Text(
-            text = "Kopia zapasowa",
+            text = stringResource(R.string.backup_title),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.primary
         )
@@ -92,7 +99,7 @@ fun BackupSettingsSection(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Eksportuj lub importuj swoje oceny, zadania, plan zajęć i ustawienia.",
+            text = stringResource(R.string.backup_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -115,7 +122,7 @@ fun BackupSettingsSection(
                     }
                 }
             ) {
-                Text("Eksportuj")
+                Text(stringResource(R.string.btn_export))
             }
 
             // PRZYCISK IMPORTU
@@ -126,7 +133,7 @@ fun BackupSettingsSection(
                     openDocumentLauncher.launch(arrayOf("application/json", "*/*"))
                 }
             ) {
-                Text("Importuj")
+                Text(stringResource(R.string.btn_import))
             }
         }
     }

@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import androidx.compose.ui.res.stringResource
+import com.example.my_uz_android.R
 
 /**
  * Bazowy full-screen Empty State zgodny z układem z Figmy:
@@ -166,9 +168,9 @@ fun CalendarEmptyState(
     modifier: Modifier = Modifier
 ) {
     EmptyStateFigma(
-        title = "Brak zajęć",
-        subtitle = "Zasłużony odpoczynek",
-        message = "W tym dniu nie masz żadnych zaplanowanych zajęć. Ciesz się wolnym czasem!",
+        title = stringResource(R.string.empty_calendar_title),
+        subtitle = stringResource(R.string.empty_calendar_subtitle),
+        message = stringResource(R.string.empty_calendar_message),
         iconRes = iconRes,
         modifier = modifier,
         illustrationSize = 221.7868.dp
@@ -187,9 +189,9 @@ fun TasksEmptyState(
     modifier: Modifier = Modifier
 ) {
     EmptyStateFigma(
-        title = "Brak zadań ✅",
-        subtitle = "Wszystko gotowe",
-        message = "Lista Twoich zadań do zrobienia jest obecnie pusta",
+        title = stringResource(R.string.empty_tasks_title),
+        subtitle = stringResource(R.string.empty_tasks_subtitle),
+        message = stringResource(R.string.empty_tasks_message),
         iconRes = iconRes,
         modifier = modifier,
         illustrationSize = 221.7868.dp,
@@ -209,9 +211,9 @@ fun AbsencesEmptyState(
     modifier: Modifier = Modifier
 ) {
     EmptyStateFigma(
-        title = "100% frekwencji! ✅",
-        subtitle = "Bez ani jednej nieobecności!",
-        message = "Brawo! Nie opuściłeś żadnych zajęć w tym semestrze. Tak trzymaj!",
+        title = stringResource(R.string.empty_absences_title),
+        subtitle = stringResource(R.string.empty_absences_subtitle),
+        message = stringResource(R.string.empty_absences_message),
         iconRes = iconRes,
         modifier = modifier,
         illustrationSize = 221.7868.dp,

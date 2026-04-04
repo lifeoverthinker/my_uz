@@ -1,5 +1,11 @@
 package com.example.my_uz_android.ui.screens.index
 
+/**
+ * ViewModel zawiadujący logiką Indeksu ocen.
+ * Sortuje oceny po przedmiotach, oblicza średnie ważone (przy użyciu GradeCalculator)
+ * oraz obsługuje przełączanie (filtrowanie) kierunków i specjalności studenta.
+ */
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.GradeEntity
@@ -14,12 +20,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+/**
+ * Przechowuje statystyki i listę ocen zebranych dla konkretnego rodzaju zajęć (np. tylko Lab).
+ */
 data class ClassTypeState(
     val name: String,
     val average: Double?,
     val grades: List<GradeEntity>
 )
 
+/**
+ * Kompletny kontener na przedmiot (zawiera różne ClassTypeState dla Wykładów, Ćwiczeń itp.).
+ */
 data class SubjectState(
     val uniqueKey: String,
     val code: String,
@@ -29,6 +41,9 @@ data class SubjectState(
     val types: List<ClassTypeState>
 )
 
+/**
+ * Stan UI przechowujący dane głównego ekranu Indeksu.
+ */
 data class GradesUiState(
     val subjects: List<SubjectState> = emptyList(),
     val average: Double? = null,
@@ -50,6 +65,7 @@ class GradesViewModel(
     private val _selectedGroups = MutableStateFlow<Set<String>>(emptySet())
     private var isGroupsInitialized = false
 
+    // Główny proces budujący gigantyczną listę przedmiotów z obliczonymi na żywo średnimi.
     val uiState: StateFlow<GradesUiState> = combine(
         gradesRepository.getAllGradesStream(),
         classRepository.getAllClassesStream(),
@@ -111,7 +127,7 @@ class GradesViewModel(
             }
         }
 
-        // Wspolna mapa uprawnien podgrup oparta o intersection
+        // Sprawdzamy prawa dostępu (filtry i podgrupy) na poziomie całych list
         val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, courses, activeCodes)
         val activeClasses = allClasses.filter { clazz ->
             SubgroupMatcher.isClassVisible(
@@ -170,10 +186,8 @@ class GradesViewModel(
             val allGroupsForSubject = subjectToAllGroups[subjectKey].orEmpty()
             val activeGroupsForSubject = subjectToActiveGroups[subjectKey].orEmpty()
 
-            // Brak klas dla przedmiotu -> zostawiamy oceny historyczne.
             if (allGroupsForSubject.isEmpty()) return@mapNotNull grade to null
 
-            // Przy wielu kierunkach pokazujemy tylko przedmioty obecne w aktywnych grupach.
             val resolvedGroup = activeGroupsForSubject.sorted().firstOrNull() ?: return@mapNotNull null
             grade to resolvedGroup
         }
@@ -202,6 +216,7 @@ class GradesViewModel(
             .distinct()
             .sortedWith(compareBy<SubjectBucketKey>({ it.groupCode ?: "" }, { it.subjectKey }))
 
+        // Budujemy mapę przedmiotów do wyświetlenia na UI
         val subjects = allBuckets.mapNotNull { bucketKey ->
             val classesForSubject = classesByBucket[bucketKey].orEmpty()
             val gradesForSubject = gradesByBucket[bucketKey].orEmpty().map { it.first }
@@ -216,6 +231,7 @@ class GradesViewModel(
             val typesFromGrades = gradesForSubject.map { normalizeType(it.classType) }
             val allTypes = (typesFromClasses + typesFromGrades).distinct().sorted()
 
+            // Wyliczamy osobne średnie dla danego rodzaju zajęć (np. dla Labów)
             val typeStates = allTypes.map { typeName ->
                 val gradesForType = gradesForSubject.filter { normalizeType(it.classType) == typeName }
                 val avgRaw = GradeCalculator.calculateGPA(gradesForType)
@@ -266,6 +282,7 @@ class GradesViewModel(
             }
         }
 
+        // Srednie dla calych kierunkow
         val courseAverages = buildList {
             activeCourseNames.forEach { courseName ->
                 val gradesForCourse = gradesByCourseName[courseName].orEmpty().map { it.first }
@@ -303,7 +320,6 @@ class GradesViewModel(
         val normalized = groupCode.trim().lowercase()
         val current = _selectedGroups.value.toMutableSet()
 
-        // Nie pozwalamy odznaczyc ostatniego aktywnego kierunku.
         if (current.contains(normalized) && current.size <= 1) return
 
         if (current.contains(normalized)) current.remove(normalized) else current.add(normalized)
@@ -319,5 +335,4 @@ class GradesViewModel(
     fun deleteGrade(grade: GradeEntity) { viewModelScope.launch { gradesRepository.deleteGrade(grade) } }
     fun duplicateGrade(grade: GradeEntity) { viewModelScope.launch { gradesRepository.insertGrade(grade.copy(id = 0)) } }
     fun saveGrade(grade: GradeEntity) { viewModelScope.launch { if (grade.id == 0) gradesRepository.insertGrade(grade) else gradesRepository.updateGrade(grade) } }
-
 }

@@ -23,6 +23,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.components.TopBarActionIcon
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +50,7 @@ fun IndexScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = "Indeks",
+                title = stringResource(R.string.index_screen_title),
                 navigationIcon = null,
                 actions = {
                     if (multiplePlans) {
@@ -142,7 +143,11 @@ private fun FilterTabRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        listOf("Oceny", "Nieobecności").forEachIndexed { index, title ->
+        val tabs = listOf(
+            stringResource(R.string.tab_grades),
+            stringResource(R.string.tab_absences)
+        )
+        tabs.forEachIndexed { index, title ->
             val isSelected = selectedTabIndex == index
             Box(
                 modifier = Modifier

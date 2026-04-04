@@ -41,6 +41,7 @@ import com.example.my_uz_android.ui.components.EmptyStateMessage
 import com.example.my_uz_android.ui.components.SearchTopAppBar
 import com.example.my_uz_android.ui.screens.calendar.CalendarViewModel
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun ScheduleSearchScreen(
@@ -101,9 +102,9 @@ fun ScheduleSearchContent(
             if (!uiState.isLoading && uiState.searchQuery.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyStateMessage(
-                        title = "Wyszukaj plan",
-                        subtitle = "Grupa lub wykładowca",
-                        message = "Wpisz kod grupy albo nazwisko wykładowcy, aby przejść do podglądu planu.",
+                        title = stringResource(R.string.search_plan_title),
+                        subtitle = stringResource(R.string.search_plan_subtitle),
+                        message = stringResource(R.string.search_plan_msg),
                         iconRes = R.drawable.paper_map_rafiki,
                         modifier = Modifier.padding(16.dp)
                     )
@@ -111,9 +112,9 @@ fun ScheduleSearchContent(
             } else if (!uiState.isLoading && uiState.searchQuery.isNotEmpty() && uiState.searchResults.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyStateMessage(
-                        title = "Brak wyników",
-                        subtitle = "Nie znaleziono pasujących pozycji",
-                        message = "Spróbuj wpisać kod grupy, fragment nazwy kierunku lub nazwisko prowadzącego.",
+                        title = stringResource(R.string.search_no_results_title),
+                        subtitle = stringResource(R.string.search_no_results_subtitle),
+                        message = stringResource(R.string.search_no_results_msg),
                         iconRes = R.drawable.paper_map_rafiki,
                         modifier = Modifier.padding(16.dp)
                     )
@@ -124,7 +125,7 @@ fun ScheduleSearchContent(
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
                 ) {
                     if (groups.isNotEmpty()) {
-                        item { SearchSectionHeader(title = "Grupy") }
+                        item { SearchSectionHeader(title = stringResource(R.string.search_section_groups)) }
                         items(
                             items = groups,
                             key = { "group_${it.name}" }
@@ -142,7 +143,7 @@ fun ScheduleSearchContent(
                     }
 
                     if (teachers.isNotEmpty()) {
-                        item { SearchSectionHeader(title = "Wykładowcy") }
+                        item { SearchSectionHeader(title = stringResource(R.string.search_section_teachers)) }
                         items(
                             items = teachers,
                             key = { "teacher_${it.name}" }
@@ -204,7 +205,7 @@ fun SearchListItem(
             )
         },
         supportingContent = {
-            val secondaryText = if (item.type == "group") "Grupa" else "Wykładowca"
+            val secondaryText = if (item.type == "group") stringResource(R.string.search_type_group) else stringResource(R.string.search_type_teacher)
 
             Text(
                 text = secondaryText,

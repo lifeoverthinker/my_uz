@@ -34,6 +34,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun ClassDetailsScreen(
@@ -67,8 +68,8 @@ fun ClassDetailsScreen(
     val classEntity = uiState.classEntity
     if (classEntity == null) {
         EmptyDetailsState(
-            title = "Brak danych zajęć",
-            description = "Nie udało się pobrać szczegółów tych zajęć."
+            title = stringResource(R.string.class_details_empty_title),
+            description = stringResource(R.string.class_details_empty_message)
         )
         return
     }
@@ -90,14 +91,14 @@ fun ClassDetailsContent(
     val dateOrDayText = if (!classEntity.date.isNullOrBlank()) {
         try {
             val date = LocalDate.parse(classEntity.date)
-            val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("pl", "PL"))
+            val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.getDefault())
             date.format(formatter).replaceFirstChar { it.uppercase() }
         } catch (e: Exception) {
             classEntity.date
         }
     } else {
         val day = DayOfWeek.of(if (classEntity.dayOfWeek == 0) 7 else classEntity.dayOfWeek)
-        day.getDisplayName(TextStyle.FULL, Locale("pl", "PL")).replaceFirstChar { it.uppercase() }
+        day.getDisplayName(TextStyle.FULL, Locale.getDefault()).replaceFirstChar { it.uppercase() }
     }
 
     val isDark = isSystemInDarkTheme()
@@ -126,8 +127,8 @@ fun ClassDetailsContent(
                     .fillMaxSize()
                     .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Surface(
                     modifier = Modifier
@@ -175,8 +176,8 @@ fun ClassDetailsContent(
                 if (!classEntity.room.isNullOrBlank()) {
                     DetailRowCard(
                         iconRes = R.drawable.ic_marker_pin,
-                        label = "Miejsce",
-                        value = "Sala ${classEntity.room}"
+                        label = stringResource(R.string.label_place),
+                        value = stringResource(R.string.label_room_format, classEntity.room ?: "")
                     )
                 }
 
@@ -184,7 +185,7 @@ fun ClassDetailsContent(
                     if (!classEntity.teacherName.isNullOrBlank()) {
                         DetailRowCard(
                             iconRes = R.drawable.ic_user,
-                            label = "Prowadzący",
+                            label = stringResource(R.string.label_teacher),
                             value = classEntity.teacherName,
                             isMultiline = false
                         )
@@ -197,7 +198,7 @@ fun ClassDetailsContent(
                     if (groupInfo.isNotBlank()) {
                         DetailRowCard(
                             iconRes = R.drawable.ic_users,
-                            label = "Grupa",
+                            label = stringResource(R.string.label_group),
                             value = groupInfo
                         )
                     }
@@ -205,7 +206,7 @@ fun ClassDetailsContent(
 
                 DetailRowCard(
                     iconRes = R.drawable.ic_stand,
-                    label = "Rodzaj zajęć",
+                    label = stringResource(R.string.label_class_type_details),
                     value = ClassTypeUtils.getFullName(classEntity.classType)
                 )
             }
@@ -224,13 +225,13 @@ private fun DetailRowCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 12.dp),
         color = Color.Transparent
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = if (isMultiline) Alignment.Top else Alignment.CenterVertically
         ) {
             Icon(

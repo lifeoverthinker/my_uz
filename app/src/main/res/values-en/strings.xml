@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MyUZ</string>
+
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_close">Close</string>
+    <string name="btn_back">Back</string>
+    <string name="btn_next">Next</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_duplicate">Duplicate</string>
+    <string name="btn_edit">Edit</string>
+    <string name="btn_confirm">Confirm</string>
+    <string name="btn_done">Done</string>
+    <string name="options_menu">Options</string>
+
+    <string name="task_title_placeholder">Add title</string>
+    <string name="task_description_placeholder">Add description</string>
+    <string name="task_all_day">All day</string>
+    <string name="task_start_date">Start</string>
+    <string name="task_end_date">End</string>
+    <string name="task_subject_label">Subject (optional)</string>
+    <string name="task_type_label">Type (optional)</string>
+    <string name="task_saved">Task saved successfully</string>
+    <string name="task_deleted">Task deleted</string>
+    <string name="task_validation_error">Enter title</string>
+    <string name="task_details_title">Task Details</string>
+    <string name="task_status_completed">Completed</string>
+    <string name="task_status_in_progress">In progress</string>
+    <string name="task_mark_incomplete">Mark as incomplete</string>
+    <string name="task_mark_complete">Mark as complete</string>
+    <string name="task_no_date">No date</string>
+    <string name="task_not_found">Task not found</string>
+    <string name="label_subject">SUBJECT</string>
+    <string name="label_type">CLASS TYPE</string>
+    <string name="label_description">DESCRIPTION</string>
+    <string name="label_status">STATUS</string>
+    <string name="none">None</string>
+
+    <string name="calendar_empty_title">No classes</string>
+    <string name="calendar_empty_description">You have no classes scheduled for this day.</string>
+    <string name="calendar_empty_hint">Select another day or use the calendar icon above.</string>
+
+    <string name="tasks_screen_title">Schedule</string>
+    <string name="tasks_empty_title">No tasks</string>
+    <string name="tasks_today">Today</string>
+    <string name="tasks_tomorrow">Tomorrow</string>
+    <string name="moje_zajecia">My Classes</string>
+    <string name="dzisiaj">Today</string>
+    <string name="jutro">Tomorrow</string>
+
+    <!-- Index / Indeks -->
+    <string name="index_screen_title">Index</string>
+    <string name="tab_grades">Grades</string>
+    <string name="tab_absences">Absences</string>
+
+    <!-- Grades -->
+    <string name="subject_grades_title">Grades</string>
+    <string name="subject_grades_empty_title">Clean slate! 📖</string>
+    <string name="subject_grades_empty_subtitle">You\'re starting from scratch</string>
+    <string name="subject_grades_empty_message">There are no entries in your grade book yet. Time to get those first A\'s this semester!</string>
+    <string name="label_average">Average</string>
+    <string name="label_points">Points</string>
+    <string name="label_activities">Activities</string>
+    <string name="add_final_grade">+ Add final grade</string>
+    <string name="final_grade_dialog_title">Add final grade</string>
+    <string name="final_grade_dialog_message">Select the final grade for the subject:</string>
+    <string name="activity">Activity</string>
+    <string name="weight_label">Weight: %1$s</string>
+    <string name="default_subject_name">Subject</string>
+    <string name="current_semester_average">Current semester average</string>
+    <string name="current_semester_averages">Current semester averages</string>
+    <string name="other_courses">Other / Past</string>
+    <string name="average_label_small">average</string>
+    <string name="expand_collapse_content_description">Expand/Collapse</string>
+    <string name="no_grades">No grades</string>
+    <string name="add_grade">Add grade</string>
+
+    <!-- Szczegóły Oceny -->
+    <string name="grade_details_empty_title">No grade data</string>
+    <string name="grade_details_empty_message">Failed to retrieve details for this grade.</string>
+    <string name="activity_plus">Activity (+)</string>
+    <string name="label_grade_single">Grade</string>
+    <string name="label_points_activity">Points / Activity</string>
+    <string name="grade_weight_format">Grade • Weight: %1$s</string>
+    <string name="label_subject_details">Subject</string>
+    <string name="label_class_type_details">Class type</string>
+    <string name="label_comment">Comment</string>
+    <string name="delete_confirmation_message_alt">Are you sure you want to delete this %1$s? These changes are irreversible.</string>
+
+    <!-- Add/Edit Grade -->
+    <string name="edit_entry">Edit entry</string>
+    <string name="add_grade_points">Add grade / points</string>
+    <string name="quick_choice">QUICK CHOICE</string>
+    <string name="entry_type">ENTRY TYPE</string>
+    <string name="grade_scale">Scale</string>
+    <string name="grade_points">Points</string>
+    <string name="grade_activity">Pluses</string>
+    <string name="label_grade_value">GRADE</string>
+    <string name="label_points_count">Points count</string>
+    <string name="label_activity_count">Number of pluses: %1$d</string>
+    <string name="label_weight_field">Weight (default 1.0)</string>
+    <string name="label_subject_field">Subject</string>
+    <string name="label_class_type_field">CLASS TYPE</string>
+    <string name="label_date_received">Date received</string>
+    <string name="select_date">Select date</string>
+    <string name="label_title_field">Title / Name (e.g. Test 1)</string>
+    <string name="label_comment_field">Additional description / comment</string>
+    <string name="chip_colloquium">Colloquium</string>
+    <string name="chip_exam">Exam</string>
+    <string name="chip_project">Project</string>
+    <string name="chip_activity">Activity</string>
+    <string name="chip_other">Other</string>
+
+    <!-- Nieobecności -->
+    <string name="add_absence">Add absence</string>
+    <string name="edit_limit">Change limit</string>
+    <string name="edit_limit_message">Enter the maximum number of absences for these classes:</string>
+    <string name="absence_details_empty_title">No absence data</string>
+    <string name="absence_details_empty_message">Failed to retrieve details for this absence.</string>
+    <string name="unknown_subject">Unknown subject</string>
+    <string name="status_excused">Excused</string>
+    <string name="status_unexcused">Unexcused</string>
+    <string name="label_status_absence">Status</string>
+    <string name="label_reason">Reason / description</string>
+    <string name="edit_absence_title">Edit absence</string>
+    <string name="add_absence_title">Add absence</string>
+    <string name="label_absence_date">Absence date</string>
+    <string name="label_reason_optional">Reason / Note (optional)</string>
+
+    <!-- Dialogi -->
+    <string name="delete_confirmation_title">Confirm deletion</string>
+    <string name="delete_confirmation_message">Are you sure you want to delete this %1$s? These changes are irreversible.</string>
+    <string name="item_type_grade">grade</string>
+    <string name="item_type_absence">absence</string>
+    <string name="dialog_teacher_title">Instructor</string>
+    <string name="dialog_filter_subgroups_title">Filter subgroups</string>
+    <string name="dialog_filter_schedule_title">Filter schedule</string>
+    <string name="label_subgroups">Subgroups</string>
+
+    <!-- Home -->
+    <string name="greeting_morning">Hi</string>
+    <string name="greeting_evening">Good evening</string>
+    <string name="no_study_field">No study field assigned</string>
+    <string name="no_classes_title">No classes</string>
+    <string name="no_classes_message">No classes on the horizon</string>
+    <string name="tasks_title">Tasks</string>
+    <string name="tasks_empty_card_title">Clean list!</string>
+    <string name="tasks_empty_card_message">You have no tasks</string>
+    <string name="events_title">Events</string>
+    <string name="events_empty_card_title">Quiet time</string>
+    <string name="events_empty_card_message">No upcoming events</string>
+
+    <!-- Home Components -->
+    <string name="upcoming_classes_title">Upcoming classes</string>
+    <string name="setup_plan_title">Select study plan</string>
+    <string name="setup_plan_message">Go to personal details to assign yourself to a group and see upcoming classes.</string>
+    <string name="setup_plan_button">Select group</string>
+    <string name="all_set_title">All set!</string>
+    <string name="no_classes_today_tomorrow">No classes today or tomorrow</string>
+
+    <!-- Calendar -->
+    <string name="calendar_title_month_year">%1$s %2$d</string>
+
+    <!-- Account -->
+    <string name="account_screen_title">Account</string>
+    <string name="default_user_title">Student</string>
+    <string name="no_data">No data</string>
+    <string name="account_management_section">Account management</string>
+    <string name="personal_data_option">Personal data</string>
+    <string name="settings_option">Settings</string>
+    <string name="about_app_option">About app</string>
+    <string name="study_data_section">Study data</string>
+    <string name="anonymous_study_data_msg">Complete your profile to see study data.</string>
+    <string name="no_study_directions_msg">No assigned study directions. Go to settings to add your schedule.</string>
+    <string name="label_field_of_study">FIELD OF STUDY</string>
+    <string name="label_study_mode">MODE</string>
+    <string name="label_study_group">GROUP</string>
+    <string name="label_faculty">FACULTY</string>
+    <string name="label_subgroups_caps">SUBGROUPS</string>
+    <string name="anonymous_user_name">Guest User</string>
+    <string name="anonymous_user_title">Guest account</string>
+
+    <!-- Settings -->
+    <string name="settings_screen_title">Settings</string>
+    <string name="settings_appearance_section">Appearance</string>
+    <string name="settings_theme_label">App theme</string>
+    <string name="settings_language_label">App language</string>
+    <string name="settings_language_polish">Polski</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_notifications_section">Notifications</string>
+    <string name="settings_notifications_push">PUSH Notifications</string>
+    <string name="settings_notifications_push_desc">Reminders about classes and tasks</string>
+    <string name="settings_backup_section">Data and synchronization</string>
+
+    <!-- Backup -->
+    <string name="backup_title">Backup</string>
+    <string name="backup_desc">Export or import your grades, tasks, schedule and settings.</string>
+    <string name="btn_export">Export</string>
+    <string name="btn_import">Import</string>
+    <string name="backup_saved">Backup saved successfully!</string>
+    <string name="backup_error_save">Error saving file</string>
+    <string name="backup_import_success">Data imported successfully!</string>
+    <string name="backup_import_error">Import error: %1$s</string>
+    <string name="backup_read_error">Error reading file. Make sure it is a valid backup file.</string>
+
+    <!-- About App -->
+    <string name="about_app_title">About app</string>
+    <string name="about_app_subtitle">Your study center</string>
+    <string name="about_app_description">The MyUZ application was created to make life easier for students of the University of Zielona Góra. Our mission is to provide the fastest and most intuitive access to the schedule, grades and task deadlines.</string>
+    <string name="about_app_icons_info">Interface icons come from SVG Repo (CC0 license).</string>
+    <string name="about_app_illustrations_prefix">Illustrations in the app come from </string>
+    <string name="about_app_storyset">Storyset</string>
+    <string name="student_project_label">Student Project 2026</string>
+    <string name="uz_label">University of Zielona Góra</string>
+    <string name="logo_content_description">MyUZ Logo</string>
+
+    <!-- Personal Data -->
+    <string name="personal_data_title">Personal data</string>
+    <string name="personal_data_student_profile">Student profile</string>
+    <string name="personal_data_name_surname">Name and surname</string>
+    <string name="personal_data_gender_title">Gender / Form of address</string>
+    <string name="personal_data_saved_groups">Saved groups</string>
+    <string name="personal_data_no_data_msg">No study fields and subgroups assigned.</string>
+    <string name="personal_data_main_group">Main group</string>
+    <string name="personal_data_selected_subgroups">Selected subgroups</string>
+    <string name="personal_data_additional_groups">Additional groups</string>
+    <string name="personal_data_subgroups_format">Subgroups: %1$s</string>
+
+    <!-- Edit Personal Data -->
+    <string name="edit_personal_data_title">Edit profile</string>
+    <string name="edit_personal_data_saved">Saved</string>
+    <string name="edit_personal_data_return_form">Form of address</string>
+    <string name="edit_personal_data_student">Student</string>
+    <string name="edit_personal_data_studentka">Student (female)</string>
+    <string name="edit_personal_data_name">First name</string>
+    <string name="edit_personal_data_surname">Last name</string>
+    <string name="edit_personal_data_your_courses">Your study fields</string>
+    <string name="edit_personal_data_main_course">Main study field</string>
+    <string name="edit_personal_data_delete_main_desc">Remove main study field</string>
+    <string name="edit_personal_data_loading_subgroups">Downloading subgroups...</string>
+    <string name="edit_personal_data_subgroups_label">Subgroups:</string>
+    <string name="edit_personal_data_additional_course_label">Additional study field</string>
+    <string name="edit_personal_data_find_main_hint">Find main study field...</string>
+    <string name="edit_personal_data_add_next_hint">Add next study field...</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_start">Start</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_finish">Let\'s go!</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_welcome_title">Welcome to MyUZ! 👋</string>
+    <string name="onboarding_welcome_subtitle">Your digital assistant at the\nUniversity of Zielona Góra</string>
+    <string name="onboarding_welcome_desc">Manage classes, tasks and grades in one place. Everything you need to organize student life.</string>
+    <string name="onboarding_personalization_title">Personalization</string>
+    <string name="onboarding_personalization_subtitle">Who are you?</string>
+    <string name="onboarding_personalization_desc">This allows the app to address you as you like</string>
+    <string name="onboarding_return_form">Form of address</string>
+    <string name="onboarding_your_data">Your data</string>
+    <string name="onboarding_name">First name</string>
+    <string name="onboarding_surname_optional">Last name (optional)</string>
+    <string name="onboarding_group_title">Select your group</string>
+    <string name="onboarding_group_subtitle">Find your schedule</string>
+    <string name="onboarding_group_desc">Select your group and subgroups to customize the app to your schedule</string>
+    <string name="onboarding_group_hint">e.g. 23INF-SP</string>
+    <string name="onboarding_group_label">Group code</string>
+    <string name="onboarding_clear">Clear</string>
+    <string name="onboarding_group_not_found">No such group found</string>
+    <string name="onboarding_select_subgroups">Select subgroups</string>
+    <string name="onboarding_extra_title">Additional study field? 🎓</string>
+    <string name="onboarding_extra_subtitle">Multiple schedules in one place</string>
+    <string name="onboarding_extra_desc">If you study in two fields (or are an auditor), you can add more groups here.\nIf not, just click Next.</string>
+    <string name="onboarding_added_groups">Added groups to integrate:</string>
+    <string name="onboarding_search_extra_hint">Search additional group</string>
+    <string name="onboarding_mark_subgroups_for">Select subgroups for %1$s</string>
+    <string name="onboarding_save_to_list">Save to study fields list</string>
+    <string name="onboarding_calendar_title">Schedule and calendar</string>
+    <string name="onboarding_calendar_subtitle">All classes in one place</string>
+    <string name="onboarding_calendar_desc">Check your schedule, add tasks and don\'t miss any university events</string>
+    <string name="onboarding_grades_title">Personal grade book</string>
+    <string name="onboarding_grades_subtitle">Track your progress locally</string>
+    <string name="onboarding_grades_desc">Your grades in one place. Save results, check your average and keep an eye on absence limits</string>
+    <string name="onboarding_final_title">All set! 🎉</string>
+    <string name="onboarding_final_subtitle">Welcome aboard!</string>
+    <string name="onboarding_final_desc">Your profile has been configured. Schedule, grade book and task list are waiting for you</string>
+    <string name="onboarding_footer">MyUZ 2026 Version 1.00</string>
+
+    <!-- Notifications -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_empty_title">You\'re all caught up!</string>
+    <string name="notifications_empty_desc">You have no new notifications.\nReminders about your upcoming tasks will appear here.</string>
+    <string name="notifications_clear_all_desc">Clear all</string>
+    <string name="notifications_empty_accent">No notifications</string>
+
+    <!-- Tasks -->
+    <string name="tasks_active">Active</string>
+    <string name="tasks_completed">Completed</string>
+    <string name="tasks_empty_active">No active tasks</string>
+    <string name="tasks_empty_completed">No completed tasks</string>
+    <string name="tasks_empty_subtitle">Your list is empty</string>
+    <string name="tasks_empty_msg">Add a new task with the + button</string>
+    <string name="tasks_confirm_selected">Confirm selected: %1$d</string>
+    <string name="tasks_share_confirm_title">Share tasks?</string>
+    <string name="tasks_share_confirm_msg">%1$d tasks selected for sharing.</string>
+    <string name="tasks_share_btn">Share</string>
+    <string name="tasks_code_copied">Code copied</string>
+    <string name="tasks_imported_title">Tasks imported!</string>
+    <string name="tasks_imported_btn">Great!</string>
+    <string name="tasks_delete_title">Delete task</string>
+    <string name="tasks_delete_msg">Are you sure you want to permanently delete the task \"%1$s\"?</string>
+    <string name="tasks_share_title">Share tasks</string>
+    <string name="tasks_share_all">Share all</string>
+    <string name="tasks_share_select">Select tasks</string>
+    <string name="tasks_import_title">Import tasks</string>
+    <string name="tasks_share_code_title">Sharing code</string>
+    <string name="tasks_copy_code">Copy code</string>
+    <string name="tasks_import_hint">Enter the 6-character code to download tasks.</string>
+    <string name="tasks_code_label">Code</string>
+    <string name="tasks_code_placeholder">ABC123</string>
+
+    <!-- Task Add/Edit -->
+    <string name="task_edit_title">Edit task</string>
+    <string name="task_add_title">Add task</string>
+    <string name="chip_entrance_test">Entrance test</string>
+    <string name="chip_presentation">Presentation</string>
+    <string name="chip_homework">Homework</string>
+    <string name="chip_oral_answer">Oral answer</string>
+    <string name="label_task_title">Task title</string>
+    <string name="placeholder_task_title">e.g. Read chapter 4</string>
+    <string name="label_all_day">All-day task</string>
+    <string name="label_due_date">Due date</string>
+    <string name="label_due_time">Due time</string>
+    <string name="label_set_reminder">Set reminder</string>
+    <string name="label_date">Date</string>
+    <string name="label_hour">Hour</string>
+    <string name="label_priority">PRIORITY</string>
+    <string name="priority_low">Low</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_high">High</string>
+    <string name="label_description_optional">Description (optional)</string>
+    <string name="placeholder_description">Additional details, materials...</string>
+
+    <!-- Schedule Preview -->
+    <string name="preview_teacher_plan">Instructor plan</string>
+    <string name="preview_group_plan">Group plan</string>
+    <string name="preview_no_classes_msg">No scheduled classes found in the selected plan.</string>
+    <string name="preview_no_department">No department info</string>
+    <string name="preview_no_email">No email address</string>
+
+    <!-- Empty States Presets -->
+    <string name="empty_calendar_title">No classes</string>
+    <string name="empty_calendar_subtitle">Well-deserved rest</string>
+    <string name="empty_calendar_message">You have no scheduled classes on this day. Enjoy your free time!</string>
+    <string name="empty_tasks_title">No tasks ✅</string>
+    <string name="empty_tasks_subtitle">Everything done</string>
+    <string name="empty_tasks_message">Your to-do list is currently empty</string>
+    <string name="empty_absences_title">100% attendance! ✅</string>
+    <string name="empty_absences_subtitle">Without a single absence!</string>
+    <string name="empty_absences_message">Well done! You haven\'t missed any classes this semester. Keep it up!</string>
+
+    <!-- Search -->
+    <string name="search_plan_title">Search plan</string>
+    <string name="search_plan_subtitle">Group or instructor</string>
+    <string name="search_plan_msg">Enter a group code or instructor name to view the plan.</string>
+    <string name="search_no_results_title">No results</string>
+    <string name="search_no_results_subtitle">No matching items found</string>
+    <string name="search_no_results_msg">Try entering a group code, a field of study, or an instructor\'s name.</string>
+    <string name="search_section_groups">Groups</string>
+    <string name="search_section_teachers">Instructors</string>
+    <string name="search_type_group">Group</string>
+    <string name="search_type_teacher">Instructor</string>
+
+    <!-- Drawer -->
+    <string name="drawer_section_menu">Menu</string>
+    <string name="drawer_calendar">Calendar</string>
+    <string name="drawer_tasks">Schedule</string>
+    <string name="drawer_groups">Groups</string>
+    <string name="drawer_no_favorite_groups">No favorite groups</string>
+    <string name="drawer_teachers">Instructors</string>
+    <string name="drawer_no_favorite_teachers">No favorite instructors</string>
+</resources>

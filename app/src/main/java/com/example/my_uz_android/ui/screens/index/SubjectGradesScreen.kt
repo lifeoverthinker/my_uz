@@ -34,6 +34,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -51,9 +52,26 @@ fun SubjectGradesScreen(
     var showFinalGradeDialog by remember { mutableStateOf(false) }
     var gradeToDelete by remember { mutableStateOf<GradeEntity?>(null) }
 
+    val visibleTypes = subject?.types
+        ?.filter { normalizedTypeFilter.isNullOrBlank() || it.name.trim().lowercase() == normalizedTypeFilter }
+        .orEmpty()
+
     if (showFinalGradeDialog) {
         FinalGradeDialog(
-            onConfirm = { showFinalGradeDialog = false },
+            onConfirm = { finalGradeValue ->
+                // NAPRAWA: Zapisujemy wagę jako Int (1 zamiast 1.0)
+                val newFinalGrade = GradeEntity(
+                    subjectName = subject?.name ?: "Nieznany",
+                    classType = visibleTypes.firstOrNull()?.name ?: "Inne",
+                    grade = finalGradeValue,
+                    weight = 1,
+                    description = "Ocena końcowa",
+                    date = System.currentTimeMillis(),
+                    isPoints = false
+                )
+                viewModel.saveGrade(newFinalGrade)
+                showFinalGradeDialog = false
+            },
             onDismiss = { showFinalGradeDialog = false }
         )
     }
@@ -65,13 +83,9 @@ fun SubjectGradesScreen(
                 gradeToDelete = null
             },
             onDismiss = { gradeToDelete = null },
-            itemType = "ocenę"
+            itemType = stringResource(R.string.item_type_grade)
         )
     }
-
-    val visibleTypes = subject?.types
-        ?.filter { normalizedTypeFilter.isNullOrBlank() || it.name.trim().lowercase() == normalizedTypeFilter }
-        .orEmpty()
 
     val classTypeSubtitle = when {
         visibleTypes.isEmpty() -> ""
@@ -80,16 +94,15 @@ fun SubjectGradesScreen(
     }
 
     val allGrades = visibleTypes
-        ?.flatMap { type -> type.grades.map { it to type.name } }
-        ?.sortedByDescending { it.first.date }
-        .orEmpty()
+        .flatMap { type -> type.grades.map { it to type.name } }
+        .sortedByDescending { it.first.date }
 
     val hasAnyGrades = allGrades.isNotEmpty()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = subject?.name ?: "Przedmiot",
+                title = subject?.name ?: stringResource(R.string.default_subject_name),
                 subtitle = classTypeSubtitle,
                 navigationIcon = R.drawable.ic_chevron_left,
                 onNavigationClick = onBackClick,
@@ -101,7 +114,7 @@ fun SubjectGradesScreen(
                         onClick = {
                             val preferredType = visibleTypes.firstOrNull()?.name
                                 ?: subject?.types?.firstOrNull()?.name
-                                .orEmpty()
+                                    .orEmpty()
                             onAddGradeClick(subject?.name.orEmpty(), preferredType)
                         }
                     )
@@ -110,11 +123,11 @@ fun SubjectGradesScreen(
         },
         containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
-        if (subject == null) {
+        if (subject == null || !hasAnyGrades) {
             EmptyStateFigma(
-                title = "Czysta karta! 📖",
-                subtitle = "Startujesz od zera",
-                message = "W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!",
+                title = stringResource(R.string.subject_grades_empty_title),
+                subtitle = stringResource(R.string.subject_grades_empty_subtitle),
+                message = stringResource(R.string.subject_grades_empty_message),
                 iconRes = R.drawable.grades_rafiki,
                 modifier = Modifier
                     .fillMaxSize()
@@ -125,21 +138,8 @@ fun SubjectGradesScreen(
             return@Scaffold
         }
 
-        if (!hasAnyGrades) {
-            EmptyStateFigma(
-                title = "Czysta karta! 📖",
-                subtitle = "Startujesz od zera",
-                message = "W Twoim indeksie nie ma jeszcze wpisów. Czas zdobyć pierwsze piątki w tym semestrze!",
-                iconRes = R.drawable.grades_rafiki,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            )
-            return@Scaffold
-        }
-
         val totalPoints = allGrades.map { it.first }.filter { it.isPoints }.sumOf { it.grade }
-        val activitiesCount = allGrades.size
+        val activitiesCount = allGrades.map { it.first }.count { it.grade == -1.0 }
         val overallAverage = subject.average?.let { String.format("%.1f", it) } ?: "-"
         val pointsText = if (totalPoints % 1.0 == 0.0) totalPoints.toInt().toString() else totalPoints.toString()
 
@@ -162,7 +162,7 @@ fun SubjectGradesScreen(
                 ) {
                     DetailSummaryItem(
                         value = overallAverage,
-                        label = "Średnia",
+                        label = stringResource(R.string.label_average),
                         modifier = Modifier.weight(1f),
                         valueColor = MaterialTheme.colorScheme.primary
                     )
@@ -174,7 +174,7 @@ fun SubjectGradesScreen(
                     )
                     DetailSummaryItem(
                         value = if (totalPoints > 0) pointsText else "-",
-                        label = "Punkty",
+                        label = stringResource(R.string.label_points),
                         modifier = Modifier.weight(1f),
                         valueColor = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -186,7 +186,7 @@ fun SubjectGradesScreen(
                     )
                     DetailSummaryItem(
                         value = activitiesCount.toString(),
-                        label = "Aktywności",
+                        label = stringResource(R.string.label_activities),
                         modifier = Modifier.weight(1f),
                         valueColor = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -206,7 +206,7 @@ fun SubjectGradesScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Oceny",
+                            text = stringResource(R.string.subject_grades_title),
                             style = TextStyle(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Medium,
@@ -216,7 +216,7 @@ fun SubjectGradesScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "+ Dodaj ocenę końcową",
+                            text = stringResource(R.string.add_final_grade),
                             style = TextStyle(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight.Medium,
@@ -256,7 +256,7 @@ fun SubjectGradesScreen(
                                     ) {
                                         Icon(
                                             Icons.Default.Delete,
-                                            contentDescription = "Usuń",
+                                            contentDescription = stringResource(R.string.btn_delete),
                                             tint = Color.White,
                                             modifier = Modifier.padding(horizontal = 24.dp)
                                         )
@@ -293,10 +293,10 @@ fun FinalGradeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "Dodaj ocenę końcową", style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)) },
+        title = { Text(text = stringResource(R.string.final_grade_dialog_title), style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Wybierz ocenę końcową z przedmiotu:", style = TextStyle(fontFamily = InterFontFamily))
+                Text(stringResource(R.string.final_grade_dialog_message), style = TextStyle(fontFamily = InterFontFamily))
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -313,10 +313,10 @@ fun FinalGradeDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selectedGrade) }) { Text("Zatwierdź") }
+            TextButton(onClick = { onConfirm(selectedGrade) }) { Text(stringResource(R.string.btn_confirm)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Anuluj") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel)) }
         }
     )
 }
@@ -393,7 +393,7 @@ private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
             horizontalAlignment = Alignment.Start,
         ) {
             Text(
-                text = grade.description.takeIf { !it.isNullOrBlank() } ?: (if (grade.isPoints) "Punkty" else "Aktywność"),
+                text = grade.description.takeIf { !it.isNullOrBlank() } ?: (if (grade.isPoints) stringResource(R.string.label_points) else stringResource(R.string.activity)),
                 style = TextStyle(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Medium,
@@ -416,9 +416,10 @@ private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
             )
         }
 
+        // NAPRAWA: Z uwagi na fakt, że weight to Int, usunąłem modulo z wyświetlania - teraz wpisuje po prostu wartość np. 1
         if (!grade.isPoints && grade.weight > 0 && grade.grade != -1.0) {
             Text(
-                text = "Waga: ${if (grade.weight % 1.0 == 0.0) grade.weight.toInt() else grade.weight}",
+                text = stringResource(R.string.weight_label, grade.weight),
                 style = TextStyle(
                     fontFamily = InterFontFamily,
                     fontWeight = FontWeight.Normal,
