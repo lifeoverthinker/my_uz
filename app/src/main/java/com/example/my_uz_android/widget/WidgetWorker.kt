@@ -66,10 +66,10 @@ class WidgetWorker(
         }
 
         val (displayedClasses, dayLabel, emptyMessage) = when {
-            !isPlanSelected -> Triple(emptyList(), null, "Wybierz plan zajęć w profilu")
-            classesForToday.isNotEmpty() -> Triple(classesForToday, "Dzisiaj", null)
-            classesForTomorrow.isNotEmpty() -> Triple(classesForTomorrow, "Jutro", null)
-            else -> Triple(emptyList(), "Dzisiaj", "Brak zajęć na dziś i jutro")
+            !isPlanSelected -> Triple(emptyList(), null, context.getString(com.example.my_uz_android.R.string.setup_plan_message))
+            classesForToday.isNotEmpty() -> Triple(classesForToday, context.getString(com.example.my_uz_android.R.string.dzisiaj), null)
+            classesForTomorrow.isNotEmpty() -> Triple(classesForTomorrow, context.getString(com.example.my_uz_android.R.string.jutro), null)
+            else -> Triple(emptyList(), context.getString(com.example.my_uz_android.R.string.dzisiaj), context.getString(com.example.my_uz_android.R.string.no_classes_today_tomorrow))
         }
 
         val gson = Gson()

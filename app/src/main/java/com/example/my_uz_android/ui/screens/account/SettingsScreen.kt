@@ -229,7 +229,7 @@ fun SettingsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "MyUZ v1.0.0",
+                        text = stringResource(R.string.app_version_label),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 32.dp)
@@ -372,37 +372,40 @@ fun SettingsActionItem(iconRes: Int, title: String, description: String, isDestr
  * Wiersz wyboru koloru dla typu zajęć.
  */
 fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelected: (Int) -> Unit) {
+    val isDarkMode = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(text = classType, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 12.dp, start = 4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ClassColorPalette.forEachIndexed { index, colorSet ->
                 val isSelected = index == selectedColorIndex
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(colorSet.lightBg)
-                        .border(
-                            width = if (isSelected) 2.dp else 0.dp,
-                            color = if (isSelected) colorSet.lightAccent else Color.Transparent,
-                            shape = CircleShape
-                        )
-                        .clickable { onColorSelected(index) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isSelected) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_check),
-                            contentDescription = null,
-                            tint = if (colorSet.lightBg.luminance() > 0.5f) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+                val circleBg = if (isDarkMode) colorSet.darkBg else colorSet.lightBg
+                val circleAccent = if (isDarkMode) colorSet.darkAccent else colorSet.lightAccent
+                 Box(
+                     modifier = Modifier
+                         .size(36.dp)
+                         .clip(CircleShape)
+                         .background(circleBg)
+                         .border(
+                             width = if (isSelected) 2.dp else 0.dp,
+                             color = if (isSelected) circleAccent else Color.Transparent,
+                             shape = CircleShape
+                         )
+                         .clickable { onColorSelected(index) },
+                     contentAlignment = Alignment.Center
+                 ) {
+                     if (isSelected) {
+                         Icon(
+                             painter = painterResource(R.drawable.ic_check),
+                             contentDescription = null,
+                             tint = if (circleBg.luminance() > 0.5f) MaterialTheme.colorScheme.onSurface else Color.White,
+                             modifier = Modifier.size(18.dp)
+                         )
+                     }
+                 }
+             }
+         }
+     }
+ }
 
 @Composable
 /**
@@ -428,7 +431,11 @@ fun DataTypeSelectionDialog(title: String, confirmText: String, initialSelection
                     ) {
                         Checkbox(checked = selection.contains(type), onCheckedChange = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = type.displayName, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            text = backupTypeLabel(type),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
@@ -446,9 +453,9 @@ private suspend fun saveBackupToFile(context: Context, uri: Uri, viewModel: Sett
         try {
             val jsonString = viewModel.createBackupJson(selection)
             context.contentResolver.openOutputStream(uri)?.use { it.write(jsonString.toByteArray()) }
-            withContext(Dispatchers.Main) { Toast.makeText(context, "Zapisano dane!", Toast.LENGTH_SHORT).show() }
+            withContext(Dispatchers.Main) { Toast.makeText(context, context.getString(R.string.backup_saved), Toast.LENGTH_SHORT).show() }
         } catch (e: Exception) {
-            withContext(Dispatchers.Main) { Toast.makeText(context, "Błąd zapisu: ${e.message}", Toast.LENGTH_LONG).show() }
+            withContext(Dispatchers.Main) { Toast.makeText(context, context.getString(R.string.backup_error_save), Toast.LENGTH_LONG).show() }
         }
     }
 }
@@ -462,7 +469,7 @@ private suspend fun readBackupFileToPreview(context: Context, uri: Uri, viewMode
             val content = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
             content?.let { viewModel.previewBackupFile(it) }
         } catch (e: Exception) {
-            withContext(Dispatchers.Main) { Toast.makeText(context, "Nie można odczytać pliku.", Toast.LENGTH_LONG).show() }
+            withContext(Dispatchers.Main) { Toast.makeText(context, context.getString(R.string.backup_read_error), Toast.LENGTH_LONG).show() }
         }
     }
 }
@@ -475,3 +482,13 @@ private fun normalizeAppLanguageForUi(rawCode: String?): String = when (rawCode)
     "en" -> "en"
     else -> if (Locale.getDefault().language == "en") "en" else "pl"
 }
+
+@Composable
+private fun backupTypeLabel(type: BackupDataType): String = when (type) {
+    BackupDataType.SETTINGS -> stringResource(R.string.backup_type_settings)
+    BackupDataType.CLASSES -> stringResource(R.string.backup_type_classes)
+    BackupDataType.TASKS -> stringResource(R.string.backup_type_tasks)
+    BackupDataType.GRADES -> stringResource(R.string.backup_type_grades)
+    BackupDataType.ABSENCES -> stringResource(R.string.backup_type_absences)
+}
+

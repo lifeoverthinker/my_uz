@@ -12,17 +12,14 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ThemeMode
 
 /*** Zielony komentarz: Stałe UI wyciągnięte poza Composable, aby nie tworzyć ich ponownie przy każdej rekompozycji. */
 private val ThemeTileShape = RoundedCornerShape(12.dp)
-private val ThemeModeLabelsPl = mapOf(
-    ThemeMode.LIGHT to "Jasny",
-    ThemeMode.DARK to "Ciemny",
-    ThemeMode.SYSTEM to "System"
-)
 
 @Immutable
 private data class ThemeTileColors(
@@ -63,7 +60,11 @@ fun ThemeSelector(
         ThemeMode.entries.forEach { mode ->
             val isSelected = selectedTheme == mode
             val colors = resolveThemeTileColors(isSelected)
-            val themeName = ThemeModeLabelsPl[mode] ?: "System"
+            val themeName = when (mode) {
+                ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light)
+                ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
+                ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_system)
+            }
 
             Box(
                 modifier = Modifier

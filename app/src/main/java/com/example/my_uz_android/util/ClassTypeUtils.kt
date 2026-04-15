@@ -2,9 +2,10 @@ package com.example.my_uz_android.util
 
 import androidx.compose.ui.graphics.Color
 import kotlin.math.abs
+import java.util.Locale
 
 object ClassTypeUtils {
-    val abbreviations = mapOf(
+    private val abbreviationsPl = mapOf(
         "R" to "Rezerwacja",
         "BHP" to "Szkolenie BHP",
         "C" to "Ćwiczenia",
@@ -38,9 +39,44 @@ object ClassTypeUtils {
         "Zp" to "Zajęcia praktyczne"
     )
 
+    private val abbreviationsEn = mapOf(
+        "R" to "Reservation",
+        "BHP" to "Health and Safety Training",
+        "C" to "Exercises",
+        "Cz" to "Exercises / Remote",
+        "Ć" to "Exercises",
+        "ĆL" to "Exercises and Lab",
+        "E" to "Exam",
+        "E/Z" to "Exam / Remote",
+        "I" to "Other",
+        "K" to "Seminar Class",
+        "L" to "Laboratory",
+        "P" to "Project",
+        "Pra" to "Internship",
+        "Pro" to "Proseminar",
+        "PrZ" to "Professional Internship",
+        "P/Z" to "Project / Remote",
+        "S" to "Seminar",
+        "Sk" to "Self-study",
+        "T" to "Field Classes",
+        "W" to "Lecture",
+        "war" to "Workshop",
+        "W+C" to "Lecture and Exercises",
+        "WĆL" to "Lecture + Exercises + Lab",
+        "W+K" to "Lectures + Seminar Classes",
+        "W+L" to "Lecture and Lab",
+        "W+P" to "Lecture + Project",
+        "WW" to "Lecture and Workshops",
+        "W/Z" to "Lecture / Remote",
+        "Z" to "Remote",
+        "ZK" to "Clinical Classes",
+        "Zp" to "Practical Classes"
+    )
+
     fun getFullName(abbreviation: String?): String {
         if (abbreviation.isNullOrEmpty()) return ""
-        return abbreviations[abbreviation] ?: abbreviation
+        val map = if (Locale.getDefault().language == "en") abbreviationsEn else abbreviationsPl
+        return map[abbreviation] ?: abbreviation
     }
 
     // ✅ ZMODYFIKOWANA FUNKCJA: Zwraca kolor na podstawie nazwy typu zajęć ORAZ mapy ustawień

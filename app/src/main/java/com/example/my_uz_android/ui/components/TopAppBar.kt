@@ -130,7 +130,7 @@ fun TopAppBar(
     isNavigationIconFilled: Boolean = true,
     isCenterAligned: Boolean = false,
     isFilled: Boolean = true,
-    containerColor: Color = MaterialTheme.colorScheme.surface,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLowest,
     bottomContent: @Composable (() -> Unit)? = null,
     titleClickable: Boolean = false,
     onTitleClick: () -> Unit = {},

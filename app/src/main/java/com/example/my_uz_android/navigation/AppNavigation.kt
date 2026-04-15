@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.initializer
@@ -58,15 +59,15 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
-sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
-    data object Main : Screen("main", "Główna", R.drawable.ic_home)
-    data object Calendar : Screen("calendar", "Kalendarz", R.drawable.ic_calendar_check)
-    data object Index : Screen("index", "Indeks", R.drawable.ic_graduation_hat)
-    data object Account : Screen("account", "Konto", R.drawable.ic_user)
+sealed class Screen(val route: String, val titleRes: Int, @DrawableRes val iconResId: Int) {
+    data object Main : Screen("main", R.string.nav_main, R.drawable.ic_home)
+    data object Calendar : Screen("calendar", R.string.nav_calendar, R.drawable.ic_calendar_check)
+    data object Index : Screen("index", R.string.nav_index, R.drawable.ic_graduation_hat)
+    data object Account : Screen("account", R.string.nav_account, R.drawable.ic_user)
 
-    data object GradeDetails : Screen("grade_details", "Szczegóły oceny", 0)
-    data object AddEditGrade : Screen("add_grade", "Dodaj/Edytuj ocenę", 0)
-    data object ClassDetails : Screen("class_details", "Szczegóły zajęć", 0)
+    data object GradeDetails : Screen("grade_details", 0, 0)
+    data object AddEditGrade : Screen("add_grade", 0, 0)
+    data object ClassDetails : Screen("class_details", 0, 0)
 }
 
 private fun encodeNavArg(value: String?): String = Uri.encode(value ?: "")
@@ -178,6 +179,7 @@ fun AppNavigation(
                             ) {
                                 val currentDestination = navBackStackEntry?.destination
                                 items.forEach { screen ->
+                                    val label = stringResource(screen.titleRes)
                                     val isCalendarSection = screen.route == "calendar" &&
                                             (currentRoute == "tasks" || currentRoute == "schedule_search" || currentRoute == "schedule_preview")
 
@@ -189,14 +191,14 @@ fun AppNavigation(
                                         icon = {
                                             Icon(
                                                 painter = painterResource(id = screen.iconResId),
-                                                contentDescription = screen.title,
+                                                contentDescription = label,
                                                 modifier = Modifier.size(24.dp),
                                                 tint = if (selected) navActiveColor else navInactiveColor
                                             )
                                         },
                                         label = {
                                             Text(
-                                                text = screen.title,
+                                                text = label,
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = if (selected) navActiveColor else navInactiveColor
                                             )

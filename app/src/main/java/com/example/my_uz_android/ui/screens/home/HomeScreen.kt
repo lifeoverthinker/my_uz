@@ -12,7 +12,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,9 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,8 +49,6 @@ import com.example.my_uz_android.ui.components.DashboardEmptyCard
 import com.example.my_uz_android.ui.theme.getAppBackgroundColor
 import com.example.my_uz_android.ui.theme.getAppAccentColor
 import com.example.my_uz_android.ui.components.TopBarActionIcon
-import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -70,7 +69,7 @@ fun HomeScreen(
     onAddTaskClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isDark = isSystemInDarkTheme()
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
     val topSectionBackground = extendedColors.homeTopBackground
     val headerContentColor = MaterialTheme.colorScheme.onSurface
@@ -173,9 +172,10 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        val firstName = uiState.userName.split(" ").firstOrNull() ?: "Student"
+                        val firstName = uiState.userName.split(" ").firstOrNull()
+                            ?: stringResource(R.string.default_user_title)
                         Text(
-                            text = "Cześć, $firstName! 👋",
+                            text = "${stringResource(R.string.greeting_morning)}, $firstName! 👋",
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = headerContentColor,
                             maxLines = 1,
@@ -184,19 +184,23 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // ZMIANA: Używamy logiki zbudowanej z 'faculties' - UZ, Wydział...
-                        val greetingText = if (uiState.faculties.isNotEmpty()) {
-                            "UZ, " + uiState.faculties.joinToString(", ")
-                        } else {
-                            "Uniwersytet Zielonogórski"
+                        val uniqueFaculties = uiState.faculties
+                            .map { it.trim() }
+                            .filter { it.isNotEmpty() }
+                            .distinct()
+
+                        val greetingText = buildString {
+                            append(stringResource(R.string.uz_short))
+                            if (uniqueFaculties.isNotEmpty()) {
+                                append("\n")
+                                append(uniqueFaculties.joinToString("\n"))
+                            }
                         }
 
                         Text(
                             text = greetingText,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = subHeaderContentColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            color = subHeaderContentColor
                         )
                     }
                 }
@@ -212,12 +216,18 @@ fun HomeScreen(
 
                         item {
                             val displayClasses = if (uiState.todaysClasses.isNotEmpty()) uiState.todaysClasses else uiState.tomorrowClasses
-                            val dayLabel = if (uiState.todaysClasses.isNotEmpty()) "Dzisiaj" else if (uiState.tomorrowClasses.isNotEmpty()) "Jutro" else "Brak zajęć"
+                            val dayLabel = if (uiState.todaysClasses.isNotEmpty()) {
+                                stringResource(R.string.dzisiaj)
+                            } else if (uiState.tomorrowClasses.isNotEmpty()) {
+                                stringResource(R.string.jutro)
+                            } else {
+                                stringResource(R.string.no_classes_title)
+                            }
 
                             UpcomingClasses(
                                 classes = displayClasses,
                                 isPlanSelected = uiState.studyFields.isNotEmpty(),
-                                emptyMessage = "Brak zajęć na horyzoncie",
+                                emptyMessage = stringResource(R.string.no_classes_message),
                                 dayLabel = dayLabel,
                                 classColorMap = uiState.classColorMap,
                                 isDarkMode = isDark,
@@ -231,12 +241,12 @@ fun HomeScreen(
                             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Icon(painter = painterResource(id = R.drawable.ic_book_open), contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
-                                    Text(text = "Zadania", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
+                                    Text(text = stringResource(R.string.tasks_title), style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 if (uiState.upcomingTasks.isEmpty()) {
                                     DashboardEmptyCard(
-                                        title = "Czysta lista!",
-                                        message = "Nie masz żadnych zadań",
+                                        title = stringResource(R.string.tasks_empty_card_title),
+                                        message = stringResource(R.string.tasks_empty_card_message),
                                         iconRes = R.drawable.ic_check_circle_broken,
                                         containerColor = getAppBackgroundColor(1, isDark),
                                         accentColor = getAppAccentColor(1, isDark),
@@ -263,12 +273,12 @@ fun HomeScreen(
                             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Icon(painter = painterResource(id = R.drawable.ic_marker_pin), contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(20.dp))
-                                    Text(text = "Wydarzenia", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
+                                    Text(text = stringResource(R.string.events_title), style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 if (uiState.todaysEvents.isEmpty()) {
                                     DashboardEmptyCard(
-                                        title = "Spokojny czas",
-                                        message = "Brak nadchodzących wydarzeń",
+                                        title = stringResource(R.string.events_empty_card_title),
+                                        message = stringResource(R.string.events_empty_card_message),
                                         iconRes = R.drawable.ic_marker_pin,
                                         containerColor = getAppBackgroundColor(2, isDark),
                                         accentColor = getAppAccentColor(2, isDark),
@@ -286,7 +296,7 @@ fun HomeScreen(
 
                         item {
                             Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 24.dp), contentAlignment = Alignment.CenterStart) {
-                                Text(text = "MyUZ 2026", style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline))
+                                Text(text = stringResource(R.string.home_footer_label), style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline))
                             }
                         }
                     }

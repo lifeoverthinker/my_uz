@@ -79,7 +79,7 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
                 // --- INFORMACJE O PROJEKCIE (INŻYNIERKA) ---
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
-                        text = "Twój Cyfrowy Asystent", // Albo z zasobów: stringResource(R.string.about_app_subtitle)
+                        text = stringResource(R.string.about_app_subtitle),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -92,7 +92,7 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
 
                     // Tutaj zmieniamy tekst na jawnie mówiący o projekcie niezależnym!
                     Text(
-                        text = "MyUZ to niezależna aplikacja stworzona od podstaw w ramach projektu inżynierskiego przez jednego studenta. Jej celem jest ułatwienie życia akademickiego na Uniwersytecie Zielonogórskim poprzez zintegrowanie planu zajęć, ocen i powiadomień w jednym, nowoczesnym miejscu.\n\nAplikacja nie jest oficjalnym produktem uczelni, lecz studencką inicjatywą zrodzoną z pasji do programowania.",
+                        text = stringResource(R.string.about_app_description),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         lineHeight = 22.sp,
@@ -107,7 +107,7 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Ikony: SVG Repo (Licencja CC0)",
+                    text = stringResource(R.string.about_app_icons_info),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline,
                     textAlign = TextAlign.Center
@@ -122,12 +122,12 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
                 modifier = Modifier.padding(bottom = 32.dp)
             ) {
                 Text(
-                    text = "Projekt Inżynierski 2026",
+                    text = stringResource(R.string.student_project_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.outline
                 )
                 Text(
-                    text = "Autor: Martyna",
+                    text = stringResource(R.string.about_app_author_label),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Medium
@@ -144,8 +144,8 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
 fun StorysetAttribution() {
     val uriHandler = LocalUriHandler.current
 
-    val prefix = "Ilustracje od "
-    val storysetLabel = "Storyset"
+    val prefix = stringResource(R.string.about_app_illustrations_prefix)
+    val storysetLabel = stringResource(R.string.about_app_storyset)
 
     val annotatedLinkString = buildAnnotatedString {
         withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant)) {

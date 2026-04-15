@@ -229,8 +229,10 @@ class AccountViewModel(
                         val parts = (settings.userName ?: "").split(" ", limit = 2)
                         _userName.value = parts.getOrElse(0) { "" }
                         _userSurname.value = parts.getOrElse(1) { "" }
-                        _selectedGender.value =
-                            if (settings.gender == "Studentka") UserGender.STUDENTKA else UserGender.STUDENT
+                        _selectedGender.value = when (settings.gender?.uppercase()) {
+                            UserGender.STUDENTKA.name, "STUDENTKA" -> UserGender.STUDENTKA
+                            else -> UserGender.STUDENT
+                        }
                         _isAnonymous.value = settings.isAnonymous
                         _selectedGroup.value = settings.selectedGroupCode
 
@@ -552,7 +554,7 @@ class AccountViewModel(
         _isLoading.value = true
 
         val fullName = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
-        val gender = if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
+        val gender = (_selectedGender.value ?: UserGender.STUDENT).name
         val newMainGroup = _selectedGroup.value
         val mainSubgroups = normalizeSubgroupCsv(_mainSelectedSubgroups.value, hasMainGroup = !newMainGroup.isNullOrBlank())
 

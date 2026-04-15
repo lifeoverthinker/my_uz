@@ -218,7 +218,7 @@ private fun ExpandableAbsenceCard(
                             ) {
                                 typeGroup.absences.forEach { absence ->
                                     val dateStr =
-                                        DateTimeFormatter.ofPattern("d MMM yyyy", Locale("pl"))
+                                        DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())
                                             .withZone(ZoneId.systemDefault())
                                             .format(Instant.ofEpochMilli(absence.date))
 
@@ -240,7 +240,7 @@ private fun ExpandableAbsenceCard(
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            text = dateStr + if (absence.isExcused) " (Usprawiedliwiona)" else "",
+                                            text = dateStr + if (absence.isExcused) " (${stringResource(R.string.status_excused)})" else "",
                                             style = TextStyle(
                                                 fontWeight = FontWeight(500),
                                                 fontSize = 12.sp,

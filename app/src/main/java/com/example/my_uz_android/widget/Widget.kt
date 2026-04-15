@@ -89,6 +89,15 @@ class Widget : GlanceAppWidget() {
         colorMap: Map<String, Int>
     ) {
         val context = LocalContext.current
+        val isDeviceDark = try {
+            (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        } catch (e: Exception) {
+            false
+        }
+        val widgetSurface = ColorProvider(if (isDeviceDark) Color(0xFF141218) else Color(0xFFFFFFFF))
+        val onWidgetSurface = ColorProvider(if (isDeviceDark) Color(0xFFE6E1E5) else Color(0xFF1D1B20))
+        val onWidgetSurfaceVariant = ColorProvider(if (isDeviceDark) Color(0xFFCAC4D0) else Color(0xFF49454F))
+        val widgetPrimary = ColorProvider(if (isDeviceDark) Color(0xFFD0BCFF) else Color(0xFF6750A4))
         val mainIntent = try {
             Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -100,7 +109,7 @@ class Widget : GlanceAppWidget() {
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(GlanceTheme.colors.surface)
+                .background(widgetSurface)
                 .cornerRadius(16.dp)
                 .padding(12.dp)
         ) {
@@ -114,7 +123,7 @@ class Widget : GlanceAppWidget() {
                     Text(
                         text = context.getString(R.string.upcoming_classes_title),
                         style = TextStyle(
-                            color = GlanceTheme.colors.onSurface,
+                            color = onWidgetSurface,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -123,7 +132,7 @@ class Widget : GlanceAppWidget() {
                         Text(
                             text = dayLabel,
                             style = TextStyle(
-                                color = GlanceTheme.colors.primary,
+                                color = widgetPrimary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -149,7 +158,7 @@ class Widget : GlanceAppWidget() {
                     Text(
                         text = message,
                         style = TextStyle(
-                            color = GlanceTheme.colors.onSurfaceVariant,
+                            color = onWidgetSurfaceVariant,
                             fontSize = 14.sp
                         )
                     )
@@ -158,7 +167,7 @@ class Widget : GlanceAppWidget() {
                 LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
                     items(classes) { classItem ->
                         ClassItemCard(classItem, colorMap, mainIntent)
-                        Spacer(modifier = GlanceModifier.height(12.dp))
+                        Spacer(modifier = GlanceModifier.height(16.dp))
                     }
                 }
             }

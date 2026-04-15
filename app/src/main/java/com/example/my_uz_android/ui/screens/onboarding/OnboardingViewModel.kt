@@ -304,8 +304,7 @@ class OnboardingViewModel(
             val currentSettings = settingsRepository.getSettingsStream().firstOrNull()
 
             val fullName = "${_userName.value.trim()} ${_userSurname.value.trim()}".trim()
-            val genderString =
-                if (_selectedGender.value == UserGender.STUDENTKA) "Studentka" else "Student"
+            val genderString = (_selectedGender.value ?: UserGender.STUDENT).name
 
             val subgroupsString = _selectedSubgroups.value.joinToString(",")
 

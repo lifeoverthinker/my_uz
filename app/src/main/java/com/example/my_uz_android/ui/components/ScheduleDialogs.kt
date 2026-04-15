@@ -14,6 +14,12 @@ import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.util.ClassTypeUtils
 import androidx.compose.ui.res.stringResource
 import com.example.my_uz_android.R
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import android.widget.Toast
 
 /**
  * Okno dialogowe pokazujące informacje kontaktowe wykładowcy.
@@ -25,25 +31,66 @@ fun TeacherInfoDialog(
     department: String,
     email: String
 ) {
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(stringResource(R.string.dialog_teacher_title), style = MaterialTheme.typography.titleLarge)
+            Text(
+                stringResource(R.string.dialog_teacher_title),
+                style = MaterialTheme.typography.titleLarge
+            )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = fullName,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )
-                Text(text = department, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = department,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 if (email.isNotBlank()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Text(
-                        text = email,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        text = stringResource(R.string.dialog_teacher_email_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = email,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(email))
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.dialog_teacher_email_copied),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.ContentCopy,
+                                contentDescription = null
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.dialog_teacher_copy_email))
+                        }
+                    }
                 }
             }
         },

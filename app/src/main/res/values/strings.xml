@@ -14,6 +14,10 @@
     <string name="btn_done">Gotowe</string>
     <string name="btn_ok">OK</string>
     <string name="options_menu">Opcje</string>
+    <string name="nav_main">Główna</string>
+    <string name="nav_calendar">Kalendarz</string>
+    <string name="nav_index">Indeks</string>
+    <string name="nav_account">Konto</string>
 
     <string name="task_title_placeholder">Dodaj tytuł</string>
     <string name="task_description_placeholder">Dodaj opis</string>
@@ -33,7 +37,7 @@
     <string name="task_no_date">Brak terminu</string>
     <string name="task_not_found">Nie znaleziono zadania</string>
     <string name="label_subject">PRZEDMIOT</string>
-    <string name="label_type">RODZAJ ZAJĘĆ</string>
+    <string name="label_type">Rodzaj zajęć</string>
     <string name="label_description">OPIS</string>
     <string name="label_status">STATUS</string>
     <string name="none">Brak</string>
@@ -102,7 +106,7 @@
     <string name="label_activity_count">Liczba plusów: %1$d</string>
     <string name="label_weight_field">Waga (domyślnie 1.0)</string>
     <string name="label_subject_field">Przedmiot</string>
-    <string name="label_class_type_field">RODZAJ ZAJĘĆ</string>
+    <string name="label_class_type_field">Rodzaj zajęć</string>
     <string name="label_date_received">Data otrzymania</string>
     <string name="select_date">Wybierz datę</string>
     <string name="label_title_field">Tytuł / Nazwa (np. Kolokwium 1)</string>
@@ -135,6 +139,9 @@
     <string name="item_type_grade">ocenę</string>
     <string name="item_type_absence">nieobecność</string>
     <string name="dialog_teacher_title">Prowadzący</string>
+    <string name="dialog_teacher_email_label">E-mail</string>
+    <string name="dialog_teacher_copy_email">Kopiuj</string>
+    <string name="dialog_teacher_email_copied">Skopiowano e-mail</string>
     <string name="dialog_filter_subgroups_title">Filtruj podgrupy</string>
     <string name="dialog_filter_schedule_title">Filtruj plan</string>
     <string name="label_subgroups">Podgrupy</string>
@@ -151,6 +158,8 @@
     <string name="events_title">Wydarzenia</string>
     <string name="events_empty_card_title">Spokojny czas</string>
     <string name="events_empty_card_message">Brak nadchodzących wydarzeń</string>
+    <string name="home_university_with_faculties">%1$s, %2$s</string>
+    <string name="home_footer_label">MyUZ 2026</string>
 
     <!-- Home Components -->
     <string name="upcoming_classes_title">Najbliższe zajęcia</string>
@@ -186,6 +195,9 @@
     <string name="settings_screen_title">Ustawienia</string>
     <string name="settings_appearance_section">Wygląd</string>
     <string name="settings_theme_label">Motyw aplikacji</string>
+    <string name="settings_theme_light">Jasny</string>
+    <string name="settings_theme_dark">Ciemny</string>
+    <string name="settings_theme_system">Systemowy</string>
     <string name="settings_language_label">Język aplikacji</string>
     <string name="settings_language_polish">Polski</string>
     <string name="settings_language_english">English</string>
@@ -201,6 +213,7 @@
     <string name="settings_export_data_title">Eksportuj dane</string>
     <string name="settings_import_data_title">Importuj dane</string>
     <string name="settings_restore">Przywróć</string>
+    <string name="app_version_label">MyUZ v1.0.0</string>
 
     <!-- Backup -->
     <string name="backup_title">Kopia zapasowa</string>
@@ -212,6 +225,11 @@
     <string name="backup_import_success">Pomyślnie zaimportowano dane!</string>
     <string name="backup_import_error">Błąd importu: %1$s</string>
     <string name="backup_read_error">Błąd odczytu pliku. Upewnij się, że to poprawny plik kopii zapasowej.</string>
+    <string name="backup_type_settings">Ustawienia aplikacji</string>
+    <string name="backup_type_classes">Plan zajęć</string>
+    <string name="backup_type_tasks">Zadania</string>
+    <string name="backup_type_grades">Oceny</string>
+    <string name="backup_type_absences">Nieobecności</string>
 
     <!-- About App -->
     <string name="about_app_title">O aplikacji</string>
@@ -221,6 +239,8 @@
     <string name="about_app_illustrations_prefix">Ilustracje w aplikacji pochodzą z serwisu </string>
     <string name="about_app_storyset">Storyset</string>
     <string name="student_project_label">Student Project 2026</string>
+    <string name="about_app_author_label">Autor: Martyna</string>
+    <string name="uz_short">UZ</string>
     <string name="uz_label">Uniwersytet Zielonogórski</string>
     <string name="logo_content_description">Logo MyUZ</string>
 
