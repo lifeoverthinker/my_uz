@@ -192,7 +192,15 @@
     <string name="settings_notifications_section">Powiadomienia</string>
     <string name="settings_notifications_push">Powiadomienia PUSH</string>
     <string name="settings_notifications_push_desc">Przypomnienia o zajęciach i zadaniach</string>
+    <string name="settings_notifications_classes_title">Zajęcia</string>
+    <string name="settings_notifications_classes_desc">15 minut przed rozpoczęciem</string>
     <string name="settings_backup_section">Dane i synchronizacja</string>
+    <string name="settings_class_colors_section">Kolory zajęć</string>
+    <string name="settings_backup_export_desc">Zapisz kopię danych do pliku JSON</string>
+    <string name="settings_backup_import_desc">Przywróć dane z pliku zewnętrznego</string>
+    <string name="settings_export_data_title">Eksportuj dane</string>
+    <string name="settings_import_data_title">Importuj dane</string>
+    <string name="settings_restore">Przywróć</string>
 
     <!-- Backup -->
     <string name="backup_title">Kopia zapasowa</string>

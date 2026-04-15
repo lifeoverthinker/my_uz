@@ -68,11 +68,11 @@ class ScheduleSearchViewModel(
     private fun observeFavoritesScheduleSearchVM() {
         viewModelScope.launch {
             favoritesRepository.favoritesStream.collect { favorites ->
-                val favoriteIds = favorites.map { it.resourceId }.toSet()
+                val favoriteKeys = favorites.map { it.resourceId to it.type }.toSet()
                 _uiState.update { state ->
                     state.copy(
                         searchResults = state.searchResults.map { result ->
-                            result.copy(isFavorite = favoriteIds.contains(result.name))
+                            result.copy(isFavorite = favoriteKeys.contains(result.name to result.type))
                         }
                     )
                 }
@@ -141,7 +141,7 @@ class ScheduleSearchViewModel(
         }
 
         val favorites = favoritesRepository.favoritesStream.first()
-        val favoriteIds = favorites.map { it.resourceId }.toSet()
+        val favoriteKeys = favorites.map { it.resourceId to it.type }.toSet()
 
         val localMatchedGroups = allGroupsIndex
             .asSequence()
@@ -167,7 +167,7 @@ class ScheduleSearchViewModel(
                 SearchResultItem(
                     name = groupCode,
                     type = "group",
-                    isFavorite = favoriteIds.contains(groupCode)
+                    isFavorite = favoriteKeys.contains(groupCode to "group")
                 )
             }
 
@@ -183,7 +183,7 @@ class ScheduleSearchViewModel(
                 SearchResultItem(
                     name = safeName,
                     type = "teacher",
-                    isFavorite = favoriteIds.contains(safeName),
+                    isFavorite = favoriteKeys.contains(safeName to "teacher"),
                     email = teacher.email,
                     institute = teacher.institute
                 )
@@ -246,9 +246,9 @@ class ScheduleSearchViewModel(
     fun toggleFavorite(result: SearchResultItem) {
         viewModelScope.launch {
             if (result.isFavorite) {
-                favoritesRepository.deleteFavoriteByResourceId(result.name)
+                favoritesRepository.deleteFavoriteByResourceIdAndType(result.name, result.type)
             } else {
-                favoritesRepository.insertFavorite(
+                favoritesRepository.insertFavoriteIfAbsent(
                     FavoriteEntity(
                         name = result.name,
                         type = result.type,

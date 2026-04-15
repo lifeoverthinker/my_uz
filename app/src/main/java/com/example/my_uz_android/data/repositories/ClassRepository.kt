@@ -60,8 +60,20 @@ class ClassRepository(private val classDao: ClassDao) {
 
     suspend fun syncGroupClasses(groupCode: String, newClasses: List<ClassEntity>) {
         try {
-            classDao.deleteByGroupCode(groupCode)
-            classDao.insertAll(newClasses)
+            val deduplicated = newClasses.distinctBy {
+                listOf(
+                    it.supabaseId ?: "",
+                    it.groupCode.trim().lowercase(),
+                    it.date,
+                    it.startTime,
+                    it.endTime,
+                    it.subjectName.trim().lowercase(),
+                    it.classType.trim().lowercase(),
+                    it.subgroup?.trim()?.lowercase().orEmpty(),
+                    it.room?.trim()?.lowercase().orEmpty()
+                ).joinToString("|")
+            }
+            classDao.replaceGroupClasses(groupCode, deduplicated)
         } catch (e: Exception) {
             Log.e("ClassRepository", "Błąd syncGroupClasses", e)
         }

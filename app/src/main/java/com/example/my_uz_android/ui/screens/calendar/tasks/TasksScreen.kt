@@ -54,6 +54,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -126,10 +128,14 @@ fun TasksScreen(
     var showImportSuccessDialog by remember { mutableStateOf(false) }
     var lastImportMessage by remember { mutableStateOf("") }
 
-    var selectedTab by remember { mutableStateOf(0) }
-    var isSelectionMode by remember { mutableStateOf(false) }
-    var selectedTasks by remember { mutableStateOf(setOf<Int>()) }
-
+    var selectedTab by rememberSaveable { mutableStateOf(0) }
+    var isSelectionMode by rememberSaveable { mutableStateOf(false) }
+    var selectedTasks by rememberSaveable(
+        stateSaver = listSaver<Set<Int>, Int>(
+            save = { it.toList() },
+            restore = { it.toSet() }
+        )
+    ) { mutableStateOf(emptySet<Int>()) }
     LaunchedEffect(shareError) {
         val message = shareError ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -156,6 +162,27 @@ fun TasksScreen(
             .filter { task -> if (selectedTab == 0) !task.isCompleted else task.isCompleted }
             .sortedBy { it.dueDate }
             .groupBy { YearMonth.from(taskDateTasksScreen(it.dueDate)) }
+    }
+
+    LaunchedEffect(tasks, selectedTab, isSelectionMode) {
+        if (!isSelectionMode) {
+            if (selectedTasks.isNotEmpty()) selectedTasks = emptySet()
+            return@LaunchedEffect
+        }
+
+        val visibleIds = tasks
+            .asSequence()
+            .filter { task -> if (selectedTab == 0) !task.isCompleted else task.isCompleted }
+            .map { it.id }
+            .toSet()
+
+        val reconciledSelection = selectedTasks.intersect(visibleIds)
+        if (reconciledSelection != selectedTasks) {
+            selectedTasks = reconciledSelection
+        }
+        if (selectedTasks.isEmpty()) {
+            isSelectionMode = false
+        }
     }
 
     ModalNavigationDrawer(
@@ -203,7 +230,9 @@ fun TasksScreen(
             ) {
                 if (groupedTasks.isEmpty()) {
                     EmptyStateMessage(
-                        title = if (selectedTab == 0) stringResource(R.string.tasks_empty_active) else stringResource(R.string.tasks_empty_completed),
+                        title = if (selectedTab == 0) stringResource(R.string.tasks_empty_active) else stringResource(
+                            R.string.tasks_empty_completed
+                        ),
                         subtitle = stringResource(R.string.tasks_empty_subtitle),
                         message = stringResource(R.string.tasks_empty_msg),
                         iconRes = R.drawable.to_do_list_rafiki
@@ -215,7 +244,8 @@ fun TasksScreen(
                         selectedTasks = selectedTasks,
                         onTaskClick = { id ->
                             if (isSelectionMode) {
-                                selectedTasks = if (selectedTasks.contains(id)) selectedTasks - id else selectedTasks + id
+                                selectedTasks =
+                                    if (selectedTasks.contains(id)) selectedTasks - id else selectedTasks + id
                             } else {
                                 onTaskClick(id)
                             }
@@ -238,7 +268,10 @@ fun TasksScreen(
                             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
                         ) {
                             Text(
-                                text = stringResource(R.string.tasks_confirm_selected, selectedTasks.size),
+                                text = stringResource(
+                                    R.string.tasks_confirm_selected,
+                                    selectedTasks.size
+                                ),
                                 style = TextStyle(
                                     fontFamily = InterFontFamily,
                                     fontWeight = FontWeight.Medium,
@@ -276,7 +309,10 @@ fun TasksScreen(
             title = {
                 Text(
                     stringResource(R.string.tasks_share_confirm_title),
-                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold)
+                    style = TextStyle(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 )
             },
             text = { Text(stringResource(R.string.tasks_share_confirm_msg, selectedTasks.size)) },
@@ -291,7 +327,9 @@ fun TasksScreen(
                 ) { Text(stringResource(R.string.tasks_share_btn)) }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirmShareDialog = false }) { Text(stringResource(R.string.btn_cancel)) }
+                TextButton(onClick = {
+                    showConfirmShareDialog = false
+                }) { Text(stringResource(R.string.btn_cancel)) }
             }
         )
     }
@@ -303,7 +341,11 @@ fun TasksScreen(
             onCopy = {
                 sharedCode?.let {
                     clipboardManager.setText(AnnotatedString(it))
-                    Toast.makeText(context, context.getString(R.string.tasks_code_copied), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.tasks_code_copied),
+                        Toast.LENGTH_SHORT
+                    ).show()
                     showGeneratedCodeDialog = false
                     viewModel.clearSharedCode()
                 }
@@ -380,10 +422,17 @@ fun TasksScreen(
                         taskToDelete?.let { viewModel.deleteTask(it) }
                         taskToDelete = null
                     }
-                ) { Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error) }
+                ) {
+                    Text(
+                        stringResource(R.string.btn_delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             },
             dismissButton = {
-                TextButton(onClick = { taskToDelete = null }) { Text(stringResource(R.string.btn_cancel)) }
+                TextButton(onClick = {
+                    taskToDelete = null
+                }) { Text(stringResource(R.string.btn_cancel)) }
             }
         )
     }
@@ -407,7 +456,11 @@ fun TasksTopBar(
         actions = {
             TopBarActionIcon(icon = R.drawable.ic_plus, onClick = onAddClick, isFilled = true)
             if (!isSelectionMode) {
-                TopBarActionIcon(icon = R.drawable.ic_share, onClick = onShareClick, isFilled = true)
+                TopBarActionIcon(
+                    icon = R.drawable.ic_share,
+                    onClick = onShareClick,
+                    isFilled = true
+                )
             }
         },
         bottomContent = {
@@ -458,7 +511,10 @@ fun TasksTopBar(
                         )
                     }
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 1.dp
+                )
             }
         }
     )
@@ -612,7 +668,10 @@ fun SwipeToDismissItem(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = date.dayOfWeek.getDisplayName(JavaTextStyle.SHORT, Locale.getDefault()),
+                            text = date.dayOfWeek.getDisplayName(
+                                JavaTextStyle.SHORT,
+                                Locale.getDefault()
+                            ),
                             style = TextStyle(
                                 fontFamily = InterFontFamily,
                                 fontWeight = FontWeight(500),
@@ -686,7 +745,11 @@ fun ShareOptionsModal(
             ) {
                 Text(
                     text = stringResource(R.string.tasks_share_title),
-                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Medium, fontSize = 18.sp),
+                    style = TextStyle(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 18.sp
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
@@ -761,7 +824,11 @@ fun GeneratedCodeModal(
             ) {
                 Text(
                     text = stringResource(R.string.tasks_share_code_title),
-                    style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
+                    style = TextStyle(
+                        fontFamily = InterFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    ),
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
@@ -800,7 +867,11 @@ fun GeneratedCodeModal(
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(16.dp)
                 ) {
-                    Icon(painterResource(R.drawable.ic_copy), contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(
+                        painterResource(R.drawable.ic_copy),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.tasks_copy_code))
                 }
@@ -809,7 +880,10 @@ fun GeneratedCodeModal(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.btn_close), style = TextStyle(fontWeight = FontWeight.SemiBold))
+                    Text(
+                        stringResource(R.string.btn_close),
+                        style = TextStyle(fontWeight = FontWeight.SemiBold)
+                    )
                 }
             }
         }
@@ -825,14 +899,21 @@ fun ImportDialog(onImport: (String) -> Unit, onDismiss: () -> Unit) {
         title = {
             Text(
                 stringResource(R.string.tasks_import_title),
-                style = TextStyle(fontFamily = InterFontFamily, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                style = TextStyle(
+                    fontFamily = InterFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     stringResource(R.string.tasks_import_hint),
-                    style = TextStyle(fontFamily = InterFontFamily, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    style = TextStyle(
+                        fontFamily = InterFontFamily,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
                 OutlinedTextField(
                     value = code,

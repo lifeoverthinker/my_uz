@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -93,6 +94,8 @@ class CalendarViewModel(
 
     private val _isLoadingNetwork = MutableStateFlow(false)
     private val _temporaryClassForDetails = MutableStateFlow<ClassEntity?>(null)
+    private val isRefreshInProgress = AtomicBoolean(false)
+    private var previewRequestVersion = 0L
 
     // Flaga powstrzymująca resetowanie wybranych kierunków
     private var isGroupsInitialized = false
@@ -223,6 +226,8 @@ class CalendarViewModel(
      * Dodano tu zabezpieczenie przed resetem przy nawigacji!
      */
     fun selectMyPlan(forceRefresh: Boolean = false) {
+        previewRequestVersion++
+        _isLoadingNetwork.value = false
         if (forceRefresh || !hasLoadedInitialPlan) {
             _currentSource.value = ScheduleSource.MyPlan
             refreshMyPlan()
@@ -241,9 +246,15 @@ class CalendarViewModel(
     fun toggleFavorite(name: String, type: String) {
         viewModelScope.launch {
             runCatching {
-                val existing = uiState.value.favorites.find { it.name == name }
-                if (existing != null) favoritesRepository.deleteFavorite(existing)
-                else favoritesRepository.insertFavorite(FavoriteEntity(resourceId = name, name = name, type = type))
+                val resourceId = name
+                val exists = favoritesRepository.existsByResourceIdAndType(resourceId, type)
+                if (exists) {
+                    favoritesRepository.deleteFavoriteByResourceIdAndType(resourceId, type)
+                } else {
+                    favoritesRepository.insertFavoriteIfAbsent(
+                        FavoriteEntity(resourceId = resourceId, name = name, type = type)
+                    )
+                }
             }.onFailure { Log.e("CalendarVM", "Błąd zapisu ulubionych", it) }
         }
     }
@@ -251,31 +262,40 @@ class CalendarViewModel(
     fun selectFavoritePlan(favorite: FavoriteEntity) {
         _previewState.value = emptyList()
         _currentSource.value = ScheduleSource.Favorite(favorite.resourceId, favorite.name, favorite.type)
-        loadNetworkScheduleCalendarVM(favorite.name, favorite.type)
+        val requestVersion = ++previewRequestVersion
+        loadNetworkScheduleCalendarVM(favorite.name, favorite.type, requestVersion)
     }
 
     fun selectPreviewPlan(name: String, type: String) {
         _previewState.value = emptyList()
         _currentSource.value = ScheduleSource.Preview(name, name, type)
-        loadNetworkScheduleCalendarVM(name, type)
+        val requestVersion = ++previewRequestVersion
+        loadNetworkScheduleCalendarVM(name, type, requestVersion)
     }
 
     /**
      * Wewnętrzna funkcja uderzająca do API uniwersytetu (Scraper) pobierająca plany "Ulubionych".
      */
-    private fun loadNetworkScheduleCalendarVM(name: String, type: String) {
+    private fun loadNetworkScheduleCalendarVM(name: String, type: String, requestVersion: Long) {
         viewModelScope.launch {
             _isLoadingNetwork.value = true
             try {
                 val result = if (type == "teacher") universityRepository.getScheduleForTeacher(name)
                 else universityRepository.getSchedule(name, emptyList())
 
-                _previewState.value = if (result is NetworkResult.Success) result.data ?: emptyList() else emptyList()
+                val resolvedPreview = if (result is NetworkResult.Success) result.data ?: emptyList() else emptyList()
+                if (requestVersion == previewRequestVersion) {
+                    _previewState.value = resolvedPreview
+                }
             } catch (e: Exception) {
                 Log.e("CalendarVM", "Błąd pobierania planu", e)
-                _previewState.value = emptyList()
+                if (requestVersion == previewRequestVersion) {
+                    _previewState.value = emptyList()
+                }
             } finally {
-                _isLoadingNetwork.value = false
+                if (requestVersion == previewRequestVersion) {
+                    _isLoadingNetwork.value = false
+                }
             }
         }
     }
@@ -285,25 +305,29 @@ class CalendarViewModel(
      */
     fun refreshMyPlan() {
         viewModelScope.launch {
-            val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch
-            val groupCodes = mutableListOf<Pair<String, String?>>()
-
-            settings.selectedGroupCode?.let { groupCodes.add(it to settings.selectedSubgroup) }
-            val extraCourses = userCourseRepository.getAllUserCoursesStream().firstOrNull().orEmpty()
-            extraCourses.forEach { groupCodes.add(it.groupCode to it.selectedSubgroup) }
-
-            if (groupCodes.isEmpty()) return@launch
-
-            // Tu możemy dać UI feedback, że odświeża plan w tle, jeśli ma internet
-            _isLoadingNetwork.value = true
+            if (!isRefreshInProgress.compareAndSet(false, true)) return@launch
             try {
-                groupCodes.forEach { (code, subgroup) ->
-                    universityRepository.refreshSchedule(code, subgroup, classRepository)
-                }
+                val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch
+                val groupCodes = mutableListOf<Pair<String, String?>>()
+
+                settings.selectedGroupCode?.let { groupCodes.add(it to settings.selectedSubgroup) }
+                val extraCourses = userCourseRepository.getAllUserCoursesStream().firstOrNull().orEmpty()
+                extraCourses.forEach { groupCodes.add(it.groupCode to it.selectedSubgroup) }
+
+                if (groupCodes.isEmpty()) return@launch
+
+                // Tu możemy dać UI feedback, że odświeża plan w tle, jeśli ma internet
+                _isLoadingNetwork.value = true
+                groupCodes
+                    .distinctBy { (code, subgroup) -> code.trim().lowercase() to subgroup?.trim()?.lowercase() }
+                    .forEach { (code, subgroup) ->
+                        universityRepository.refreshSchedule(code, subgroup, classRepository)
+                    }
             } catch (e: Exception) {
                 Log.e("CalendarVM", "Błąd odświeżania planu", e)
             } finally {
                 _isLoadingNetwork.value = false
+                isRefreshInProgress.set(false)
             }
         }
     }

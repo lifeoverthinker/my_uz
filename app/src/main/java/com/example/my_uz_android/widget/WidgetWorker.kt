@@ -9,12 +9,13 @@ import androidx.work.WorkerParameters
 import androidx.work.ExistingPeriodicWorkPolicy
 import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.data.models.ClassEntity
+import com.example.my_uz_android.util.classesStillRemainingToday
 import com.example.my_uz_android.util.SubgroupMatcher
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.firstOrNull
 import java.time.LocalDateTime
-import java.time.LocalTime
+import java.time.ZoneId
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
@@ -41,7 +42,7 @@ class WidgetWorker(
         val upcomingClasses = classRepository.getUpcomingClasses().firstOrNull() ?: emptyList()
         val userCourses = userCourseRepository.getAllUserCoursesStream().firstOrNull() ?: emptyList()
 
-        val now = LocalDateTime.now()
+        val now = LocalDateTime.now(ZoneId.of("Europe/Warsaw"))
         val today = now.toLocalDate()
         val nowTime = now.toLocalTime()
         val tomorrow = today.plusDays(1)
@@ -59,9 +60,7 @@ class WidgetWorker(
         }
 
         // Odwzorowanie logiki z HomeViewModel
-        val classesForToday = visibleClasses.filter {
-            it.date == today.toString() && runCatching { LocalTime.parse(it.endTime).isAfter(nowTime) }.getOrDefault(true)
-        }
+        val classesForToday = classesStillRemainingToday(visibleClasses, today, nowTime)
         val classesForTomorrow = visibleClasses.filter {
             it.date == tomorrow.toString()
         }

@@ -8,7 +8,9 @@ package com.example.my_uz_android.ui.components
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
+import com.example.my_uz_android.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 /**
@@ -34,12 +36,12 @@ fun DatePicker(
             TextButton(onClick = {
                 datePickerState.selectedDateMillis?.let { onDateSelected(it) }
             }) {
-                Text("OK")
+                Text(stringResource(R.string.btn_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj")
+                Text(stringResource(R.string.btn_cancel))
             }
         },
         colors = DatePickerDefaults.colors(
@@ -82,12 +84,12 @@ fun TimePicker(
         properties = DialogProperties(usePlatformDefaultWidth = false),
         confirmButton = {
             TextButton(onClick = { onTimeSelected(timePickerState.hour, timePickerState.minute) }) {
-                Text("OK")
+                Text(stringResource(R.string.btn_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Anuluj")
+                Text(stringResource(R.string.btn_cancel))
             }
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,

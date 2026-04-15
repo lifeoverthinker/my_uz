@@ -47,6 +47,14 @@ interface ClassDao {
     @Query("DELETE FROM classes WHERE groupCode = :groupCode")
     suspend fun deleteByGroupCode(groupCode: String)
 
+    @Transaction
+    suspend fun replaceGroupClasses(groupCode: String, classes: List<ClassEntity>) {
+        deleteByGroupCode(groupCode)
+        if (classes.isNotEmpty()) {
+            insertAll(classes)
+        }
+    }
+
     /**
      * Czyści cały lokalny plan zajęć.
      */

@@ -1,5 +1,6 @@
 package com.example.my_uz_android.navigation
 
+import android.net.Uri
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -11,12 +12,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.createSavedStateHandle
+import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -26,6 +33,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.my_uz_android.MyUZApplication
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.extendedColors
@@ -46,6 +54,9 @@ import com.example.my_uz_android.ui.screens.notifications.NotificationsScreen
 import com.example.my_uz_android.ui.screens.notifications.NotificationsViewModel
 import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 sealed class Screen(val route: String, val title: String, @DrawableRes val iconResId: Int) {
     data object Main : Screen("main", "Główna", R.drawable.ic_home)
@@ -57,6 +68,10 @@ sealed class Screen(val route: String, val title: String, @DrawableRes val iconR
     data object AddEditGrade : Screen("add_grade", "Dodaj/Edytuj ocenę", 0)
     data object ClassDetails : Screen("class_details", "Szczegóły zajęć", 0)
 }
+
+private fun encodeNavArg(value: String?): String = Uri.encode(value ?: "")
+
+private fun decodeNavArg(value: String?): String = value?.let(Uri::decode) ?: ""
 
 @Composable
 fun AppNavigation(
@@ -92,8 +107,11 @@ fun AppNavigation(
     val navBorderColor = extendedColors.navBorder
     val navActiveColor = extendedColors.navActive
     val navInactiveColor = extendedColors.navInactive
-    val bottomNavBarHeight = 84.dp
-    val fabBottomOffset = if (showBottomBar) bottomNavBarHeight + 24.dp else 24.dp
+    var bottomBarHeightPx by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    val measuredBottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
+    val effectiveBottomBarHeight = if (showBottomBar && bottomBarHeightPx == 0) 84.dp else measuredBottomBarHeight
+    val fabBottomOffset = if (showBottomBar) effectiveBottomBarHeight + 24.dp else 24.dp
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -138,6 +156,7 @@ fun AppNavigation(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .onSizeChanged { bottomBarHeightPx = it.height }
                                 .background(navBackgroundColor)
                                 .drawBehind {
                                     drawLine(
@@ -319,7 +338,25 @@ fun AppNavigation(
                 composable(
                     "event_details/{eventId}",
                     arguments = listOf(navArgument("eventId") { type = NavType.IntType })
-                ) { EventDetailsScreen(onBackClick = { navController.popBackStack() }) }
+                ) {
+                    val context = LocalContext.current
+                    val app = context.applicationContext as MyUZApplication
+                    val detailsViewModel: EventDetailsViewModel = viewModel(
+                        factory = viewModelFactory {
+                            initializer {
+                                EventDetailsViewModel(
+                                    savedStateHandle = createSavedStateHandle(),
+                                    eventRepository = app.container.eventRepository
+                                )
+                            }
+                        }
+                    )
+
+                    EventDetailsScreen(
+                        onBackClick = { navController.popBackStack() },
+                        viewModel = detailsViewModel
+                    )
+                }
 
                 composable("tasks") {
                     TasksScreen(
@@ -346,7 +383,12 @@ fun AppNavigation(
                             val task = detailsViewModel.uiState.value.task
                             task?.let {
                                 navController.navigate(
-                                    "add_task?title=${it.title}&desc=${it.description ?: ""}&subject=${it.subjectName ?: ""}&type=${it.classType ?: ""}&dueDate=${it.dueDate}&isAllDay=${it.isAllDay}"
+                                    "add_task?title=${encodeNavArg(it.title)}" +
+                                            "&desc=${encodeNavArg(it.description ?: "")}" +
+                                            "&subject=${encodeNavArg(it.subjectName ?: "")}" +
+                                            "&type=${encodeNavArg(it.classType ?: "")}" +
+                                            "&dueDate=${it.dueDate}" +
+                                            "&isAllDay=${it.isAllDay}"
                                 )
                             }
                         }
@@ -387,13 +429,23 @@ fun AppNavigation(
                 composable(Screen.Index.route) {
                     IndexScreen(
                         onSubjectClick = { subjectName, classType ->
-                            navController.navigate("subject_grades/$subjectName?classType=$classType")
+                            navController.navigate(
+                                "subject_grades/${encodeNavArg(subjectName)}?classType=${encodeNavArg(classType)}"
+                            )
                         },
                         onAddGradeClick = { navController.navigate("add_grade") },
                         onAddAbsenceClick = { navController.navigate("add_absence") },
                         onEditAbsenceClick = { id -> navController.navigate("absence_details/$id") },
-                        onAddGradeSpecificClick = { subj, type -> navController.navigate("add_grade?subject=$subj&classType=$type") },
-                        onAddAbsenceSpecificClick = { subj, type -> navController.navigate("add_absence?subject=$subj&classType=$type") }
+                        onAddGradeSpecificClick = { subj, type ->
+                            navController.navigate(
+                                "add_grade?subject=${encodeNavArg(subj)}&classType=${encodeNavArg(type)}"
+                            )
+                        },
+                        onAddAbsenceSpecificClick = { subj, type ->
+                            navController.navigate(
+                                "add_absence?subject=${encodeNavArg(subj)}&classType=${encodeNavArg(type)}"
+                            )
+                        }
                     )
                 }
 
@@ -404,8 +456,10 @@ fun AppNavigation(
                         navArgument("classType") { type = NavType.StringType; nullable = true; defaultValue = null }
                     )
                 ) { backStackEntry ->
-                    val subjectName = backStackEntry.arguments?.getString("subjectName") ?: ""
-                    val classType = backStackEntry.arguments?.getString("classType")
+                    val subjectName = decodeNavArg(backStackEntry.arguments?.getString("subjectName"))
+                    val classType = backStackEntry.arguments
+                        ?.getString("classType")
+                        ?.let(Uri::decode)
 
                     SubjectGradesScreen(
                         subjectKey = subjectName,
@@ -413,7 +467,9 @@ fun AppNavigation(
                         onBackClick = { navController.popBackStack() },
                         onGradeClick = { gradeId -> navController.navigate("grade_details/$gradeId") },
                         onAddGradeClick = { subj, type ->
-                            navController.navigate("add_grade?subject=$subj&classType=$type")
+                            navController.navigate(
+                                "add_grade?subject=${encodeNavArg(subj)}&classType=${encodeNavArg(type)}"
+                            )
                         }
                     )
                 }
@@ -431,7 +487,12 @@ fun AppNavigation(
                         onDuplicateGrade = {
                             val grade = detailsViewModel.uiState.value.grade
                             grade?.let {
-                                navController.navigate("add_grade?subject=${it.subjectName}&classType=${it.classType}&description=${it.description}&weight=${it.weight}")
+                                navController.navigate(
+                                    "add_grade?subject=${encodeNavArg(it.subjectName)}" +
+                                            "&classType=${encodeNavArg(it.classType)}" +
+                                            "&description=${encodeNavArg(it.description ?: "")}" +
+                                            "&weight=${encodeNavArg(it.weight.toString())}"
+                                )
                             }
                         }
                     )
@@ -482,7 +543,9 @@ fun AppNavigation(
                         onDuplicateClick = {
                             val absence = detailsViewModel.uiState.value.absence
                             absence?.let {
-                                navController.navigate("add_absence?subject=${it.subjectName}&classType=${it.classType}")
+                                navController.navigate(
+                                    "add_absence?subject=${encodeNavArg(it.subjectName)}&classType=${encodeNavArg(it.classType)}"
+                                )
                             }
                         }
                     )
@@ -503,8 +566,8 @@ fun AppNavigation(
                         viewModel(factory = AppViewModelProvider.Factory)
                     AbsenceAddEditScreenRoute(
                         viewModel = addEditViewModel,
-                        prefilledSubject = backStackEntry.arguments?.getString("subject"),
-                        prefilledClassType = backStackEntry.arguments?.getString("classType"),
+                        prefilledSubject = backStackEntry.arguments?.getString("subject")?.let(Uri::decode),
+                        prefilledClassType = backStackEntry.arguments?.getString("classType")?.let(Uri::decode),
                         onNavigateBack = { navController.popBackStack() }
                     )
                 }
@@ -537,6 +600,10 @@ fun AppNavigation(
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateToEdit = { navController.navigate("edit_personal_data") }
                     )
+                }
+
+                composable("setup_plan") {
+                    EditPersonalDataScreen(onNavigateBack = { navController.popBackStack() })
                 }
 
                 composable("edit_personal_data") {

@@ -191,7 +191,15 @@
     <string name="settings_notifications_section">Notifications</string>
     <string name="settings_notifications_push">PUSH Notifications</string>
     <string name="settings_notifications_push_desc">Reminders about classes and tasks</string>
+    <string name="settings_notifications_classes_title">Classes</string>
+    <string name="settings_notifications_classes_desc">15 minutes before start</string>
     <string name="settings_backup_section">Data and synchronization</string>
+    <string name="settings_class_colors_section">Class colors</string>
+    <string name="settings_backup_export_desc">Save a data backup to a JSON file</string>
+    <string name="settings_backup_import_desc">Restore data from an external file</string>
+    <string name="settings_export_data_title">Export data</string>
+    <string name="settings_import_data_title">Import data</string>
+    <string name="settings_restore">Restore</string>
 
     <!-- Backup -->
     <string name="backup_title">Backup</string>
@@ -379,4 +387,26 @@
     <string name="drawer_no_favorite_groups">No favorite groups</string>
     <string name="drawer_teachers">Instructors</string>
     <string name="drawer_no_favorite_teachers">No favorite instructors</string>
+
+    <!-- Missing EN keys filled from PL -->
+    <string name="btn_ok">OK</string>
+    <string name="task_details_empty_title">No task data</string>
+    <string name="task_details_empty_message">Failed to load details of this task.</string>
+    <string name="class_details_empty_title">No class data</string>
+    <string name="class_details_empty_message">Failed to load details of these classes.</string>
+    <string name="event_details_empty_title">No event data</string>
+    <string name="event_details_empty_message">Failed to load details of this event.</string>
+    <string name="label_place">Location</string>
+    <string name="label_room_format">Room %1$s</string>
+    <string name="label_teacher">Instructor</string>
+    <string name="label_group">Group</string>
+    <string name="label_subgroup_format">%1$s (Subgroup: %2$s)</string>
+    <string name="item_type_task">task</string>
+    <string name="time_picker_title">Select time</string>
+    <string name="search_hint">Search...</string>
+    <string name="fab_add_grade">Add grade</string>
+    <string name="fab_add_absence">Add absence</string>
+    <string name="fab_add_task">Add task</string>
+    <string name="widget_loading">Loading data...</string>
+    <string name="widget_refresh">Refresh</string>
 </resources>

@@ -7,6 +7,8 @@ import com.example.my_uz_android.data.repositories.ClassRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.unmockkAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -93,6 +95,26 @@ class ClassRepositoryTest {
         assertEquals(2, result.size)
         assertEquals(3, result[0].id)
         assertEquals(nextDay.toString(), result[0].date)
+    }
+
+    @Test
+    fun `syncGroupClasses przy spam klikach zapisuje plan bez duplikatow`() = runTest {
+        val duplicateA = createClass(10, "2026-04-15", "08:00", "09:30").copy(
+            supabaseId = "SAME-1",
+            subjectName = "Algorytmy"
+        )
+        val duplicateB = duplicateA.copy(id = 11)
+
+        coEvery { classDao.replaceGroupClasses(any(), any()) } returns Unit
+
+        classRepository.syncGroupClasses("INF-1", listOf(duplicateA, duplicateB))
+
+        coVerify(exactly = 1) {
+            classDao.replaceGroupClasses(
+                "INF-1",
+                match { deduped -> deduped.size == 1 && deduped.first().supabaseId == "SAME-1" }
+            )
+        }
     }
 
     // Funkcja pomocnicza uzupełniona o wymagane parametry

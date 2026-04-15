@@ -171,7 +171,7 @@ fun SettingsScreen(
 
                     // --- PRZYWRÓCONE: KOLORY ZAJĘĆ ---
                     if (uiState.uniqueClassTypes.isNotEmpty()) {
-                        SettingsSection(title = "Kolory zajęć") {
+                        SettingsSection(title = stringResource(R.string.settings_class_colors_section)) {
                             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                                 uiState.uniqueClassTypes.forEach { classType ->
                                     val safeClassType = classType.trim()
@@ -198,8 +198,8 @@ fun SettingsScreen(
                         if (activeSettings?.notificationsEnabled == true) {
                             SettingsToggleItem(
                                 iconRes = R.drawable.ic_clock,
-                                title = "Zajęcia",
-                                description = "15 minut przed rozpoczęciem",
+                                title = stringResource(R.string.settings_notifications_classes_title),
+                                description = stringResource(R.string.settings_notifications_classes_desc),
                                 isChecked = activeSettings.notificationsClasses,
                                 onCheckedChange = { viewModel.toggleClassesNotifications(it) }
                             )
@@ -211,7 +211,7 @@ fun SettingsScreen(
                         SettingsActionItem(
                             iconRes = R.drawable.ic_export,
                             title = stringResource(R.string.btn_export),
-                            description = "Zapisz kopię danych do pliku JSON",
+                            description = stringResource(R.string.settings_backup_export_desc),
                             onClick = {
                                 exportSelection = BackupDataType.entries.toSet()
                                 showExportDialog = true
@@ -221,7 +221,7 @@ fun SettingsScreen(
                         SettingsActionItem(
                             iconRes = R.drawable.ic_import,
                             title = stringResource(R.string.btn_import),
-                            description = "Przywróć dane z pliku zewnętrznego",
+                            description = stringResource(R.string.settings_backup_import_desc),
                             isDestructive = true,
                             onClick = { importLauncher.launch("application/json") }
                         )
@@ -241,8 +241,8 @@ fun SettingsScreen(
 
     if (showExportDialog) {
         DataTypeSelectionDialog(
-            title = "Eksportuj dane",
-            confirmText = "Eksportuj",
+            title = stringResource(R.string.settings_export_data_title),
+            confirmText = stringResource(R.string.btn_export),
             initialSelection = exportSelection,
             onDismiss = { showExportDialog = false },
             onConfirm = { selection ->
@@ -255,8 +255,8 @@ fun SettingsScreen(
 
     if (uiState.showImportDialog && uiState.backupPreview != null) {
         DataTypeSelectionDialog(
-            title = "Importuj dane",
-            confirmText = "Przywróć",
+            title = stringResource(R.string.settings_import_data_title),
+            confirmText = stringResource(R.string.settings_restore),
             initialSelection = BackupDataType.entries.toSet(),
             onDismiss = { viewModel.cancelImport() },
             onConfirm = { selection -> viewModel.confirmImport(selection) }
@@ -434,7 +434,7 @@ fun DataTypeSelectionDialog(title: String, confirmText: String, initialSelection
             }
         },
         confirmButton = { TextButton(onClick = { onConfirm(selection) }) { Text(confirmText, style = MaterialTheme.typography.labelLarge) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Anuluj", style = MaterialTheme.typography.labelLarge) } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.btn_cancel), style = MaterialTheme.typography.labelLarge) } }
     )
 }
 

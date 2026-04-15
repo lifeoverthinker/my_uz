@@ -18,4 +18,17 @@ class FavoritesRepository(private val favoritesDao: FavoritesDao) {
     // Poprawiona metoda dopasowana do DAO (usuwanie po resourceId)
     suspend fun deleteFavoriteByResourceId(resourceId: String) =
         favoritesDao.deleteByResourceId(resourceId)
+
+    suspend fun existsByResourceIdAndType(resourceId: String, type: String): Boolean =
+        favoritesDao.existsByResourceIdAndType(resourceId, type)
+
+    suspend fun deleteFavoriteByResourceIdAndType(resourceId: String, type: String) =
+        favoritesDao.deleteByResourceIdAndType(resourceId, type)
+
+    suspend fun insertFavoriteIfAbsent(favorite: FavoriteEntity) {
+        if (!favoritesDao.existsByResourceIdAndType(favorite.resourceId, favorite.type)) {
+            favoritesDao.insertFavorite(favorite)
+        }
+        favoritesDao.deleteDuplicateEntries(favorite.resourceId, favorite.type)
+    }
 }

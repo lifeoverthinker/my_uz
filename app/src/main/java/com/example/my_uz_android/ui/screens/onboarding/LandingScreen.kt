@@ -104,7 +104,7 @@ fun LandingScreen(
                             enabled = !isLoading
                         ) {
                             Text(
-                                "Pomiń",
+                                stringResource(R.string.onboarding_skip),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -138,7 +138,7 @@ fun LandingScreen(
                                             contentColor = MaterialTheme.colorScheme.onPrimary
                                         )
                                     ) {
-                                        Text("Rozpocznij", style = MaterialTheme.typography.labelLarge)
+                                        Text(stringResource(R.string.onboarding_start), style = MaterialTheme.typography.labelLarge)
                                         Spacer(Modifier.width(8.dp))
                                         Icon(
                                             painter = painterResource(id = R.drawable.ic_chevron_right),
@@ -159,7 +159,7 @@ fun LandingScreen(
                                         ) {
                                             Icon(painterResource(R.drawable.ic_chevron_left), null, Modifier.size(20.dp))
                                             Spacer(Modifier.width(8.dp))
-                                            Text("Wstecz")
+                                            Text(stringResource(R.string.onboarding_back))
                                         }
                                         Button(
                                             onClick = {
@@ -174,7 +174,7 @@ fun LandingScreen(
                                                     color = MaterialTheme.colorScheme.onPrimary
                                                 )
                                             } else {
-                                                Text("Zaczynamy!")
+                                                Text(stringResource(R.string.onboarding_finish))
                                             }
                                         }
                                     }
@@ -191,14 +191,14 @@ fun LandingScreen(
                                         ) {
                                             Icon(painterResource(R.drawable.ic_chevron_left), null, Modifier.size(20.dp))
                                             Spacer(Modifier.width(8.dp))
-                                            Text("Wstecz")
+                                            Text(stringResource(R.string.onboarding_back))
                                         }
                                         Button(
                                             onClick = { viewModel.onAdditionalCoursesNextClick() },
                                             modifier = Modifier.weight(1f).height(48.dp),
                                             enabled = !isLoading
                                         ) {
-                                            Text("Dalej")
+                                            Text(stringResource(R.string.onboarding_next))
                                             Spacer(Modifier.width(8.dp))
                                             Icon(painterResource(R.drawable.ic_chevron_right), null, Modifier.size(20.dp))
                                         }
@@ -220,14 +220,14 @@ fun LandingScreen(
                                         ) {
                                             Icon(painterResource(R.drawable.ic_chevron_left), null, Modifier.size(20.dp))
                                             Spacer(Modifier.width(8.dp))
-                                            Text("Wstecz")
+                                            Text(stringResource(R.string.onboarding_back))
                                         }
                                         Button(
                                             onClick = { viewModel.onNextClick() },
                                             modifier = Modifier.weight(1f).height(48.dp),
                                             enabled = isNextEnabled
                                         ) {
-                                            Text("Dalej")
+                                            Text(stringResource(R.string.onboarding_next))
                                             Spacer(Modifier.width(8.dp))
                                             Icon(painterResource(R.drawable.ic_chevron_right), null, Modifier.size(20.dp))
                                         }
@@ -434,9 +434,9 @@ fun AdditionalCoursesStepContent(viewModel: OnboardingViewModel) {
 fun WelcomeStepContent() {
     ResponsiveOnboardingStep(illustrationResId = R.drawable.college_students_rafiki) {
         OnboardingTexts(
-            title = "Witaj w MyUZ! 👋",
-            subtitle = "Twój cyfrowy asystent na\nUniwersytecie Zielonogórskim",
-            description = "Zarządzaj zajęciami, zadaniami i ocenami w jednym miejscu. Wszystko co potrzebujesz do organizacji życia studenckiego."
+            title = stringResource(R.string.onboarding_welcome_title),
+            subtitle = stringResource(R.string.onboarding_welcome_subtitle),
+            description = stringResource(R.string.onboarding_welcome_desc)
         )
     }
 }
@@ -456,9 +456,9 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
 
     ResponsiveOnboardingStep(illustrationResId = R.drawable.hello_rafiki) {
         OnboardingTexts(
-            title = "Personalizacja",
-            subtitle = "Kim jesteś?",
-            description = "Dzięki temu aplikacja będzie zwracać się do Ciebie tak, jak lubisz"
+            title = stringResource(R.string.onboarding_personalization_title),
+            subtitle = stringResource(R.string.onboarding_personalization_subtitle),
+            description = stringResource(R.string.onboarding_personalization_desc)
         )
 
         Column(
@@ -466,7 +466,7 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Forma zwrotu",
+                text = stringResource(R.string.onboarding_return_form),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -482,7 +482,7 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
                     onClick = { viewModel.setGender(UserGender.STUDENT) },
                     label = {
                         Text(
-                            "Student",
+                            stringResource(R.string.edit_personal_data_student),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             style = MaterialTheme.typography.titleMedium
@@ -497,7 +497,7 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
                     onClick = { viewModel.setGender(UserGender.STUDENTKA) },
                     label = {
                         Text(
-                            "Studentka",
+                            stringResource(R.string.edit_personal_data_studentka),
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             style = MaterialTheme.typography.titleMedium
@@ -519,7 +519,7 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Twoje dane",
+                    text = stringResource(R.string.onboarding_your_data),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -529,7 +529,7 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
                 OutlinedTextField(
                     value = userName,
                     onValueChange = { viewModel.setUserName(it) },
-                    label = { Text("Imię") },
+                    label = { Text(stringResource(R.string.onboarding_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
@@ -542,7 +542,7 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
                 OutlinedTextField(
                     value = userSurname,
                     onValueChange = { viewModel.setUserSurname(it) },
-                    label = { Text("Nazwisko (opcjonalne)") },
+                    label = { Text(stringResource(R.string.onboarding_surname_optional)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
@@ -574,9 +574,9 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
 
     ResponsiveOnboardingStep(illustrationResId = R.drawable.settings_rafiki) {
         OnboardingTexts(
-            title = "Wybierz swoją grupę",
-            subtitle = "Znajdź swój plan zajęć",
-            description = "Wybierz swoją grupę i podgrupy, aby dostosować aplikację do Twojego rozkładu zajęć"
+            title = stringResource(R.string.onboarding_group_title),
+            subtitle = stringResource(R.string.onboarding_group_subtitle),
+            description = stringResource(R.string.onboarding_group_desc)
         )
 
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -590,13 +590,13 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
                         viewModel.setGroupSearchQuery(it)
                         expanded = true
                     },
-                    placeholder = { Text("np. 23INF-SP") },
-                    label = { Text("Kod grupy") },
+                    placeholder = { Text(stringResource(R.string.onboarding_group_hint)) },
+                    label = { Text(stringResource(R.string.onboarding_group_label)) },
                     leadingIcon = { Icon(painterResource(R.drawable.ic_search), null, Modifier.size(24.dp)) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.setGroupSearchQuery("") }) {
-                                Icon(painterResource(R.drawable.ic_close), "Wyczyść", Modifier.size(24.dp))
+                                Icon(painterResource(R.drawable.ic_close), stringResource(R.string.onboarding_clear), Modifier.size(24.dp))
                             }
                         }
                     },
@@ -636,7 +636,7 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
 
             if (!isLoading && searchQuery.isNotEmpty() && filteredGroups.isEmpty() && selectedGroup == null) {
                 Text(
-                    text = "Nie znaleziono takiej grupy",
+                    text = stringResource(R.string.onboarding_group_not_found),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)
@@ -652,7 +652,7 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Wybierz podgrupy",
+                    text = stringResource(R.string.onboarding_select_subgroups),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -679,9 +679,9 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
 fun CalendarFeatureStepContent() {
     InfoStepContent(
         pageIndex = 3,
-        title = "Terminarz i kalendarz",
-        subtitle = "Wszystkie zajęcia w jednym miejscu",
-        description = "Sprawdzaj plan zajęć, dodawaj zadania i nie przegap żadnego wydarzenia uniwersyteckiego"
+        title = stringResource(R.string.onboarding_calendar_title),
+        subtitle = stringResource(R.string.onboarding_calendar_subtitle),
+        description = stringResource(R.string.onboarding_calendar_desc)
     )
 }
 
@@ -692,9 +692,9 @@ fun CalendarFeatureStepContent() {
 fun GradesFeatureStepContent() {
     InfoStepContent(
         pageIndex = 4,
-        title = "Osobisty indeks",
-        subtitle = "Śledź swoje postępy lokalnie",
-        description = "Twoje oceny w jednym miejscu. Zapisuj wyniki, sprawdzaj średnią i pilnuj limitów nieobecności"
+        title = stringResource(R.string.onboarding_grades_title),
+        subtitle = stringResource(R.string.onboarding_grades_subtitle),
+        description = stringResource(R.string.onboarding_grades_desc)
     )
 }
 
@@ -705,9 +705,9 @@ fun GradesFeatureStepContent() {
 fun FinalStepContent() {
     InfoStepContent(
         pageIndex = 5,
-        title = "Wszystko gotowe! 🎉",
-        subtitle = "Witaj na pokładzie!",
-        description = "Twój profil został skonfigurowany. Plan zajęć, indeks i terminarz czekają na Ciebie"
+        title = stringResource(R.string.onboarding_final_title),
+        subtitle = stringResource(R.string.onboarding_final_subtitle),
+        description = stringResource(R.string.onboarding_final_desc)
     )
 }
 
@@ -846,7 +846,7 @@ fun PageIndicators(totalPages: Int, currentPage: Int) {
          */
 fun FooterText() {
     Text(
-        text = "MyUZ 2026 Wersja 1.00",
+        text = stringResource(R.string.onboarding_footer),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.outline
     )

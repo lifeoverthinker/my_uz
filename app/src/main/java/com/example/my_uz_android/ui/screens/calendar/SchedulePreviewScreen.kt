@@ -22,6 +22,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,13 +99,13 @@ fun SchedulePreviewScreen(
     val classes = uiState.visibleClasses
     val classColorMap = uiState.classColorMap
     val planName = uiState.selectedPlanName
-    val isFavorite = uiState.favorites.any { it.name == planName }
 
     val type = when (val source = uiState.currentSource) {
         is ScheduleSource.Preview -> source.type
         is ScheduleSource.Favorite -> source.type
         else -> "group"
     }
+    val isFavorite = uiState.favorites.any { it.resourceId == planName && it.type == type }
     val isTeacher = type == "teacher"
 
     val teacherData = remember(classes) {
@@ -164,12 +166,26 @@ fun SchedulePreviewScreenContent(
         classes.map { it.subgroup ?: "" }.distinct().sorted()
     }
 
-    var selectedSubgroups by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var selectedSubgroups by rememberSaveable(
+        planName,
+        isTeacher,
+        stateSaver = listSaver<Set<String>, String>(
+            save = { it.toList() },
+            restore = { it.toSet() }
+        )
+    ) { mutableStateOf(emptySet<String>()) }
 
     LaunchedEffect(availableSubgroups) {
-        if (selectedSubgroups.isEmpty() && availableSubgroups.isNotEmpty()) {
-            // Zielony komentarz: domyślnie zaznaczamy wszystkie dostępne podgrupy.
-            selectedSubgroups = availableSubgroups.toSet()
+        val availableSet = availableSubgroups.toSet()
+        val keptSelection = selectedSubgroups.intersect(availableSet)
+        val reconciledSelection = when {
+            availableSet.isEmpty() -> emptySet()
+            keptSelection.isEmpty() -> availableSet
+            else -> keptSelection
+        }
+
+        if (reconciledSelection != selectedSubgroups) {
+            selectedSubgroups = reconciledSelection
         }
     }
 
@@ -183,8 +199,9 @@ fun SchedulePreviewScreenContent(
     val startMonth = remember { currentMonth.minusMonths(24) }
     val endMonth = remember { currentMonth.plusMonths(24) }
 
-    var selectedDate by remember { mutableStateOf(currentDate) }
-    var isMonthView by remember { mutableStateOf(false) }
+    var selectedDateEpochDay by rememberSaveable { mutableStateOf(currentDate.toEpochDay()) }
+    val selectedDate = LocalDate.ofEpochDay(selectedDateEpochDay)
+    var isMonthView by rememberSaveable { mutableStateOf(false) }
     var swipeDirection by remember { mutableStateOf<DaySwipeDirection?>(null) }
 
     val weekState = rememberWeekCalendarState(
@@ -207,7 +224,7 @@ fun SchedulePreviewScreenContent(
         if (newDate == selectedDate) return
 
         swipeDirection = direction
-        selectedDate = newDate
+        selectedDateEpochDay = newDate.toEpochDay()
 
         scope.launch {
             if (isMonthView) monthState.scrollToMonth(YearMonth.from(newDate))
@@ -218,7 +235,9 @@ fun SchedulePreviewScreenContent(
     Scaffold(
         topBar = {
             PreviewTopAppBar(
-                title = if (isTeacher) stringResource(R.string.preview_teacher_plan) else stringResource(R.string.preview_group_plan),
+                title = if (isTeacher) stringResource(R.string.preview_teacher_plan) else stringResource(
+                    R.string.preview_group_plan
+                ),
                 subtitle = if (isTeacher) (teacherData?.teacherName ?: planName) else planName,
                 isFavorite = isFavorite,
                 onBackClick = onBackClick,
@@ -294,7 +313,7 @@ fun SchedulePreviewScreenContent(
                         swipeDirection = swipeDirection,
                         onDateSelected = { date ->
                             swipeDirection = null
-                            selectedDate = date
+                            selectedDateEpochDay = date.toEpochDay()
                             if (isMonthView) {
                                 isMonthView = false
                                 scope.launch { weekState.scrollToWeek(date) }
@@ -303,7 +322,11 @@ fun SchedulePreviewScreenContent(
                         onToggleView = {
                             isMonthView = !isMonthView
                             scope.launch {
-                                if (isMonthView) monthState.scrollToMonth(YearMonth.from(selectedDate))
+                                if (isMonthView) monthState.scrollToMonth(
+                                    YearMonth.from(
+                                        selectedDate
+                                    )
+                                )
                                 else weekState.scrollToWeek(selectedDate)
                             }
                         },
@@ -325,7 +348,8 @@ fun SchedulePreviewScreenContent(
         TeacherInfoDialog(
             onDismiss = { showTeacherInfo = false },
             fullName = teacherData?.teacherName ?: planName,
-            department = teacherData?.teacherInstitute ?: stringResource(R.string.preview_no_department),
+            department = teacherData?.teacherInstitute
+                ?: stringResource(R.string.preview_no_department),
             email = teacherData?.teacherEmail ?: stringResource(R.string.preview_no_email)
         )
     }

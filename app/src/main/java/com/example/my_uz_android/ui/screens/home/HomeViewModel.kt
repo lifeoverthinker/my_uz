@@ -22,6 +22,7 @@ import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.TasksRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.data.repositories.UserCourseRepository
+import com.example.my_uz_android.util.classesStillRemainingToday
 import com.example.my_uz_android.util.SubgroupMatcher
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -37,9 +38,9 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -80,6 +81,7 @@ class HomeViewModel(
 
     private val gson = Gson()
     private val _isLoadingNetwork = MutableStateFlow(false)
+    private val isRefreshInProgress = AtomicBoolean(false)
 
     // 3. ZMIANA: Strumień "tikający" na bieżąco, wymuszający przeliczanie planu, jak wybije północ
     private val _currentTimeReference = MutableStateFlow(LocalDateTime.now(ZoneId.of("Europe/Warsaw")))
@@ -177,7 +179,11 @@ class HomeViewModel(
                 visibleClasses
             }
 
-            val classesForToday = finalVisibleClasses.filter { it.date == today.toString() }
+            val classesForToday = classesStillRemainingToday(
+                classes = finalVisibleClasses,
+                today = today,
+                nowTime = nowReference.toLocalTime()
+            )
             val classesForTomorrow = finalVisibleClasses.filter { it.date == tomorrow.toString() }
             val upcomingTasks = tasks.filter { !it.isCompleted }.sortedBy { it.dueDate }
             val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", java.util.Locale("pl", "PL"))
@@ -224,26 +230,30 @@ class HomeViewModel(
      */
     fun refreshSchedule() {
         viewModelScope.launch {
-            val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch
-            val groupCodes = mutableListOf<Pair<String, String?>>()
-
-            settings.selectedGroupCode?.let { groupCodes.add(it to settings.selectedSubgroup) }
-
-            val extraCourses = userCourseRepository.getAllUserCoursesStream().firstOrNull().orEmpty()
-            extraCourses.forEach { groupCodes.add(it.groupCode to it.selectedSubgroup) }
-
-            if (groupCodes.isEmpty()) return@launch
-
-            _isLoadingNetwork.value = true
+            if (!isRefreshInProgress.compareAndSet(false, true)) return@launch
             try {
+                val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch
+                val groupCodes = mutableListOf<Pair<String, String?>>()
+
+                settings.selectedGroupCode?.let { groupCodes.add(it to settings.selectedSubgroup) }
+
+                val extraCourses = userCourseRepository.getAllUserCoursesStream().firstOrNull().orEmpty()
+                extraCourses.forEach { groupCodes.add(it.groupCode to it.selectedSubgroup) }
+
+                if (groupCodes.isEmpty()) return@launch
+
+                _isLoadingNetwork.value = true
                 // Skrypt Supabase do odświeżania na podstawie danych UZ
-                groupCodes.forEach { (code, subgroup) ->
+                groupCodes
+                    .distinctBy { (code, subgroup) -> code.trim().lowercase() to subgroup?.trim()?.lowercase() }
+                    .forEach { (code, subgroup) ->
                     universityRepository.refreshSchedule(code, subgroup, classRepository)
                 }
             } catch (e: Exception) {
                 Log.e("HomeVM", "Błąd odświeżania: ${e.message}")
             } finally {
                 _isLoadingNetwork.value = false
+                isRefreshInProgress.set(false)
             }
         }
     }
@@ -259,10 +269,7 @@ class HomeViewModel(
             while (isActive) {
                 delay(60_000L) // Czekaj minutę
                 val newTime = LocalDateTime.now(ZoneId.of("Europe/Warsaw"))
-                // Jeśli zmienił się dzień, powiadom StateFlow!
-                if (newTime.toLocalDate() != _currentTimeReference.value.toLocalDate()) {
-                    _currentTimeReference.value = newTime
-                }
+                _currentTimeReference.value = newTime
             }
         }
     }

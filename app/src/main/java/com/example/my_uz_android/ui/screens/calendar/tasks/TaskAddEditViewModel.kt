@@ -76,11 +76,15 @@ class TaskAddEditViewModel(
             _uiState.update {
                 it.copy(
                     title = savedStateHandle.get<String>("title") ?: "",
-                    description = savedStateHandle.get<String>("description") ?: "",
+                    description = savedStateHandle.get<String>("desc")
+                        ?: savedStateHandle.get<String>("description")
+                        ?: "",
                     classSubject = savedStateHandle.get<String>("subject"),
-                    classType = savedStateHandle.get<String>("classType"),
+                    classType = savedStateHandle.get<String>("type")
+                        ?: savedStateHandle.get<String>("classType"),
                     isAllDay = savedStateHandle.get<Boolean>("isAllDay") ?: false,
-                    startDate = savedStateHandle.get<Long>("date")
+                    startDate = (savedStateHandle.get<Long>("dueDate")
+                        ?: savedStateHandle.get<Long>("date"))
                         ?.let { dateMillis ->
                             Instant.ofEpochMilli(dateMillis)
                                 .atZone(ZoneId.systemDefault())
