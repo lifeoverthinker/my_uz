@@ -114,6 +114,11 @@
     <string name="chip_exam">Exam</string>
     <string name="chip_project">Project</string>
     <string name="chip_activity">Activity</string>
+    <string name="chip_entrance_test">Entrance test</string>
+    <string name="chip_presentation">Presentation</string>
+    <string name="chip_homework">Homework</string>
+    <string name="chip_oral_answer">Oral answer</string>
+    <string name="chip_report">Report</string>
     <string name="chip_other">Other</string>
 
     <!-- Nieobecności -->
@@ -144,6 +149,7 @@
     <string name="dialog_filter_subgroups_title">Filter subgroups</string>
     <string name="dialog_filter_schedule_title">Filter schedule</string>
     <string name="label_subgroups">Subgroups</string>
+    <string name="label_whole_group">Whole group</string>
 
     <!-- Home -->
     <string name="greeting_morning">Hi</string>
@@ -157,6 +163,7 @@
     <string name="events_title">Events</string>
     <string name="events_empty_card_title">Quiet time</string>
     <string name="events_empty_card_message">No upcoming events</string>
+    <string name="home_university_title">University of Zielona Gora</string>
     <string name="home_university_with_faculties">%1$s, %2$s</string>
     <string name="home_footer_label">MyUZ 2026</string>
 
@@ -260,7 +267,7 @@
     <string name="edit_personal_data_saved">Saved</string>
     <string name="edit_personal_data_return_form">Form of address</string>
     <string name="edit_personal_data_student">Student</string>
-    <string name="edit_personal_data_studentka">Student (female)</string>
+    <string name="edit_personal_data_studentka">Student</string>
     <string name="edit_personal_data_name">First name</string>
     <string name="edit_personal_data_surname">Last name</string>
     <string name="edit_personal_data_your_courses">Your study fields</string>
@@ -350,10 +357,7 @@
     <!-- Task Add/Edit -->
     <string name="task_edit_title">Edit task</string>
     <string name="task_add_title">Add task</string>
-    <string name="chip_entrance_test">Entrance test</string>
-    <string name="chip_presentation">Presentation</string>
-    <string name="chip_homework">Homework</string>
-    <string name="chip_oral_answer">Oral answer</string>
+
     <string name="label_task_title">Task title</string>
     <string name="placeholder_task_title">e.g. Read chapter 4</string>
     <string name="label_all_day">All-day task</string>
@@ -393,7 +397,7 @@
     <string name="search_plan_msg">Enter a group code or instructor name to view the plan.</string>
     <string name="search_no_results_title">No results</string>
     <string name="search_no_results_subtitle">No matching items found</string>
-    <string name="search_no_results_msg">Try entering a group code, a field of study, or an instructor\'s name.</string>
+    <string name="search_no_results_msg">Try entering a group code or an instructor\'s name.</string>
     <string name="search_section_groups">Groups</string>
     <string name="search_section_teachers">Lecturers</string>
     <string name="search_type_group">Group</string>

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.FavoriteEntity
 import com.example.my_uz_android.data.repositories.FavoritesRepository
+import com.example.my_uz_android.data.repositories.GroupSearchMeta
 import com.example.my_uz_android.data.repositories.TeacherDetailsDto
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.util.NetworkResult
@@ -29,12 +30,14 @@ data class SearchResultItem(
     val name: String,
     val type: String, // "group" | "teacher"
     val isFavorite: Boolean = false,
+    val studyField: String? = null,
     val email: String? = null,
     val institute: String? = null
 )
 
 private data class GroupSearchIndexItemScheduleSearchVM(
     val code: String,
+    val primaryStudyField: String?,
     val searchableTexts: List<String>
 )
 
@@ -84,7 +87,7 @@ class ScheduleSearchViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val groupsDeferred = async { universityRepository.getGroupCodes() }
+            val groupsDeferred = async { universityRepository.getGroupsForSearch() }
             val teachersDeferred = async { universityRepository.getAllTeachersWithDetails() }
 
             val groupsRes = groupsDeferred.await()
@@ -92,13 +95,14 @@ class ScheduleSearchViewModel(
 
             if (groupsRes is NetworkResult.Success) {
                 val groups = (groupsRes.data ?: emptyList())
-                    .filter { it.isNotBlank() }
-                    .distinct()
+                    .filter { it.code.isNotBlank() }
+                    .distinctBy { it.code }
 
-                allGroupsIndex = groups.map { groupCode ->
+                allGroupsIndex = groups.map { group ->
                     GroupSearchIndexItemScheduleSearchVM(
-                        code = groupCode,
-                        searchableTexts = buildGroupSearchableTextsScheduleSearchVM(groupCode)
+                        code = group.code,
+                        primaryStudyField = group.studyFields.firstOrNull { it.isNotBlank() },
+                        searchableTexts = buildGroupSearchableTextsScheduleSearchVM(group)
                     )
                 }
             }
@@ -146,8 +150,11 @@ class ScheduleSearchViewModel(
         val localMatchedGroups = allGroupsIndex
             .asSequence()
             .filter { groupItem ->
-                groupItem.searchableTexts.any { searchable ->
-                    matchesQueryScheduleSearchVM(searchable, words)
+                // Pozwala mieszać kryteria: np. fragment kodu grupy + fragment kierunku.
+                words.all { word ->
+                    groupItem.searchableTexts.any { searchable ->
+                        matchesQueryScheduleSearchVM(searchable, listOf(word))
+                    }
                 }
             }
             .map { it.code }
@@ -160,6 +167,8 @@ class ScheduleSearchViewModel(
             addAll(remoteMatchedGroups.filter { it.isNotBlank() })
         }
 
+        val studyFieldByCode = allGroupsIndex.associate { it.code to it.primaryStudyField }
+
         val matchedGroups = mergedGroupCodes
             .asSequence()
             .take(30)
@@ -167,7 +176,8 @@ class ScheduleSearchViewModel(
                 SearchResultItem(
                     name = groupCode,
                     type = "group",
-                    isFavorite = favoriteKeys.contains(groupCode to "group")
+                    isFavorite = favoriteKeys.contains(groupCode to "group"),
+                    studyField = studyFieldByCode[groupCode]
                 )
             }
 
@@ -207,11 +217,16 @@ class ScheduleSearchViewModel(
         return result
     }
 
-    private fun buildGroupSearchableTextsScheduleSearchVM(groupCode: String): List<String> {
-        val normalizedCode = groupCode.trim()
+    private fun buildGroupSearchableTextsScheduleSearchVM(group: GroupSearchMeta): List<String> {
+        val normalizedCode = group.code.trim()
         val compact = normalizedCode.replace(Regex("[^\\p{L}\\p{N}]"), " ")
-        return listOf(normalizedCode, compact)
+
+        return buildList {
+            add(normalizedCode)
+            add(compact)
+        }.distinct()
     }
+
 
     private fun matchesQueryScheduleSearchVM(candidate: String, words: List<String>): Boolean {
         val normalizedCandidate = candidate.normalizeForSearchScheduleSearchVM()

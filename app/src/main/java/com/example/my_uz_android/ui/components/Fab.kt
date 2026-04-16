@@ -8,6 +8,7 @@ package com.example.my_uz_android.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -70,6 +71,10 @@ fun Fab(
 ) {
     var isExpanded by remember { mutableStateOf(false) }
     val isDark = isSystemInDarkTheme()
+
+    BackHandler(enabled = isExpanded) {
+        isExpanded = false
+    }
 
     val addGradeLabel = stringResource(R.string.fab_add_grade)
     val addAbsenceLabel = stringResource(R.string.fab_add_absence)

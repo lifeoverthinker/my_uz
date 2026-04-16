@@ -164,10 +164,14 @@ class Widget : GlanceAppWidget() {
                     )
                 }
             } else {
-                LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = GlanceModifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     items(classes) { classItem ->
-                        ClassItemCard(classItem, colorMap, mainIntent)
-                        Spacer(modifier = GlanceModifier.height(16.dp))
+                        Box(modifier = GlanceModifier.padding(vertical = 4.dp, horizontal = 8.dp)) {
+                            ClassItemCard(classItem, colorMap, mainIntent)
+                        }
                     }
                 }
             }

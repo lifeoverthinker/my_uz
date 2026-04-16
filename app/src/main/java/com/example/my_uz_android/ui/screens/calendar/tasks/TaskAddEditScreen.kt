@@ -264,6 +264,7 @@ fun TaskAddEditScreen(
                     stringResource(R.string.chip_entrance_test) to "Wejściówka",
                     stringResource(R.string.chip_project) to "Projekt",
                     stringResource(R.string.chip_presentation) to "Prezentacja",
+                    stringResource(R.string.chip_report) to "Referat",
                     stringResource(R.string.chip_homework) to "Zadanie domowe",
                     stringResource(R.string.chip_oral_answer) to "Odpowiedź ustna"
                 )

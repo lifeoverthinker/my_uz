@@ -117,6 +117,12 @@ fun SubgroupFilterDialog(
         text = {
             LazyColumn {
                 items(subgroups) { subgroup ->
+                    val subgroupLabel = if (subgroup.isBlank()) {
+                        stringResource(R.string.label_whole_group)
+                    } else {
+                        subgroup
+                    }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -136,7 +142,7 @@ fun SubgroupFilterDialog(
                             onCheckedChange = null
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = subgroup)
+                        Text(text = subgroupLabel)
                     }
                 }
             }

@@ -205,7 +205,14 @@ fun SearchListItem(
             )
         },
         supportingContent = {
-            val secondaryText = if (item.type == "group") stringResource(R.string.search_type_group) else stringResource(R.string.search_type_teacher)
+            val secondaryText = when {
+                item.type == "group" && !item.studyField.isNullOrBlank() -> {
+                    "${stringResource(R.string.search_type_group)} • ${item.studyField}"
+                }
+
+                item.type == "group" -> stringResource(R.string.search_type_group)
+                else -> stringResource(R.string.search_type_teacher)
+            }
 
             Text(
                 text = secondaryText,
@@ -251,9 +258,21 @@ fun ScheduleSearchScreenResultsPreview() {
             uiState = SearchUiState(
                 searchQuery = "Kowalski",
                 searchResults = listOf(
-                    SearchResultItem("311-EA-ZI", "group", false),
-                    SearchResultItem("Jan Kowalski", "teacher", true, "j.kowalski@uz.zgora.pl", "Instytut Informatyki"),
-                    SearchResultItem("Adam Kowal", "teacher", false, null, "Wydział Mechaniczny")
+                    SearchResultItem("311-EA-ZI", "group", false, studyField = "Biznes elektroniczny"),
+                    SearchResultItem(
+                        "Jan Kowalski",
+                        "teacher",
+                        true,
+                        email = "j.kowalski@uz.zgora.pl",
+                        institute = "Instytut Informatyki"
+                    ),
+                    SearchResultItem(
+                        "Adam Kowal",
+                        "teacher",
+                        false,
+                        email = null,
+                        institute = "Wydział Mechaniczny"
+                    )
                 )
             ),
             onQueryChange = {},

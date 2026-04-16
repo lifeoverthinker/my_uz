@@ -7,11 +7,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -42,6 +44,8 @@ fun AbsencesScreen(
     onEditAbsenceClick: (Int) -> Unit
 ) {
     val absencesState by viewModel.absencesState.collectAsStateWithLifecycle()
+    val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    var expandedSubjectKeys by rememberSaveable { mutableStateOf(setOf<String>()) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (absencesState.isEmpty()) {
@@ -51,12 +55,21 @@ fun AbsencesScreen(
             )
         } else {
             LazyColumn(
+                state = listState,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                items(absencesState) { subjectGroup ->
+                items(absencesState, key = { it.subjectName }) { subjectGroup ->
                     ExpandableAbsenceCard(
                         subjectData = subjectGroup,
+                        isExpanded = expandedSubjectKeys.contains(subjectGroup.subjectName),
+                        onExpandedChange = { expanded ->
+                            expandedSubjectKeys = if (expanded) {
+                                expandedSubjectKeys + subjectGroup.subjectName
+                            } else {
+                                expandedSubjectKeys - subjectGroup.subjectName
+                            }
+                        },
                         onDeleteAbsence = { viewModel.deleteAbsence(it) },
                         onAddClick = { type -> onAddAbsenceClick(subjectGroup.subjectName, type) },
                         onUpdateLimit = { type, limit ->
@@ -73,13 +86,14 @@ fun AbsencesScreen(
 @Composable
 private fun ExpandableAbsenceCard(
     subjectData: SubjectAbsences,
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     onDeleteAbsence: (AbsenceEntity) -> Unit,
     onAddClick: (String) -> Unit,
     onUpdateLimit: (String, Int) -> Unit,
     onEditAbsenceClick: (Int) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val rotation by animateFloatAsState(if (expanded) 180f else 0f)
+    val rotation by animateFloatAsState(if (isExpanded) 180f else 0f)
     var showLimitDialogForType by remember { mutableStateOf<AbsenceTypeGroup?>(null) }
     var absenceToDelete by remember { mutableStateOf<AbsenceEntity?>(null) }
 
@@ -111,14 +125,14 @@ private fun ExpandableAbsenceCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(cardBackground, RoundedCornerShape(8.dp))
-            .then(if (expanded) Modifier.padding(bottom = 16.dp) else Modifier),
+            .then(if (isExpanded) Modifier.padding(bottom = 16.dp) else Modifier),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
             modifier = Modifier
                 .height(80.dp)
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .clickable { onExpandedChange(!isExpanded) }
                 .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -148,7 +162,7 @@ private fun ExpandableAbsenceCard(
             }
         }
 
-        AnimatedVisibility(visible = expanded) {
+        AnimatedVisibility(visible = isExpanded) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),

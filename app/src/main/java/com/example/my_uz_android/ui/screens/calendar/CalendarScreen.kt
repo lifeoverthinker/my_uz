@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -102,7 +104,8 @@ fun CalendarScreen(
         onClassClick = onClassClick,
         onDateSelected = viewModel::setSelectedDate,
         onToggleMonthView = viewModel::setMonthView,
-        onToggleGroupVisibility = viewModel::toggleGroupVisibility
+        onToggleGroupVisibility = viewModel::toggleGroupVisibility,
+        onRefresh = viewModel::refreshMyPlan
     )
 }
 
@@ -116,7 +119,8 @@ fun CalendarScreenContent(
     onClassClick: (ClassEntity) -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     onToggleMonthView: (Boolean) -> Unit,
-    onToggleGroupVisibility: (String) -> Unit
+    onToggleGroupVisibility: (String) -> Unit,
+    onRefresh: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -240,7 +244,9 @@ fun CalendarScreenContent(
             )
         }
     ) { padding ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = uiState.isLoading,
+            onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
@@ -252,26 +258,32 @@ fun CalendarScreenContent(
                     onSwipePrevious = { navigateDay(-1, DaySwipeDirection.PREVIOUS) }
                 )
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                ScheduleView(
-                    calendarState = monthState,
-                    weekState = weekState,
-                    selectedDate = selectedDate,
-                    isMonthView = isMonthView,
-                    swipeDirection = swipeDirection,
-                    onDateSelected = { date ->
-                        swipeDirection = null
-                        onDateSelected(date)
-                    },
-                    onToggleView = { onToggleMonthView(!isMonthView) },
-                    classes = uiState.visibleClasses,
-                    tasks = uiState.tasks,
-                    classColorMap = uiState.classColorMap,
-                    onClassClick = onClassClick,
-                    isDarkMode = isDark,
-                    modifier = Modifier.weight(1f),
-                    showHeader = false
-                )
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    ScheduleView(
+                        calendarState = monthState,
+                        weekState = weekState,
+                        selectedDate = selectedDate,
+                        isMonthView = isMonthView,
+                        swipeDirection = swipeDirection,
+                        onDateSelected = { date ->
+                            swipeDirection = null
+                            onDateSelected(date)
+                        },
+                        onToggleView = { onToggleMonthView(!isMonthView) },
+                        classes = uiState.visibleClasses,
+                        tasks = uiState.tasks,
+                        classColorMap = uiState.classColorMap,
+                        onClassClick = onClassClick,
+                        isDarkMode = isDark,
+                        modifier = Modifier.weight(1f),
+                        showHeader = false
+                    )
+                }
+
+                if (uiState.isLoading && uiState.visibleClasses.isEmpty()) {
+                    CircularProgressIndicator(modifier = Modifier.align(androidx.compose.ui.Alignment.Center))
+                }
             }
         }
     }

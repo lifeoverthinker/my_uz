@@ -36,10 +36,10 @@
     <string name="task_mark_complete">Oznacz jako ukończone</string>
     <string name="task_no_date">Brak terminu</string>
     <string name="task_not_found">Nie znaleziono zadania</string>
-    <string name="label_subject">PRZEDMIOT</string>
+    <string name="label_subject">Przedmiot</string>
     <string name="label_type">Rodzaj zajęć</string>
-    <string name="label_description">OPIS</string>
-    <string name="label_status">STATUS</string>
+    <string name="label_description">Opis</string>
+    <string name="label_status">Status</string>
     <string name="none">Brak</string>
 
     <string name="calendar_empty_title">Brak zajęć</string>
@@ -95,13 +95,13 @@
 
     <!-- Add/Edit Grade -->
     <string name="edit_entry">Edytuj wpis</string>
-    <string name="add_grade_points">Dodaj ocenę / punkty</string>
-    <string name="quick_choice">SZYBKI WYBÓR</string>
-    <string name="entry_type">TYP WPISU</string>
+    <string name="add_grade_points">Dodaj ocenę</string>
+    <string name="quick_choice">Szybki wybór</string>
+    <string name="entry_type">Typ wpisu</string>
     <string name="grade_scale">Skala</string>
     <string name="grade_points">Punkty</string>
     <string name="grade_activity">Plusy</string>
-    <string name="label_grade_value">OCENA</string>
+    <string name="label_grade_value">Ocena</string>
     <string name="label_points_count">Liczba punktów</string>
     <string name="label_activity_count">Liczba plusów: %1$d</string>
     <string name="label_weight_field">Waga (domyślnie 1.0)</string>
@@ -115,6 +115,11 @@
     <string name="chip_exam">Egzamin</string>
     <string name="chip_project">Projekt</string>
     <string name="chip_activity">Aktywność</string>
+    <string name="chip_entrance_test">Wejściówka</string>
+    <string name="chip_presentation">Prezentacja</string>
+    <string name="chip_homework">Zadanie domowe</string>
+    <string name="chip_oral_answer">Odpowiedź ustna</string>
+    <string name="chip_report">Referat</string>
     <string name="chip_other">Inne</string>
 
     <!-- Nieobecności -->
@@ -145,6 +150,7 @@
     <string name="dialog_filter_subgroups_title">Filtruj podgrupy</string>
     <string name="dialog_filter_schedule_title">Filtruj plan</string>
     <string name="label_subgroups">Podgrupy</string>
+    <string name="label_whole_group">Cała grupa</string>
 
     <!-- Home -->
     <string name="greeting_morning">Cześć</string>
@@ -158,6 +164,7 @@
     <string name="events_title">Wydarzenia</string>
     <string name="events_empty_card_title">Spokojny czas</string>
     <string name="events_empty_card_message">Brak nadchodzących wydarzeń</string>
+    <string name="home_university_title">Uniwersytet Zielonogórski</string>
     <string name="home_university_with_faculties">%1$s, %2$s</string>
     <string name="home_footer_label">MyUZ 2026</string>
 
@@ -183,11 +190,11 @@
     <string name="study_data_section">Dane studiów</string>
     <string name="anonymous_study_data_msg">Uzupełnij profil, aby zobaczyć dane studiów.</string>
     <string name="no_study_directions_msg">Brak przypisanych kierunków. Przejdz do ustawien, aby dodac swoj plan zajec.</string>
-    <string name="label_field_of_study">KIERUNEK</string>
-    <string name="label_study_mode">TRYB</string>
-    <string name="label_study_group">GRUPA</string>
-    <string name="label_faculty">WYDZIAŁ</string>
-    <string name="label_subgroups_caps">PODGRUPY</string>
+    <string name="label_field_of_study">Kierunek</string>
+    <string name="label_study_mode">Tryb</string>
+    <string name="label_study_group">Grupa</string>
+    <string name="label_faculty">Wydział</string>
+    <string name="label_subgroups_caps">Podgrupy</string>
     <string name="anonymous_user_name">Użytkownik Gość</string>
     <string name="anonymous_user_title">Konto gościa</string>
 
@@ -351,10 +358,7 @@
     <!-- Task Add/Edit -->
     <string name="task_edit_title">Edytuj zadanie</string>
     <string name="task_add_title">Dodaj zadanie</string>
-    <string name="chip_entrance_test">Wejściówka</string>
-    <string name="chip_presentation">Prezentacja</string>
-    <string name="chip_homework">Zadanie domowe</string>
-    <string name="chip_oral_answer">Odpowiedź ustna</string>
+
     <string name="label_task_title">Tytuł zadania</string>
     <string name="placeholder_task_title">np. Przeczytać rozdział 4</string>
     <string name="label_all_day">Zadanie całodniowe</string>
@@ -363,7 +367,7 @@
     <string name="label_set_reminder">Ustaw przypomnienie</string>
     <string name="label_date">Data</string>
     <string name="label_hour">Godzina</string>
-    <string name="label_priority">PRIORYTET</string>
+    <string name="label_priority">Priorytet</string>
     <string name="priority_low">Niski</string>
     <string name="priority_medium">Średni</string>
     <string name="priority_high">Wysoki</string>
@@ -394,7 +398,7 @@
     <string name="search_plan_msg">Wpisz kod grupy albo nazwisko wykładowcy, aby przejść do podglądu planu.</string>
     <string name="search_no_results_title">Brak wyników</string>
     <string name="search_no_results_subtitle">Nie znaleziono pasujących pozycji</string>
-    <string name="search_no_results_msg">Spróbuj wpisać kod grupy, fragment nazwy kierunku lub nazwisko prowadzącego.</string>
+    <string name="search_no_results_msg">Spróbuj wpisać kod grupy lub nazwisko prowadzącego.</string>
     <string name="search_section_groups">Grupy</string>
     <string name="search_section_teachers">Wykładowcy</string>
     <string name="search_type_group">Grupa</string>

@@ -10,6 +10,8 @@ import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import java.time.LocalDateTime
@@ -64,6 +66,20 @@ data class GroupCodeDto(
 ) {
     val code get() = (nazwaRaw ?: kodRaw)?.jsonPrimitive?.contentOrNull
 }
+
+@Serializable
+data class GroupSearchDto(
+    @SerialName("nazwa") val nazwaRaw: JsonElement? = null,
+    @SerialName("kod") val kodRaw: JsonElement? = null,
+    @SerialName("kierunki") val kierunkiRaw: JsonElement? = null
+) {
+    val code get() = (nazwaRaw ?: kodRaw)?.jsonPrimitive?.contentOrNull
+}
+
+data class GroupSearchMeta(
+    val code: String,
+    val studyFields: List<String>
+)
 
 @Serializable
 data class GroupIdDto(
@@ -132,6 +148,29 @@ class UniversityRepository(
     private val supabase: Postgrest,
     private val context: Context
 ) {
+    private fun extractStudyFieldNames(raw: JsonElement?): List<String> {
+        if (raw == null) return emptyList()
+
+        return try {
+            when {
+                raw is kotlinx.serialization.json.JsonArray -> raw.jsonArray
+                    .mapNotNull { element ->
+                        element.jsonObject["nazwa"]?.jsonPrimitive?.contentOrNull?.trim()
+                    }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+
+                raw is kotlinx.serialization.json.JsonObject -> listOfNotNull(
+                    raw.jsonObject["nazwa"]?.jsonPrimitive?.contentOrNull?.trim()
+                ).filter { it.isNotBlank() }
+
+                else -> emptyList()
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
     private fun tokenizeSubgroups(rawValues: List<String>): List<String> {
         return rawValues
             .asSequence()
@@ -257,6 +296,40 @@ class UniversityRepository(
             val result = supabase.from("grupy").select().decodeList<GroupCodeDto>().mapNotNull { it.code }.distinct().sorted()
             NetworkResult.Success(result)
         } catch (e: Exception) { NetworkResult.Error("Błąd pobierania grup.") }
+    }
+
+    /** Pobiera grupy wraz z nazwami kierunków do lokalnego indeksu wyszukiwarki. */
+    suspend fun getGroupsForSearch(): NetworkResult<List<GroupSearchMeta>> {
+        return try {
+            val result = supabase.from("grupy")
+                .select(columns = Columns.raw("nazwa, kod, kierunki:kierunek_id(nazwa)"))
+                .decodeList<GroupSearchDto>()
+                .mapNotNull { dto ->
+                    val code = dto.code?.trim().orEmpty()
+                    if (code.isBlank()) return@mapNotNull null
+                    GroupSearchMeta(
+                        code = code,
+                        studyFields = extractStudyFieldNames(dto.kierunkiRaw)
+                    )
+                }
+                .distinctBy { it.code }
+                .sortedBy { it.code }
+
+            NetworkResult.Success(result)
+        } catch (e: Exception) {
+            val fallback = when (val codes = getGroupCodes()) {
+                is NetworkResult.Success -> (codes.data ?: emptyList()).map {
+                    GroupSearchMeta(code = it, studyFields = emptyList())
+                }
+                is NetworkResult.Error -> emptyList()
+            }
+
+            if (fallback.isNotEmpty()) {
+                NetworkResult.Success(fallback)
+            } else {
+                NetworkResult.Error("Błąd pobierania grup do wyszukiwania.")
+            }
+        }
     }
 
     /** Zwraca podgrupy dostępne do wyboru dla określonej grupy. */

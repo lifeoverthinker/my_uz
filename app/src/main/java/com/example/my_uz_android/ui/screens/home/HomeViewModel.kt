@@ -57,6 +57,8 @@ data class HomeUiState(
     val faculties: List<String> = emptyList(),
     val semester: Int? = null,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
+    val hasAnyClasses: Boolean = false,
     val todaysClasses: List<ClassEntity> = emptyList(),
     val tomorrowClasses: List<ClassEntity> = emptyList(),
     val upcomingTasks: List<TaskEntity> = emptyList(),
@@ -196,7 +198,7 @@ class HomeViewModel(
             val left = ChronoUnit.DAYS.between(today, LocalDate.of(2025, 6, 20)).coerceAtLeast(0).toInt()
 
             // 5. ZMIANA: Tymczasowe opóźnienie, by uniknąć migania "Pustego ekranu"
-            val showLoading = isLoadingNet || (settings == null)
+            val showLoading = settings == null
 
             HomeUiState(
                 userName = settings?.userName ?: "Student",
@@ -204,6 +206,8 @@ class HomeViewModel(
                 faculties = facultiesList, // Przekazujemy listę wydziałów do UI!
                 semester = settings?.currentSemester,
                 isLoading = showLoading,
+                isRefreshing = isLoadingNet,
+                hasAnyClasses = finalVisibleClasses.isNotEmpty(),
                 todaysClasses = classesForToday,
                 tomorrowClasses = classesForTomorrow,
                 upcomingTasks = upcomingTasks,

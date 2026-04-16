@@ -130,8 +130,13 @@ fun PersonalDataScreenContent(
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     ListItem(
                         headlineContent = {
+                            val genderText = when (selectedGender) {
+                                UserGender.STUDENT -> stringResource(R.string.edit_personal_data_student)
+                                UserGender.STUDENTKA -> stringResource(R.string.edit_personal_data_studentka)
+                                null -> stringResource(R.string.default_user_title)
+                            }
                             Text(
-                                selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: stringResource(R.string.default_user_title),
+                                text = genderText,
                                 style = MaterialTheme.typography.bodyLarge
                             )
                         },

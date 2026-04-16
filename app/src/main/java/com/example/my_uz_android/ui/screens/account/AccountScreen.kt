@@ -121,9 +121,15 @@ fun AccountScreenContent(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            val userTitleText = when (selectedGender) {
+                UserGender.STUDENT -> stringResource(R.string.edit_personal_data_student)
+                UserGender.STUDENTKA -> stringResource(R.string.edit_personal_data_studentka)
+                null -> stringResource(R.string.default_user_title)
+            }
+
             ProfileSection(
                 userName = "$userName $userSurname".trim(),
-                userTitle = selectedGender?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: stringResource(R.string.default_user_title),
+                userTitle = userTitleText,
                 isAnonymous = isAnonymous
             )
 

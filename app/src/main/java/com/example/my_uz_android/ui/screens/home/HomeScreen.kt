@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,6 +71,21 @@ fun HomeScreen(
     onAddTaskClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var initialRefreshRequested by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(uiState.studyFields, uiState.hasAnyClasses, uiState.isLoading, uiState.isRefreshing) {
+        if (!initialRefreshRequested && !uiState.isLoading && !uiState.isRefreshing) {
+            val shouldAutoRefresh = uiState.studyFields.isNotEmpty() && !uiState.hasAnyClasses
+            if (shouldAutoRefresh) {
+                initialRefreshRequested = true
+                viewModel.refreshSchedule()
+            }
+        }
+        if (uiState.hasAnyClasses) {
+            initialRefreshRequested = true
+        }
+    }
+
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
     val topSectionBackground = extendedColors.homeTopBackground
@@ -184,21 +201,8 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        val uniqueFaculties = uiState.faculties
-                            .map { it.trim() }
-                            .filter { it.isNotEmpty() }
-                            .distinct()
-
-                        val greetingText = buildString {
-                            append(stringResource(R.string.uz_short))
-                            if (uniqueFaculties.isNotEmpty()) {
-                                append("\n")
-                                append(uniqueFaculties.joinToString("\n"))
-                            }
-                        }
-
                         Text(
-                            text = greetingText,
+                            text = stringResource(R.string.home_university_title),
                             style = MaterialTheme.typography.bodyMedium,
                             color = subHeaderContentColor
                         )
@@ -212,7 +216,12 @@ fun HomeScreen(
                         .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                     color = MaterialTheme.colorScheme.surface
                 ) {
-                    LazyColumn(contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
+                    PullToRefreshBox(
+                        isRefreshing = uiState.isRefreshing,
+                        onRefresh = viewModel::refreshSchedule,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
 
                         item {
                             val displayClasses = if (uiState.todaysClasses.isNotEmpty()) uiState.todaysClasses else uiState.tomorrowClasses
@@ -298,6 +307,7 @@ fun HomeScreen(
                             Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 24.dp), contentAlignment = Alignment.CenterStart) {
                                 Text(text = stringResource(R.string.home_footer_label), style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline))
                             }
+                        }
                         }
                     }
                 }

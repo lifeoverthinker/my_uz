@@ -70,19 +70,79 @@ sealed class Screen(val route: String, val titleRes: Int, @DrawableRes val iconR
     data object ClassDetails : Screen("class_details", 0, 0)
 }
 
+private const val ROUTE_LANDING = "landing"
+private const val ROUTE_TASKS = "tasks"
+private const val ROUTE_SCHEDULE_SEARCH = "schedule_search"
+private const val ROUTE_SCHEDULE_PREVIEW = "schedule_preview"
+
+private val calendarSectionRoutes = setOf(
+    Screen.Calendar.route,
+    ROUTE_TASKS,
+    ROUTE_SCHEDULE_SEARCH,
+    ROUTE_SCHEDULE_PREVIEW
+)
+
+private val sectionOrder = mapOf(
+    Screen.Main.route to 0,
+    Screen.Calendar.route to 1,
+    Screen.Index.route to 2,
+    Screen.Account.route to 3
+)
+
 private fun encodeNavArg(value: String?): String = Uri.encode(value ?: "")
 
 private fun decodeNavArg(value: String?): String = value?.let(Uri::decode) ?: ""
 
+private fun routeBase(route: String?): String? {
+    return route
+        ?.substringBefore('?')
+        ?.substringBefore('/')
+}
+
+private fun routeSection(route: String?): String? {
+    val base = routeBase(route) ?: return null
+    return when {
+        base in calendarSectionRoutes -> Screen.Calendar.route
+        base in sectionOrder.keys -> base
+        else -> null
+    }
+}
+
+private fun transitionDirection(
+    fromRoute: String?,
+    toRoute: String?,
+    defaultDirection: AnimatedContentTransitionScope.SlideDirection
+): AnimatedContentTransitionScope.SlideDirection {
+    val fromSection = routeSection(fromRoute)
+    val toSection = routeSection(toRoute)
+    val fromOrder = fromSection?.let(sectionOrder::get)
+    val toOrder = toSection?.let(sectionOrder::get)
+
+    if (fromOrder == null || toOrder == null || fromOrder == toOrder) {
+        return defaultDirection
+    }
+
+    return if (toOrder > fromOrder) {
+        AnimatedContentTransitionScope.SlideDirection.Left
+    } else {
+        AnimatedContentTransitionScope.SlideDirection.Right
+    }
+}
+
+private fun isBottomBarVisible(route: String?, items: List<Screen>): Boolean {
+    val base = routeBase(route) ?: return false
+    return items.any { it.route == base } || base in calendarSectionRoutes
+}
+
 @Composable
 fun AppNavigation(
-    startDestination: String = "landing",
+    startDestination: String = ROUTE_LANDING,
     navController: NavHostController = rememberNavController(),
     deepLinkIntent: android.content.Intent? = null
 ) {
     LaunchedEffect(deepLinkIntent) {
         if (deepLinkIntent?.data?.toString() == "myuz://add_task") {
-            navController.navigate("tasks") {
+            navController.navigate(ROUTE_TASKS) {
                 launchSingleTop = true
             }
         }
@@ -99,10 +159,8 @@ fun AppNavigation(
         viewModel(factory = AppViewModelProvider.Factory)
     val calendarUiState by sharedCalendarViewModel.uiState.collectAsState()
 
-    val showBottomBar = items.any { currentRoute?.startsWith(it.route) == true } ||
-            currentRoute == "tasks" ||
-            currentRoute == "schedule_search" ||
-            currentRoute == "schedule_preview"
+    val showBottomBar = isBottomBarVisible(currentRoute, items)
+    val isCalendarSectionRoute = routeBase(currentRoute) in calendarSectionRoutes
 
     val navBackgroundColor = extendedColors.navBackground
     val navBorderColor = extendedColors.navBorder
@@ -136,12 +194,12 @@ fun AppNavigation(
                     },
                     onTasksClick = {
                         scope.launch { drawerState.close() }
-                        navController.navigate("tasks") { launchSingleTop = true }
+                        navController.navigate(ROUTE_TASKS) { launchSingleTop = true }
                     },
                     onFavoriteClick = { fav ->
                         scope.launch { drawerState.close() }
                         sharedCalendarViewModel.selectFavoritePlan(fav)
-                        navController.navigate("schedule_preview")
+                        navController.navigate(ROUTE_SCHEDULE_PREVIEW)
                     },
                     onCloseDrawer = {
                         scope.launch { drawerState.close() }
@@ -180,8 +238,8 @@ fun AppNavigation(
                                 val currentDestination = navBackStackEntry?.destination
                                 items.forEach { screen ->
                                     val label = stringResource(screen.titleRes)
-                                    val isCalendarSection = screen.route == "calendar" &&
-                                            (currentRoute == "tasks" || currentRoute == "schedule_search" || currentRoute == "schedule_preview")
+                                    val isCalendarSection =
+                                        screen.route == Screen.Calendar.route && isCalendarSectionRoute
 
                                     val selected = currentDestination?.hierarchy?.any {
                                         it.route?.startsWith(screen.route) == true
@@ -239,22 +297,42 @@ fun AppNavigation(
                     startDestination = startDestination,
                     modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding()),
                     enterTransition = {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(300)) + fadeIn(tween(300))
+                        val direction = transitionDirection(
+                            fromRoute = initialState.destination.route,
+                            toRoute = targetState.destination.route,
+                            defaultDirection = AnimatedContentTransitionScope.SlideDirection.Left
+                        )
+                        slideIntoContainer(direction, tween(300)) + fadeIn(tween(300))
                     },
                     exitTransition = {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, tween(300)) + fadeOut(tween(300))
+                        val direction = transitionDirection(
+                            fromRoute = initialState.destination.route,
+                            toRoute = targetState.destination.route,
+                            defaultDirection = AnimatedContentTransitionScope.SlideDirection.Left
+                        )
+                        slideOutOfContainer(direction, tween(300)) + fadeOut(tween(300))
                     },
                     popEnterTransition = {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300)) + fadeIn(tween(300))
+                        val direction = transitionDirection(
+                            fromRoute = initialState.destination.route,
+                            toRoute = targetState.destination.route,
+                            defaultDirection = AnimatedContentTransitionScope.SlideDirection.Right
+                        )
+                        slideIntoContainer(direction, tween(300)) + fadeIn(tween(300))
                     },
                     popExitTransition = {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, tween(300)) + fadeOut(tween(300))
+                        val direction = transitionDirection(
+                            fromRoute = initialState.destination.route,
+                            toRoute = targetState.destination.route,
+                            defaultDirection = AnimatedContentTransitionScope.SlideDirection.Right
+                        )
+                        slideOutOfContainer(direction, tween(300)) + fadeOut(tween(300))
                     }
                 ) {
-                composable("landing") {
+                composable(ROUTE_LANDING) {
                     LandingScreen(onNavigateToHome = {
                         navController.navigate(Screen.Main.route) {
-                            popUpTo("landing") { inclusive = true }
+                            popUpTo(ROUTE_LANDING) { inclusive = true }
                         }
                     })
                 }
@@ -286,16 +364,16 @@ fun AppNavigation(
                 composable(Screen.Calendar.route) {
                     CalendarScreen(
                         onOpenDrawer = { scope.launch { drawerState.open() } },
-                        onSearchClick = { navController.navigate("schedule_search") },
-                        onTasksClick = { navController.navigate("tasks") },
+                        onSearchClick = { navController.navigate(ROUTE_SCHEDULE_SEARCH) },
+                        onTasksClick = { navController.navigate(ROUTE_TASKS) },
                         onAccountClick = { navController.navigate(Screen.Account.route) },
                         onClassClick = { classEntity -> navController.navigate("class_details/${classEntity.id}") },
-                        onShowPreview = { navController.navigate("schedule_preview") },
+                        onShowPreview = { navController.navigate(ROUTE_SCHEDULE_PREVIEW) },
                         viewModel = sharedCalendarViewModel
                     )
                 }
 
-                composable("schedule_preview") {
+                composable(ROUTE_SCHEDULE_PREVIEW) {
                     SchedulePreviewScreen(
                         navController = navController,
                         viewModel = sharedCalendarViewModel,
@@ -306,7 +384,7 @@ fun AppNavigation(
                     )
                 }
 
-                composable("schedule_search") {
+                composable(ROUTE_SCHEDULE_SEARCH) {
                     val searchViewModel: ScheduleSearchViewModel =
                         viewModel(factory = AppViewModelProvider.Factory)
                     ScheduleSearchScreen(
@@ -360,7 +438,7 @@ fun AppNavigation(
                     )
                 }
 
-                composable("tasks") {
+                composable(ROUTE_TASKS) {
                     TasksScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onAddTaskClick = { navController.navigate("add_task") },

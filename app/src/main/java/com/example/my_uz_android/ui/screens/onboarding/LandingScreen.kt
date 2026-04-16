@@ -10,6 +10,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -36,6 +38,7 @@ import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.UserGender
 import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.MyUZTheme
+import kotlin.math.abs
 
 @Composable
 private fun getIllustrationResId(currentPage: Int): Int = when (currentPage) {
@@ -263,14 +266,52 @@ fun LandingScreen(
                     },
                     label = "OnboardingContent"
                 ) { page ->
-                    when (page) {
-                        0 -> WelcomeStepContent()
-                        1 -> PersonalizationStepContent(viewModel)
-                        2 -> GroupSelectionStepContent(viewModel)
-                        3 -> AdditionalCoursesStepContent(viewModel)
-                        4 -> CalendarFeatureStepContent()
-                        5 -> GradesFeatureStepContent()
-                        6 -> FinalStepContent()
+                    var accumulatedDragX by remember(page) { mutableFloatStateOf(0f) }
+
+                    Box(
+                        modifier = Modifier.pointerInput(
+                            page,
+                            selectedGender,
+                            userName,
+                            selectedGroup,
+                            isLoading
+                        ) {
+                            val threshold = 72.dp.toPx()
+
+                            detectHorizontalDragGestures(
+                                onDragStart = { accumulatedDragX = 0f },
+                                onHorizontalDrag = { _, dragAmount ->
+                                    accumulatedDragX += dragAmount
+                                },
+                                onDragEnd = {
+                                    if (abs(accumulatedDragX) < threshold) return@detectHorizontalDragGestures
+
+                                    // Swipe w lewo = kolejny krok, swipe w prawo = poprzedni krok.
+                                    if (accumulatedDragX < 0f) {
+                                        when (page) {
+                                            1 -> if (selectedGender != null && userName.isNotBlank()) viewModel.onNextClick()
+                                            2 -> if (!selectedGroup.isNullOrBlank()) viewModel.onNextClick()
+                                            3 -> if (!isLoading) viewModel.onAdditionalCoursesNextClick()
+                                            in 0 until totalPages - 1 -> viewModel.onNextClick()
+                                        }
+                                    } else {
+                                        viewModel.onBackClick()
+                                    }
+
+                                    accumulatedDragX = 0f
+                                }
+                            )
+                        }
+                    ) {
+                        when (page) {
+                            0 -> WelcomeStepContent()
+                            1 -> PersonalizationStepContent(viewModel)
+                            2 -> GroupSelectionStepContent(viewModel)
+                            3 -> AdditionalCoursesStepContent(viewModel)
+                            4 -> CalendarFeatureStepContent()
+                            5 -> GradesFeatureStepContent()
+                            6 -> FinalStepContent()
+                        }
                     }
                 }
             }

@@ -253,15 +253,19 @@ fun AddEditGradeScreen(
             // --- SZYBKI WYBÓR ---
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = stringResource(R.string.quick_choice).uppercase(),
+                    text = stringResource(R.string.quick_choice),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 val quickTypes = listOf(
                     stringResource(R.string.chip_colloquium) to "Kolokwium",
                     stringResource(R.string.chip_exam) to "Egzamin",
-                    stringResource(R.string.chip_activity) to "Aktywność",
+                    stringResource(R.string.chip_entrance_test) to "Wejściówka",
                     stringResource(R.string.chip_project) to "Projekt",
+                    stringResource(R.string.chip_presentation) to "Prezentacja",
+                    stringResource(R.string.chip_oral_answer) to "Odpowiedź ustna",
+                    stringResource(R.string.chip_report) to "Referat",
+                    stringResource(R.string.chip_activity) to "Aktywność",
                     stringResource(R.string.chip_other) to "Inne"
                 )
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
