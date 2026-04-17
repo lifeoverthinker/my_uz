@@ -56,6 +56,7 @@ import com.example.my_uz_android.ui.screens.notifications.NotificationsViewModel
 import com.example.my_uz_android.ui.screens.onboarding.LandingScreen
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
@@ -166,11 +167,34 @@ fun AppNavigation(
     val navBorderColor = extendedColors.navBorder
     val navActiveColor = extendedColors.navActive
     val navInactiveColor = extendedColors.navInactive
+    var isClassDetailsNavigationInProgress by remember { mutableStateOf(false) }
     var bottomBarHeightPx by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
     val measuredBottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
     val effectiveBottomBarHeight = if (showBottomBar && bottomBarHeightPx == 0) 84.dp else measuredBottomBarHeight
     val fabBottomOffset = if (showBottomBar) effectiveBottomBarHeight + 24.dp else 24.dp
+
+    LaunchedEffect(currentRoute) {
+        if (routeBase(currentRoute) != Screen.ClassDetails.route) {
+            isClassDetailsNavigationInProgress = false
+        }
+    }
+
+    fun navigateToClassDetails(classId: Int, isTeacherPlan: Boolean = false) {
+        if (isClassDetailsNavigationInProgress) return
+        if (routeBase(currentRoute) == Screen.ClassDetails.route) return
+
+        isClassDetailsNavigationInProgress = true
+        val route = if (isTeacherPlan) {
+            "${Screen.ClassDetails.route}/$classId?isTeacherPlan=true"
+        } else {
+            "${Screen.ClassDetails.route}/$classId"
+        }
+
+        navController.navigate(route) {
+            launchSingleTop = true
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -339,7 +363,7 @@ fun AppNavigation(
 
                 composable(Screen.Main.route) {
                     HomeScreen(
-                        onClassClick = { classId -> navController.navigate("class_details/$classId") },
+                        onClassClick = { classId -> navigateToClassDetails(classId) },
                         onEventClick = { eventId -> navController.navigate("event_details/$eventId") },
                         onTaskClick = { taskId -> navController.navigate("task_details/$taskId") },
                         onSetupPlanClick = { navController.navigate("setup_plan") },
@@ -367,7 +391,7 @@ fun AppNavigation(
                         onSearchClick = { navController.navigate(ROUTE_SCHEDULE_SEARCH) },
                         onTasksClick = { navController.navigate(ROUTE_TASKS) },
                         onAccountClick = { navController.navigate(Screen.Account.route) },
-                        onClassClick = { classEntity -> navController.navigate("class_details/${classEntity.id}") },
+                        onClassClick = { classEntity -> navigateToClassDetails(classEntity.id) },
                         onShowPreview = { navController.navigate(ROUTE_SCHEDULE_PREVIEW) },
                         viewModel = sharedCalendarViewModel
                     )
@@ -377,9 +401,9 @@ fun AppNavigation(
                     SchedulePreviewScreen(
                         navController = navController,
                         viewModel = sharedCalendarViewModel,
-                        onClassClick = { classEntity ->
+                        onClassClick = { classEntity, isTeacherPlan ->
                             sharedCalendarViewModel.setTemporaryClassForDetails(classEntity)
-                            navController.navigate("class_details/-1")
+                            navigateToClassDetails(classId = -1, isTeacherPlan = isTeacherPlan)
                         }
                     )
                 }

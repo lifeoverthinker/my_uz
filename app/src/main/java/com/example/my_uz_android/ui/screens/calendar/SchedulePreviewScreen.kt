@@ -13,6 +13,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -92,7 +94,7 @@ private fun Modifier.calendarDaySwipeGestureSchedulePreviewScreen(
 fun SchedulePreviewScreen(
     navController: NavController,
     viewModel: CalendarViewModel = viewModel(factory = AppViewModelProvider.Factory),
-    onClassClick: (ClassEntity) -> Unit
+    onClassClick: (ClassEntity, Boolean) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -109,9 +111,9 @@ fun SchedulePreviewScreen(
     val isTeacher = type == "teacher"
 
     val teacherData = remember(classes) {
-        classes.firstOrNull {
-            !it.teacherEmail.isNullOrBlank() || !it.teacherInstitute.isNullOrBlank()
-        } ?: classes.firstOrNull { it.teacherName?.isNotBlank() == true }
+        classes.firstOrNull { !it.teacherEmail.isNullOrBlank() }
+            ?: classes.firstOrNull { !it.teacherInstitute.isNullOrBlank() }
+            ?: classes.firstOrNull { it.teacherName?.isNotBlank() == true }
     }
 
     val isDark = when (uiState.themeMode) {
@@ -138,8 +140,7 @@ fun SchedulePreviewScreen(
             )
         },
         onClassClick = { classEntity ->
-            viewModel.setTemporaryClassForDetails(classEntity)
-            navController.navigate("class_details/-1?isTeacherPlan=$isTeacher")
+            onClassClick(classEntity, isTeacher)
         }
     )
 }
@@ -161,6 +162,8 @@ fun SchedulePreviewScreenContent(
 ) {
     var showTeacherInfo by remember { mutableStateOf(false) }
     var showSubgroupFilter by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val emailCopiedMessage = stringResource(R.string.dialog_teacher_email_copied)
 
     val availableSubgroups = remember(classes) {
         classes.map { it.subgroup ?: "" }.distinct().sorted()
@@ -233,6 +236,7 @@ fun SchedulePreviewScreenContent(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             PreviewTopAppBar(
                 title = if (isTeacher) stringResource(R.string.preview_teacher_plan) else stringResource(
@@ -350,7 +354,12 @@ fun SchedulePreviewScreenContent(
             fullName = teacherData?.teacherName ?: planName,
             department = teacherData?.teacherInstitute
                 ?: stringResource(R.string.preview_no_department),
-            email = teacherData?.teacherEmail ?: stringResource(R.string.preview_no_email)
+            email = teacherData?.teacherEmail.orEmpty(),
+            onEmailCopied = {
+                scope.launch {
+                    snackbarHostState.showSnackbar(message = emailCopiedMessage)
+                }
+            }
         )
     }
 

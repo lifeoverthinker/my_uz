@@ -144,9 +144,13 @@
     <string name="item_type_grade">ocenę</string>
     <string name="item_type_absence">nieobecność</string>
     <string name="dialog_teacher_title">Prowadzący</string>
+    <string name="dialog_teacher_data_label">Dane nauczyciela</string>
+    <string name="dialog_teacher_department_label">Instytut / Katedra</string>
+    <string name="dialog_teacher_email_address_label">Adres e-mail</string>
     <string name="dialog_teacher_email_label">E-mail</string>
     <string name="dialog_teacher_copy_email">Kopiuj</string>
-    <string name="dialog_teacher_email_copied">Skopiowano e-mail</string>
+    <string name="dialog_teacher_email_copied">Skopiowano do schowka</string>
+    <string name="dialog_teacher_no_email">Brak adresu e-mail</string>
     <string name="dialog_filter_subgroups_title">Filtruj podgrupy</string>
     <string name="dialog_filter_schedule_title">Filtruj plan</string>
     <string name="label_subgroups">Podgrupy</string>
