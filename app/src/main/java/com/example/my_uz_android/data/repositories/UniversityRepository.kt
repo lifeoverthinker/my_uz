@@ -37,7 +37,9 @@ data class ClassScheduleDto(
     @SerialName("podgrupa") val podgrupaRaw: JsonElement? = null,
     @SerialName("grupa") val fallbackSubgroupRaw: JsonElement? = null,
     @SerialName("nauczyciel") val teacher: String? = null,
-    @SerialName("wykladowca") val fallbackTeacher: String? = null
+    @SerialName("wykladowca") val fallbackTeacher: String? = null,
+    @SerialName("id_semestru_aktualny") val currentSemesterId: String? = null,
+    @SerialName("nazwa_semestru_aktualny") val currentSemesterName: String? = null
 ) {
     val id get() = (uidRaw ?: idRaw)?.jsonPrimitive?.contentOrNull
     val subjectName get() = przedmiot ?: fallbackSubject
@@ -445,4 +447,16 @@ class UniversityRepository(
             is NetworkResult.Error -> NetworkResult.Error(result.message ?: "Wystąpił nieoczekiwany błąd odświeżania.")
         }
     }
+
+    suspend fun checkCurrentSemester(): NetworkResult<SemesterStateDto> {
+    return try {
+        val result = supabase.from("stan_semestru")
+            .select()
+            .decodeList<SemesterStateDto>()
+        result.firstOrNull()?.let { NetworkResult.Success(it) } 
+            ?: NetworkResult.Error("Brak danych o semestrze.")
+    } catch (e: Exception) {
+        NetworkResult.Error("Błąd sprawdzania semestru: ${e.message}")
+    }
+}
 }
