@@ -62,7 +62,9 @@ data class HomeUiState(
     val daysLeftInSemester: Int = 0,
     val error: String? = null,
     val classColorMap: Map<String, Int> = emptyMap(),
-    val currentDateReference: LocalDate = LocalDate.now(ZoneId.of("Europe/Warsaw"))
+    val currentDateReference: LocalDate = LocalDate.now(ZoneId.of("Europe/Warsaw")),
+    val showNewSemesterDialog: Boolean = false,
+    val newSemesterName: String = ""
 )
 
 /**
@@ -94,6 +96,13 @@ class HomeViewModel(
         startTimeTicker()
     }
 
+    private val _showNewSemesterDialog = MutableStateFlow(false)
+    private val _newSemesterName = MutableStateFlow("")
+
+    init {
+        startTimeTicker()
+        checkForNewSemester()
+    }
     /**
      * Strumień serwujący połączony i przetworzony stan UI.
      * Wykorzystuje operator [combine] do nasłuchiwania zmian w bazie danych, ustawieniach
@@ -106,7 +115,9 @@ class HomeViewModel(
         userCourseRepository.getAllUserCoursesStream(),
         eventRepository.getAllEventsStream(),
         _isLoadingNetwork,
-        _currentTimeReference
+        _currentTimeReference,
+        _showNewSemesterDialog,
+        _newSemesterName
     ) { args: Array<Any?> ->
         try {
             val settings = args[0] as SettingsEntity?
@@ -116,6 +127,8 @@ class HomeViewModel(
             @Suppress("UNCHECKED_CAST") val events = args[4] as List<EventEntity>
             val isLoadingNet = args[5] as Boolean
             val nowReference = args[6] as LocalDateTime
+            val showDialog = args[7] as Boolean
+            val newSemesterTitle = args[8] as String
 
             val today = nowReference.toLocalDate()
             val tomorrow = today.plusDays(1)
@@ -211,7 +224,9 @@ class HomeViewModel(
                 semesterProgress = progress,
                 daysLeftInSemester = left,
                 classColorMap = colorMap,
-                currentDateReference = today
+                currentDateReference = today,
+                showNewSemesterDialog = showDialog,
+                newSemesterName = newSemesterTitle
             )
         } catch (e: Exception) {
             Log.e("HomeVM", "Błąd generowania stanu UI", e)
@@ -274,6 +289,54 @@ class HomeViewModel(
                 val newTime = LocalDateTime.now(ZoneId.of("Europe/Warsaw"))
                 _currentTimeReference.value = newTime
             }
+        }
+    }
+
+    /**
+     * Sprawdza przy starcie czy na uczelni nie rozpoczął się nowy semestr.
+     */
+    private fun checkForNewSemester() {
+        viewModelScope.launch {
+            try {
+                val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch
+                val semesterResult = universityRepository.checkCurrentSemester()
+                
+                if (semesterResult is NetworkResult.Success) {
+                    val currentRemoteId = semesterResult.data?.currentSemesterId
+                    val currentRemoteName = semesterResult.data?.currentSemesterName ?: "Nowy semestr"
+
+                    // Jeśli student miał już przypisany semestr, a na UZ pojawił się inny ID semestru:
+                    if (settings.selectedGroupCode != null && 
+                        settings.lastSyncedSemesterId != null && 
+                        settings.lastSyncedSemesterId != currentRemoteId) {
+                        
+                        _newSemesterName.value = currentRemoteName
+                        _showNewSemesterDialog.value = true
+                    } else if (settings.lastSyncedSemesterId == null && currentRemoteId != null) {
+                        // Pierwsze uruchomienie po aktualizacji: zapamiętaj aktualny semestr
+                        settingsRepository.updateSettings(settings.copy(lastSyncedSemesterId = currentRemoteId))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("HomeVM", "Błąd sprawdzania semestru: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Zamyka dialog i zapisuje semestr, aby komunikat nie wyskakiwał przy każdym wejściu do aplikacji.
+     */
+    fun dismissSemesterDialog() {
+        viewModelScope.launch {
+            val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch
+            val semesterResult = universityRepository.checkCurrentSemester()
+            if (semesterResult is NetworkResult.Success) {
+                val currentRemoteId = semesterResult.data?.currentSemesterId
+                if (currentRemoteId != null) {
+                    settingsRepository.updateSettings(settings.copy(lastSyncedSemesterId = currentRemoteId))
+                }
+            }
+            _showNewSemesterDialog.value = false
         }
     }
 }
