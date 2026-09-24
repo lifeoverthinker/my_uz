@@ -302,15 +302,61 @@ fun HomeScreen(
                             }
                         }
 
-                        item {
-                            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 24.dp), contentAlignment = Alignment.CenterStart) {
-                                Text(text = stringResource(R.string.home_footer_label), style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline))
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 24.dp), contentAlignment = Alignment.CenterStart) {
+                                    Text(text = stringResource(R.string.home_footer_label), style = MaterialTheme.typography.labelMedium.copy(color = MaterialTheme.colorScheme.outline))
+                                }
                             }
-                        }
                         }
                     }
                 }
             }
+
+            // --- POCZĄTEK NOWEGO KODU: DIALOG NOWEGO SEMESTRU ---
+            if (uiState.showNewSemesterDialog) {
+                AlertDialog(
+                    onDismissRequest = { viewModel.dismissSemesterDialog() },
+                    icon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_book_open),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    },
+                    title = {
+                        Text(
+                            text = "Nowy semestr!",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "Uczelnia opublikowała plan na nowy okres: ${uiState.newSemesterName}.\n\nPrzejdź do konfiguracji planu, aby wybrać swoją nową grupę.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                viewModel.dismissSemesterDialog()
+                                onSetupPlanClick()
+                            }
+                        ) {
+                            Text("Wybierz nową grupę")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { viewModel.dismissSemesterDialog() }
+                        ) {
+                            Text("Później")
+                        }
+                    }
+                )
+            }
+            // --- KONIEC NOWEGO KODU ---
         }
     }
 }
