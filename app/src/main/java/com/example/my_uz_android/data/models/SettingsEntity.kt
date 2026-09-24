@@ -45,5 +45,7 @@ data class SettingsEntity(
     val autoSyncEnabled: Boolean = true,
     val syncIntervalHours: Int = 24,
 
-    val appLanguage: String = "pl"
+    val appLanguage: String = "pl",
+
+    val lastSyncedSemesterId: String? = null
 )
