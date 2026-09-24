@@ -17,6 +17,7 @@ import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.data.repositories.UserCourseRepository
 import com.example.my_uz_android.util.SubgroupMatcher
 import com.example.my_uz_android.util.classesStillRemainingToday
+import com.example.my_uz_android.util.NetworkResult
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Job
