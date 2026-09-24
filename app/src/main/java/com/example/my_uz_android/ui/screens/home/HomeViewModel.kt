@@ -93,10 +93,6 @@ class HomeViewModel(
     private val _currentTimeReference = MutableStateFlow(LocalDateTime.now(ZoneId.of("Europe/Warsaw")))
     private var timeTickerJob: Job? = null
 
-    init {
-        startTimeTicker()
-    }
-
     private val _showNewSemesterDialog = MutableStateFlow(false)
     private val _newSemesterName = MutableStateFlow("")
 
@@ -104,6 +100,7 @@ class HomeViewModel(
         startTimeTicker()
         checkForNewSemester()
     }
+    
     /**
      * Strumień serwujący połączony i przetworzony stan UI.
      * Wykorzystuje operator [combine] do nasłuchiwania zmian w bazie danych, ustawieniach
@@ -315,7 +312,7 @@ class HomeViewModel(
                         _showNewSemesterDialog.value = true
                     } else if (settings.lastSyncedSemesterId == null && currentRemoteId != null) {
                         // Pierwsze uruchomienie po aktualizacji: zapamiętaj aktualny semestr
-                        settingsRepository.updateSettings(settings.copy(lastSyncedSemesterId = currentRemoteId))
+                        settingsRepository.insertSettings(settings.copy(lastSyncedSemesterId = currentRemoteId))
                     }
                 }
             } catch (e: Exception) {
@@ -334,7 +331,7 @@ class HomeViewModel(
             if (semesterResult is NetworkResult.Success) {
                 val currentRemoteId = semesterResult.data?.currentSemesterId
                 if (currentRemoteId != null) {
-                    settingsRepository.updateSettings(settings.copy(lastSyncedSemesterId = currentRemoteId))
+                    settingsRepository.insertSettings(settings.copy(lastSyncedSemesterId = currentRemoteId))
                 }
             }
             _showNewSemesterDialog.value = false
