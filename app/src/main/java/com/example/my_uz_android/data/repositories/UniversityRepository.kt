@@ -22,6 +22,12 @@ import java.time.format.DateTimeFormatter
 // =========================================================================
 
 @Serializable
+data class SemesterStateDto(
+    @SerialName("id_semestru_aktualny") val currentSemesterId: String? = null,
+    @SerialName("nazwa_semestru_aktualny") val currentSemesterName: String? = null
+)
+
+@Serializable
 data class ClassScheduleDto(
     @SerialName("uid") val uidRaw: JsonElement? = null,
     @SerialName("id") val idRaw: JsonElement? = null,
