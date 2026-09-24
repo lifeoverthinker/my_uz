@@ -21,7 +21,7 @@ import com.example.my_uz_android.data.models.*
         UserCourseEntity::class,
         NotificationEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
