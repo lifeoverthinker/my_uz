@@ -45,10 +45,67 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migracja zachowująca wszystkie dane użytkowników z wersji 12 do 13
+        // Kompletna, bezpieczna migracja z wersji 12 do 13
         private val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE settings ADD COLUMN lastSyncedSemesterId TEXT DEFAULT NULL")
+                // 1. Tworzymy tabelę z dokładną strukturą oczekiwaną przez nową wersję Room
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS settings_new (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        userName TEXT,
+                        firstName TEXT,
+                        lastName TEXT,
+                        gender TEXT,
+                        faculty TEXT,
+                        department TEXT,
+                        fieldOfStudy TEXT,
+                        currentSemester INTEGER NOT NULL,
+                        studyMode TEXT,
+                        selectedGroupCode TEXT,
+                        selectedGroupName TEXT,
+                        selectedSubgroup TEXT,
+                        additionalGroupCodes TEXT NOT NULL,
+                        isFirstRun INTEGER NOT NULL,
+                        isAnonymous INTEGER NOT NULL,
+                        isDarkMode INTEGER NOT NULL,
+                        themeMode TEXT NOT NULL,
+                        notificationsEnabled INTEGER NOT NULL,
+                        notificationsClasses INTEGER NOT NULL,
+                        notificationClassTimeBefore INTEGER NOT NULL DEFAULT 15,
+                        autoSyncEnabled INTEGER NOT NULL DEFAULT 1,
+                        syncIntervalHours INTEGER NOT NULL DEFAULT 4,
+                        offlineModeEnabled INTEGER NOT NULL,
+                        classColorsJson TEXT NOT NULL,
+                        activeDirectionCode TEXT,
+                        activeIndexDirectionCode TEXT,
+                        appLanguage TEXT NOT NULL DEFAULT 'system',
+                        lastSyncedSemesterId TEXT
+                    )
+                """.trimIndent())
+
+                // 2. Kopiujemy dane użytkownika ze starej tabeli do nowej
+                db.execSQL("""
+                    INSERT INTO settings_new (
+                        id, userName, firstName, lastName, gender, faculty, department, fieldOfStudy,
+                        currentSemester, studyMode, selectedGroupCode, selectedGroupName, selectedSubgroup,
+                        additionalGroupCodes, isFirstRun, isAnonymous, isDarkMode, themeMode,
+                        notificationsEnabled, notificationsClasses, notificationClassTimeBefore,
+                        autoSyncEnabled, syncIntervalHours, offlineModeEnabled, classColorsJson,
+                        activeDirectionCode, activeIndexDirectionCode, appLanguage, lastSyncedSemesterId
+                    )
+                    SELECT 
+                        id, userName, firstName, lastName, gender, faculty, department, fieldOfStudy,
+                        currentSemester, studyMode, selectedGroupCode, selectedGroupName, selectedSubgroup,
+                        additionalGroupCodes, isFirstRun, isAnonymous, isDarkMode, themeMode,
+                        notificationsEnabled, notificationsClasses, 15,
+                        1, 4, offlineModeEnabled, classColorsJson,
+                        activeDirectionCode, activeIndexDirectionCode, appLanguage, NULL
+                    FROM settings
+                """.trimIndent())
+
+                // 3. Zastępujemy starą tabelę nową
+                db.execSQL("DROP TABLE settings")
+                db.execSQL("ALTER TABLE settings_new RENAME TO settings")
             }
         }
 
