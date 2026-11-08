@@ -4,9 +4,6 @@ import android.content.Context
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 
-/**
- * Punkt wejścia dla systemu Android, zarządzający cyklem życia widżetu.
- */
 class WidgetReceiver : GlanceAppWidgetReceiver() {
 
     override val glanceAppWidget: GlanceAppWidget = Widget()

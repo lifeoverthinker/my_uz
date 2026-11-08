@@ -113,12 +113,10 @@ class Widget : GlanceAppWidget() {
                 .cornerRadius(16.dp)
                 .padding(12.dp)
         ) {
-            // --- NAGŁÓWEK ---
             Row(
                 modifier = GlanceModifier.fillMaxWidth().padding(bottom = 12.dp),
                 verticalAlignment = Alignment.Vertical.CenterVertically
             ) {
-                // Używamy mainIntent w actionStartActivity
                 Column(modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity(mainIntent))) {
                     Text(
                         text = context.getString(R.string.upcoming_classes_title),
@@ -149,7 +147,6 @@ class Widget : GlanceAppWidget() {
                 )
             }
 
-            // --- ZAWARTOŚĆ ---
             if (classes.isEmpty()) {
                 Box(
                     modifier = GlanceModifier.fillMaxSize().clickable(actionStartActivity(mainIntent)),
@@ -195,16 +192,13 @@ class Widget : GlanceAppWidget() {
             false
         }
 
-        // Kolory dynamiczne (Tło karty, Kolor Akcentu, Tekst na akcencie)
         val bgColorProvider = ColorProvider(if (isDark) colorSet.darkBg else colorSet.lightBg)
         val accentColorProvider = ColorProvider(if (isDark) colorSet.darkAccent else colorSet.lightAccent)
         val onAccentColorProvider = ColorProvider(if (isDark) Color(0xFF1D192B) else Color.White)
 
-        // Kolory tekstu
         val titleColorProvider = ColorProvider(if (isDark) Color.White else Color(0xFF1D192B))
         val subtitleColorProvider = ColorProvider(if (isDark) Color(0xFFCAC4D0) else Color(0xFF49454F))
 
-        // Pobieramy pierwszą literę typu zajęć (np. "W" dla Wykład, "L" dla Laboratorium)
         val typeInitial = if (classItem.classType.isNotEmpty()) classItem.classType.take(1).uppercase() else "?"
 
         Row(
@@ -216,7 +210,6 @@ class Widget : GlanceAppWidget() {
                 .padding(12.dp),
             verticalAlignment = Alignment.Vertical.CenterVertically
         ) {
-            // Lewa strona - informacje o przedmiocie (zajmuje dostępną szerokość)
             Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
                     text = classItem.subjectName,
@@ -230,7 +223,6 @@ class Widget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.height(6.dp))
 
-                // Czas i sala
                 Row(verticalAlignment = Alignment.Vertical.CenterVertically) {
                     Text(
                         text = "${classItem.startTime} - ${classItem.endTime}",
@@ -256,7 +248,6 @@ class Widget : GlanceAppWidget() {
 
             Spacer(modifier = GlanceModifier.width(12.dp))
 
-            // Prawa strona - okrągły Badge z literą
             Box(
                 modifier = GlanceModifier
                     .size(32.dp)
