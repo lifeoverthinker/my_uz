@@ -65,7 +65,6 @@ class GradesViewModel(
     private val _selectedGroups = MutableStateFlow<Set<String>>(emptySet())
     private var isGroupsInitialized = false
 
-    // Główny proces budujący gigantyczną listę przedmiotów z obliczonymi na żywo średnimi.
     val uiState: StateFlow<GradesUiState> = combine(
         gradesRepository.getAllGradesStream(),
         classRepository.getAllClassesStream(),
@@ -112,10 +111,23 @@ class GradesViewModel(
                 .filter { it in allUserCodes }
                 .toSet()
 
-            if (selectedNormalized.isNotEmpty()) selectedNormalized else allUserCodes
+            if (!isGroupsInitialized && allUserCodes.isNotEmpty()) {
+                isGroupsInitialized = true
+                _selectedGroups.value = allUserCodes
+                allUserCodes
+            } else if (selectedNormalized.isNotEmpty()) {
+                if (selectedNormalized.size != selectedGroupsRaw.size) {
+                    _selectedGroups.value = selectedNormalized
+                }
+                selectedNormalized
+            } else if (allUserCodes.isNotEmpty()) {
+                _selectedGroups.value = allUserCodes
+                allUserCodes
+            } else {
+                emptySet()
+            }
         }
 
-        // Sprawdzamy prawa dostępu (filtry i podgrupy) na poziomie całych list
         val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, courses, activeCodes)
         val activeClasses = allClasses.filter { clazz ->
             SubgroupMatcher.isClassVisible(

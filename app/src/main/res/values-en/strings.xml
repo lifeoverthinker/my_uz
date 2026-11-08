@@ -244,11 +244,11 @@
     <!-- About App -->
     <string name="about_app_title">About app</string>
     <string name="about_app_subtitle">Your study center</string>
-    <string name="about_app_description">The MyUZ application was created to make life easier for students of the University of Zielona Góra. Our mission is to provide the fastest and most intuitive access to the schedule, grades and task deadlines.</string>
+    <string name="about_app_description">The application is used to view the class schedule, To-Do tasks, virtual index with weighted average, and attendance.</string>
     <string name="about_app_icons_info">Interface icons come from SVG Repo (CC0 license).</string>
-    <string name="about_app_illustrations_prefix">Illustrations in the app come from </string>
+    <string name="about_app_illustrations_prefix">Illustrations and graphics: </string>
     <string name="about_app_storyset">Storyset</string>
-    <string name="student_project_label">Student Project 2026</string>
+    <string name="student_project_label">Engineering Project 2027</string>
     <string name="about_app_author_label">Author: Martyna</string>
     <string name="uz_short">UZ</string>
     <string name="uz_label">University of Zielona Góra</string>

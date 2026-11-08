@@ -236,11 +236,25 @@ class AbsencesViewModel(
             .filter { it in allUserCodes }
             .toSet()
 
-        return if (selectedNormalized.isNotEmpty()) {
-            selectedNormalized
-        } else {
-            allUserCodes
+        if (!isGroupsInitialized && allUserCodes.isNotEmpty()) {
+            isGroupsInitialized = true
+            _selectedGroups.value = allUserCodes
+            return allUserCodes
         }
+
+        if (selectedNormalized.isNotEmpty()) {
+            if (selectedNormalized.size != selectedGroupsRaw.size) {
+                _selectedGroups.value = selectedNormalized
+            }
+            return selectedNormalized
+        }
+
+        if (allUserCodes.isNotEmpty()) {
+            _selectedGroups.value = allUserCodes
+            return allUserCodes
+        }
+
+        return emptySet()
     }
 
     private fun buildAllCoursesForUiAbsencesVm(

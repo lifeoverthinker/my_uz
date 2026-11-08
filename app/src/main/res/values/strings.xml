@@ -245,12 +245,12 @@
     <!-- About App -->
     <string name="about_app_title">O aplikacji</string>
     <string name="about_app_subtitle">Twoje centrum studiowania</string>
-    <string name="about_app_description">Aplikacja MyUZ powstała, aby ułatwić życie studentom Uniwersytetu Zielonogórskiego. Naszą misją jest dostarczenie najszybszego i najbardziej intuicyjnego dostępu do planu zajęć, ocen oraz terminów zadań.</string>
+    <string name="about_app_description">Aplikacja służy do przeglądania planu zajęć, zadań To-Do, wirtualnego indeksu ze średnią ważoną oraz frekwencji.</string>
     <string name="about_app_icons_info">Ikony interfejsu pochodzą z bazy SVG Repo (licencja CC0).</string>
-    <string name="about_app_illustrations_prefix">Ilustracje w aplikacji pochodzą z serwisu </string>
+    <string name="about_app_illustrations_prefix">Ilustracje i grafiki: </string>
     <string name="about_app_storyset">Storyset</string>
-    <string name="student_project_label">Student Project 2026</string>
-    <string name="about_app_author_label">Autor: Martyna</string>
+    <string name="student_project_label">Projekt inżynierski 2027</string>
+    <string name="about_app_author_label">Autorka: Martyna</string>
     <string name="uz_short">UZ</string>
     <string name="uz_label">Uniwersytet Zielonogórski</string>
     <string name="logo_content_description">Logo MyUZ</string>

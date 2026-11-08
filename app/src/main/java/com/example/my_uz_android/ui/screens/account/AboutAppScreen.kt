@@ -1,10 +1,5 @@
 package com.example.my_uz_android.ui.screens.account
 
-/**
- * Ekran z informacjami o aplikacji, jej autorze (Projekt Inżynierski)
- * oraz podziękowaniami za użyte licencje (np. grafiki Storyset).
- */
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -53,7 +48,6 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // --- LOGO APKI ---
                 Image(
                     painter = painterResource(id = R.drawable.logo),
                     contentDescription = stringResource(R.string.logo_content_description),
@@ -76,7 +70,6 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // --- INFORMACJE O PROJEKCIE (INŻYNIERKA) ---
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(
                         text = stringResource(R.string.about_app_subtitle),
@@ -90,7 +83,6 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     )
 
-                    // Tutaj zmieniamy tekst na jawnie mówiący o projekcie niezależnym!
                     Text(
                         text = stringResource(R.string.about_app_description),
                         style = MaterialTheme.typography.bodyMedium,
@@ -102,7 +94,6 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // --- PODZIĘKOWANIA / LICENCJE ---
                 StorysetAttribution()
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -116,7 +107,6 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // --- STOPKA AUTORSKA ---
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(bottom = 32.dp)
@@ -137,9 +127,6 @@ fun AboutAppScreen(onBackClick: () -> Unit) {
     }
 }
 
-/**
- * Komponent odpowiedzialny za wyświetlenie klikalnego linku do autorów ilustracji.
- */
 @Composable
 fun StorysetAttribution() {
     val uriHandler = LocalUriHandler.current
