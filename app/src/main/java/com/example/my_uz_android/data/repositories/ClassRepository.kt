@@ -5,9 +5,8 @@ import com.example.my_uz_android.data.daos.ClassDao
 import com.example.my_uz_android.data.models.ClassEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -45,9 +44,48 @@ class ClassRepository(private val classDao: ClassDao) {
         }
     }
 
+    suspend fun getClassesByGroupCode(groupCode: String): List<ClassEntity> {
+        return try {
+            classDao.getClassesByGroupCode(groupCode.trim())
+        } catch (e: Exception) {
+            Log.e("ClassRepository", "Błąd getClassesByGroupCode", e)
+            emptyList()
+        }
+    }
+
+    suspend fun deleteClassesForGroup(groupCode: String): List<ClassEntity> {
+        return try {
+            val trimmedCode = groupCode.trim()
+            val classesToDelete = classDao.getClassesByGroupCode(trimmedCode)
+            classDao.deleteByGroupCode(trimmedCode)
+            Log.d("ClassRepository", "Usunięto zajęcia dla grupy $trimmedCode: ${classesToDelete.size}")
+            classesToDelete
+        } catch (e: Exception) {
+            Log.e("ClassRepository", "Błąd deleteClassesForGroup", e)
+            emptyList()
+        }
+    }
+
+    suspend fun deleteOrphanedClasses(validGroupCodes: Set<String>): List<ClassEntity> {
+        return try {
+            val validLower = validGroupCodes.map { it.trim().lowercase() }.toSet()
+            val allClasses = classDao.getAllClasses().first()
+            val orphaned = allClasses.filter { it.groupCode.trim().lowercase() !in validLower }
+            orphaned.forEach { classItem ->
+                classDao.delete(classItem)
+            }
+            if (orphaned.isNotEmpty()) {
+                Log.d("ClassRepository", "Usunięto osierocone zajęcia: ${orphaned.size}")
+            }
+            orphaned
+        } catch (e: Exception) {
+            Log.e("ClassRepository", "Błąd deleteOrphanedClasses", e)
+            emptyList()
+        }
+    }
+
     suspend fun updateClasses(classes: List<ClassEntity>) {
         try {
-            // Zawsze czyścimy i wstawiamy nowe, aby uniknąć problemów z nieaktualnym planem
             classDao.deleteAll()
             if (classes.isNotEmpty()) {
                 classDao.insertAll(classes)
@@ -80,26 +118,25 @@ class ClassRepository(private val classDao: ClassDao) {
     }
 
     suspend fun insertClasses(classes: List<ClassEntity>) {
-        try { classDao.insertAll(classes) } catch (e: Exception) { }
+        try { classDao.insertAll(classes) } catch (_: Exception) { }
     }
 
     suspend fun insertClass(classEntity: ClassEntity) {
-        try { classDao.insertClass(classEntity) } catch (e: Exception) { }
+        try { classDao.insertClass(classEntity) } catch (_: Exception) { }
     }
 
     suspend fun deleteAllClasses() {
-        try { classDao.deleteAll() } catch (e: Exception) { }
+        try { classDao.deleteAll() } catch (_: Exception) { }
     }
 
     suspend fun deleteClass(classEntity: ClassEntity) {
-        try { classDao.delete(classEntity) } catch (e: Exception) { }
+        try { classDao.delete(classEntity) } catch (_: Exception) { }
     }
 
     suspend fun updateClass(classEntity: ClassEntity) {
-        try { classDao.update(classEntity) } catch (e: Exception) { }
+        try { classDao.update(classEntity) } catch (_: Exception) { }
     }
 
-    // Pobiera nadchodzące zajęcia (dzisiejsze trwające/późniejsze oraz z kolejnych dni)
     fun getUpcomingClasses(limit: Int = Int.MAX_VALUE): Flow<List<ClassEntity>> {
         return getAllClassesStream().map { classes ->
             val now = LocalDateTime.now()

@@ -1,5 +1,6 @@
 package com.example.my_uz_android.ui.screens.account
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.ClassEntity
@@ -11,6 +12,8 @@ import com.example.my_uz_android.data.repositories.SettingsRepository
 import com.example.my_uz_android.data.repositories.UniversityRepository
 import com.example.my_uz_android.data.repositories.UserCourseRepository
 import com.example.my_uz_android.util.NetworkResult
+import com.example.my_uz_android.util.NotificationHelper
+import com.example.my_uz_android.widget.triggerWidgetUpdate
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -35,7 +38,8 @@ class AccountViewModel(
     private val settingsRepository: SettingsRepository,
     private val universityRepository: UniversityRepository,
     private val classRepository: ClassRepository,
-    private val userCourseRepository: UserCourseRepository
+    private val userCourseRepository: UserCourseRepository,
+    private val application: Application? = null
 ) : ViewModel() {
 
     private val _userName = MutableStateFlow("")
@@ -404,6 +408,26 @@ class AccountViewModel(
             _activeDirection.value = _additionalUserCourses.value.firstOrNull()?.groupCode
         }
 
+        previousMainGroup?.let { groupCode ->
+            viewModelScope.launch {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    val remainingCourses = _additionalUserCourses.value.map { it.groupCode }
+                    if (!remainingCourses.contains(groupCode)) {
+                        val deletedClasses = classRepository.deleteClassesForGroup(groupCode)
+                        application?.let { ctx ->
+                            NotificationHelper.cancelClassAlarms(ctx, deletedClasses)
+                        }
+                    }
+                    val remainingGroups = remainingCourses.toSet()
+                    val orphanedClasses = classRepository.deleteOrphanedClasses(remainingGroups)
+                    application?.let { ctx ->
+                        NotificationHelper.cancelClassAlarms(ctx, orphanedClasses)
+                        triggerWidgetUpdate(ctx)
+                    }
+                }
+            }
+        }
+
         _triggerSave.tryEmit(Unit)
     }
 
@@ -534,7 +558,20 @@ class AccountViewModel(
         }
 
         kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
-            classRepository.syncGroupClasses(course.groupCode, emptyList())
+            val deletedClasses = classRepository.deleteClassesForGroup(course.groupCode)
+            application?.let { ctx ->
+                NotificationHelper.cancelClassAlarms(ctx, deletedClasses)
+            }
+
+            val remainingGroups = buildSet {
+                _selectedGroup.value?.let { if (it.isNotBlank()) add(it) }
+                addAll(updatedCourses.map { it.groupCode })
+            }
+            val orphanedClasses = classRepository.deleteOrphanedClasses(remainingGroups)
+            application?.let { ctx ->
+                NotificationHelper.cancelClassAlarms(ctx, orphanedClasses)
+                triggerWidgetUpdate(ctx)
+            }
         }
 
         _triggerSave.tryEmit(Unit)
@@ -596,6 +633,18 @@ class AccountViewModel(
 
             _additionalUserCourses.value.forEach { course ->
                 universityRepository.refreshSchedule(course.groupCode, course.selectedSubgroup, classRepository)
+            }
+
+            val validGroups = buildSet {
+                newMainGroup?.let { if (it.isNotBlank()) add(it) }
+                addAll(_additionalUserCourses.value.map { it.groupCode })
+            }
+            val orphanedClasses = classRepository.deleteOrphanedClasses(validGroups)
+            application?.let { ctx ->
+                if (orphanedClasses.isNotEmpty()) {
+                    NotificationHelper.cancelClassAlarms(ctx, orphanedClasses)
+                }
+                triggerWidgetUpdate(ctx)
             }
         }
 

@@ -32,7 +32,6 @@ class ClassRepositoryTest {
         classDao = mockk()
         classRepository = ClassRepository(classDao)
 
-        // Mockujemy klasę Log z Androida, aby testy nie "wybuchały" przy próbie logowania
         mockkStatic(Log::class)
         every { Log.d(any(), any()) } returns 0
         every { Log.e(any(), any()) } returns 0
@@ -117,7 +116,37 @@ class ClassRepositoryTest {
         }
     }
 
-    // Funkcja pomocnicza uzupełniona o wymagane parametry
+    @Test
+    fun `deleteClassesForGroup pobiera i usuwa zajecia dla podanej grupy`() = runTest {
+        val groupCode = "31INF-SP"
+        val classToDelete = createClass(1, "2026-04-15", "08:00", "09:30").copy(groupCode = groupCode)
+
+        coEvery { classDao.getClassesByGroupCode("31INF-SP") } returns listOf(classToDelete)
+        coEvery { classDao.deleteByGroupCode("31INF-SP") } returns Unit
+
+        val result = classRepository.deleteClassesForGroup(groupCode)
+
+        assertEquals(1, result.size)
+        assertEquals(classToDelete, result.first())
+        coVerify(exactly = 1) { classDao.getClassesByGroupCode("31INF-SP") }
+        coVerify(exactly = 1) { classDao.deleteByGroupCode("31INF-SP") }
+    }
+
+    @Test
+    fun `deleteOrphanedClasses usuwa osierocone rekordy z bazy`() = runTest {
+        val classValid = createClass(1, "2026-04-15", "08:00", "09:30").copy(groupCode = "11MAT")
+        val classOrphan = createClass(2, "2026-04-15", "10:00", "11:30").copy(groupCode = "31INF-SP")
+
+        every { classDao.getAllClasses() } returns flowOf(listOf(classValid, classOrphan))
+        coEvery { classDao.delete(classOrphan) } returns Unit
+
+        val result = classRepository.deleteOrphanedClasses(setOf("11MAT"))
+
+        assertEquals(1, result.size)
+        assertEquals(classOrphan, result.first())
+        coVerify(exactly = 1) { classDao.delete(classOrphan) }
+    }
+
     private fun createClass(id: Int, date: String, start: String, end: String): ClassEntity {
         return ClassEntity(
             id = id,

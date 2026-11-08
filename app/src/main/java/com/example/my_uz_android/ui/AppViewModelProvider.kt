@@ -138,12 +138,14 @@ object AppViewModelProvider {
         }
 
         initializer {
-            val container = myUZApplication().container
+            val app = myUZApplication()
+            val container = app.container
             AccountViewModel(
                 settingsRepository = container.settingsRepository,
                 universityRepository = container.universityRepository,
                 classRepository = container.classRepository,
-                userCourseRepository = container.userCourseRepository
+                userCourseRepository = container.userCourseRepository,
+                application = app
             )
         }
 

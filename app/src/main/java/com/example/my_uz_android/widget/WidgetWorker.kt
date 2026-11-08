@@ -49,12 +49,20 @@ class WidgetWorker(
         val isPlanSelected = !settings?.selectedGroupCode.isNullOrBlank() || userCourses.isNotEmpty()
 
         val allUserCodesLower = mutableSetOf<String>()
-        settings?.selectedGroupCode?.let { allUserCodesLower.add(it.trim().lowercase()) }
-        userCourses.forEach { allUserCodesLower.add(it.groupCode.trim().lowercase()) }
+        settings?.selectedGroupCode?.let { code ->
+            if (code.isNotBlank()) allUserCodesLower.add(code.trim().lowercase())
+        }
+        userCourses.forEach { course ->
+            if (course.groupCode.isNotBlank()) allUserCodesLower.add(course.groupCode.trim().lowercase())
+        }
 
         val userEnrollments = SubgroupMatcher.buildUserEnrollments(settings, userCourses, allUserCodesLower)
 
-        val visibleClasses = allClasses.filter { classItem ->
+        val userClasses = allClasses.filter { classItem ->
+            allUserCodesLower.contains(classItem.groupCode.trim().lowercase())
+        }
+
+        val visibleClasses = userClasses.filter { classItem ->
             SubgroupMatcher.isClassVisible(
                 classGroupCode = classItem.groupCode,
                 classType = classItem.classType,
@@ -63,8 +71,8 @@ class WidgetWorker(
             )
         }
 
-        val finalVisibleClasses = if (visibleClasses.isEmpty() && allClasses.isNotEmpty() && userEnrollments.isEmpty()) {
-            allClasses
+        val finalVisibleClasses = if (visibleClasses.isEmpty() && userClasses.isNotEmpty() && userEnrollments.isEmpty()) {
+            userClasses
         } else {
             visibleClasses
         }

@@ -4,7 +4,6 @@ import androidx.room.*
 import com.example.my_uz_android.data.models.ClassEntity
 import kotlinx.coroutines.flow.Flow
 
-// Operacje na planie zajęć w lokalnej bazie
 @Dao
 interface ClassDao {
 
@@ -17,16 +16,18 @@ interface ClassDao {
     @Query("SELECT * FROM classes WHERE id = :id")
     fun getClassById(id: Int): Flow<ClassEntity?>
 
+    @Query("SELECT * FROM classes WHERE LOWER(TRIM(groupCode)) = LOWER(TRIM(:groupCode))")
+    suspend fun getClassesByGroupCode(groupCode: String): List<ClassEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(classes: List<ClassEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertClass(classEntity: ClassEntity)
 
-    @Query("DELETE FROM classes WHERE groupCode = :groupCode")
+    @Query("DELETE FROM classes WHERE LOWER(TRIM(groupCode)) = LOWER(TRIM(:groupCode))")
     suspend fun deleteByGroupCode(groupCode: String)
 
-    // Podmienia cały plan dla danej grupy
     @Transaction
     suspend fun replaceGroupClasses(groupCode: String, classes: List<ClassEntity>) {
         deleteByGroupCode(groupCode)

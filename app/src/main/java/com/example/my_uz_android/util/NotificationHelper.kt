@@ -37,7 +37,6 @@ object NotificationHelper {
             }
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
-            Log.d("ALARM_TEST", "Utworzono kanał powiadomień")
         }
     }
 
@@ -53,7 +52,6 @@ object NotificationHelper {
                     context, Manifest.permission.POST_NOTIFICATIONS
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                Log.e("ALARM_TEST", "BRAK UPRAWNIENIA POST_NOTIFICATIONS w showNotification!")
                 return
             }
         }
@@ -79,10 +77,8 @@ object NotificationHelper {
             .build()
 
         NotificationManagerCompat.from(context).notify(notificationId, notification)
-        Log.d("ALARM_TEST", "Powiadomienie zostało wypchnięte do systemu: ID=$notificationId")
     }
 
-    // Ustawia dokładny alarm budzący telefon z Doze Mode
     fun scheduleExactAlarm(
         context: Context,
         timeInMillis: Long,
@@ -119,6 +115,7 @@ object NotificationHelper {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val pendingIntent = createAlarmPendingIntent(context, id, "", "", isTask)
         alarmManager.cancel(pendingIntent)
+        pendingIntent.cancel()
         Log.d("ALARM_TEST", "Anulowano alarm dla ID: $id")
     }
 
@@ -139,13 +136,11 @@ object NotificationHelper {
         )
     }
 
-    // Generuje unikalne i stabilne ID powiadomienia/alarmu dla danych zajęć (niezależne od auto-increment ID w Room)
     fun getNotificationIdForClass(classItem: ClassEntity): Int {
         val key = "${classItem.groupCode.trim().lowercase()}_${classItem.subjectName.trim().lowercase()}_${classItem.date}_${classItem.startTime}"
         return key.hashCode()
     }
 
-    // Anuluje alarmy dla usuniętych zajęć
     fun cancelClassAlarms(context: Context, classes: List<ClassEntity>) {
         classes.forEach { classItem ->
             val uniqueAlarmId = getNotificationIdForClass(classItem)
@@ -153,7 +148,6 @@ object NotificationHelper {
         }
     }
 
-    // Planuje przypomnienia 15 min przed każdym zajęciem na najbliższy tydzień
     fun scheduleClassAlarms(context: Context, classes: List<ClassEntity>) {
         val now = LocalDateTime.now()
         val limitDate = now.plusDays(7)
@@ -170,7 +164,6 @@ object NotificationHelper {
                 if (notificationTime.isAfter(now) && notificationTime.isBefore(limitDate)) {
                     val timeInMillis = notificationTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-                    // Stabilne, unikalne ID na podstawie danych zajęć (grupa, przedmiot, data, godzina)
                     val uniqueAlarmId = getNotificationIdForClass(classItem)
 
                     scheduleExactAlarm(
@@ -183,8 +176,7 @@ object NotificationHelper {
                     )
                     zaplanowano++
                 }
-            } catch (e: Exception) {
-                // Ignore parse error
+            } catch (_: Exception) {
             }
         }
         Log.d("ALARM_TEST", "Odświeżanie planu: Zaplanowano $zaplanowano alarmów na najbliższe 7 dni.")
