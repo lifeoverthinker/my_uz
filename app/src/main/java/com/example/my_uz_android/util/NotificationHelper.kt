@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -48,10 +47,7 @@ object NotificationHelper {
         notificationId: Int
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(
-                    context, Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 return
             }
         }
@@ -96,17 +92,13 @@ object NotificationHelper {
             true
         }
 
-        if (canScheduleExact) {
-            try {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    timeInMillis,
-                    pendingIntent
-                )
-            } catch (e: SecurityException) {
+        try {
+            if (canScheduleExact) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
+            } else {
                 alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
             }
-        } else {
+        } catch (e: SecurityException) {
             alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeInMillis, pendingIntent)
         }
     }
@@ -116,7 +108,6 @@ object NotificationHelper {
         val pendingIntent = createAlarmPendingIntent(context, id, "", "", isTask)
         alarmManager.cancel(pendingIntent)
         pendingIntent.cancel()
-        Log.d("ALARM_TEST", "Anulowano alarm dla ID: $id")
     }
 
     private fun createAlarmPendingIntent(
@@ -129,9 +120,7 @@ object NotificationHelper {
             putExtra(AppAlarmReceiver.EXTRA_MESSAGE, message)
         }
         return PendingIntent.getBroadcast(
-            context,
-            id,
-            intent,
+            context, id, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
@@ -142,43 +131,33 @@ object NotificationHelper {
     }
 
     fun cancelClassAlarms(context: Context, classes: List<ClassEntity>) {
-        classes.forEach { classItem ->
-            val uniqueAlarmId = getNotificationIdForClass(classItem)
-            cancelAlarm(context, uniqueAlarmId, isTask = false)
-        }
+        classes.forEach { cancelAlarm(context, getNotificationIdForClass(it), isTask = false) }
     }
 
     fun scheduleClassAlarms(context: Context, classes: List<ClassEntity>) {
         val now = LocalDateTime.now()
         val limitDate = now.plusDays(7)
+        var count = 0
 
-        var zaplanowano = 0
         classes.forEach { classItem ->
             try {
                 val classDate = LocalDate.parse(classItem.date)
                 val classTime = LocalTime.parse(classItem.startTime, DateTimeFormatter.ofPattern("HH:mm"))
-                val classDateTime = LocalDateTime.of(classDate, classTime)
-
-                val notificationTime = classDateTime.minusMinutes(15)
+                val notificationTime = LocalDateTime.of(classDate, classTime).minusMinutes(15)
 
                 if (notificationTime.isAfter(now) && notificationTime.isBefore(limitDate)) {
                     val timeInMillis = notificationTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-
-                    val uniqueAlarmId = getNotificationIdForClass(classItem)
-
                     scheduleExactAlarm(
                         context = context,
                         timeInMillis = timeInMillis,
-                        id = uniqueAlarmId,
+                        id = getNotificationIdForClass(classItem),
                         title = "Zajęcia za 15 minut!",
                         message = "${classItem.subjectName} · sala ${classItem.room ?: "Brak"}",
                         isTask = false
                     )
-                    zaplanowano++
+                    count++
                 }
-            } catch (_: Exception) {
-            }
+            } catch (_: Exception) {}
         }
-        Log.d("ALARM_TEST", "Odświeżanie planu: Zaplanowano $zaplanowano alarmów na najbliższe 7 dni.")
     }
 }

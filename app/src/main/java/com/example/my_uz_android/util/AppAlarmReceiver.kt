@@ -17,13 +17,9 @@ class AppAlarmReceiver : BroadcastReceiver() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
-        Log.d("ALARM_TEST", "1. ODBIORNIK OBUDZONY! Akcja: ${intent.action}")
-
-        val pendingResult = goAsync() // Pozwala BroadcastReceiverowi na wykonanie zadań asynchronicznych (coroutines)
-
+        val pendingResult = goAsync()
         val action = intent.action ?: run { pendingResult.finish(); return }
 
-        // Po restarcie telefonu przywracamy alarmy na nowo
         if (action == Intent.ACTION_BOOT_COMPLETED) {
             scope.launch {
                 try {
@@ -49,37 +45,20 @@ class AppAlarmReceiver : BroadcastReceiver() {
         scope.launch {
             try {
                 val database = AppDatabase.getDatabase(context)
-
-                // 1. POBRANIE NAJNOWSZYCH USTAWIEŃ Z BAZY DANYCH
                 val settings = database.settingsDao().getSettingsStream().firstOrNull()
 
                 val isMasterEnabled = settings?.notificationsEnabled ?: true
                 val isClassesEnabled = settings?.notificationsClasses ?: true
 
-                // 2. WERYFIKACJA PRZEŁĄCZNIKÓW
-                if (!isMasterEnabled) {
-                    Log.d("ALARM_TEST", "Powiadomienia całkowicie wyłączone. Przerywam.")
-                    return@launch
-                }
+                if (!isMasterEnabled) return@launch
+                if (!isTask && !isClassesEnabled) return@launch
 
-                if (!isTask && !isClassesEnabled) {
-                    Log.d("ALARM_TEST", "Powiadomienia o zajęciach (15 minut przed) wyłączone. Przerywam.")
-                    return@launch
-                }
-
-                // 3. WERYFIKACJA CZY ZAJĘCIA NADAL ISTNIEJĄ W BAZIE (CZY KIERUNEK NIE ZOSTAŁ USUNIĘTY)
                 if (!isTask) {
                     val currentClasses = database.classDao().getAllClasses().firstOrNull().orEmpty()
-                    val classExists = currentClasses.any { classItem ->
-                        NotificationHelper.getNotificationIdForClass(classItem) == id
-                    }
-                    if (!classExists) {
-                        Log.d("ALARM_TEST", "Zajęcia dla ID $id już nie istnieją w bazie (usunięty kierunek). Przerywam.")
-                        return@launch
-                    }
+                    val classExists = currentClasses.any { NotificationHelper.getNotificationIdForClass(it) == id }
+                    if (!classExists) return@launch
                 }
 
-                // 4. WYŚWIETLENIE POWIADOMIENIA (Jeśli przeszło weryfikację)
                 NotificationHelper.showNotification(
                     context = context,
                     title = title,
@@ -87,9 +66,7 @@ class AppAlarmReceiver : BroadcastReceiver() {
                     isTask = isTask,
                     notificationId = id
                 )
-                Log.d("ALARM_TEST", "Wywołano showNotification pomyślnie!")
 
-                // 4. ZAPIS DO HISTORII POWIADOMIEŃ APLIKACJI
                 val notification = NotificationEntity(
                     id = 0,
                     title = title,
@@ -99,12 +76,9 @@ class AppAlarmReceiver : BroadcastReceiver() {
                     isRead = false
                 )
                 database.notificationDao().insertNotification(notification)
-                Log.d("ALARM_TEST", "Zapisano do bazy danych pomyślnie!")
-
             } catch (e: Exception) {
                 Log.e("ALARM_TEST", "BŁĄD przy weryfikacji/wyświetlaniu powiadomienia!", e)
             } finally {
-                // Informuje system, że zakończyliśmy działanie w tle
                 pendingResult.finish()
             }
         }

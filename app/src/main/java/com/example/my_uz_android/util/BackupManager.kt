@@ -8,7 +8,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-// Model przechowujący całą strukturę bazy w jednym obiekcie JSON
 @Serializable
 data class BackupData(
     val classes: List<ClassEntity> = emptyList(),
@@ -24,15 +23,11 @@ data class BackupData(
 
 class BackupManager(private val db: AppDatabase) {
 
-    // Konfiguracja JSON: ignorujemy nieznane klucze (przydatne przy migracjach w przyszłości)
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
 
-    /**
-     * Zbiera dane ze wszystkich DAO i zwraca je jako jeden string JSON.
-     */
     suspend fun exportData(): String {
         val data = BackupData(
             classes = db.classDao().getAllClasses().first(),
@@ -48,15 +43,10 @@ class BackupManager(private val db: AppDatabase) {
         return json.encodeToString(data)
     }
 
-    /**
-     * Czyści obecną bazę i ładuje dane z JSONa.
-     * Używamy withTransaction, by upewnić się, że w razie błędu nic się nie zepsuje.
-     */
     suspend fun importData(jsonString: String) {
         val data = json.decodeFromString<BackupData>(jsonString)
 
         db.withTransaction {
-            // 1. Czyszczenie starych danych
             db.classDao().deleteAll()
             db.tasksDao().deleteAll()
             db.gradesDao().deleteAll()
@@ -67,8 +57,6 @@ class BackupManager(private val db: AppDatabase) {
             db.userCourseDao().deleteAll()
             db.notificationDao().clearAll()
 
-            // 2. Wstawianie nowych danych
-            // W przypadku braku insertAll, pętla wewnątrz withTransaction jest równie wydajna
             data.classes.forEach { db.classDao().insertClass(it) }
             data.tasks.forEach { db.tasksDao().insert(it) }
             data.grades.forEach { db.gradesDao().insertGrade(it) }

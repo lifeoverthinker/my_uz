@@ -79,24 +79,17 @@ object ClassTypeUtils {
         return map[abbreviation] ?: abbreviation
     }
 
-    // Zwraca kolor dla typu zajęć z ustawień lub domyślny
     fun getClassTypeColor(
         classType: String?,
         colors: List<Color>,
-        classColorMap: Map<String, Int> = emptyMap() // Dodano parametr z wartością domyślną
+        classColorMap: Map<String, Int> = emptyMap()
     ): Color {
         if (classType.isNullOrBlank() || colors.isEmpty()) return colors.firstOrNull() ?: Color.Gray
 
-        // 1. Sprawdź, czy użytkownik przypisał kolor w ustawieniach
-        // Pobieramy index przypisany do danego typu zajęć (np. "Wykład" -> 2)
-        val savedIndex = classColorMap[classType]
-
-        // Jeśli index istnieje i mieści się w zakresie listy kolorów, zwracamy go
-        if (savedIndex != null && savedIndex in colors.indices) {
-            return colors[savedIndex]
+        classColorMap[classType]?.let { savedIndex ->
+            if (savedIndex in colors.indices) return colors[savedIndex]
         }
 
-        // 2. Fallback: Jeśli nie ma w ustawieniach, używamy hashCode (tak jak wcześniej)
         val index = abs(classType.hashCode()) % colors.size
         return colors[index]
     }
