@@ -67,7 +67,19 @@ class AppAlarmReceiver : BroadcastReceiver() {
                     return@launch
                 }
 
-                // 3. WYŚWIETLENIE POWIADOMIENIA (Jeśli przeszło weryfikację)
+                // 3. WERYFIKACJA CZY ZAJĘCIA NADAL ISTNIEJĄ W BAZIE (CZY KIERUNEK NIE ZOSTAŁ USUNIĘTY)
+                if (!isTask) {
+                    val currentClasses = database.classDao().getAllClasses().firstOrNull().orEmpty()
+                    val classExists = currentClasses.any { classItem ->
+                        NotificationHelper.getNotificationIdForClass(classItem) == id
+                    }
+                    if (!classExists) {
+                        Log.d("ALARM_TEST", "Zajęcia dla ID $id już nie istnieją w bazie (usunięty kierunek). Przerywam.")
+                        return@launch
+                    }
+                }
+
+                // 4. WYŚWIETLENIE POWIADOMIENIA (Jeśli przeszło weryfikację)
                 NotificationHelper.showNotification(
                     context = context,
                     title = title,

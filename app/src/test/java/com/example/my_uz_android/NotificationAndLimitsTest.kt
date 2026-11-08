@@ -84,4 +84,98 @@ class NotificationAndLimitsTest {
         // Assert
         assertEquals("Przekroczono limit", status)
     }
+
+    // --- TESTY UNIKALNOŚCI I STABILNOŚCI ID ALARMÓW POWIADOMIEŃ ---
+
+    @Test
+    fun `getNotificationIdForClass returns identical ID before and after Room DB insert`() {
+        // Arrange: zajęcia przed zapisem w bazie (id = 0) oraz po zapisie (id = 42)
+        val classBeforeInsert = com.example.my_uz_android.data.models.ClassEntity(
+            id = 0,
+            subjectName = "Analiza Matematyczna",
+            classType = "Wykład",
+            startTime = "08:15",
+            endTime = "09:45",
+            dayOfWeek = 1,
+            date = "2025-05-10",
+            groupCode = "12-MAT-S",
+            subgroup = null
+        )
+        val classAfterInsert = classBeforeInsert.copy(id = 42)
+
+        // Act
+        val idBefore = NotificationHelper.getNotificationIdForClass(classBeforeInsert)
+        val idAfter = NotificationHelper.getNotificationIdForClass(classAfterInsert)
+
+        // Assert: ID alarmu musi być identyczne, żeby nie duplikować alarmów w AlarmManagerze
+        assertEquals(idBefore, idAfter)
+    }
+
+    @Test
+    fun `getNotificationIdForClass returns different IDs for different classes`() {
+        // Arrange
+        val class1 = com.example.my_uz_android.data.models.ClassEntity(
+            id = 1,
+            subjectName = "Analiza Matematyczna",
+            classType = "Wykład",
+            startTime = "08:15",
+            endTime = "09:45",
+            dayOfWeek = 1,
+            date = "2025-05-10",
+            groupCode = "12-MAT-S",
+            subgroup = null
+        )
+        val class2 = com.example.my_uz_android.data.models.ClassEntity(
+            id = 2,
+            subjectName = "Fizyka",
+            classType = "Laboratorium",
+            startTime = "10:00",
+            endTime = "11:30",
+            dayOfWeek = 1,
+            date = "2025-05-10",
+            groupCode = "12-MAT-S",
+            subgroup = null
+        )
+
+        // Act
+        val id1 = NotificationHelper.getNotificationIdForClass(class1)
+        val id2 = NotificationHelper.getNotificationIdForClass(class2)
+
+        // Assert
+        org.junit.Assert.assertNotEquals(id1, id2)
+    }
+
+    @Test
+    fun `getNotificationIdForClass normalizes groupCode and subjectName case and spaces`() {
+        // Arrange
+        val class1 = com.example.my_uz_android.data.models.ClassEntity(
+            id = 0,
+            subjectName = "  Programowanie  ",
+            classType = "Wykład",
+            startTime = "08:15",
+            endTime = "09:45",
+            dayOfWeek = 1,
+            date = "2025-05-10",
+            groupCode = " 31-INF-S ",
+            subgroup = null
+        )
+        val class2 = com.example.my_uz_android.data.models.ClassEntity(
+            id = 99,
+            subjectName = "programowanie",
+            classType = "Wykład",
+            startTime = "08:15",
+            endTime = "09:45",
+            dayOfWeek = 1,
+            date = "2025-05-10",
+            groupCode = "31-inf-s",
+            subgroup = null
+        )
+
+        // Act
+        val id1 = NotificationHelper.getNotificationIdForClass(class1)
+        val id2 = NotificationHelper.getNotificationIdForClass(class2)
+
+        // Assert
+        assertEquals(id1, id2)
+    }
 }

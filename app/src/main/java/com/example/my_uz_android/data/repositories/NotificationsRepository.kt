@@ -10,8 +10,11 @@ class NotificationsRepository(private val notificationDao: NotificationDao) {
 
     fun getUnreadCount() = notificationDao.getUnreadCount()
 
-    suspend fun insertNotification(notification: NotificationEntity) =
-        notificationDao.insertNotification(notification)
+    suspend fun insertNotification(notification: NotificationEntity) {
+        if (!notificationDao.existsRecentNotification(notification.title, notification.message, notification.timestamp)) {
+            notificationDao.insertNotification(notification)
+        }
+    }
 
     suspend fun markAllAsRead() = notificationDao.markAllAsRead()
 

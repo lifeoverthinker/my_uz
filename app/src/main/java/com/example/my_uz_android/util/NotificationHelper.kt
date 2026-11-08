@@ -139,6 +139,20 @@ object NotificationHelper {
         )
     }
 
+    // Generuje unikalne i stabilne ID powiadomienia/alarmu dla danych zajęć (niezależne od auto-increment ID w Room)
+    fun getNotificationIdForClass(classItem: ClassEntity): Int {
+        val key = "${classItem.groupCode.trim().lowercase()}_${classItem.subjectName.trim().lowercase()}_${classItem.date}_${classItem.startTime}"
+        return key.hashCode()
+    }
+
+    // Anuluje alarmy dla usuniętych zajęć
+    fun cancelClassAlarms(context: Context, classes: List<ClassEntity>) {
+        classes.forEach { classItem ->
+            val uniqueAlarmId = getNotificationIdForClass(classItem)
+            cancelAlarm(context, uniqueAlarmId, isTask = false)
+        }
+    }
+
     // Planuje przypomnienia 15 min przed każdym zajęciem na najbliższy tydzień
     fun scheduleClassAlarms(context: Context, classes: List<ClassEntity>) {
         val now = LocalDateTime.now()
@@ -156,15 +170,15 @@ object NotificationHelper {
                 if (notificationTime.isAfter(now) && notificationTime.isBefore(limitDate)) {
                     val timeInMillis = notificationTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-                    // Generujemy unikalne ID na podstawie ID zajęć i daty, żeby alarmy się nie nadpisywały
-                    val uniqueAlarmId = (classItem.id.toString() + classItem.date + classItem.startTime).hashCode()
+                    // Stabilne, unikalne ID na podstawie danych zajęć (grupa, przedmiot, data, godzina)
+                    val uniqueAlarmId = getNotificationIdForClass(classItem)
 
                     scheduleExactAlarm(
                         context = context,
                         timeInMillis = timeInMillis,
                         id = uniqueAlarmId,
                         title = "Zajęcia za 15 minut!",
-                        message = "${classItem.subjectName} · sala ${classItem.room}",
+                        message = "${classItem.subjectName} · sala ${classItem.room ?: "Brak"}",
                         isTask = false
                     )
                     zaplanowano++

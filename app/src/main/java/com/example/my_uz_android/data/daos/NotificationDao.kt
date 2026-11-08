@@ -21,6 +21,9 @@ interface NotificationDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertNotification(notification: NotificationEntity)
 
+    @Query("SELECT EXISTS(SELECT 1 FROM notifications WHERE title = :title AND message = :message AND abs(timestamp - :timestamp) < :timeWindowMs)")
+    suspend fun existsRecentNotification(title: String, message: String, timestamp: Long, timeWindowMs: Long = 60000): Boolean
+
     @Query("UPDATE notifications SET isRead = 1 WHERE isRead = 0")
     suspend fun markAllAsRead()
 
