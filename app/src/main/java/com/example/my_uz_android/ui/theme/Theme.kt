@@ -15,12 +15,16 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Dodatkowe kolory aplikacji, których nie ma w standardowym ColorScheme Materiala
+// Dodatkowe kolory aplikacji, których nie ma w standardowym ColorScheme Materiala.
+// Kolory kart (zajęcia / wydarzenia / zadania) są takie same w Light i Dark.
 @Immutable
 data class ExtendedColors(
-    val classCardBackground: Color,
-    val eventCardBackground: Color,
-    val taskCardBackground: Color,
+    val classCardBackground: Color = CardClassColors.background,
+    val onClassCard: Color = CardClassColors.content,
+    val eventCardBackground: Color = CardEventColors.background,
+    val onEventCard: Color = CardEventColors.content,
+    val taskCardBackground: Color = CardTaskColors.background,
+    val onTaskCard: Color = CardTaskColors.content,
     val navBackground: Color,
     val navBorder: Color,
     val navActive: Color,
@@ -56,8 +60,13 @@ private fun lightScheme() = lightColorScheme(
     onSurface = md_theme_light_onSurface,
     surfaceVariant = md_theme_light_surfaceVariant,
     onSurfaceVariant = md_theme_light_onSurfaceVariant,
+    inverseSurface = md_theme_light_inverseSurface,
+    inverseOnSurface = md_theme_light_inverseOnSurface,
+    inversePrimary = md_theme_light_inversePrimary,
     outline = md_theme_light_outline,
     outlineVariant = md_theme_light_outlineVariant,
+    scrim = md_theme_light_scrim,
+    surfaceContainerLowest = md_theme_light_surfaceContainerLowest,
     surfaceContainerLow = md_theme_light_surfaceContainerLow,
     surfaceContainer = md_theme_light_surfaceContainer,
     surfaceContainerHigh = md_theme_light_surfaceContainerHigh,
@@ -87,8 +96,13 @@ private fun darkScheme() = darkColorScheme(
     onSurface = md_theme_dark_onSurface,
     surfaceVariant = md_theme_dark_surfaceVariant,
     onSurfaceVariant = md_theme_dark_onSurfaceVariant,
+    inverseSurface = md_theme_dark_inverseSurface,
+    inverseOnSurface = md_theme_dark_inverseOnSurface,
+    inversePrimary = md_theme_dark_inversePrimary,
     outline = md_theme_dark_outline,
     outlineVariant = md_theme_dark_outlineVariant,
+    scrim = md_theme_dark_scrim,
+    surfaceContainerLowest = md_theme_dark_surfaceContainerLowest,
     surfaceContainerLow = md_theme_dark_surfaceContainerLow,
     surfaceContainer = md_theme_dark_surfaceContainer,
     surfaceContainerHigh = md_theme_dark_surfaceContainerHigh,
@@ -101,11 +115,9 @@ fun MyUZTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
+    // Kolory kart są wspólne - różnią się tylko elementy nawigacji i nagłówka
     val extended = if (darkTheme) {
         ExtendedColors(
-            classCardBackground = card_class_dark,
-            eventCardBackground = card_event_dark,
-            taskCardBackground = card_task_dark,
             navBackground = nav_dark_background,
             navBorder = nav_dark_border,
             navActive = nav_dark_active,
@@ -114,9 +126,6 @@ fun MyUZTheme(
         )
     } else {
         ExtendedColors(
-            classCardBackground = card_class_light,
-            eventCardBackground = card_event_light,
-            taskCardBackground = card_task_light,
             navBackground = nav_light_background,
             navBorder = nav_light_border,
             navActive = nav_light_active,

@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.tileContentColor
+import com.example.my_uz_android.ui.theme.tileSecondaryContentColor
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -61,8 +63,8 @@ fun ClassCard(
     isTeacherPlan: Boolean = false,
     onClick: () -> Unit = {}
 ) {
-    val titleColor = MaterialTheme.colorScheme.onSurface
-    val detailsColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val titleColor = tileContentColor(backgroundColor)
+    val detailsColor = tileSecondaryContentColor(backgroundColor)
 
     val avatarTextColor = if (accentColor.luminance() > 0.5f) Color(0xFF1D192B) else Color.White
 

@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.data.models.TaskEntity
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.tileContentColor
+import com.example.my_uz_android.ui.theme.tileSecondaryContentColor
 import com.example.my_uz_android.ui.theme.extendedColors
 import com.example.my_uz_android.ui.theme.taskPriorityDotColor
 import java.text.SimpleDateFormat
@@ -43,11 +45,10 @@ fun TaskCard(
     backgroundColor: Color? = null
 ) {
     val isCompleted = task.isCompleted
-    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
 
     val priorityDefaultBg = when (task.priority) {
-        2 -> com.example.my_uz_android.ui.theme.getAppBackgroundColor(5, isDark) // Wysoki: pastelowy róż
-        1 -> com.example.my_uz_android.ui.theme.getAppBackgroundColor(3, isDark) // Średni: pastelowy żółty
+        2 -> com.example.my_uz_android.ui.theme.getAppBackgroundColor(5) // Wysoki: pastelowy róż
+        1 -> com.example.my_uz_android.ui.theme.getAppBackgroundColor(3) // Średni: pastelowy żółty
         else -> extendedColors.taskCardBackground                                // Niski: błękitny
     }
 
@@ -57,8 +58,8 @@ fun TaskCard(
         backgroundColor ?: priorityDefaultBg
     }
 
-    val titleColor = MaterialTheme.colorScheme.onSurface
-    val secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val titleColor = tileContentColor(cardBackgroundColor)
+    val secondaryColor = tileSecondaryContentColor(cardBackgroundColor)
     val textDecoration = if (isCompleted) TextDecoration.LineThrough else null
 
     Column(

@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.ui.theme.InterFontFamily
+import com.example.my_uz_android.ui.theme.tileContentColor
+import com.example.my_uz_android.ui.theme.tileSecondaryContentColor
 import androidx.compose.ui.res.stringResource
 import com.example.my_uz_android.R
 
@@ -221,6 +223,8 @@ fun DashboardEmptyCard(
     accentColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val contentColor = tileContentColor(containerColor)
+    val secondaryColor = tileSecondaryContentColor(containerColor)
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = containerColor,
@@ -254,7 +258,7 @@ fun DashboardEmptyCard(
                     fontSize = 16.sp,
                     lineHeight = 24.sp
                 ),
-                color = accentColor,
+                color = contentColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -267,7 +271,7 @@ fun DashboardEmptyCard(
                     fontSize = 12.sp,
                     lineHeight = 16.sp
                 ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = secondaryColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -287,6 +291,8 @@ fun DashboardActionEmptyCard(
     accentColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val contentColor = tileContentColor(containerColor)
+    val secondaryColor = tileSecondaryContentColor(containerColor)
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = containerColor,
@@ -320,7 +326,7 @@ fun DashboardActionEmptyCard(
                     fontSize = 18.sp,
                     lineHeight = 26.sp
                 ),
-                color = accentColor,
+                color = contentColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -333,7 +339,7 @@ fun DashboardActionEmptyCard(
                     fontSize = 14.sp,
                     lineHeight = 20.sp
                 ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = secondaryColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -343,10 +349,10 @@ fun DashboardActionEmptyCard(
             Button(
                 onClick = onActionClick,
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                colors = ButtonDefaults.buttonColors(containerColor = contentColor),
                 modifier = Modifier.heightIn(min = 48.dp)
             ) {
-                Text(text = actionText, color = MaterialTheme.colorScheme.surfaceContainerLowest)
+                Text(text = actionText, color = containerColor)
             }
         }
     }

@@ -372,40 +372,37 @@ fun SettingsActionItem(iconRes: Int, title: String, description: String, isDestr
  * Wiersz wyboru koloru dla typu zajęć.
  */
 fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelected: (Int) -> Unit) {
-    val isDarkMode = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(text = classType, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 12.dp, start = 4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ClassColorPalette.forEachIndexed { index, colorSet ->
                 val isSelected = index == selectedColorIndex
-                val circleBg = if (isDarkMode) colorSet.darkBg else colorSet.lightBg
-                val circleAccent = if (isDarkMode) colorSet.darkAccent else colorSet.lightAccent
-                 Box(
-                     modifier = Modifier
-                         .size(36.dp)
-                         .clip(CircleShape)
-                         .background(circleBg)
-                         .border(
-                             width = if (isSelected) 2.dp else 0.dp,
-                             color = if (isSelected) circleAccent else Color.Transparent,
-                             shape = CircleShape
-                         )
-                         .clickable { onColorSelected(index) },
-                     contentAlignment = Alignment.Center
-                 ) {
-                     if (isSelected) {
-                         Icon(
-                             painter = painterResource(R.drawable.ic_check),
-                             contentDescription = null,
-                             tint = if (circleBg.luminance() > 0.5f) MaterialTheme.colorScheme.onSurface else Color.White,
-                             modifier = Modifier.size(18.dp)
-                         )
-                     }
-                 }
-             }
-         }
-     }
- }
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(colorSet.background)
+                        .border(
+                            width = if (isSelected) 2.dp else 0.dp,
+                            color = if (isSelected) colorSet.accent else Color.Transparent,
+                            shape = CircleShape
+                        )
+                        .clickable { onColorSelected(index) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_check),
+                            contentDescription = null,
+                            tint = colorSet.content,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 /**

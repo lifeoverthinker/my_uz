@@ -38,10 +38,18 @@ import androidx.glance.unit.ColorProvider
 import com.example.my_uz_android.MainActivity
 import com.example.my_uz_android.R
 import com.example.my_uz_android.data.models.ClassEntity
-import com.example.my_uz_android.ui.theme.ClassColorPalette
+import com.example.my_uz_android.ui.theme.getAppColorSet
+import com.example.my_uz_android.ui.theme.getClassColorIndex
+import com.example.my_uz_android.ui.theme.md_theme_dark_background
+import com.example.my_uz_android.ui.theme.md_theme_dark_onBackground
+import com.example.my_uz_android.ui.theme.md_theme_dark_onSurfaceVariant
+import com.example.my_uz_android.ui.theme.md_theme_dark_primary
+import com.example.my_uz_android.ui.theme.md_theme_light_background
+import com.example.my_uz_android.ui.theme.md_theme_light_onBackground
+import com.example.my_uz_android.ui.theme.md_theme_light_onSurfaceVariant
+import com.example.my_uz_android.ui.theme.md_theme_light_primary
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlin.math.abs
 
 class Widget : GlanceAppWidget() {
 
@@ -181,23 +189,14 @@ class Widget : GlanceAppWidget() {
         colorMap: Map<String, Int>,
         mainIntent: Intent
     ) {
-        val colorIndex = colorMap[classItem.classType]
-            ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
-        val colorSet = ClassColorPalette.getOrElse(colorIndex) { ClassColorPalette[0] }
-
+        val colorSet = getAppColorSet(getClassColorIndex(classItem.classType, colorMap))
         val context = LocalContext.current
-        val isDark = try {
-            (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        } catch (e: Exception) {
-            false
-        }
 
-        val bgColorProvider = ColorProvider(if (isDark) colorSet.darkBg else colorSet.lightBg)
-        val accentColorProvider = ColorProvider(if (isDark) colorSet.darkAccent else colorSet.lightAccent)
-        val onAccentColorProvider = ColorProvider(if (isDark) Color(0xFF1D192B) else Color.White)
-
-        val titleColorProvider = ColorProvider(if (isDark) Color.White else Color(0xFF1D192B))
-        val subtitleColorProvider = ColorProvider(if (isDark) Color(0xFFCAC4D0) else Color(0xFF49454F))
+        val bgColorProvider = ColorProvider(colorSet.background)
+        val accentColorProvider = ColorProvider(colorSet.accent)
+        val onAccentColorProvider = ColorProvider(Color.White)
+        val titleColorProvider = ColorProvider(colorSet.content)
+        val subtitleColorProvider = ColorProvider(colorSet.content.copy(alpha = 0.8f))
 
         val typeInitial = if (classItem.classType.isNotEmpty()) classItem.classType.take(1).uppercase() else "?"
 

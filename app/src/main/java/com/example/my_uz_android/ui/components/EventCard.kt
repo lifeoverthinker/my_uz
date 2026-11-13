@@ -17,6 +17,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.data.models.EventEntity
 import com.example.my_uz_android.ui.theme.extendedColors
+import com.example.my_uz_android.ui.theme.tileContentColor
+import com.example.my_uz_android.ui.theme.tileSecondaryContentColor
 
 // Karta pojedynczego wydarzenia na dashboardzie i liście
 @Composable
@@ -27,8 +29,8 @@ fun EventCard(
     backgroundColor: Color? = null
 ) {
     val cardBackgroundColor = backgroundColor ?: extendedColors.eventCardBackground
-    val titleColor = MaterialTheme.colorScheme.onSurface
-    val descriptionColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val titleColor = tileContentColor(cardBackgroundColor)
+    val descriptionColor = tileSecondaryContentColor(cardBackgroundColor)
 
     Column(
         modifier = modifier
