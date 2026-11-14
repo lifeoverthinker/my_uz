@@ -44,13 +44,11 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 
-// Warianty karty zajęć: pełna na głównym ekranie lub kompaktowa w kalendarzu
 enum class ClassCardType {
     HOME,
     CALENDAR
 }
 
-// Karta pojedynczych zajęć w planie (poszarza się automatycznie, jeśli zajęcia już minęły)
 @Composable
 fun ClassCard(
     classItem: ClassEntity,

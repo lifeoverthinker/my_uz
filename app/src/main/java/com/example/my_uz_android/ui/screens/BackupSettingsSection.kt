@@ -31,9 +31,6 @@ fun BackupSettingsSection(
     val backupImportSuccessMsg = stringResource(R.string.backup_import_success)
     val backupReadErrorMsg = stringResource(R.string.backup_read_error)
 
-    // ---------------------------------------------------------
-    // LAUNCHER DO ZAPISU PLIKU (EKSPORT)
-    // ---------------------------------------------------------
     val createDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
@@ -51,22 +48,17 @@ fun BackupSettingsSection(
         }
     }
 
-    // ---------------------------------------------------------
-    // LAUNCHER DO ODCZYTU PLIKU (IMPORT)
-    // ---------------------------------------------------------
     val openDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let { sourceUri ->
             try {
-                // Odczytujemy zawartość wybranego pliku
                 val inputStream = context.contentResolver.openInputStream(sourceUri)
                 val reader = BufferedReader(InputStreamReader(inputStream))
                 val jsonString = reader.readText()
                 reader.close()
                 inputStream?.close()
 
-                // Przekazujemy odczytany tekst do ViewModelu
                 viewModel.importDatabase(
                     json = jsonString,
                     onSuccess = {
@@ -82,9 +74,6 @@ fun BackupSettingsSection(
         }
     }
 
-    // ---------------------------------------------------------
-    // WIDOK (UI)
-    // ---------------------------------------------------------
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -110,13 +99,11 @@ fun BackupSettingsSection(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // PRZYCISK EKSPORTU
             Button(
                 modifier = Modifier.weight(1f),
                 onClick = {
                     viewModel.exportDatabase { json ->
                         jsonContentToSave = json
-                        // Generujemy domyślną nazwę pliku z datą
                         val dateString = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm"))
                         createDocumentLauncher.launch("my_uz_backup_$dateString.json")
                     }
@@ -125,11 +112,9 @@ fun BackupSettingsSection(
                 Text(stringResource(R.string.btn_export))
             }
 
-            // PRZYCISK IMPORTU
             FilledTonalButton(
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    // Odpalamy systemowe okno wyboru pliku (filtrujemy po JSON)
                     openDocumentLauncher.launch(arrayOf("application/json", "*/*"))
                 }
             ) {

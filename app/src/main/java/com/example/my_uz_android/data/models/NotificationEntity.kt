@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-// Powiadomienie lokalne/systemowe
 @Serializable
 @Entity(tableName = "notifications")
 data class NotificationEntity(
@@ -14,5 +13,5 @@ data class NotificationEntity(
     val message: String,
     val timestamp: Long = System.currentTimeMillis(),
     val isRead: Boolean = false,
-    val type: String // np. "schedule_change", "system"
+    val type: String
 )

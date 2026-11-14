@@ -8,7 +8,6 @@ import androidx.room.Query
 import com.example.my_uz_android.data.models.FavoriteEntity
 import kotlinx.coroutines.flow.Flow
 
-// Zarządzanie ulubionymi salami, wykładowcami i grupami
 @Dao
 interface FavoritesDao {
     @Query("SELECT * FROM favorites ORDER BY name ASC")

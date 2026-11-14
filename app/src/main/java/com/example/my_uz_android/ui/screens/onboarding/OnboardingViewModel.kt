@@ -20,17 +20,14 @@ class OnboardingViewModel(
     private val userCourseRepository: UserCourseRepository
 ) : ViewModel() {
 
-    // Numer aktualnego slajdu (0..6)
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
 
-    // Flaga ładowania przy pobieraniu grup lub zapisywaniu
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     val totalPages = 7
 
-    // Dane osobowe
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
@@ -40,7 +37,6 @@ class OnboardingViewModel(
     private val _selectedGender = MutableStateFlow<UserGender?>(null)
     val selectedGender: StateFlow<UserGender?> = _selectedGender.asStateFlow()
 
-    // Wybór głównej grupy i podgrup
     private val _groupSearchQuery = MutableStateFlow("")
     val groupSearchQuery: StateFlow<String> = _groupSearchQuery.asStateFlow()
 
@@ -53,7 +49,6 @@ class OnboardingViewModel(
     private val _selectedSubgroups = MutableStateFlow<Set<String>>(emptySet())
     val selectedSubgroups: StateFlow<Set<String>> = _selectedSubgroups.asStateFlow()
 
-    // Wybór drugiego/dodatkowego kierunku (krok 4)
     private val _additionalCourses = MutableStateFlow<List<Pair<String, Set<String>>>>(emptyList())
     val additionalCourses: StateFlow<List<Pair<String, Set<String>>>> = _additionalCourses.asStateFlow()
 
@@ -69,10 +64,8 @@ class OnboardingViewModel(
     private val _selectedExtraSubgroups = MutableStateFlow<Set<String>>(emptySet())
     val selectedExtraSubgroups: StateFlow<Set<String>> = _selectedExtraSubgroups.asStateFlow()
 
-    // Wszystkie grupy pobrane z API uczelni
     private val _allGroups = MutableStateFlow<List<String>>(emptyList())
 
-    // Filtrowanie podpowiedzi dla grupy głównej (max 5)
     val filteredGroups: StateFlow<List<String>> = combine(
         _groupSearchQuery,
         _allGroups
@@ -86,7 +79,6 @@ class OnboardingViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Filtrowanie podpowiedzi dla kierunków dodatkowych (max 5)
     val filteredExtraGroups: StateFlow<List<String>> = combine(
         _extraGroupSearchQuery,
         _allGroups
@@ -99,7 +91,6 @@ class OnboardingViewModel(
         loadGroups()
     }
 
-    // Pobranie listy grup z API
     private fun loadGroups() {
         viewModelScope.launch {
             when (val result = universityRepository.getGroupCodes()) {
@@ -116,7 +107,6 @@ class OnboardingViewModel(
         }
     }
 
-    // Nawigacja w przód i w tył
     fun onNextClick() {
         if (_currentPage.value < totalPages - 1) {
             _currentPage.value += 1
@@ -129,12 +119,10 @@ class OnboardingViewModel(
         }
     }
 
-    // Formularz danych
     fun setUserName(name: String) { _userName.value = name }
     fun setUserSurname(surname: String) { _userSurname.value = surname }
     fun setGender(gender: UserGender) { _selectedGender.value = gender }
 
-    // Obsługa wyboru grupy głównej
     fun setGroupSearchQuery(query: String) {
         _groupSearchQuery.value = query
         if (query.isBlank()) {
@@ -173,7 +161,6 @@ class OnboardingViewModel(
         _selectedSubgroups.value = current
     }
 
-    // Obsługa dodatkowych kierunków
     fun setExtraGroupSearchQuery(query: String) {
         _extraGroupSearchQuery.value = query
         if (query.isBlank()) {
@@ -231,7 +218,6 @@ class OnboardingViewModel(
         _additionalCourses.value = _additionalCourses.value.filter { it.first != group }
     }
 
-    // Pominięcie onboardingu i wejście jako gość
     fun skipOnboarding(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -257,7 +243,6 @@ class OnboardingViewModel(
         }
     }
 
-    // Zapisanie ustawień i przejście do aplikacji
     fun saveOnboardingData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -298,7 +283,6 @@ class OnboardingViewModel(
                 )
                 settingsRepository.insertSettings(newSettings)
 
-                // Zapisujemy dodatkowe kierunki jeśli użytkownik jakieś dodał
                 _additionalCourses.value.forEach { (courseGroup, subgroups) ->
                     var extraField: String? = null
                     val detailsResult = runCatching { universityRepository.getGroupDetails(courseGroup) }.getOrNull()
@@ -317,7 +301,6 @@ class OnboardingViewModel(
                 }
                 onSuccess()
             } catch (_: Exception) {
-                // W razie błędu sieci i tak przechodzimy do aplikacji
                 onSuccess()
             } finally {
                 _isLoading.value = false

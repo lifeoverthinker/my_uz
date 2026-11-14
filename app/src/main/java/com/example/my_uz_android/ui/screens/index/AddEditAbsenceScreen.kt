@@ -29,7 +29,6 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.res.stringResource
 
-// Obsługa stanu i logiki dodawania/edycji nieobecności
 @Composable
 fun AbsenceAddEditScreenRoute(
     viewModel: AddEditAbsenceViewModel,
@@ -40,19 +39,16 @@ fun AbsenceAddEditScreenRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isSaved by viewModel.isSaved.collectAsStateWithLifecycle()
 
-    // Po udanym zapisie wracamy do poprzedniego ekranu
     LaunchedEffect(isSaved) {
         if (isSaved) onNavigateBack()
     }
 
-    // Inicjalizacja nowych danych na podstawie przekazanych argumentów (np. z widoku kalendarza)
     LaunchedEffect(prefilledSubject, prefilledClassType, uiState.id, uiState.subjectName) {
         if (uiState.id == 0 && uiState.subjectName == null) {
             viewModel.initNewAbsence(prefilledSubject, prefilledClassType)
         }
     }
 
-    // Zmienne lokalne, aby uniknąć opóźnień (lagów) podczas wpisywania tekstu
     var localSubject by remember(uiState.subjectName) { mutableStateOf(uiState.subjectName ?: "") }
     var localClassType by remember(uiState.classType) { mutableStateOf(uiState.classType ?: "") }
 
@@ -68,7 +64,7 @@ fun AbsenceAddEditScreenRoute(
         onSubjectChange = {
             localSubject = it
             viewModel.updateSubjectName(it)
-            viewModel.updateClassType("") // Resetujemy rodzaj zajęć przy zmianie przedmiotu
+            viewModel.updateClassType("")
             localClassType = ""
         },
         subjectsList = subjectsList,
@@ -80,7 +76,6 @@ fun AbsenceAddEditScreenRoute(
         classTypesList = classTypesList,
         dateMillis = uiState.date,
         onDateChange = viewModel::updateDate,
-        // Pobieramy status usprawiedliwienia PROSTO z ViewModelu (naprawiony bug!)
         isExcused = uiState.isExcused,
         onExcusedChange = viewModel::updateIsExcused,
         reason = uiState.description,
@@ -90,7 +85,6 @@ fun AbsenceAddEditScreenRoute(
     )
 }
 
-// Kolory ramek pól tekstowych w formularzu
 @Composable
 private fun absenceOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -104,7 +98,6 @@ private fun absenceOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
 
 private val AbsenceAppShape = RoundedCornerShape(16.dp)
 
-// Klikalny wiersz wyboru (np. data)
 @Composable
 private fun AbsenceClickableFieldRow(
     label: String,
@@ -159,7 +152,6 @@ private fun AbsenceClickableFieldRow(
     }
 }
 
-// Widok formularza nieobecności
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AbsenceAddEditScreen(
@@ -218,7 +210,6 @@ fun AbsenceAddEditScreen(
                     .padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Wybór daty
                 AbsenceClickableFieldRow(
                     label = stringResource(R.string.label_absence_date),
                     value = formatAbsenceAddEditDate(dateMillis),
@@ -226,7 +217,6 @@ fun AbsenceAddEditScreen(
                     onClick = { showDatePicker = true }
                 )
 
-                // Wybór przedmiotu
                 AbsenceAppDropdownMenu(
                     label = stringResource(R.string.label_subject_field),
                     selectedOption = selectedSubject,
@@ -235,7 +225,6 @@ fun AbsenceAddEditScreen(
                     iconRes = R.drawable.ic_book_open
                 )
 
-                // Wybór rodzaju zajęć (pokazywany tylko po wybraniu przedmiotu)
                 AnimatedVisibility(
                     visible = selectedSubject.isNotEmpty() && classTypesList.isNotEmpty(),
                     enter = expandVertically(),
@@ -267,7 +256,6 @@ fun AbsenceAddEditScreen(
                     }
                 }
 
-                // Przełącznik "Usprawiedliwiona"
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -301,7 +289,6 @@ fun AbsenceAddEditScreen(
                     }
                 }
 
-                // Pole opisu / powodu
                 OutlinedTextField(
                     value = reason,
                     onValueChange = onReasonChange,
@@ -329,7 +316,6 @@ fun AbsenceAddEditScreen(
     }
 }
 
-// Menu rozwijane wyboru przedmiotu
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AbsenceAppDropdownMenu(
@@ -363,7 +349,7 @@ fun AbsenceAppDropdownMenu(
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
-            colors = absenceOutlinedTextFieldColors(), // Używa spójnych kolorów
+            colors = absenceOutlinedTextFieldColors(),
             shape = AbsenceAppShape
         )
 

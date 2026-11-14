@@ -329,7 +329,6 @@ private fun ExpandableSubjectGradeCard(
                             }
                         }
 
-                        // Styl CTA: prostokąt zaokrąglony 8dp + kolor bordera = kolor tekstu
                         Row(
                             modifier = Modifier
                                 .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))

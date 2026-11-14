@@ -1,11 +1,5 @@
 package com.example.my_uz_android.ui.screens.index
 
-/**
- * ViewModel zarządzający listą nieobecności oraz sprawdzaniem limitów przedmiotów.
- * Filtruje zajęcia z uwzględnieniem podgrup, kierunków oraz faktu,
- * czy dana nieobecność została usprawiedliwiona (nie licząc jej do limitu).
- */
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.my_uz_android.data.models.AbsenceEntity
@@ -20,28 +14,18 @@ import com.example.my_uz_android.util.SubgroupMatcher
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-/**
- * Model danych reprezentujący zbiór nieobecności dla pojedynczego przedmiotu.
- */
 data class SubjectAbsences(
     val subjectName: String,
     val courseName: String,
     val types: List<AbsenceTypeGroup>
 )
 
-/**
- * Model danych grupujący nieobecności z podziałem na rodzaj zajęć (Wykład, Lab)
- * oraz przechowujący ich dopuszczalny limit.
- */
 data class AbsenceTypeGroup(
     val classType: String,
     val absences: List<AbsenceEntity>,
     val limit: Int
 )
 
-/**
- * Dostępne stany ładowania ekranu nieobecności.
- */
 sealed interface AbsencesUiState {
     data object Loading : AbsencesUiState
     data class Success(val data: List<SubjectAbsences>) : AbsencesUiState
@@ -105,10 +89,6 @@ class AbsencesViewModel(
         }
     }
 
-    /**
-     * Włącza lub wyłącza widoczność wybranego kierunku na ekranie nieobecności.
-     * Nie pozwala wyłączyć ostatniego aktywnego kierunku.
-     */
     fun toggleGroupVisibility(groupCode: String) {
         val normalized = normalizeGroupCodeAbsencesVm(groupCode)
         val current = _selectedGroups.value.toMutableSet()
@@ -123,25 +103,15 @@ class AbsencesViewModel(
         .map { state -> if (state is AbsencesUiState.Success) state.data else emptyList() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /**
-     * Usuwa wskazaną nieobecność z bazy danych.
-     */
     fun deleteAbsence(absence: AbsenceEntity) = viewModelScope.launch {
         absenceRepository.deleteAbsence(absence)
     }
 
-    /**
-     * Aktualizuje lokalny, wybrany przez użytkownika limit nieobecności dla danych zajęć.
-     */
     fun updateLimit(subjectName: String, classType: String, newLimit: Int) {
         val key = normalizeLimitKeyAbsencesVm(subjectName, classType)
         _limits.update { it + (key to newLimit) }
     }
 
-    /**
-     * Buduje skomplikowaną strukturę listy nieobecności dla UI, uwzględniając podział na przedmioty,
-     * weryfikację użytkownika (czy ma dostęp do zajęć), sprawdzanie podgrup itp.
-     */
     private fun buildSubjectAbsences(
         absences: List<AbsenceEntity>,
         allClasses: List<ClassEntity>,
@@ -203,13 +173,10 @@ class AbsencesViewModel(
                     val limitKey = normalizeLimitKeyAbsencesVm(displaySubjectName, type)
                     val currentLimit = limits[limitKey] ?: 2
 
-                    // Rozdzielamy je logicznie do sortowania, ale zachowujemy wszystkie by je narysować w UI!
                     val typeAbsences = absencesForSubject
                         .filter { normalizeTypeAbsencesVm(it.classType) == type }
                         .sortedBy { it.date }
 
-                    // Właściwość, z której aplikacja liczy "Ile zostało" nieobecności.
-                    // Filtr: if (!it.isExcused) oznacza, że wliczamy TYLKO te, które są NIeusprawiedliwione
                     AbsenceTypeGroup(
                         classType = type,
                         absences = typeAbsences,

@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.res.stringResource
 import com.example.my_uz_android.R
 
-// Dialog wyboru godziny dla wartości w formacie "HH:mm"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePicker(

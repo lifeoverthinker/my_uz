@@ -29,7 +29,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -117,12 +116,6 @@ fun SchedulePreviewScreen(
             ?: classes.firstOrNull { it.teacherName?.isNotBlank() == true }
     }
 
-    val isDark = when (uiState.themeMode) {
-        "DARK" -> true
-        "LIGHT" -> false
-        else -> MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    }
-
     SchedulePreviewScreenContent(
         classes = classes,
         tasks = uiState.tasks,
@@ -132,7 +125,6 @@ fun SchedulePreviewScreen(
         isTeacher = isTeacher,
         teacherData = teacherData,
         isLoading = uiState.isLoading,
-        isDarkMode = isDark,
         onBackClick = { navController.popBackStack() },
         onFavoriteClick = {
             viewModel.toggleFavorite(
@@ -156,7 +148,6 @@ fun SchedulePreviewScreenContent(
     isTeacher: Boolean,
     teacherData: ClassEntity?,
     isLoading: Boolean,
-    isDarkMode: Boolean,
     onBackClick: () -> Unit,
     onFavoriteClick: () -> Unit,
     onClassClick: (ClassEntity) -> Unit
@@ -339,7 +330,6 @@ fun SchedulePreviewScreenContent(
                         tasks = emptyList(),
                         classColorMap = classColorMap,
                         onClassClick = onClassClick,
-                        isDarkMode = isDarkMode,
                         isTeacherPlan = isTeacher,
                         showHeader = true,
                         modifier = Modifier.fillMaxSize()
@@ -401,7 +391,6 @@ fun SchedulePreviewScreenPreview() {
             isTeacher = true,
             teacherData = null,
             isLoading = false,
-            isDarkMode = false,
             onBackClick = {},
             onFavoriteClick = {},
             onClassClick = {}

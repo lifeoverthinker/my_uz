@@ -89,7 +89,6 @@ val nav_dark_border = Color(0xFF2D2842)
 val nav_dark_active = Color(0xFFCBB8FF)
 val nav_dark_inactive = Color(0xFFA9A2C0)
 
-// Tło górnej części ekranu głównego
 val home_top_background_light = MyUZ_Icon_Bg_Light
 val home_top_background_dark = Color(0xFF1A1630)
 
@@ -170,23 +169,11 @@ fun tileSecondaryContentColor(
 ): Color = AppColorPalette.firstOrNull { it.background == tileBackground }
     ?.content?.copy(alpha = 0.8f) ?: fallback
 
-// Przeciążenia dla starych wywołań - parametr isDark jest ignorowany.
-// Po podmianie wywołań w całej aplikacji można je usunąć.
-@Deprecated("Kolory kafelków nie zależą od trybu. Użyj getAppBackgroundColor(index).")
-@Suppress("UNUSED_PARAMETER")
-fun getAppBackgroundColor(index: Int, isDark: Boolean): Color = getAppBackgroundColor(index)
-
-@Deprecated("Kolory kafelków nie zależą od trybu. Użyj getAppAccentColor(index).")
-@Suppress("UNUSED_PARAMETER")
-fun getAppAccentColor(index: Int, isDark: Boolean): Color = getAppAccentColor(index)
-
-// Dobiera indeks koloru dla przedmiotu (z mapy użytkownika lub z hasha nazwy)
 fun getClassColorIndex(subjectName: String?, userColorMap: Map<String, Int> = emptyMap()): Int {
     if (subjectName == null) return 0
     return userColorMap[subjectName] ?: ((subjectName.hashCode() and 0x7FFFFFFF) % AppColorPalette.size)
 }
 
-// Kolor kropki priorytetu zadania (2 = wysoki, 1 = średni, 0 = niski)
 @Composable
 fun taskPriorityDotColor(priority: Int): Color {
     return when (priority) {

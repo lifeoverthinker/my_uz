@@ -20,7 +20,6 @@ import com.example.my_uz_android.ui.theme.extendedColors
 import com.example.my_uz_android.ui.theme.tileContentColor
 import com.example.my_uz_android.ui.theme.tileSecondaryContentColor
 
-// Karta pojedynczego wydarzenia na dashboardzie i liście
 @Composable
 fun EventCard(
     event: EventEntity,

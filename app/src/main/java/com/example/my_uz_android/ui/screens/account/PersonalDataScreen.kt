@@ -1,10 +1,5 @@
 package com.example.my_uz_android.ui.screens.account
 
-/**
- * Ekran wyświetlający dane personalne i przypisane kierunki studiów.
- * Zaprojektowany zgodnie ze standardem Material Design 3 (karty, listy, wyraźna hierarchia).
- */
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

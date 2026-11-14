@@ -29,7 +29,6 @@ fun UpcomingClasses(
     emptyMessage: String?,
     dayLabel: String?,
     classColorMap: Map<String, Int>,
-    isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     onClassClick: (Int) -> Unit,
     onSetupPlanClick: () -> Unit
@@ -86,8 +85,8 @@ fun UpcomingClasses(
                 iconRes = R.drawable.ic_calendar_check,
                 actionText = stringResource(R.string.setup_plan_button),
                 onActionClick = onSetupPlanClick,
-                containerColor = getAppBackgroundColor(0, isDarkMode),
-                accentColor = getAppAccentColor(0, isDarkMode),
+                containerColor = getAppBackgroundColor(0),
+                accentColor = getAppAccentColor(0),
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         } else if (classes.isEmpty()) {
@@ -95,8 +94,8 @@ fun UpcomingClasses(
                 title = stringResource(R.string.all_set_title),
                 message = emptyMessage ?: stringResource(R.string.no_classes_today_tomorrow),
                 iconRes = R.drawable.ic_calendar_check,
-                containerColor = getAppBackgroundColor(0, isDarkMode),
-                accentColor = getAppAccentColor(0, isDarkMode),
+                containerColor = getAppBackgroundColor(0),
+                accentColor = getAppAccentColor(0),
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         } else {
@@ -107,8 +106,8 @@ fun UpcomingClasses(
                     val colorIndex = classColorMap[classItem.classType]
                         ?: (abs(classItem.classType.hashCode()) % ClassColorPalette.size)
 
-                    val bgColor = getAppBackgroundColor(colorIndex, isDarkMode)
-                    val accentColor = getAppAccentColor(colorIndex, isDarkMode)
+                    val bgColor = getAppBackgroundColor(colorIndex)
+                    val accentColor = getAppAccentColor(colorIndex)
 
                     ClassCard(
                         classItem = classItem,

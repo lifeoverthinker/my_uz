@@ -8,8 +8,6 @@ import com.example.my_uz_android.data.repositories.TasksRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// Zmieniono strukturę UiState na prostszą klasę danych,
-// aby uniknąć błędów Unresolved reference 'task' w TaskDetailsScreen.
 data class TaskDetailsUiState(
     val task: TaskEntity? = null,
     val isLoading: Boolean = true,
@@ -51,7 +49,6 @@ class TaskDetailsViewModel(
         }
     }
 
-    // Metoda toggle pozostaje dla szybkiej edycji z poziomu szczegółów
     fun toggleTaskCompletion() {
         viewModelScope.launch {
             uiState.value.task?.let {

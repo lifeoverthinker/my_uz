@@ -171,7 +171,6 @@ private fun ExpandableAbsenceCard(
                 )
 
                 subjectData.types.forEachIndexed { typeIndex, typeGroup ->
-                    // NAPRAWA: Zliczamy do limitu tylko nieusprawiedliwione!
                     val count = typeGroup.absences.count { !it.isExcused }
                     val limit = typeGroup.limit
                     val isLimitReached = count >= limit

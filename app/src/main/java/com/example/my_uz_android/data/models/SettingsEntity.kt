@@ -11,7 +11,6 @@ enum class ThemeMode(val displayName: String) {
     SYSTEM("Systemowy")
 }
 
-// Główne ustawienia profilu i aplikacji (pojedynczy rekord o stałym id = 1)
 @Serializable
 @Entity(tableName = "settings")
 data class SettingsEntity(

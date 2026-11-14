@@ -11,23 +11,18 @@ class BackupManagerTest {
     fun `test BackupData serializes and deserializes properly to identical object`() {
         val json = Json { ignoreUnknownKeys = true }
 
-        // Tworzymy przykładowy obiekt BackupData (puste listy wystarczą,
-        // by potwierdzić prawidłowe działanie struktury i opcjonalnych nulli)
         val originalData = BackupData(
             classes = emptyList(),
             tasks = emptyList(),
             grades = emptyList(),
-            settings = null, // Testujemy obsługę nulla w SettingsEntity
+            settings = null,
             favorites = emptyList()
         )
 
-        // Wykonujemy serializację
         val serializedJsonString = json.encodeToString(originalData)
 
-        // Wykonujemy deserializację
         val deserializedData = json.decodeFromString<BackupData>(serializedJsonString)
 
-        // Porównujemy oba obiekty
         assertEquals(
             "Zdeserializowany obiekt powinien być dokładnie taki sam jak oryginalny",
             originalData,

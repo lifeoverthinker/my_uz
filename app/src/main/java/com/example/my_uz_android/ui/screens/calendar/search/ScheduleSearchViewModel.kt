@@ -28,7 +28,7 @@ data class SearchUiState(
 
 data class SearchResultItem(
     val name: String,
-    val type: String, // "group" | "teacher"
+    val type: String,
     val isFavorite: Boolean = false,
     val studyField: String? = null,
     val email: String? = null,
@@ -150,7 +150,6 @@ class ScheduleSearchViewModel(
         val localMatchedGroups = allGroupsIndex
             .asSequence()
             .filter { groupItem ->
-                // Pozwala mieszać kryteria: np. fragment kodu grupy + fragment kierunku.
                 words.all { word ->
                     groupItem.searchableTexts.any { searchable ->
                         matchesQueryScheduleSearchVM(searchable, listOf(word))
@@ -224,7 +223,6 @@ class ScheduleSearchViewModel(
         return buildList {
             add(normalizedCode)
             add(compact)
-            // Dodajemy nazwy kierunków do indeksu wyszukiwania
             group.studyFields.forEach { field ->
                 if (field.isNotBlank()) {
                     add(field.trim())

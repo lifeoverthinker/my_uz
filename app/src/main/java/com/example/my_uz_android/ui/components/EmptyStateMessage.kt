@@ -1,11 +1,5 @@
 package com.example.my_uz_android.ui.components
 
-/**
- * Zestaw komponentów Empty State używanych w dashboardzie i ekranach list.
- * Plik zawiera zarówno pełnoekranowe warianty informacyjne, jak i kompaktowe
- * karty dashboardowe dla sekcji bez danych.
- */
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,13 +22,6 @@ import com.example.my_uz_android.ui.theme.tileSecondaryContentColor
 import androidx.compose.ui.res.stringResource
 import com.example.my_uz_android.R
 
-/**
- * Bazowy full-screen Empty State zgodny z układem z Figmy:
- * - kontener szerokości 328.dp
- * - ilustracja ~221.8dp
- * - stack tekstów 312.dp
- * - spacing 10.dp między ilustracją i tekstem, 8.dp między liniami tekstu
- */
 @Composable
 fun EmptyStateMessage(
     title: String,
@@ -56,12 +43,6 @@ fun EmptyStateMessage(
     )
 }
 
-/**
- * Wariant "figmowy" do precyzyjnego odwzorowania:
- * - title: headlineMedium (28/36)
- * - subtitle: titleMedium (16/24), kolor primary-like (68548E)
- * - message: bodySmall (12/16), onSurfaceVariant
- */
 @Composable
 fun EmptyStateFigma(
     title: String,
@@ -161,9 +142,6 @@ fun EmptyStateFigma(
     }
 }
 
-/**
- * Gotowe preset-y pod ekrany, które opisałeś.
- */
 @Composable
 fun CalendarEmptyState(
     iconRes: Int,
@@ -179,7 +157,6 @@ fun CalendarEmptyState(
     )
 }
 
-// Pusty stan dla listy zadań
 @Composable
 fun TasksEmptyState(
     iconRes: Int,
@@ -196,7 +173,6 @@ fun TasksEmptyState(
     )
 }
 
-// Pusty stan dla listy nieobecności
 @Composable
 fun AbsencesEmptyState(
     iconRes: Int,
@@ -213,7 +189,6 @@ fun AbsencesEmptyState(
     )
 }
 
-// Mały kafelek na dashboardzie informujący o braku danych
 @Composable
 fun DashboardEmptyCard(
     title: String,
@@ -279,7 +254,6 @@ fun DashboardEmptyCard(
     }
 }
 
-// Kafelek pustego stanu na dashboardzie z przyciskiem akcji
 @Composable
 fun DashboardActionEmptyCard(
     title: String,

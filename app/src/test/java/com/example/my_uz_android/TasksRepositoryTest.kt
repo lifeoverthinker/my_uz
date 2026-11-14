@@ -33,12 +33,10 @@ class TasksRepositoryTest {
     fun `shareTasks catches network exception and returns Error`() = runTest {
         val mockTasks = listOf(TaskEntity(id = 1, title = "Zadanie", description = null))
 
-        // Upraszczamy: symulujemy od razu błąd sieci / błąd biblioteki
         every { supabaseClient.pluginManager } throws RuntimeException("Brak połączenia z siecią")
 
         val result = repository.shareTasks(mockTasks)
 
-        // Sprawdzamy czy nasza logika try-catch poprawnie to wyłapała
         assertTrue("Powinien zwrócić błąd sieciowy", result is NetworkResult.Error)
         assertTrue((result as NetworkResult.Error).message?.contains("Błąd udostępniania") == true)
     }
@@ -57,7 +55,6 @@ class TasksRepositoryTest {
     fun `getAllTasks returns flow from DAO directly`() = runTest {
         val mockTasks = listOf(TaskEntity(id = 1, title = "Test DAO", description = null))
 
-        // Testujemy komunikację z lokalną bazą (Room)
         every { tasksDao.getAllTasks() } returns flowOf(mockTasks)
 
         repository.getAllTasks().collect { tasks ->

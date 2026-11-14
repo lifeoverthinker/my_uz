@@ -53,7 +53,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -124,7 +123,6 @@ fun ScheduleView(
     tasks: List<TaskEntity>,
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
-    isDarkMode: Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5f,
     isTeacherPlan: Boolean = false,
     availableDirections: List<String> = emptyList(),
     selectedDirections: Set<String> = emptySet(),
@@ -301,7 +299,6 @@ fun ScheduleView(
                 classesForDay = animatedClassesForDay,
                 classColorMap = classColorMap,
                 onClassClick = onClassClick,
-                isDarkMode = isDarkMode,
                 isTeacherPlan = isTeacherPlan,
                 scrollState = scrollState
             )
@@ -355,7 +352,6 @@ private fun DayTimelineContent(
     classesForDay: List<ClassEntity>,
     classColorMap: Map<String, Int>,
     onClassClick: (ClassEntity) -> Unit,
-    isDarkMode: Boolean,
     isTeacherPlan: Boolean,
     scrollState: androidx.compose.foundation.ScrollState
 ) {
@@ -406,7 +402,6 @@ private fun DayTimelineContent(
                             totalCols = layoutInfo.totalCols,
                             maxWidthDp = maxWidth,
                             onClassClick = onClassClick,
-                            isDarkMode = isDarkMode,
                             isTeacherPlan = isTeacherPlan
                         )
                     }
@@ -582,7 +577,6 @@ fun ScheduledClassItem(
     totalCols: Int,
     maxWidthDp: Dp,
     onClassClick: (ClassEntity) -> Unit,
-    isDarkMode: Boolean,
     isTeacherPlan: Boolean = false
 ) {
     val (startMinutes, durationMinutes) = remember(classEntity) {
@@ -607,8 +601,8 @@ fun ScheduledClassItem(
     val assignedColorIndex = classColorMap[classEntity.classType]
         ?: abs(classEntity.classType.hashCode()) % ClassColorPalette.size
 
-    val bgColor = getAppBackgroundColor(assignedColorIndex, isDarkMode)
-    val accentColor = getAppAccentColor(assignedColorIndex, isDarkMode)
+    val bgColor = getAppBackgroundColor(assignedColorIndex)
+    val accentColor = getAppAccentColor(assignedColorIndex)
 
     Box(
         modifier = Modifier

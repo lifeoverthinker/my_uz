@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-// Zadanie na liście to-do studenta
 @Serializable
 @Entity(tableName = "tasks")
 data class TaskEntity(

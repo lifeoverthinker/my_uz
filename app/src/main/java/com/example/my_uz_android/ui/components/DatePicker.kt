@@ -6,7 +6,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
 import com.example.my_uz_android.R
 
-// Dialog wyboru daty z kalendarza
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePicker(
@@ -47,7 +46,6 @@ fun DatePicker(
     }
 }
 
-// Dialog zegara do wyboru godziny i minut
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePicker(

@@ -9,7 +9,6 @@ import androidx.room.Update
 import com.example.my_uz_android.data.models.UserCourseEntity
 import kotlinx.coroutines.flow.Flow
 
-// Obsługa dodatkowych kierunków i grup studenta
 @Dao
 interface UserCourseDao {
     @Query("SELECT * FROM user_courses ORDER BY id ASC")

@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-// Repozytorium zadań studenta + obsługa chmury Supabase do dzielenia się listą zadań
 class TasksRepository(
     private val tasksDao: TasksDao,
     private val supabase: SupabaseClient
@@ -31,7 +30,6 @@ class TasksRepository(
 
     suspend fun deleteAllTasks() = tasksDao.deleteAll()
 
-    // Udostępnianie listy zadań kodem 6-znakowym
     suspend fun shareTasks(tasks: List<TaskEntity>): NetworkResult<String> {
         return try {
             val payloadJson = Json.encodeToString(tasks)
@@ -47,7 +45,6 @@ class TasksRepository(
         }
     }
 
-    // Pobieranie i import zadań ze wspólnego kodu
     suspend fun importTasks(code: String): NetworkResult<List<TaskEntity>> {
         return try {
             val result = supabase.postgrest["shared_tasks"]

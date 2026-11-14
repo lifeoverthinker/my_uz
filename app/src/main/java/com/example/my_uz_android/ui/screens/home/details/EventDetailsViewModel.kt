@@ -12,27 +12,12 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
-/**
- * Stan UI ekranu szczegółów wydarzenia.
- *
- * Zawiera:
- * - dane wydarzenia (jeśli istnieje),
- * - flagę ładowania,
- * - komunikat błędu do bezpiecznego renderowania stanu pustego.
- */
 data class EventDetailsUiState(
     val eventEntity: EventEntity? = null,
     val isLoading: Boolean = true,
     val error: String? = null
 )
 
-/**
- * ViewModel szczegółów wydarzenia.
- *
- * Odpowiada za:
- * - pobieranie wydarzenia po ID z nawigacji,
- * - utrzymanie stanu loading/success/error.
- */
 class EventDetailsViewModel(
     savedStateHandle: SavedStateHandle,
     private val eventRepository: EventRepository? = null

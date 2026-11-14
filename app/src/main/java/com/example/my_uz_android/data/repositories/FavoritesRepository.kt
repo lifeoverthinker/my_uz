@@ -4,7 +4,6 @@ import com.example.my_uz_android.data.daos.FavoritesDao
 import com.example.my_uz_android.data.models.FavoriteEntity
 import kotlinx.coroutines.flow.Flow
 
-// Ulubione sale, grupy i prowadzący
 class FavoritesRepository(private val favoritesDao: FavoritesDao) {
 
     val favoritesStream: Flow<List<FavoriteEntity>> = favoritesDao.getAllFavoritesStream()

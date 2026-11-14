@@ -8,7 +8,6 @@ import com.example.my_uz_android.data.repositories.GradesRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-// DODANO: właściwość isLoading
 data class GradeDetailsUiState(
     val grade: GradeEntity? = null,
     val isLoading: Boolean = false
@@ -23,11 +22,11 @@ class GradeDetailsViewModel(
 
     val uiState: StateFlow<GradeDetailsUiState> = gradesRepository
         .getGradeByIdStream(gradeId)
-        .map { GradeDetailsUiState(grade = it, isLoading = false) } // Kiedy pobierze, isLoading na false
+        .map { GradeDetailsUiState(grade = it, isLoading = false) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = GradeDetailsUiState(isLoading = true) // Domyślnie na starcie ekran ładuje dane
+            initialValue = GradeDetailsUiState(isLoading = true)
         )
 
     fun deleteGrade(onSuccess: () -> Unit) {

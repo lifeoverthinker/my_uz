@@ -3,7 +3,6 @@ package com.example.my_uz_android.ui.screens.calendar.tasks
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,11 +15,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.my_uz_android.R
 import com.example.my_uz_android.ui.components.DatePicker
+import com.example.my_uz_android.ui.components.SaveActionButton
 import com.example.my_uz_android.ui.components.TimePicker
 import com.example.my_uz_android.ui.components.TopAppBar
 import com.example.my_uz_android.ui.theme.MyUZTheme
@@ -30,7 +32,6 @@ import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.*
-import androidx.compose.ui.res.stringResource
 
 @Composable
 fun TaskAddEditScreenRoute(
@@ -118,12 +119,66 @@ private fun appOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedBorderColor = MaterialTheme.colorScheme.outline,
     focusedLabelColor = MaterialTheme.colorScheme.primary,
     unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-    focusedContainerColor = MaterialTheme.colorScheme.surface,
-    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    focusedContainerColor = MaterialTheme.colorScheme.background,
+    unfocusedContainerColor = MaterialTheme.colorScheme.background,
     cursorColor = MaterialTheme.colorScheme.primary
 )
 
 private val AppFieldShape = RoundedCornerShape(16.dp)
+
+@Composable
+private fun FormCard(
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = AppFieldShape,
+        color = containerColor
+    ) {
+        Column(content = content)
+    }
+}
+
+@Composable
+private fun SwitchRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    iconRes: Int? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
 
 @Composable
 private fun ClickableFieldRow(
@@ -131,7 +186,8 @@ private fun ClickableFieldRow(
     value: String,
     iconRes: Int?,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow
 ) {
     Surface(
         modifier = modifier
@@ -139,7 +195,7 @@ private fun ClickableFieldRow(
             .clip(AppFieldShape)
             .clickable(onClick = onClick),
         shape = AppFieldShape,
-        color = MaterialTheme.colorScheme.surfaceContainerLow
+        color = containerColor
     ) {
         Column {
             Row(
@@ -222,7 +278,7 @@ fun TaskAddEditScreen(
     val scrollState = rememberScrollState()
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = if (isEditMode) stringResource(R.string.task_edit_title) else stringResource(R.string.task_add_title),
@@ -230,15 +286,10 @@ fun TaskAddEditScreen(
                 isNavigationIconFilled = true,
                 onNavigationClick = onBackClick,
                 actions = {
-                    Button(
+                    SaveActionButton(
                         onClick = onSaveClick,
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .heightIn(min = 48.dp),
                         enabled = title.isNotBlank()
-                    ) {
-                        Text(stringResource(R.string.btn_save), style = MaterialTheme.typography.labelLarge)
-                    }
+                    )
                 }
             )
         }
@@ -291,21 +342,12 @@ fun TaskAddEditScreen(
                 shape = AppFieldShape
             )
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onAllDayChange(!isAllDay) }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.label_all_day), style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = isAllDay, onCheckedChange = { onAllDayChange(it) })
-                }
+            FormCard {
+                SwitchRow(
+                    label = stringResource(R.string.label_all_day),
+                    checked = isAllDay,
+                    onCheckedChange = onAllDayChange
+                )
             }
 
             ClickableFieldRow(
@@ -324,55 +366,37 @@ fun TaskAddEditScreen(
                 )
             }
 
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+            FormCard {
+                SwitchRow(
+                    label = stringResource(R.string.label_set_reminder),
+                    checked = hasReminder,
+                    onCheckedChange = onHasReminderChange,
+                    iconRes = R.drawable.ic_bell
+                )
+
+                AnimatedVisibility(visible = hasReminder, enter = expandVertically(), exit = shrinkVertically()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onHasReminderChange(!hasReminder) }
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_bell),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(stringResource(R.string.label_set_reminder), style = MaterialTheme.typography.bodyLarge)
-                        }
-                        Switch(checked = hasReminder, onCheckedChange = { onHasReminderChange(it) })
-                    }
-
-                    AnimatedVisibility(visible = hasReminder, enter = expandVertically(), exit = shrinkVertically()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            ClickableFieldRow(
-                                label = stringResource(R.string.label_date),
-                                value = formatDateShort(reminderDateMillis),
-                                iconRes = null,
-                                onClick = { showReminderDatePicker = true },
-                                modifier = Modifier.weight(1f)
-                            )
-                            ClickableFieldRow(
-                                label = stringResource(R.string.label_hour),
-                                value = String.format(Locale.getDefault(), "%02d:%02d", reminderHour, reminderMinute),
-                                iconRes = null,
-                                onClick = { showReminderTimePicker = true },
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
+                        ClickableFieldRow(
+                            label = stringResource(R.string.label_date),
+                            value = formatDateShort(reminderDateMillis),
+                            iconRes = null,
+                            onClick = { showReminderDatePicker = true },
+                            modifier = Modifier.weight(1f),
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
+                        ClickableFieldRow(
+                            label = stringResource(R.string.label_hour),
+                            value = String.format(Locale.getDefault(), "%02d:%02d", reminderHour, reminderMinute),
+                            iconRes = null,
+                            onClick = { showReminderTimePicker = true },
+                            modifier = Modifier.weight(1f),
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
                     }
                 }
             }

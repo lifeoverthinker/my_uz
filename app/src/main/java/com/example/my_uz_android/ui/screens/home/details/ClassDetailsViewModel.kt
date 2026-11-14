@@ -21,7 +21,6 @@ class ClassDetailsViewModel(
 
     private val classId: Int = checkNotNull(savedStateHandle["classId"])
 
-    // Używamy MutableStateFlow, żeby móc nadpisać stan, jeśli otrzymamy zajęcia z pamięci tymczasowej
     private val _uiState = MutableStateFlow(ClassDetailsUiState(isLoading = true))
     val uiState: StateFlow<ClassDetailsUiState> = _uiState.asStateFlow()
 
@@ -31,11 +30,8 @@ class ClassDetailsViewModel(
 
     private fun loadClassDetails() {
         if (classId == -1) {
-            // To znaczy, że jesteśmy w trybie podglądu (wyszukiwania).
-            // Dane zostaną wstrzyknięte z zewnątrz przez funkcję setTemporaryClass.
             _uiState.value = ClassDetailsUiState(isLoading = true)
         } else {
-            // Normalny tryb z kalendarza - idziemy do bazy SQLite
             viewModelScope.launch {
                 classRepository.getClassByIdStream(classId)
                     .catch { e ->
@@ -52,7 +48,6 @@ class ClassDetailsViewModel(
         }
     }
 
-    // Nowa funkcja - pozwala "wstrzyknąć" zajęcia bez szukania ich w bazie
     fun setTemporaryClass(classEntity: ClassEntity?) {
         if (classEntity != null) {
             _uiState.value = ClassDetailsUiState(classEntity = classEntity, isLoading = false)

@@ -42,7 +42,6 @@ class CalendarViewModelTest {
 
     @Before
     fun setup() {
-        // Mockujemy systemowego Log'a, aby testy na PC nie wyrzucały błędu "not mocked"
         mockkStatic(Log::class)
         every { Log.d(any(), any()) } returns 0
         every { Log.w(any(), any<String>()) } returns 0

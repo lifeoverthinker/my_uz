@@ -17,9 +17,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-// =========================================================================
-// MODELE DTO (Data Transfer Objects)
-// =========================================================================
 
 @Serializable
 data class SemesterStateDto(
@@ -144,9 +141,6 @@ data class TeacherIdDto(
     val id get() = idRaw?.jsonPrimitive?.contentOrNull
 }
 
-// =========================================================================
-// REPOZYTORIUM API (UniversityRepository)
-// =========================================================================
 class UniversityRepository(
     private val supabase: Postgrest,
     private val context: Context
@@ -265,7 +259,6 @@ class UniversityRepository(
         }
     }
 
-    // Wyszukiwanie wykładowców po imieniu/nazwisku
     suspend fun searchTeachers(query: String): NetworkResult<List<TeacherDetailsDto>> {
         return try {
             val searchTerms = query.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }

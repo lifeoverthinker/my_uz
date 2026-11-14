@@ -33,14 +33,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import java.util.Locale
 
-/**
- * Główna aktywność aplikacji.
- *
- * Odpowiada za:
- * - ustawienie języka aplikacji (`pl`/`en`) na starcie i po zmianie w ustawieniach,
- * - uruchomienie nawigacji i motywu,
- * - obsługę splash screena i uprawnień powiadomień.
- */
 class MainActivity : ComponentActivity() {
     @Volatile
     private var keepSplashVisible = true
@@ -136,12 +128,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * Normalizuje kod języka do dwóch wspieranych opcji aplikacji: `pl` i `en`.
- *
- * Dla legacy wartości (`system`, null, inne) wybór opiera się na języku urządzenia:
- * `en` pozostaje `en`, wszystko inne mapuje do `pl`.
- */
 private fun normalizeLanguageCode(rawCode: String?, deviceLanguage: String): String = when (rawCode) {
     "pl" -> "pl"
     "en" -> "en"
@@ -149,9 +135,6 @@ private fun normalizeLanguageCode(rawCode: String?, deviceLanguage: String): Str
 }
 
 @Composable
-/**
- * Prosi użytkownika o zgodę na powiadomienia na Androidzie 13+.
- */
 fun RequestNotificationPermission() {
     val context = LocalContext.current
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

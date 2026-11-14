@@ -22,7 +22,6 @@ import com.example.my_uz_android.util.ClassTypeUtils
 import androidx.compose.ui.res.stringResource
 import com.example.my_uz_android.R
 
-// Okienko ze szczegółami i mailem wykładowcy (z opcją skopiowania)
 @Composable
 fun TeacherInfoDialog(
     onDismiss: () -> Unit,
@@ -138,7 +137,6 @@ private fun TeacherEmailField(
     }
 }
 
-// Dialog wyboru podgrup w podglądzie planu
 @Composable
 fun SubgroupFilterDialog(
     subgroups: List<String>,
@@ -189,7 +187,6 @@ fun SubgroupFilterDialog(
     )
 }
 
-// Dialog filtrowania planu (grupy, podgrupy, typy zajęć)
 @Composable
 fun FilterDialog(
     groups: List<String>,

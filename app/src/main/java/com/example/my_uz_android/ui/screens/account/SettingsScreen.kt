@@ -1,11 +1,5 @@
 package com.example.my_uz_android.ui.screens.account
 
-/**
- * Ekran ustawień aplikacji.
- * Pozwala użytkownikowi na zmianę motywu, kolorów zajęć, języka aplikacji,
- * zarządzanie powiadomieniami oraz dostęp do funkcji kopii zapasowej.
- */
-
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
@@ -48,9 +42,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-/**
- * Trasa ekranu ustawień spinająca nawigację z `SettingsViewModel`.
- */
 @Composable
 fun SettingsScreenRoute(
     onNavigateBack: () -> Unit,
@@ -63,11 +54,6 @@ fun SettingsScreenRoute(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-/**
- * Główny ekran ustawień aplikacji.
- *
- * Pokazuje sekcje wyglądu, języka, powiadomień oraz backupu danych.
- */
 @Composable
 fun SettingsScreen(
     onBackClick: () -> Unit,
@@ -134,7 +120,6 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
 
-                    // --- WYGLĄD I JĘZYK ---
                     SettingsSection(title = stringResource(R.string.settings_appearance_section)) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                             Text(
@@ -169,7 +154,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // --- PRZYWRÓCONE: KOLORY ZAJĘĆ ---
                     if (uiState.uniqueClassTypes.isNotEmpty()) {
                         SettingsSection(title = stringResource(R.string.settings_class_colors_section)) {
                             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -185,7 +169,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // --- POWIADOMIENIA ---
                     SettingsSection(title = stringResource(R.string.settings_notifications_section)) {
                         SettingsToggleItem(
                             iconRes = R.drawable.ic_bell,
@@ -206,7 +189,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // --- KOPIA ZAPASOWA ---
                     SettingsSection(title = stringResource(R.string.settings_backup_section)) {
                         SettingsActionItem(
                             iconRes = R.drawable.ic_export,
@@ -264,12 +246,7 @@ fun SettingsScreen(
     }
 }
 
-// --- KOMPONENTY UI ---
-
 @Composable
-/**
- * Sekcja ustawień z nagłówkiem i wspólnym kontenerem wizualnym.
- */
 fun SettingsSection(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -288,9 +265,6 @@ fun SettingsSection(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-/**
- * Mały przełącznik języka aplikacji (tylko `pl` i `en`).
- */
 fun LanguageSelector(currentLanguage: String, onLanguageSelected: (String) -> Unit) {
     val languages = listOf(
         "pl" to stringResource(R.string.settings_language_polish),
@@ -316,9 +290,6 @@ fun LanguageSelector(currentLanguage: String, onLanguageSelected: (String) -> Un
 }
 
 @Composable
-/**
- * Element listy ustawień z przełącznikiem boolean.
- */
 fun SettingsToggleItem(iconRes: Int, title: String, description: String, isChecked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
@@ -338,9 +309,6 @@ fun SettingsToggleItem(iconRes: Int, title: String, description: String, isCheck
 }
 
 @Composable
-/**
- * Element akcji w ustawieniach uruchamiający jednorazowe działanie.
- */
 fun SettingsActionItem(iconRes: Int, title: String, description: String, isDestructive: Boolean = false, onClick: () -> Unit) {
     Row(
         modifier = Modifier
@@ -368,9 +336,6 @@ fun SettingsActionItem(iconRes: Int, title: String, description: String, isDestr
 }
 
 @Composable
-/**
- * Wiersz wyboru koloru dla typu zajęć.
- */
 fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelected: (Int) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(text = classType, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 12.dp, start = 4.dp))
@@ -405,9 +370,6 @@ fun ClassColorPickerRow(classType: String, selectedColorIndex: Int, onColorSelec
 }
 
 @Composable
-/**
- * Dialog wyboru typów danych do eksportu/importu.
- */
 fun DataTypeSelectionDialog(title: String, confirmText: String, initialSelection: Set<BackupDataType>, onDismiss: () -> Unit, onConfirm: (Set<BackupDataType>) -> Unit) {
     var selection by remember { mutableStateOf(initialSelection) }
     AlertDialog(
@@ -442,9 +404,6 @@ fun DataTypeSelectionDialog(title: String, confirmText: String, initialSelection
     )
 }
 
-/**
- * Zapisuje wybrane dane backupu do wskazanego pliku JSON.
- */
 private suspend fun saveBackupToFile(context: Context, uri: Uri, viewModel: SettingsViewModel, selection: Set<BackupDataType>) {
     withContext(Dispatchers.IO) {
         try {
@@ -457,9 +416,6 @@ private suspend fun saveBackupToFile(context: Context, uri: Uri, viewModel: Sett
     }
 }
 
-/**
- * Odczytuje plik backupu i przekazuje jego zawartość do podglądu importu.
- */
 private suspend fun readBackupFileToPreview(context: Context, uri: Uri, viewModel: SettingsViewModel) {
     withContext(Dispatchers.IO) {
         try {
@@ -471,9 +427,6 @@ private suspend fun readBackupFileToPreview(context: Context, uri: Uri, viewMode
     }
 }
 
-/**
- * Normalizuje język ustawień do dwóch wspieranych wartości `pl`/`en` na potrzeby UI.
- */
 private fun normalizeAppLanguageForUi(rawCode: String?): String = when (rawCode) {
     "pl" -> "pl"
     "en" -> "en"

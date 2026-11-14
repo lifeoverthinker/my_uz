@@ -33,7 +33,6 @@ import com.example.my_uz_android.ui.AppViewModelProvider
 import com.example.my_uz_android.ui.theme.MyUZTheme
 import kotlin.math.abs
 
-// Obrazki do poszczególnych kroków onboardingu
 @Composable
 private fun getIllustrationResId(currentPage: Int): Int = when (currentPage) {
     0 -> R.drawable.college_students_rafiki
@@ -46,7 +45,6 @@ private fun getIllustrationResId(currentPage: Int): Int = when (currentPage) {
     else -> R.drawable.ic_user
 }
 
-// Główny ekran powitalny / onboarding
 @OptIn(ExperimentalAnimationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun LandingScreen(
@@ -69,7 +67,6 @@ fun LandingScreen(
                 .imePadding(),
             containerColor = MaterialTheme.colorScheme.surface,
             topBar = {
-                // Przycisk "Pomiń" w prawym górnym rogu
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -94,7 +91,6 @@ fun LandingScreen(
                 }
             },
             bottomBar = {
-                // Dolny pasek z kropkami i przyciskami dalej/wstecz
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -227,7 +223,6 @@ fun LandingScreen(
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Animacja przejścia między slajdami
                 AnimatedContent(
                     targetState = currentPage,
                     transitionSpec = {
@@ -245,7 +240,6 @@ fun LandingScreen(
                 ) { page ->
                     var accumulatedDragX by remember(page) { mutableFloatStateOf(0f) }
 
-                    // Obsługa przesuwania palcem (swipe)
                     Box(
                         modifier = Modifier.pointerInput(
                             page,
@@ -264,7 +258,6 @@ fun LandingScreen(
                                 onDragEnd = {
                                     if (abs(accumulatedDragX) < threshold) return@detectHorizontalDragGestures
 
-                                    // W lewo -> dalej, w prawo -> wstecz
                                     if (accumulatedDragX < 0f) {
                                         when (page) {
                                             1 -> if (selectedGender != null && userName.isNotBlank()) viewModel.onNextClick()
@@ -297,7 +290,6 @@ fun LandingScreen(
     }
 }
 
-// Krok 4: wybór dodatkowych grup/kierunków
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AdditionalCoursesStepContent(viewModel: OnboardingViewModel) {
@@ -443,7 +435,6 @@ fun AdditionalCoursesStepContent(viewModel: OnboardingViewModel) {
     }
 }
 
-// Krok 1: ekran powitalny
 @Composable
 fun WelcomeStepContent() {
     ResponsiveOnboardingStep(illustrationResId = R.drawable.college_students_rafiki) {
@@ -455,7 +446,6 @@ fun WelcomeStepContent() {
     }
 }
 
-// Krok 2: imię, nazwisko i płeć
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
@@ -564,7 +554,6 @@ fun PersonalizationStepContent(viewModel: OnboardingViewModel) {
     }
 }
 
-// Krok 3: wybór grupy głównej
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
@@ -678,7 +667,6 @@ fun GroupSelectionStepContent(viewModel: OnboardingViewModel) {
     }
 }
 
-// Krok 5: info o kalendarzu
 @Composable
 fun CalendarFeatureStepContent() {
     InfoStepContent(
@@ -689,7 +677,6 @@ fun CalendarFeatureStepContent() {
     )
 }
 
-// Krok 6: info o ocenach
 @Composable
 fun GradesFeatureStepContent() {
     InfoStepContent(
@@ -700,7 +687,6 @@ fun GradesFeatureStepContent() {
     )
 }
 
-// Krok 7: podsumowanie
 @Composable
 fun FinalStepContent() {
     InfoStepContent(
@@ -711,7 +697,6 @@ fun FinalStepContent() {
     )
 }
 
-// Pomocniczy widok dla prostych kroków informacyjnych
 @Composable
 fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description: String) {
     val resId = when(pageIndex) {
@@ -725,7 +710,6 @@ fun InfoStepContent(pageIndex: Int, title: String, subtitle: String, description
     }
 }
 
-// Szablon każdego kroku ze scrollem i obrazkiem
 @Composable
 fun ResponsiveOnboardingStep(
     illustrationResId: Int,
@@ -765,7 +749,6 @@ fun ResponsiveOnboardingStep(
     }
 }
 
-// Teksty nagłówkowe dla kroku
 @Composable
 fun OnboardingTexts(title: String, subtitle: String, description: String) {
     Column(
@@ -795,7 +778,6 @@ fun OnboardingTexts(title: String, subtitle: String, description: String) {
     }
 }
 
-// Kropki pokazujące aktualny slajd
 @Composable
 fun PageIndicators(totalPages: Int, currentPage: Int) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -815,7 +797,6 @@ fun PageIndicators(totalPages: Int, currentPage: Int) {
     }
 }
 
-// Stopka na dole ekranu
 @Composable
 fun FooterText() {
     Text(

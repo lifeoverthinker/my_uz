@@ -1,11 +1,5 @@
 package com.example.my_uz_android.ui.screens.notifications
 
-/**
- * Ekran powiadomień aplikacji z listą wpisów oraz stanem pustym.
- * Plik zawiera także komponenty prezentacji pojedynczego powiadomienia
- * i obsługę gestu usuwania przez przesunięcie.
- */
-
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -46,7 +39,6 @@ import java.util.Locale
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-// Główny widok powiadomień
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
@@ -105,7 +97,6 @@ fun NotificationsScreen(
     }
 }
 
-// Pojedyncze powiadomienie z możliwością usunięcia swipem w lewo
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeToDeleteNotification(
@@ -156,27 +147,24 @@ fun SwipeToDeleteNotification(
     )
 }
 
-// Karta powiadomienia z ikonką, datą i treścią
 @Composable
 fun NotificationCardItem(
     notification: NotificationEntity,
-    backgroundColor: Color? = null,
-    isDarkMode: Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    backgroundColor: Color? = null
 ) {
     val formattedDate = remember(notification.timestamp) {
         SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.getDefault()).format(Date(notification.timestamp))
     }
 
-    // Indeks 0 dla powiadomień (fioletowy zestaw spójny z resztą apki)
-    val bgColor = backgroundColor ?: getAppBackgroundColor(0, isDarkMode)
-    val accentColor = getAppAccentColor(0, isDarkMode)
+    val bgColor = backgroundColor ?: getAppBackgroundColor(0)
+    val accentColor = getAppAccentColor(0)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(bgColor)
-            .clickable { /* Opcjonalne: obsługa kliknięcia */ }
+            .clickable { }
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -190,7 +178,6 @@ fun NotificationCardItem(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                // Ikonka w kółku - spójna z ClassCard HOME
                 Box(
                     modifier = Modifier
                         .size(32.dp)

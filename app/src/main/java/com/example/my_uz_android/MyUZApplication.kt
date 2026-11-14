@@ -13,10 +13,7 @@ class MyUZApplication : Application() {
         super.onCreate()
         container = DefaultAppContainer(this)
 
-        // Inicjalizacja kanałów powiadomień przy starcie aplikacji
         NotificationHelper.createNotificationChannels(this)
 
-        // Zauważ, że usunęliśmy stąd wywołania WorkManager'a,
-        // ponieważ teraz używamy bezpośrednio AlarmManager'a
     }
 }

@@ -1,11 +1,5 @@
 package com.example.my_uz_android.ui.components
 
-/**
- * Komponenty pływającego przycisku akcji (FAB) dla ekranu głównego.
- * Plik zawiera rozwijane menu skrótów do najczęściej wykonywanych akcji
- * użytkownika wraz z konfiguracją pojedynczych pozycji.
- */
-
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.activity.compose.BackHandler
@@ -40,14 +34,12 @@ import com.example.my_uz_android.ui.screens.home.HomeViewModel
 import com.example.my_uz_android.ui.theme.InterFontFamily
 import androidx.compose.ui.res.stringResource
 
-// Pojedyncza opcja w menu FAB
 data class FabAction(
     val label: String,
     val iconRes: Int,
     val onClick: () -> Unit
 )
 
-// Pływający przycisk '+' z rozwijanym menu (dodaj ocenę, nieobecność, zadanie)
 @Composable
 fun Fab(
     onAddGrade: () -> Unit,
@@ -76,7 +68,6 @@ fun Fab(
         )
     }
 
-    // Scrim: White for light mode, dark for dark mode
     val scrimColor = if (isDark) {
         Color.Black.copy(alpha = 0.75f)
     } else {
@@ -84,7 +75,6 @@ fun Fab(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Scrim overlay - Czysty scrim bez duplikatu imienia
         AnimatedVisibility(
             visible = isExpanded,
             enter = fadeIn(),
@@ -101,7 +91,6 @@ fun Fab(
             )
         }
 
-        // Kontener na przyciski
         Column(
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -131,7 +120,6 @@ fun Fab(
                 }
             }
 
-            // Przycisk główny
             val shapeAnimation by animateIntAsState(
                 targetValue = if (isExpanded) 50 else 28,
                 label = "ShapeRadius"

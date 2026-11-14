@@ -25,7 +25,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -190,13 +189,8 @@ fun CalendarScreenContent(
     val currentRealWorldYear = YearMonth.now(ZoneId.of("Europe/Warsaw")).year
     val calendarTitle = if (visibleMonth.year == currentRealWorldYear) monthName else "$monthName ${visibleMonth.year}"
 
-    val isDark = when (uiState.themeMode) {
-        "DARK" -> true
-        "LIGHT" -> false
-        else -> MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    }
-
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             CalendarTopAppBar(
                 title = calendarTitle,
@@ -279,7 +273,6 @@ fun CalendarScreenContent(
                         tasks = uiState.tasks,
                         classColorMap = uiState.classColorMap,
                         onClassClick = onClassClick,
-                        isDarkMode = isDark,
                         modifier = Modifier.weight(1f),
                         showHeader = false
                     )

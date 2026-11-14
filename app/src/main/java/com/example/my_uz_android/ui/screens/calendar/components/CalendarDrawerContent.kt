@@ -46,7 +46,6 @@ fun CalendarDrawerContent(
             .verticalScroll(scrollState),
         horizontalAlignment = Alignment.Start,
     ) {
-        // --- Sekcja: Menu ---
         DrawerSectionHeader(text = stringResource(R.string.drawer_section_menu))
 
         DrawerItem(
@@ -65,7 +64,6 @@ fun CalendarDrawerContent(
 
         DrawerDivider()
 
-        // --- Sekcja: Grupy ---
         DrawerSectionHeader(text = stringResource(R.string.drawer_groups))
         if (groupFavorites.isNotEmpty()) {
             groupFavorites.forEach { fav ->
@@ -82,7 +80,6 @@ fun CalendarDrawerContent(
 
         DrawerDivider()
 
-        // --- Sekcja: Wykładowcy ---
         DrawerSectionHeader(text = stringResource(R.string.drawer_teachers))
         if (teacherFavorites.isNotEmpty()) {
             teacherFavorites.forEach { fav ->

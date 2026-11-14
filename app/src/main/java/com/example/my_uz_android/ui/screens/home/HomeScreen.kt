@@ -1,10 +1,5 @@
 package com.example.my_uz_android.ui.screens.home
 
-/**
- * Ekran Główny aplikacji. (Pulpit/Dashboard).
- * Zawiera skrót najważniejszych nadchodzących zajęć, zadań i wydarzeń dla zalogowanego studenta.
- */
-
 import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -239,7 +234,6 @@ fun HomeScreen(
                                 emptyMessage = stringResource(R.string.no_classes_message),
                                 dayLabel = dayLabel,
                                 classColorMap = uiState.classColorMap,
-                                isDarkMode = isDark,
                                 onClassClick = onClassClick,
                                 onSetupPlanClick = onSetupPlanClick
                             )
@@ -257,8 +251,8 @@ fun HomeScreen(
                                         title = stringResource(R.string.tasks_empty_card_title),
                                         message = stringResource(R.string.tasks_empty_card_message),
                                         iconRes = R.drawable.ic_check_circle_broken,
-                                        containerColor = getAppBackgroundColor(1, isDark),
-                                        accentColor = getAppAccentColor(1, isDark),
+                                        containerColor = getAppBackgroundColor(1),
+                                        accentColor = getAppAccentColor(1),
                                         modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                 } else {
@@ -268,7 +262,7 @@ fun HomeScreen(
                                                 task = task,
                                                 onTaskClick = { onTaskClick(task.id) },
                                                 modifier = Modifier.width(264.dp),
-                                                backgroundColor = getAppBackgroundColor(1, isDark)
+                                                backgroundColor = getAppBackgroundColor(1)
                                             )
                                         }
                                     }
@@ -288,8 +282,8 @@ fun HomeScreen(
                                         title = stringResource(R.string.events_empty_card_title),
                                         message = stringResource(R.string.events_empty_card_message),
                                         iconRes = R.drawable.ic_marker_pin,
-                                        containerColor = getAppBackgroundColor(2, isDark),
-                                        accentColor = getAppAccentColor(2, isDark),
+                                        containerColor = getAppBackgroundColor(2),
+                                        accentColor = getAppAccentColor(2),
                                         modifier = Modifier.padding(vertical = 4.dp)
                                     )
                                 } else {
@@ -312,7 +306,6 @@ fun HomeScreen(
                 }
             }
 
-            // --- POCZĄTEK NOWEGO KODU: DIALOG NOWEGO SEMESTRU ---
             if (uiState.showNewSemesterDialog) {
                 AlertDialog(
                     onDismissRequest = { viewModel.dismissSemesterDialog() },
@@ -356,7 +349,6 @@ fun HomeScreen(
                     }
                 )
             }
-            // --- KONIEC NOWEGO KODU ---
         }
     }
 }

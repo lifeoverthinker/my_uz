@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-// Pojedyncze zajęcia w planie
 @Serializable
 @Entity(tableName = "classes")
 data class ClassEntity(

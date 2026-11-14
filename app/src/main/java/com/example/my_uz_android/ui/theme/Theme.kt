@@ -15,8 +15,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Dodatkowe kolory aplikacji, których nie ma w standardowym ColorScheme Materiala.
-// Kolory kart (zajęcia / wydarzenia / zadania) są takie same w Light i Dark.
 @Immutable
 data class ExtendedColors(
     val classCardBackground: Color = CardClassColors.background,
@@ -109,13 +107,11 @@ private fun darkScheme() = darkColorScheme(
     surfaceContainerHighest = md_theme_dark_surfaceContainerHighest
 )
 
-// Główny motyw aplikacji
 @Composable
 fun MyUZTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    // Kolory kart są wspólne - różnią się tylko elementy nawigacji i nagłówka
     val extended = if (darkTheme) {
         ExtendedColors(
             navBackground = nav_dark_background,
@@ -137,7 +133,6 @@ fun MyUZTheme(
     val colorScheme = if (darkTheme) darkScheme() else lightScheme()
     val view = LocalView.current
 
-    // Ustawienie koloru paska stanu i nawigacji systemowej
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as? Activity)?.window ?: return@SideEffect
@@ -159,7 +154,6 @@ fun MyUZTheme(
     }
 }
 
-// Pomocniczy getter, żeby łatwiej pisać np. extendedColors.navBackground
 val extendedColors: ExtendedColors
     @Composable
     get() = LocalExtendedColors.current

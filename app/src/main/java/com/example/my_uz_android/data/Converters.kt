@@ -15,7 +15,6 @@ class Converters {
         return date?.time
     }
 
-    // Konwersja listy Stringów (np. dla podgrup, jeśli gdzieś została użyta)
     @TypeConverter
     fun fromStringList(value: String?): List<String> {
         return value?.split(",")?.map { it.trim() } ?: emptyList()
@@ -26,7 +25,6 @@ class Converters {
         return list?.joinToString(",") ?: ""
     }
 
-    // Obsługa LocalDate (dla Kalendarza)
     @TypeConverter
     fun fromLocalDate(value: String?): LocalDate? {
         return value?.let { LocalDate.parse(it) }

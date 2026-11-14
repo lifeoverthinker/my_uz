@@ -39,14 +39,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Model danych reprezentujący kompletny stan interfejsu (UI State) dla ekranu głównego.
- *
- * Klasa ta agreguje wszystkie informacje niezbędne do wyrenderowania pulpitu studenta,
- * w tym spersonalizowane powitania, aktualny plan zajęć, listę nadchodzących zadań
- * oraz wskaźniki postępu semestru. Hermetyzacja tych danych w jednym, niemutowalnym
- * obiekcie gwarantuje spójność wyświetlanych informacji i ułatwia testowanie.
- */
 data class HomeUiState(
     val userName: String = "Student",
     val studyFields: List<String> = emptyList(),
@@ -68,14 +60,6 @@ data class HomeUiState(
     val newSemesterName: String = ""
 )
 
-/**
- * Komponent warstwy prezentacji (ViewModel) zarządzający logiką ekranu głównego.
- *
- * Integruje strumienie danych z wielu repozytoriów, przetwarza je w oparciu o bieżący czas
- * oraz preferencje użytkownika i eksponuje gotowy stan do warstwy widoku.
- * Implementuje również mechanizm cyklicznego odświeżania czasu systemowego, zapobiegając
- * dezaktualizacji widoków po zmianie dób.
- */
 class HomeViewModel(
     application: Application,
     private val classRepository: ClassRepository,
@@ -101,11 +85,6 @@ class HomeViewModel(
         checkForNewSemester()
     }
     
-    /**
-     * Strumień serwujący połączony i przetworzony stan UI.
-     * Wykorzystuje operator [combine] do nasłuchiwania zmian w bazie danych, ustawieniach
-     * oraz lokalnym czasie, gwarantując asynchroniczne i bezpieczne przygotowanie danych do wyświetlenia.
-     */
     val uiState: StateFlow<HomeUiState> = combine(
         settingsRepository.getSettingsStream(),
         classRepository.getAllClassesStream(),
@@ -239,11 +218,6 @@ class HomeViewModel(
             HomeUiState(isLoading = true)
         )
 
-    /**
-     * Wymusza synchronizację lokalnego harmonogramu z zewnętrznym API na podstawie zdefiniowanych
-     * przez studenta kierunków i grup.
-     * Wykorzystuje blokadę [AtomicBoolean], aby zapobiec nakładaniu się na siebie wielokrotnych żądań sieciowych.
-     */
     fun refreshSchedule() {
         viewModelScope.launch {
             if (!isRefreshInProgress.compareAndSet(false, true)) return@launch
@@ -274,11 +248,6 @@ class HomeViewModel(
         }
     }
 
-    /**
-     * Uruchamia mechanizm cyklicznej aktualizacji referencji czasu systemowego w tle.
-     * Gwarantuje prawidłowe przejście danych w widoku na nowy dzień o północy, automatycznie
-     * inicjując proces ponownego przeliczenia strumienia [uiState] bez ingerencji użytkownika.
-     */
     private fun startTimeTicker() {
         timeTickerJob?.cancel()
         timeTickerJob = viewModelScope.launch {
@@ -290,9 +259,6 @@ class HomeViewModel(
         }
     }
 
-    /**
-     * Sprawdza przy starcie czy na uczelni nie rozpoczął się nowy semestr.
-     */
     private fun checkForNewSemester() {
         viewModelScope.launch {
             try {
@@ -303,7 +269,6 @@ class HomeViewModel(
                     val currentRemoteId = semesterResult.data?.currentSemesterId
                     val currentRemoteName = semesterResult.data?.currentSemesterName ?: "Nowy semestr"
 
-                    // Jeśli student miał już przypisany semestr, a na UZ pojawił się inny ID semestru:
                     if (settings.selectedGroupCode != null && 
                         settings.lastSyncedSemesterId != null && 
                         settings.lastSyncedSemesterId != currentRemoteId) {
@@ -311,7 +276,6 @@ class HomeViewModel(
                         _newSemesterName.value = currentRemoteName
                         _showNewSemesterDialog.value = true
                     } else if (settings.lastSyncedSemesterId == null && currentRemoteId != null) {
-                        // Pierwsze uruchomienie po aktualizacji: zapamiętaj aktualny semestr
                         settingsRepository.insertSettings(settings.copy(lastSyncedSemesterId = currentRemoteId))
                     }
                 }
@@ -321,9 +285,6 @@ class HomeViewModel(
         }
     }
 
-    /**
-     * Zamyka dialog i zapisuje semestr, aby komunikat nie wyskakiwał przy każdym wejściu do aplikacji.
-     */
     fun dismissSemesterDialog() {
         viewModelScope.launch {
             val settings = settingsRepository.getSettingsStream().firstOrNull() ?: return@launch

@@ -4,7 +4,6 @@ import androidx.room.*
 import com.example.my_uz_android.data.models.GradeEntity
 import kotlinx.coroutines.flow.Flow
 
-// Operacje na ocenach studenta
 @Dao
 interface GradesDao {
 

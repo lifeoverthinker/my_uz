@@ -1,11 +1,5 @@
 package com.example.my_uz_android.ui.screens.index
 
-/**
- * Ekran formularza umożliwiającego dodawanie nowych lub edytowanie istniejących ocen,
- * wpisywanie punktów oraz wstawianie aktywności ("Plusów") z poszczególnych zajęć.
- * Zawiera ładny layout w formie karty wyboru, zachowując czystość i wygodę MD3.
- */
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -71,7 +65,6 @@ fun AddEditGradeScreenRoute(
         onQuickTypeSelect = { type ->
             selectedQuickType = type
             viewModel.updateDescription(type)
-            // Automatyczny skok do zakładki Plusów, jeśli kliknięto Szybki Wybór "Aktywność"
             if (type.lowercase() == "aktywność" || type.lowercase() == "activity") {
                 viewModel.updateGradeType(GradeType.ACTIVITY)
             }
@@ -250,7 +243,6 @@ fun AddEditGradeScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // --- SZYBKI WYBÓR ---
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = stringResource(R.string.quick_choice),
@@ -279,7 +271,6 @@ fun AddEditGradeScreen(
                 }
             }
 
-            // --- TYTUŁ ---
             OutlinedTextField(
                 value = title,
                 onValueChange = onTitleChange,
@@ -291,7 +282,6 @@ fun AddEditGradeScreen(
                 shape = GradeAppShape
             )
 
-            // --- DATA ---
             GradeClickableFieldRow(
                 label = stringResource(R.string.label_date_received),
                 value = formatGradeAddEditDate(selectedDateMillis) ?: stringResource(R.string.select_date),
@@ -299,7 +289,6 @@ fun AddEditGradeScreen(
                 onClick = { showDatePicker = true }
             )
 
-            // --- PRZEDMIOT I RODZAJ ZAJĘĆ ---
             GradeAppDropdownMenu(
                 label = stringResource(R.string.label_subject_field),
                 selectedOption = selectedSubject,
@@ -338,8 +327,6 @@ fun AddEditGradeScreen(
                 }
             }
 
-            // --- KARTA WYBORU: SKALA / PUNKTY / PLUSY ---
-            // To jest Twoja pożądana, elegancka karta z tłem, w której zagnieżdżony jest SegmentedButton
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -369,7 +356,7 @@ fun AddEditGradeScreen(
                             selected = gradeType == AppGradeType.ACTIVITY,
                             onClick = {
                                 onGradeTypeChange(AppGradeType.ACTIVITY)
-                                onQuickTypeSelect("Aktywność") // Zaznacz także chipa u góry
+                                onQuickTypeSelect("Aktywność")
                             },
                             shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
                         ) { Text(stringResource(R.string.grade_activity)) }
@@ -465,7 +452,6 @@ fun AddEditGradeScreen(
                 }
             }
 
-            // --- KOMENTARZ ---
             OutlinedTextField(
                 value = comment,
                 onValueChange = onCommentChange,
@@ -495,11 +481,6 @@ fun AddEditGradeScreen(
     }
 }
 
-/**
- * Ujednolicone rozwijane menu dla okna Ocen.
- * NAPRAWA: Zrezygnowano z twardego `Modifier.background`, aby tło listy pięknie
- * dopasowywało się do trybu Dark/Light.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GradeAppDropdownMenu(

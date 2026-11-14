@@ -1,5 +1,3 @@
-// java/com/example/my_uz_android/ui/screens/index/IndexScreen.kt
-
 package com.example.my_uz_android.ui.screens.index
 
 import androidx.compose.foundation.background
@@ -37,8 +35,6 @@ fun IndexScreen(
 ) {
     var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
 
-    // Zielony komentarz:
-    // Wspólny poziom VM zapewnia spójny filtr kierunków między zakładkami Oceny/Nieobecności.
     val gradesViewModel: GradesViewModel = viewModel(factory = AppViewModelProvider.Factory)
     val absencesViewModel: AbsencesViewModel = viewModel(factory = AppViewModelProvider.Factory)
 
@@ -57,8 +53,6 @@ fun IndexScreen(
                         Box {
                             TopBarActionIcon(
                                 icon = R.drawable.ic_filter,
-                                // Zielony komentarz:
-                                // Zgodnie z UX: ikona filtra ma zawsze mieć koło tła.
                                 isFilled = true,
                                 onClick = { showFilterMenu = true }
                             )
@@ -80,9 +74,6 @@ fun IndexScreen(
                                             )
                                         },
                                         onClick = {
-                                            // Zielony komentarz:
-                                            // Jeden klik synchronizuje filtr w obu VM,
-                                            // żeby Oceny i Nieobecności pokazywały ten sam zestaw kierunków.
                                             gradesViewModel.toggleGroupVisibility(course.groupCode)
                                             absencesViewModel.toggleGroupVisibility(course.groupCode)
                                         }

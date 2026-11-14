@@ -5,7 +5,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-// Zapisane do ulubionych (sala, prowadzący, grupa)
 @Serializable
 @Entity(tableName = "favorites")
 data class FavoriteEntity(

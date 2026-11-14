@@ -4,7 +4,6 @@ import androidx.room.*
 import com.example.my_uz_android.data.models.SettingsEntity
 import kotlinx.coroutines.flow.Flow
 
-// Ustawienia aplikacji (zawsze 1 wiersz w bazie)
 @Dao
 interface SettingsDao {
 

@@ -140,10 +140,6 @@ class AddEditAbsenceViewModel(
             val filtersForGroup = filtersByGroup[groupCode] ?: return@filter false
             val selectedSubgroupsRaw = filtersForGroup.map { it.subgroupRaw }
 
-            /**
-             * Jeśli dla grupy nie ma żadnej wybranej podgrupy,
-             * pokazujemy wszystkie zajęcia tej grupy.
-             */
             val hasAnySelectedSubgroup = selectedSubgroupsRaw.any { !it.isNullOrBlank() }
             if (!hasAnySelectedSubgroup) return@filter true
 
@@ -204,7 +200,6 @@ class AddEditAbsenceViewModel(
         }
     }
 
-    // Usuwamy obecną nieobecność z bazy
     fun deleteAbsence() {
         viewModelScope.launch {
             val state = _uiState.value

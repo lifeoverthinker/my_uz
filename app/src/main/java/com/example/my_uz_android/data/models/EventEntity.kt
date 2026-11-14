@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-// Wydarzenie w kalendarzu uczelnianym lub osobistym
 @Serializable
 @Entity(tableName = "events")
 data class EventEntity(

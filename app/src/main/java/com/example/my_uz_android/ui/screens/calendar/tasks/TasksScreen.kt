@@ -61,7 +61,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -208,6 +207,7 @@ fun TasksScreen(
         }
     ) {
         Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 TasksTopBar(
                     isSelectionMode = isSelectionMode,
@@ -418,7 +418,6 @@ fun TasksScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // Zielony komentarz: usuwamy wyłącznie po explicit confirm.
                         taskToDelete?.let { viewModel.deleteTask(it) }
                         taskToDelete = null
                     }
@@ -639,11 +638,10 @@ fun SwipeToDismissItem(
             }
         }
     ) {
-        val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
         val cardColor = if (isSelected && isSelectionMode) {
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
         } else {
-            getAppBackgroundColor(1, isDark)
+            getAppBackgroundColor(1)
         }
         val borderColor = if (isSelected && isSelectionMode) {
             MaterialTheme.colorScheme.primary
@@ -654,7 +652,7 @@ fun SwipeToDismissItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(if (isSelectionMode) Color.Transparent else MaterialTheme.colorScheme.surface)
+                .background(if (isSelectionMode) Color.Transparent else MaterialTheme.colorScheme.background)
                 .clickable(enabled = isSelectionMode) { onTaskClick() }
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,

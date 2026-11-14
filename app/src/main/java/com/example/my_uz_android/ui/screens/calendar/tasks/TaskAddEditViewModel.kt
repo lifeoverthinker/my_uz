@@ -15,14 +15,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
-/**
- * Stan ekranu dodawania/edycji zadania.
- *
- * Przechowuje:
- * - dane formularza,
- * - ustawienia przypomnienia,
- * - listę dostępnych przedmiotów i typów zajęć.
- */
 data class TaskAddEditUiState(
     val taskId: Int = 0,
     val title: String = "",
@@ -43,14 +35,6 @@ data class TaskAddEditUiState(
     val isCompleted: Boolean = false
 )
 
-/**
- * ViewModel odpowiedzialny za logikę formularza zadania.
- *
- * Funkcje:
- * - ładowanie danych do edycji,
- * - walidacja i zapis zadania,
- * - konfiguracja alarmów przypomnień.
- */
 class TaskAddEditViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
@@ -98,9 +82,6 @@ class TaskAddEditViewModel(
         }
     }
 
-    /**
-     * Ładuje zadanie do edycji (jednorazowo).
-     */
     fun loadTask(taskId: Int) {
         if (loadedTaskId == taskId) return
         loadedTaskId = taskId
@@ -138,9 +119,6 @@ class TaskAddEditViewModel(
         }
     }
 
-    /**
-     * Ładuje słownik przedmiotów i typów zajęć z lokalnego planu.
-     */
     private fun loadAvailableSubjects() {
         viewModelScope.launch {
             classRepository.getAllClassesStream().collect { classes ->
@@ -169,14 +147,6 @@ class TaskAddEditViewModel(
     fun updateReminderDate(v: LocalDate) = _uiState.update { it.copy(reminderDate = v) }
     fun updateReminderTime(v: LocalTime) = _uiState.update { it.copy(reminderTime = v) }
 
-    /**
-     * Zapisuje nowe lub edytowane zadanie.
-     *
-     * Ważne:
-     * - zachowuje `isCompleted` przy edycji,
-     * - nie zgaduje ID po insercie przez max() (eliminuje race condition),
-     * - alarm przypomnienia ustawia tylko gdy reminder > teraz.
-     */
     fun saveTask() {
         viewModelScope.launch {
             val state = _uiState.value
@@ -206,7 +176,6 @@ class TaskAddEditViewModel(
 
             val currentTaskId = state.taskId
 
-            // Dla nowego zadania id=0, dla edycji zachowujemy id.
             val taskToSave = TaskEntity(
                 id = currentTaskId,
                 title = state.title.trim(),
@@ -223,7 +192,6 @@ class TaskAddEditViewModel(
             )
 
             if (currentTaskId == 0) {
-                // INSERT zwraca realne ID w bazie – używamy go do alarmu.
                 val insertedId = tasksRepository.insertTask(taskToSave).toInt()
                 scheduleReminderIfNeeded(insertedId, taskToSave.title, reminderMillis, state.hasReminder)
             } else {
@@ -235,9 +203,6 @@ class TaskAddEditViewModel(
         }
     }
 
-    /**
-     * Usuwa zadanie i anuluje jego alarm.
-     */
     fun deleteTask() {
         viewModelScope.launch {
             val id = _uiState.value.taskId
@@ -250,11 +215,6 @@ class TaskAddEditViewModel(
         }
     }
 
-    /**
-     * Zarządza alarmem przypomnienia:
-     * - najpierw anuluje poprzedni,
-     * - potem ewentualnie ustawia nowy.
-     */
     private fun scheduleReminderIfNeeded(
         taskId: Int,
         taskTitle: String,

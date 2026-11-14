@@ -1,11 +1,5 @@
 package com.example.my_uz_android.ui.components
 
-/**
- * Komponent karty zadania wykorzystywany na ekranach dashboardu i list zadań.
- * Udostępnia spójny sposób prezentacji tytułu, przedmiotu i stanu realizacji
- * z zachowaniem zgodności wizualnej z pozostałymi kartami aplikacji.
- */
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -36,7 +30,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// Karta zadania z kropką priorytetu i datą terminu
 @Composable
 fun TaskCard(
     task: TaskEntity,
@@ -47,9 +40,9 @@ fun TaskCard(
     val isCompleted = task.isCompleted
 
     val priorityDefaultBg = when (task.priority) {
-        2 -> com.example.my_uz_android.ui.theme.getAppBackgroundColor(5) // Wysoki: pastelowy róż
-        1 -> com.example.my_uz_android.ui.theme.getAppBackgroundColor(3) // Średni: pastelowy żółty
-        else -> extendedColors.taskCardBackground                                // Niski: błękitny
+        2 -> com.example.my_uz_android.ui.theme.getAppBackgroundColor(5)
+        1 -> com.example.my_uz_android.ui.theme.getAppBackgroundColor(3)
+        else -> extendedColors.taskCardBackground
     }
 
     val cardBackgroundColor = if (isCompleted) {
@@ -131,7 +124,7 @@ fun TaskCard(
                     lineHeight = 16.sp,
                     color = secondaryColor
                 ),
-                maxLines = 2, // Pozwalamy na 2 linie, by wysokość była spójna z EventCard (który ma 2 linie opisu)
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }

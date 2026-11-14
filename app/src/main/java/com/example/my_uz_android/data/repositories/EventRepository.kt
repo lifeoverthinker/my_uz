@@ -4,7 +4,6 @@ import com.example.my_uz_android.data.daos.EventDao
 import com.example.my_uz_android.data.models.EventEntity
 import kotlinx.coroutines.flow.Flow
 
-// Obsługa wydarzeń w kalendarzu
 class EventRepository(private val eventDao: EventDao) {
 
     fun getAllEventsStream(): Flow<List<EventEntity>> = eventDao.getAllEvents()

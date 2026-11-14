@@ -17,9 +17,6 @@ import kotlin.math.abs
 
 private const val SAVE_FEEDBACK_DURATION_MS = 1200L
 
-/**
- * Stan UI ekranu ustawień.
- */
 data class SettingsUiState(
     val settings: SettingsEntity? = null,
     val uniqueClassTypes: List<String> = emptyList(),
@@ -31,12 +28,6 @@ data class SettingsUiState(
     val isSaved: Boolean = false
 )
 
-/**
- * ViewModel ekranu ustawień.
- *
- * Zarządza zapisem preferencji aplikacji (motyw, język, powiadomienia, kolory zajęć)
- * oraz operacjami backup/import.
- */
 class SettingsViewModel(
     private val backupManager: BackupManager,
     private val settingsRepository: SettingsRepository,
@@ -147,9 +138,6 @@ class SettingsViewModel(
         updateSettings { it.copy(themeMode = mode.name) }
     }
 
-    /**
-     * Ustawia język aplikacji, zapisując wyłącznie wspierane wartości `pl` lub `en`.
-     */
     fun setAppLanguage(languageCode: String) {
         val normalizedCode = when (languageCode) {
             "en" -> "en"
@@ -169,12 +157,10 @@ class SettingsViewModel(
         }
     }
 
-    // Włączenie/wyłączenie powiadomień głównych
     fun toggleNotifications(enabled: Boolean) {
         updateSettings { it.copy(notificationsEnabled = enabled) }
     }
 
-    // Włączenie/wyłączenie przypomnień 15 minut przed zajęciami
     fun toggleClassesNotifications(enabled: Boolean) {
         updateSettings { it.copy(notificationsClasses = enabled) }
     }

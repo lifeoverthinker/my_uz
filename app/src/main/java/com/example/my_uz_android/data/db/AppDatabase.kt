@@ -45,10 +45,8 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Kompletna, bezpieczna migracja z wersji 12 do 13
         private val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // 1. Tworzymy tabelę z dokładną strukturą oczekiwaną przez nową wersję Room
                 db.execSQL("""
                     CREATE TABLE IF NOT EXISTS settings_new (
                         id INTEGER PRIMARY KEY NOT NULL,
@@ -83,7 +81,6 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 """.trimIndent())
 
-                // 2. Kopiujemy dane użytkownika ze starej tabeli do nowej
                 db.execSQL("""
                     INSERT INTO settings_new (
                         id, userName, firstName, lastName, gender, faculty, department, fieldOfStudy,
@@ -103,7 +100,6 @@ abstract class AppDatabase : RoomDatabase() {
                     FROM settings
                 """.trimIndent())
 
-                // 3. Zastępujemy starą tabelę nową
                 db.execSQL("DROP TABLE settings")
                 db.execSQL("ALTER TABLE settings_new RENAME TO settings")
             }

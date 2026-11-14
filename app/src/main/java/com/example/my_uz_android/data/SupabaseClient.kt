@@ -1,6 +1,5 @@
 package com.example.my_uz_android.data
 
-// Ważny import - to jest klasa wygenerowana przez Gradle
 import com.example.my_uz_android.BuildConfig
 
 import io.github.jan.supabase.createSupabaseClient

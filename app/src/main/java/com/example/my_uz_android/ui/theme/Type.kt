@@ -9,7 +9,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.example.my_uz_android.R
 
-// Czcionka Inter w różnych grubościach
 val InterFontFamily = FontFamily(
     Font(R.font.inter_thin, FontWeight.Thin),
     Font(R.font.inter_extralight, FontWeight.ExtraLight),
@@ -23,7 +22,6 @@ val InterFontFamily = FontFamily(
     Font(R.font.inter_italic, FontWeight.Normal, FontStyle.Italic)
 )
 
-// Typografia Material 3 podpięta pod czcionkę Inter
 val AppTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = InterFontFamily,

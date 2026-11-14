@@ -59,7 +59,6 @@ fun SubjectGradesScreen(
     if (showFinalGradeDialog) {
         FinalGradeDialog(
             onConfirm = { finalGradeValue ->
-                // NAPRAWA: Zapisujemy wagę jako Int (1 zamiast 1.0)
                 val newFinalGrade = GradeEntity(
                     subjectName = subject?.name ?: "Nieznany",
                     classType = visibleTypes.firstOrNull()?.name ?: "Inne",
@@ -346,7 +345,6 @@ private fun DetailSummaryItem(
     }
 }
 
-// Pojedynczy wiersz oceny na liście
 @Composable
 private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
     val formatter = remember {
@@ -418,7 +416,6 @@ private fun GradeCardRow(grade: GradeEntity, onClick: () -> Unit) {
             )
         }
 
-        // NAPRAWA: Z uwagi na fakt, że weight to Int, usunąłem modulo z wyświetlania - teraz wpisuje po prostu wartość np. 1
         if (!grade.isPoints && grade.weight > 0 && grade.grade != -1.0) {
             Text(
                 text = stringResource(R.string.weight_label, grade.weight),

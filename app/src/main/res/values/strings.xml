@@ -443,4 +443,6 @@
     <!-- Widget -->
     <string name="widget_loading">Ładowanie danych...</string>
     <string name="widget_refresh">Odśwież</string>
+    <string name="task_details_btn_complete">Zalicz zadanie</string>
+    <string name="task_details_btn_undo_complete">Cofnij zaliczenie</string>
 </resources>

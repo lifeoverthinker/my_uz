@@ -4,7 +4,6 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-// Dodatkowy kierunek lub grupa
 @Serializable
 @Entity(tableName = "user_courses")
 data class UserCourseEntity(

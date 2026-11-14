@@ -4,7 +4,6 @@ import com.example.my_uz_android.data.daos.GradesDao
 import com.example.my_uz_android.data.models.GradeEntity
 import kotlinx.coroutines.flow.Flow
 
-// Zarządzanie ocenami i średnią
 class GradesRepository(private val gradesDao: GradesDao) {
 
     fun getAllGradesStream(): Flow<List<GradeEntity>> = gradesDao.getAllGrades()
